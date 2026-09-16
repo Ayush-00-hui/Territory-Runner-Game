@@ -4,8 +4,12 @@ import 'profile_page.dart';
 import 'features/map/map_screen.dart';
 
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  await Hive.openBox<String>('territories');
   runApp(const TerritoryApp());
 }
 

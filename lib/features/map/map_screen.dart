@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../services/location_service.dart';
 import '../gameplay/h3_service.dart';
-import '../../main.dart'; // For AppColors and animations for now
+import '../gameplay/territory_service.dart';
+import '../../main.dart'; // For AppColors and animations
+import '../../core/utils/constants.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -18,14 +21,32 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final MapController _mapController = MapController();
   final LocationService _locationService = LocationService();
   final H3Service _h3Service = H3Service();
+  final TerritoryService _territoryService = TerritoryService();
   
   StreamSubscription<Position>? _positionSub;
+  StreamSubscription<BoxEvent>? _territorySub;
+  
   LatLng? _currentLocation;
   String? _currentHexId;
+  List<String> _capturedHexes = [];
+  bool _isRunActive = false;
 
   @override
   void initState() {
     super.initState();
+    
+    // Load existing territories
+    _capturedHexes = _territoryService.getCapturedTerritories();
+    
+    // Listen for new captures
+    _territorySub = _territoryService.territoryStream.listen((event) {
+      if (mounted) {
+        setState(() {
+          _capturedHexes = _territoryService.getCapturedTerritories();
+        });
+      }
+    });
+
     _initLocation();
   }
 
@@ -54,16 +75,38 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _updateHexagon() {
     if (_currentLocation != null) {
-      _currentHexId = _h3Service.getHexagonForLocation(
+      final newHexId = _h3Service.getHexagonForLocation(
         _currentLocation!.latitude,
         _currentLocation!.longitude,
       );
+      
+      if (_currentHexId != newHexId) {
+        _currentHexId = newHexId;
+        
+        // If run is active, attempt to capture this new hexagon
+        if (_isRunActive && _currentHexId != null) {
+          _territoryService.captureTerritory(_currentHexId!);
+        }
+      }
     }
+  }
+
+  void _toggleRun() {
+    setState(() {
+      _isRunActive = !_isRunActive;
+      
+      // If we just started a run, immediately capture the current hexagon
+      if (_isRunActive && _currentHexId != null) {
+        showRunStartAnimation(context);
+        _territoryService.captureTerritory(_currentHexId!);
+      }
+    });
   }
 
   @override
   void dispose() {
     _positionSub?.cancel();
+    _territorySub?.cancel();
     _locationService.stopTracking();
     super.dispose();
   }
@@ -72,6 +115,36 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     if (_currentLocation != null) {
       _mapController.move(_currentLocation!, 17.0);
     }
+  }
+
+  List<Polygon> _buildPolygons() {
+    List<Polygon> polygons = [];
+    
+    // Draw all permanently captured hexes
+    for (String hexId in _capturedHexes) {
+      polygons.add(
+        Polygon(
+          points: _h3Service.getHexagonVertices(hexId),
+          color: AppColors.accent.withOpacity(0.4),
+          borderColor: AppColors.accent,
+          borderStrokeWidth: 2.5,
+        )
+      );
+    }
+    
+    // Draw current outline if not already captured
+    if (_currentHexId != null && !_capturedHexes.contains(_currentHexId!)) {
+      polygons.add(
+        Polygon(
+          points: _h3Service.getHexagonVertices(_currentHexId!),
+          color: AppColors.accent.withOpacity(0.1),
+          borderColor: AppColors.accent.withOpacity(0.5),
+          borderStrokeWidth: 2.0,
+        )
+      );
+    }
+    
+    return polygons;
   }
 
   @override
@@ -97,25 +170,24 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     ),
                   ),
                   children: [
-                    // Dark theme map tiles
-                    TileLayer(
-                      urlTemplate: 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png',
-                      subdomains: const ['a', 'b', 'c', 'd'],
-                      userAgentPackageName: 'com.territoryrunner.app',
+                    // Free Dark theme using OpenStreetMap + Color Inversion
+                    ColorFiltered(
+                      colorFilter: const ColorFilter.matrix([
+                        -1,  0,  0, 0, 255, // Red
+                         0, -1,  0, 0, 255, // Green
+                         0,  0, -1, 0, 255, // Blue
+                         0,  0,  0, 1,   0, // Alpha
+                      ]),
+                      child: TileLayer(
+                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.territoryrunner.app',
+                      ),
                     ),
                     
                     // Hexagon Territory Overlay
-                    if (_currentHexId != null)
-                      PolygonLayer(
-                        polygons: <Polygon<Object>>[
-                          Polygon(
-                            points: _h3Service.getHexagonVertices(_currentHexId!),
-                            color: AppColors.accent.withOpacity(0.3),
-                            borderColor: AppColors.accent,
-                            borderStrokeWidth: 2.0,
-                          ),
-                        ],
-                      ),
+                    PolygonLayer(
+                      polygons: _buildPolygons(),
+                    ),
                       
                     // Current User Location Marker
                     MarkerLayer(
@@ -152,12 +224,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             child: Row(
               children: [
                 Text(
-                  'MAP (LIVE)',
+                  _isRunActive ? 'RUNNING...' : 'MAP (LIVE)',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 2.4,
-                    color: Colors.white.withOpacity(0.85),
+                    color: _isRunActive ? AppColors.accent : Colors.white.withOpacity(0.85),
                   ),
                 ),
                 const Spacer(),
@@ -175,7 +247,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             right: 20,
             bottom: pad.bottom + 24,
             child: _MapBottomSheet(
-              onStartRun: () => showRunStartAnimation(context),
+              isActive: _isRunActive,
+              onToggleRun: _toggleRun,
             ),
           ),
         ],
@@ -208,8 +281,10 @@ class _MapIconButton extends StatelessWidget {
 }
 
 class _MapBottomSheet extends StatelessWidget {
-  const _MapBottomSheet({required this.onStartRun});
-  final VoidCallback onStartRun;
+  const _MapBottomSheet({required this.isActive, required this.onToggleRun});
+  
+  final bool isActive;
+  final VoidCallback onToggleRun;
 
   @override
   Widget build(BuildContext context) {
@@ -218,13 +293,19 @@ class _MapBottomSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface.withOpacity(0.94),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border.withOpacity(0.65)),
+        border: Border.all(color: isActive ? AppColors.accent : AppColors.border.withOpacity(0.65)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.5),
             blurRadius: 32,
             offset: const Offset(0, 18),
           ),
+          if (isActive)
+            BoxShadow(
+              color: AppColors.accent.withOpacity(0.15),
+              blurRadius: 40,
+              spreadRadius: 5,
+            )
         ],
       ),
       child: Column(
@@ -235,12 +316,12 @@ class _MapBottomSheet extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Territory outline',
+                  isActive ? 'RUN IN PROGRESS' : 'Territory outline',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 2,
-                    color: AppColors.textMuted,
+                    color: isActive ? Colors.white : AppColors.textMuted,
                   ),
                 ),
               ),
@@ -262,18 +343,18 @@ class _MapBottomSheet extends StatelessWidget {
                   height: 52,
                   child: FilledButton(
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.white,
+                      backgroundColor: isActive ? Colors.white : AppColors.accent,
+                      foregroundColor: isActive ? AppColors.bgDeep : Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
-                    onPressed: onStartRun,
-                    child: const Text(
-                      'Start Run',
-                      style: TextStyle(
+                    onPressed: onToggleRun,
+                    child: Text(
+                      isActive ? 'Stop Run' : 'Start Run',
+                      style: const TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0.2,
                       ),
                     ),
