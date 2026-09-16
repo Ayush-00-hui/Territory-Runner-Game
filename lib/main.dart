@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'profile_page.dart';
+import 'features/map/map_screen.dart';
 
 import 'package:flutter/material.dart';
 
@@ -396,11 +397,11 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-final List<Widget> _pages = [
-  const HomeScreen(),
-  const MapScreen(),
-  const ProfilePage(),
-];
+  final List<Widget> _pages = [
+    const HomeScreen(),
+    const MapScreenFeature(),
+    const ProfilePage(),
+  ];
 
   @override
   Widget build(BuildContext context) {

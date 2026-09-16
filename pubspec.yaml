@@ -48,6 +48,7 @@ dependencies:
   vibration: ^3.2.0
   maps_toolkit: ^3.1.0
   uuid: ^4.6.0
+  h3_ffi: ^0.7.0
 
 dev_dependencies:
   flutter_test:
