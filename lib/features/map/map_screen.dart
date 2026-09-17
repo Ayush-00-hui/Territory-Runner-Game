@@ -170,18 +170,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     ),
                   ),
                   children: [
-                    // Free Dark theme using OpenStreetMap + Color Inversion
-                    ColorFiltered(
-                      colorFilter: const ColorFilter.matrix([
-                        -1,  0,  0, 0, 255, // Red
-                         0, -1,  0, 0, 255, // Green
-                         0,  0, -1, 0, 255, // Blue
-                         0,  0,  0, 1,   0, // Alpha
-                      ]),
-                      child: TileLayer(
-                        urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        userAgentPackageName: 'com.territoryrunner.app',
-                      ),
+                    // Dark theme map tiles using Mapbox API
+                    TileLayer(
+                      urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token={accessToken}',
+                      additionalOptions: const {
+                        'accessToken': AppConstants.mapApiKey,
+                      },
+                      userAgentPackageName: 'com.territoryrunner.app',
                     ),
                     
                     // Hexagon Territory Overlay

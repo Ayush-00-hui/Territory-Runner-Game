@@ -18,19 +18,20 @@ Think of it as fitness meets gaming: sweat it out in the real world to conquer y
 ## ✨ Key Features
 
 - **📍 Live Location Tracking:** Precise and continuous tracking of your current position on the map using `geolocator` and `flutter_map`.
-- **🎮 Territory Claiming:** Turn your city into a game board! Claim areas based on your running routes and expand your domain.
+- **🎮 Territory Claiming:** Turn your city into a game board! Claim areas based on your running routes and expand your domain powered by H3 geospatial indexing.
 - **🏃‍♂️ Advanced Runner Profiles:** Track your total distance, level up by earning XP, and unlock special badges as you hit new milestones.
 - **🎨 Premium Dark UI:** A sleek, immersive dark-themed interface inspired by modern fitness apps, featuring micro-animations, glowing accents, and haptic feedback.
-- **🤖 AI Integration:** Powered by `google_generative_ai` for smart insights and dynamic interactions.
-- **☁️ Cloud Sync:** Securely save your progress, territories, and profile data in real-time with Firebase.
+- **🤖 AI Integration:** Powered by `google_generative_ai` for smart insights and dynamic interactions tailored to your running habits.
+- **☁️ Cloud Sync:** Securely save your progress, territories, and profile data in real-time with Firebase Auth and Firestore.
+- **💾 Offline Capabilities:** Built-in caching using Hive ensures your run data is safe even in spotty network conditions.
 
 ## 🛠️ Tech Stack & Architecture
 
 - **Frontend:** [Flutter](https://flutter.dev/) & Dart
-- **Maps & Location:** `flutter_map`, `latlong2`, `geolocator`, `maps_toolkit`
+- **Maps & Location:** `flutter_map`, `latlong2`, `geolocator`, `maps_toolkit`, `h3_ffi`
 - **Backend & Database:** Firebase Auth, Cloud Firestore
 - **Local Storage:** Hive
-- **Additional Tools:** `audioplayers` (Audio), `vibration` (Haptics)
+- **Additional Tools:** `audioplayers` (Audio), `vibration` (Haptics), Provider (State Management)
 
 ---
 
@@ -43,6 +44,7 @@ Follow these instructions to set up the project locally on your machine.
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (Version 3.13.2 or higher)
 - Android Studio or Xcode (for emulation/compilation)
 - A Firebase project setup (Required for Auth & Firestore)
+- A Google Maps / Gemini API Key (if applicable based on usage)
 
 ### Installation
 
@@ -58,7 +60,7 @@ Follow these instructions to set up the project locally on your machine.
    ```
 
 3. **Configure Firebase:**
-   Make sure you have your `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS) configured properly from your Firebase Console.
+   Make sure you have your `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS) configured properly from your Firebase Console. Place them in their respective native directories.
 
 4. **Run the application:**
    ```bash
