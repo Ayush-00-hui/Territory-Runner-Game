@@ -13,17 +13,18 @@ void main() async {
   runApp(const TerritoryApp());
 }
 
-/// Nike Run–adjacent palette: near-black surfaces, crisp red accent.
 abstract final class AppColors {
-  static const Color bgDeep = Color(0xFF050506);
-  static const Color bgElevated = Color(0xFF0F0F11);
-  static const Color surface = Color(0xFF161618);
-  static const Color surface2 = Color(0xFF1C1C1F);
-  static const Color border = Color(0xFF2A2A2E);
-  static const Color textMuted = Color(0xFF8E8E93);
-  static const Color textSecondary = Color(0xFFB0B0B5);
-  static const Color accent = Color(0xFFE50914);
-  static const Color accentGlow = Color(0x40E50914);
+  static const Color bgDeep = Color(0xFF090A0F); // Deep space background
+  static const Color bgElevated = Color(0xFF14151F); // Elevated dark surface
+  static const Color surface = Color(0xFF1C1D2A); // Glassmorphism base surface
+  static const Color surface2 = Color(0xFF26283A); // Slightly lighter surface
+  static const Color border = Color(0xFF3B3E52); // Subtle cyber borders
+  static const Color textPrimary = Color(0xFFF8FAFC); // Crisp white text
+  static const Color textSecondary = Color(0xFFA0AEC0); // Muted slate text
+  static const Color textMuted = Color(0xFF718096); // Very muted text
+  static const Color accent = Color(0xFF00F0FF); // Neon Cyan
+  static const Color accentSecondary = Color(0xFF8A2BE2); // Electric Violet
+  static const Color accentGlow = Color(0x3300F0FF); // Cyan glow
 }
 
 Path _runPreviewPath(Size size) {
@@ -364,22 +365,25 @@ class _DottedRoutePainter extends CustomPainter {
       oldDelegate.progress != progress ||
       oldDelegate.flowT != flowT;
 }
+
+
+
 class TerritoryApp extends StatelessWidget {
   const TerritoryApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Territory Runner',
       debugShowCheckedModeBanner: false,
-      title: 'Territory',
       theme: ThemeData(
-        useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: AppColors.bgDeep,
         colorScheme: const ColorScheme.dark(
           primary: AppColors.accent,
+          secondary: AppColors.accentSecondary,
           surface: AppColors.surface,
-          onSurface: Colors.white,
+          onSurface: AppColors.textPrimary,
         ),
         textTheme: ThemeData.dark().textTheme.apply(
               bodyColor: Colors.white,

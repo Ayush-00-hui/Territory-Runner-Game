@@ -669,21 +669,25 @@ class _OptionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color titleColor = isLogout ? Colors.redAccent : Colors.white;
 
-    return ListTile(
-      leading: Icon(icon, color: titleColor),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: titleColor,
-          fontWeight: FontWeight.w600,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: Icon(icon, color: titleColor),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: titleColor,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-      ),
       trailing: Icon(
         Icons.arrow_forward_ios_rounded,
         size: 16,
-        color: Colors.white.withOpacity(0.5),
+        color: titleColor.withOpacity(0.5),
       ),
-      onTap: () {},
-    );
+      onTap: () {
+        // Implement action
+      },
+    ));
   }
 }

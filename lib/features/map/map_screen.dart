@@ -47,6 +47,38 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
     });
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPermissionsAndInitLocation();
+    });
+  }
+
+  Future<void> _checkPermissionsAndInitLocation() async {
+    final isFirstTime = await _locationService.isFirstTimePermissionRequest();
+    if (isFirstTime) {
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text('Realtime GPS Needed', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          content: const Text(
+            'Territory Runner requires your background location to let you capture territories in the real world!\n\nIf you deny this, the app will fall back to a Virtual Simulation Mode.',
+            style: TextStyle(color: AppColors.textSecondary, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('GOT IT', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+      await _locationService.markPermissionRequested();
+    }
     _initLocation();
   }
 
@@ -170,9 +202,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     ),
                   ),
                   children: [
-                    // Dark theme map tiles using Mapbox API
+                    // Cyber-Dark theme map tiles using Mapbox API
                     TileLayer(
-                      urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/256/{z}/{x}/{y}@2x?access_token={accessToken}',
+                      urlTemplate: 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}',
                       additionalOptions: const {
                         'accessToken': AppConstants.mapApiKey,
                       },
@@ -224,7 +256,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 2.4,
-                    color: _isRunActive ? AppColors.accent : Colors.white.withOpacity(0.85),
+                    color: _isRunActive ? AppColors.accent : AppColors.textPrimary,
                   ),
                 ),
                 const Spacer(),
