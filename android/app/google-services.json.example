@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "603553663892",
-    "project_id": "territory-runner-fc2bb",
-    "storage_bucket": "territory-runner-fc2bb.firebasestorage.app"
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "YOUR_PROJECT_ID",
+    "storage_bucket": "YOUR_STORAGE_BUCKET"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:603553663892:android:6e2fdb69773360b8201d81",
+        "mobilesdk_app_id": "YOUR_APP_ID",
         "android_client_info": {
           "package_name": "com.example.territory_runner"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBdntRTGr7URIqj9ksOEWnG-Q16s2DxGF0"
+          "current_key": "YOUR_API_KEY"
         }
       ],
       "services": {
