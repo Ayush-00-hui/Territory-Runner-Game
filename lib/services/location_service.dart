@@ -71,7 +71,7 @@ class LocationService {
 
     try {
       return await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
     } catch (e) {
       // Fallback if real GPS throws an exception (e.g. in some emulators/desktops)

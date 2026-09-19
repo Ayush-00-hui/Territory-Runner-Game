@@ -47,7 +47,7 @@ class Territory {
     'polygon': polygon.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
     'areaSqMeters': areaSqMeters,
     'capturedAt': capturedAt.toIso8601String(),
-    'color': color.value,
+    'color': color.toARGB32(),
     'isPendingReview': isPendingReview,
   };
 
@@ -118,7 +118,7 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
       ..writeByte(4)
       ..write(obj.capturedAt.millisecondsSinceEpoch)
       ..writeByte(5)
-      ..write(obj.color.value)
+      ..write(obj.color.toARGB32())
       ..writeByte(6)
       ..write(obj.isPendingReview);
   }

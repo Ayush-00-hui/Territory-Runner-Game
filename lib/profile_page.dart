@@ -18,7 +18,6 @@ class _ProfilePageState extends State<ProfilePage>
   late final Animation<Offset> _topSlideAnimation;
   late final Animation<Offset> _statsSlideAnimation;
   late final Animation<Offset> _achievementsSlideAnimation;
-  late final Animation<Offset> _goalsSlideAnimation;
   late final Animation<Offset> _settingsSlideAnimation;
 
   final TerritoryService _territoryService = TerritoryService();
@@ -65,16 +64,6 @@ class _ProfilePageState extends State<ProfilePage>
       CurvedAnimation(
         parent: _pageController,
         curve: const Interval(0.30, 0.60, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _goalsSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.10),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _pageController,
-        curve: const Interval(0.45, 0.75, curve: Curves.easeOutCubic),
       ),
     );
 
@@ -327,9 +316,11 @@ class _ProfilePageState extends State<ProfilePage>
                                     );
                                   } catch (e) {
                                     setModalState(() => isLoading = false);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
-                                    );
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Error: $e')),
+                                      );
+                                    }
                                   }
                                 },
                           child: isLoading
@@ -391,9 +382,11 @@ class _ProfilePageState extends State<ProfilePage>
                                     }
                                   } catch (e) {
                                     setModalState(() => isLoading = false);
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Verification error: $e')),
-                                    );
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Verification error: $e')),
+                                      );
+                                    }
                                   }
                                 },
                           child: isLoading
@@ -521,7 +514,6 @@ class _ProfilePageState extends State<ProfilePage>
   Widget build(BuildContext context) {
     const Color bg = Color(0xFF090A0F);
     const Color card = Color(0xFF14151F);
-    const Color softCard = Color(0xFF1C1D2A);
     const Color accent = Color(0xFF00F0FF);
     const Color accent2 = Color(0xFF8A2BE2);
     const Color textPrimary = Color(0xFFF8FAFC);

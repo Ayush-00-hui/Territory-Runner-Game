@@ -76,7 +76,7 @@ void showRunStartAnimation(BuildContext context) {
         ),
       );
     },
-    pageBuilder: (context, _, __) => const _RunStartOverlay(),
+    pageBuilder: (context, _, _) => const _RunStartOverlay(),
   );
 }
 
@@ -642,7 +642,7 @@ class _LogoMark extends StatelessWidget {
         child: Image.asset(
           'assets/icons/logo.png',
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => const Icon(
+          errorBuilder: (_, _, _) => const Icon(
             Icons.directions_run_rounded,
             color: AppColors.accent,
             size: 26,

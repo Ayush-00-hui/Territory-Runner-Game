@@ -41,7 +41,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   
   LatLng? _currentLocation;
   String? _currentHexId;
-  List<String> _capturedHexes = [];
   bool _isRunActive = false;
   int _lastAnnouncedKm = 0;
 
@@ -52,7 +51,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   // Run telemetry & Anti-cheat tracking
   final List<Position> _recentPositions = [];
   final List<LatLng> _runCoordinates = [];
-  DateTime? _runStartTime;
   int _hexesClaimedThisRun = 0;
   double _runDistanceKm = 0.0;
   Timer? _runTimer;
@@ -62,15 +60,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void initState() {
     super.initState();
     
-    // Load existing territories
-    _capturedHexes = _territoryService.getCapturedTerritories();
-    
     // Listen for new captures
     _territorySub = _territoryService.territoryStream.listen((event) {
       if (mounted) {
-        setState(() {
-          _capturedHexes = _territoryService.getCapturedTerritories();
-        });
+        setState(() {});
       }
     });
 
@@ -198,7 +191,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       // START RUN
       setState(() {
         _isRunActive = true;
-        _runStartTime = DateTime.now();
         _hexesClaimedThisRun = 0;
         _runDistanceKm = 0.0;
         _runDurationSeconds = 0;
