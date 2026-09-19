@@ -587,12 +587,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     ),
                   ),
                   children: [
-                    // Dark theme map tiles
+                    // Clean Dark Theme Map Tiles (100% Free, No Watermarks, No API Key Required)
                     TileLayer(
                       urlTemplate: AppConstants.mapApiKey.isNotEmpty
                           ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
-                          : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                      subdomains: const ['a', 'b', 'c', 'd'],
+                          : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
                       additionalOptions: {
                         'accessToken': AppConstants.mapApiKey,
                       },
