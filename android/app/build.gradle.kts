@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.territory_runner"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "30.0.16138531"
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
