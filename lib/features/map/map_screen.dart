@@ -568,7 +568,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   children: [
                     // Cyber-Dark theme map tiles
                     TileLayer(
-                      urlTemplate: AppConstants.mapApiKey.isNotEmpty && !AppConstants.mapApiKey.contains('YOUR')
+                      urlTemplate: AppConstants.mapApiKey.isNotEmpty
                           ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
                           : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
                       subdomains: const ['a', 'b', 'c', 'd'],
