@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'profile_page.dart';
 import 'features/map/map_screen.dart';
 import 'features/teams/run_club_modal.dart';
+import 'features/gameplay/territory_service.dart';
 import 'models/territory.dart';
 import 'models/runner_profile.dart';
 import 'services/firebase_service.dart';
@@ -22,18 +23,19 @@ void main() async {
 }
 
 abstract final class AppColors {
-  static const Color bgDeep = Color(0xFF0C0D10); // Carbon matte black
-  static const Color bgElevated = Color(0xFF14151B); // Elevated performance dark surface
-  static const Color surface = Color(0xFF1B1D25); // Premium athletic plate
-  static const Color surface2 = Color(0xFF242733); // High-contrast metric card
-  static const Color border = Color(0xFF2E313D); // Subtle athletic border
+  static const Color bgDeep = Color(0xFF0B0C10); // Matte carbon black
+  static const Color bgElevated = Color(0xFF12141A); // Deep card surface
+  static const Color surface = Color(0xFF16181F); // Premium athletic plate
+  static const Color surface2 = Color(0xFF1E212B); // High-contrast pill/metric card
+  static const Color border = Color(0x1FFFFFFF); // Subtle athletic border (12% white)
   static const Color textPrimary = Color(0xFFFFFFFF); // Crisp pure white text
   static const Color textSecondary = Color(0xFF94A3B8); // Muted athletic slate text
   static const Color textMuted = Color(0xFF64748B); // Low-emphasis text
-  static const Color accent = Color(0xFFCCFF00); // High-Vis Volt Lime (Nike NRC accent)
-  static const Color accentSecondary = Color(0xFFFF5722); // Solar Sprint Orange (Heat / Streak)
-  static const Color secondary = Color(0xFFFF5722); // Solar Sprint Orange alias
-  static const Color accentGlow = Color(0x33CCFF00); // Volt glow
+  static const Color accent = Color(0xFF00E676); // Neon Emerald Green (matching reference)
+  static const Color accentSecondary = Color(0xFFFF5722); // Solar Sprint Orange
+  static const Color secondary = Color(0xFFFF5722); // Solar Orange alias
+  static const Color accentGlow = Color(0x3300E676); // Neon glow
+  static const Color positiveGreen = Color(0xFF00E676); // +XX% delta green chip
 }
 
 Path _runPreviewPath(Size size) {
@@ -191,7 +193,7 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(22),
               border: Border.all(
-                color: AppColors.border.withValues(alpha: 0.65),
+                color: AppColors.border,
               ),
               boxShadow: [
                 BoxShadow(
@@ -204,66 +206,83 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  'STARTING RUN',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2.2,
-                    color: AppColors.textMuted,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'START CONQUEST',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2.0,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 20, color: Colors.white70),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 150,
+                  width: double.infinity,
+                  child: AnimatedBuilder(
+                    animation: _controller,
+                    builder: (context, _) {
+                      return CustomPaint(
+                        painter: _RunOverlayTrackPainter(
+                          progress: _controller.value,
+                        ),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final size = constraints.biggest;
+                            final path = _runPreviewPath(size);
+                            final metrics = path.computeMetrics().toList();
+                            if (metrics.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+                            return _runnerStack(metrics.first, _controller.value);
+                          },
+                        ),
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Preview route',
+                const SizedBox(height: 12),
+                const Text(
+                  'Acquiring GPS lock & starting sector capture...',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    height: 1.35,
                     color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 18),
                 SizedBox(
-                  height: 160,
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) {
-                      final raw = _controller.value;
-                      final pathT = Curves.easeInOutCubic.transform(raw);
-                      return LayoutBuilder(
-                        builder: (context, c) {
-                          final sz = Size(c.maxWidth, c.maxHeight);
-                          final path = _runPreviewPath(sz);
-                          final metrics = path.computeMetrics().toList();
-                          if (metrics.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-                          final m = metrics.first;
-                          return Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              CustomPaint(
-                                size: sz,
-                                painter: _DottedRoutePainter(
-                                  path: path,
-                                  progress: pathT,
-                                  flowT: raw,
-                                ),
-                              ),
-                              _runnerStack(m, pathT),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Tap outside to close',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textMuted,
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text(
+                      'Ready • Hit The Grid',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -275,107 +294,51 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
   }
 }
 
-class _DottedRoutePainter extends CustomPainter {
-  _DottedRoutePainter({
-    required this.path,
-    required this.progress,
-    required this.flowT,
-  });
+class _RunOverlayTrackPainter extends CustomPainter {
+  _RunOverlayTrackPainter({required this.progress});
 
-  final Path path;
   final double progress;
-  final double flowT;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final path = _runPreviewPath(size);
+
+    final bgPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.5
+      ..strokeCap = StrokeCap.round;
+    canvas.drawPath(path, bgPaint);
+
     final metrics = path.computeMetrics().toList();
     if (metrics.isEmpty) return;
+    final m = metrics.first;
+    final len = m.length;
+    final head = progress.clamp(0.0, 1.0) * len;
+    final tail = (head - 72).clamp(0.0, len);
 
-    final metric = metrics.first;
-    final pathLen = metric.length;
-    final runnerD = progress * pathLen;
-
-    final softGlow = Paint()
-      ..color = AppColors.accent.withValues(alpha: 0.10)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 10
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-
-    final mainLine = Paint()
-      ..color = Colors.white.withValues(alpha: 0.16)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.2
-      ..strokeCap = StrokeCap.round;
-
-    final highlightLine = Paint()
-      ..color = AppColors.accent.withValues(alpha: 0.10)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5.2
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-    canvas.drawPath(path, softGlow);
-    canvas.drawPath(path, highlightLine);
-    canvas.drawPath(path, mainLine);
-
-    const tailLength = 90.0;
-
-    for (double d = 0; d < pathLen; d += 4.0) {
-      final tan = metric.getTangentForOffset(d);
-      if (tan == null) continue;
-
-      final behind = runnerD - d;
-      if (behind < 0 || behind > tailLength) continue;
-
-      final t = behind / tailLength;
-      final pulse = 0.5 + 0.5 * math.sin(flowT * math.pi * 2 - d * 0.03);
-
-      final radius = (1 - t) * 5.5 + 0.8 + pulse * 0.4;
-      final alpha = ((1 - t) * 0.30 + 0.04).clamp(0.0, 1.0);
-
-      final tailPaint = Paint()
-        ..color = Color.lerp(
-          Colors.white.withValues(alpha: alpha * 0.55),
-          AppColors.accent.withValues(alpha: alpha),
-          0.82,
-        )!
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-      canvas.drawCircle(tan.position, radius, tailPaint);
-    }
-
-    final runnerTan = metric.getTangentForOffset(
-      runnerD.clamp(0.0, pathLen),
-    );
-
-    if (runnerTan != null) {
-      final pulse = 0.5 + 0.5 * math.sin(flowT * math.pi * 2);
-
-      final outerGlow = Paint()
-        ..color = AppColors.accent.withValues(alpha: 0.22 + pulse * 0.18)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18);
-
-      final midGlow = Paint()
-        ..color = AppColors.accent.withValues(alpha: 0.75);
-
-      final innerCore = Paint()
-        ..color = Colors.white.withValues(alpha: 0.95);
-
-      canvas.drawCircle(runnerTan.position, 16 + pulse * 3, outerGlow);
-      canvas.drawCircle(runnerTan.position, 7 + pulse * 1.0, midGlow);
-      canvas.drawCircle(runnerTan.position, 2.4, innerCore);
+    if (head > tail) {
+      final seg = m.extractPath(tail, head);
+      final trailPaint = Paint()
+        ..shader = ui.Gradient.linear(
+          Offset(size.width * 0.1, size.height * 0.5),
+          Offset(size.width * 0.9, size.height * 0.5),
+          [
+            AppColors.accent.withValues(alpha: 0.15),
+            AppColors.accent,
+          ],
+        )
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 4.0
+        ..strokeCap = StrokeCap.round;
+      canvas.drawPath(seg, trailPaint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _DottedRoutePainter oldDelegate) =>
-      oldDelegate.path != path ||
-      oldDelegate.progress != progress ||
-      oldDelegate.flowT != flowT;
+  bool shouldRepaint(covariant _RunOverlayTrackPainter oldDelegate) =>
+      oldDelegate.progress != progress;
 }
-
-
 
 class TerritoryApp extends StatelessWidget {
   const TerritoryApp({super.key});
@@ -386,18 +349,14 @@ class TerritoryApp extends StatelessWidget {
       title: 'Territory Runner',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
+        useMaterial3: true,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: AppColors.bgDeep,
         colorScheme: const ColorScheme.dark(
           primary: AppColors.accent,
           secondary: AppColors.accentSecondary,
           surface: AppColors.surface,
-          onSurface: AppColors.textPrimary,
         ),
-        textTheme: ThemeData.dark().textTheme.apply(
-              bodyColor: Colors.white,
-              displayColor: Colors.white,
-            ),
       ),
       home: const MainScreen(),
     );
@@ -423,484 +382,87 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-  body: AnimatedSwitcher(
-    duration: const Duration(milliseconds: 450),
-    transitionBuilder: (child, animation) {
-      return FadeTransition(
-        opacity: animation,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0.08, 0),
-            end: Offset.zero,
-          ).animate(animation),
-          child: child,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 350),
+        child: KeyedSubtree(
+          key: ValueKey(_selectedIndex),
+          child: _pages[_selectedIndex],
         ),
-      );
-    },
-    child: KeyedSubtree(
-      key: ValueKey(_selectedIndex),
-      child: _pages[_selectedIndex],
-    ),
-  ),
-  bottomNavigationBar: NavigationBar(
-    selectedIndex: _selectedIndex,
-    onDestinationSelected: (index) {
-      setState(() {
-        _selectedIndex = index;
-      });
-    },
-    destinations: const [
-      NavigationDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home_rounded),
-        label: 'Home',
       ),
-      NavigationDestination(
-        icon: Icon(Icons.map_outlined),
-        selectedIcon: Icon(Icons.map_rounded),
-        label: 'Map',
-      ),
-      NavigationDestination(
-        icon: Icon(Icons.person_outline_rounded),
-        selectedIcon: Icon(Icons.person_rounded),
-        label: 'Profile',
-      ),
-    ],
-  ),
-);
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final topPad = MediaQuery.paddingOf(context).top;
-
-    return Scaffold(
-      backgroundColor: AppColors.bgDeep,
-      body: Stack(
-        children: [
-          Positioned(
-            top: -120,
-            right: -80,
-            child: Container(
-              width: 280,
-              height: 280,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accentGlow,
-              ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppColors.bgDeep,
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(0, Icons.home_rounded, 'Home'),
+                _buildNavItem(1, Icons.explore_rounded, 'Explore'),
+                _buildCommunityNavItem(),
+                _buildNavItem(2, Icons.person_rounded, 'Profile'),
+              ],
             ),
           ),
-          Positioned(
-            top: 180,
-            left: -100,
-            child: Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.accent.withValues(alpha: 0.06),
-              ),
-            ),
-          ),
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(24, topPad + 8, 24, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _LogoMark(),
-                          const Spacer(),
-                          _PillBadge(
-                            icon: Icons.bolt_rounded,
-                            label: 'RUN CLUB',
-                            onTap: () => RunClubModal.show(context),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 36),
-                      Text(
-                        'GOOD TO GO',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 2.4,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Own your\nterritory.',
-                        style: TextStyle(
-                          fontSize: 42,
-                          height: 0.98,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1.8,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Track runs, claim blocks, and keep the streak alive — '
-                        'minimal noise, maximum momentum.',
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1.55,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      const _SessionMetricsCard(),
-                      const SizedBox(height: 28),
-                      Text(
-                        'THIS WEEK',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 2.2,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      const _StatsRow(),
-                      const SizedBox(height: 36),
-                      _StartRunButton(
-                        onPressed: () => showRunStartAnimation(context),
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white,
-                            side: BorderSide(
-                              color: Colors.white.withValues(alpha: 0.14),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          onPressed: () {},
-                          child: const Text(
-                            'View territory map',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                      Text(
-                        'TODAY',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 2.2,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      const _TodayGoalCard(),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _LogoMark extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.7)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Image.asset(
-          'assets/icons/logo.png',
-          fit: BoxFit.contain,
-          errorBuilder: (_, _, _) => const Icon(
-            Icons.directions_run_rounded,
-            color: AppColors.accent,
-            size: 26,
-          ),
         ),
       ),
     );
   }
-}
 
-class _PillBadge extends StatelessWidget {
-  const _PillBadge({required this.icon, required this.label, this.onTap});
-
-  final IconData icon;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: AppColors.accent),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Distance, duration, calories — hero session card (NRC-style metrics strip).
-class _SessionMetricsCard extends StatelessWidget {
-  const _SessionMetricsCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.65)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.35),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
+  Widget _buildNavItem(int index, IconData icon, String label) {
+    final bool isSelected = _selectedIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedIndex = index;
+        });
+      },
+      behavior: HitTestBehavior.opaque,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'LAST RUN',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 2,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              Text(
-                'No activity',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
+          Icon(
+            icon,
+            size: 24,
+            color: isSelected ? AppColors.accent : AppColors.textMuted,
           ),
-          const SizedBox(height: 22),
-          Row(
-            children: const [
-              Expanded(
-                child: _MetricCell(
-                  label: 'Distance',
-                  value: '0',
-                  unit: 'km',
-                ),
-              ),
-              _MetricDivider(),
-              Expanded(
-                child: _MetricCell(
-                  label: 'Time',
-                  value: '0',
-                  unit: 'min',
-                ),
-              ),
-              _MetricDivider(),
-              Expanded(
-                child: _MetricCell(
-                  label: 'Calories',
-                  value: '0',
-                  unit: 'kcal',
-                ),
-              ),
-            ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+              color: isSelected ? Colors.white : AppColors.textMuted,
+            ),
           ),
         ],
       ),
     );
   }
-}
 
-class _MetricDivider extends StatelessWidget {
-  const _MetricDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 52,
-      margin: const EdgeInsets.symmetric(horizontal: 6),
-      color: AppColors.border.withValues(alpha: 0.5),
-    );
-  }
-}
-
-class _MetricCell extends StatelessWidget {
-  const _MetricCell({
-    required this.label,
-    required this.value,
-    required this.unit,
-  });
-
-  final String label;
-  final String value;
-  final String unit;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.4,
+  Widget _buildCommunityNavItem() {
+    return GestureDetector(
+      onTap: () {
+        RunClubModal.show(context);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(
+            Icons.groups_rounded,
+            size: 24,
             color: AppColors.textMuted,
           ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 28,
-                height: 1,
-                fontWeight: FontWeight.w800,
-                letterSpacing: -0.8,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              unit,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _StatsRow extends StatelessWidget {
-  const _StatsRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _MiniStatTile(title: 'Territories', value: '0'),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _MiniStatTile(title: 'Weekly km', value: '0'),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _MiniStatTile(title: 'Rank', value: '#0'),
-        ),
-      ],
-    );
-  }
-}
-
-class _MiniStatTile extends StatelessWidget {
-  const _MiniStatTile({required this.title, required this.value});
-
-  final String title;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.55)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          SizedBox(height: 4),
           Text(
-            value,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            title.toUpperCase(),
+            'Community',
             style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.2,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
               color: AppColors.textMuted,
             ),
           ),
@@ -910,221 +472,513 @@ class _MiniStatTile extends StatelessWidget {
   }
 }
 
-class _StartRunButton extends StatefulWidget {
-  const _StartRunButton({required this.onPressed});
-
-  final VoidCallback onPressed;
+/// Home Screen - Implements Right Screen from user reference image with precision
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<_StartRunButton> createState() => _StartRunButtonState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _StartRunButtonState extends State<_StartRunButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _press;
-
-  @override
-  void initState() {
-    super.initState();
-    _press = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 90),
-      reverseDuration: const Duration(milliseconds: 240),
-    );
-  }
-
-  @override
-  void dispose() {
-    _press.dispose();
-    super.dispose();
-  }
+class _HomeScreenState extends State<HomeScreen> {
+  int _tabFilterIndex = 0; // 0 = Map, 1 = Stats, 2 = Achievements
+  int _timeFilterIndex = 1; // 0 = Week, 1 = Month, 2 = Year
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 58,
-      child: AnimatedBuilder(
-        animation: _press,
-        builder: (context, child) {
-          final t = Curves.easeOutCubic.transform(_press.value);
-          final scale = ui.lerpDouble(1.0, 0.97, t)!;
-          final blur = ui.lerpDouble(20, 8, t)!;
-          final offsetY = ui.lerpDouble(12, 4, t)!;
-          final alpha = ui.lerpDouble(0.42, 0.16, t)!;
-          final spread = ui.lerpDouble(-0.5, 0, t)!;
-
-          return Transform.scale(
-            scale: scale,
-            alignment: Alignment.center,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accent.withValues(alpha: alpha),
-                    blurRadius: blur,
-                    spreadRadius: spread,
-                    offset: Offset(0, offsetY),
-                  ),
-                ],
-              ),
-              child: child,
-            ),
-          );
-        },
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTapDown: (_) => _press.forward(),
-            onTapCancel: () => _press.reverse(),
-            onTap: () {
-              _press.reverse();
-              widget.onPressed();
-            },
-            borderRadius: BorderRadius.circular(16),
-            splashColor: Colors.white.withValues(alpha: 0.14),
-            highlightColor: Colors.white.withValues(alpha: 0.06),
-            child: const SizedBox(
-              height: 58,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.bolt_rounded, size: 28, color: Color(0xFF0C0D10)),
-                  SizedBox(width: 8),
-                  Text(
-                    'START CONQUEST',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.6,
-                      color: Color(0xFF0C0D10),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _TodayGoalCard extends StatelessWidget {
-  const _TodayGoalCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppColors.accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.flag_rounded,
-              color: AppColors.accent,
-              size: 26,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Daily goal',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  '0 km — start a run to log distance and claim your first block.',
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.45,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.textMuted,
-            size: 28,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class MapScreen extends StatelessWidget {
-  const MapScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final pad = MediaQuery.paddingOf(context);
+    final topPad = MediaQuery.paddingOf(context).top;
+    final territoryService = TerritoryService();
+    final profile = territoryService.getProfile();
+    final territoriesCount = territoryService.getCapturedTerritories().length;
+    final totalAreaSqKm = (territoriesCount * 0.015047).clamp(0.0, 999.0);
 
     return Scaffold(
       backgroundColor: AppColors.bgDeep,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          const Positioned.fill(
-            child: _PlaceholderMapCanvas(),
-          ),
-          Positioned(
-            top: pad.top + 12,
-            left: 20,
-            right: 20,
-            child: Row(
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(20, topPad + 12, 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- TOP HEADER ROW (Your Territory & Level Badge) ---
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'MAP',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 2.4,
-                    color: Colors.white.withValues(alpha: 0.85),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      'Your Territory',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Every run leaves a mark.',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                // Level 6 Crown Badge Capsule
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
                   ),
-                ),
-                const Spacer(),
-                _MapIconButton(
-                  icon: Icons.my_location_rounded,
-                  onPressed: () {},
-                ),
-                const SizedBox(width: 10),
-                _MapIconButton(
-                  icon: Icons.layers_rounded,
-                  onPressed: () {},
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFD700), size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Level ${profile.level}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Level Progress Bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: SizedBox(
+                          width: 86,
+                          height: 4,
+                          child: LinearProgressIndicator(
+                            value: (profile.xp % 250) / 250.0,
+                            backgroundColor: AppColors.surface2,
+                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Run 12 km to Lvl ${profile.level + 1}',
+                        style: const TextStyle(
+                          color: AppColors.textMuted,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
+
+            const SizedBox(height: 18),
+
+            // --- FILTER CAPSULE BAR (Map | Stats | Achievements) ---
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  _buildTabPill(0, 'Map'),
+                  _buildTabPill(1, 'Stats'),
+                  _buildTabPill(2, 'Achievements'),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // --- TERRITORY MAP HERO CARD ---
+            GestureDetector(
+              onTap: () {
+                // Navigate to Map / Explore tab
+                final mainState = context.findAncestorStateOfType<_MainScreenState>();
+                mainState?.setState(() {
+                  mainState._selectedIndex = 1;
+                });
+              },
+              child: Container(
+                height: 220,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.border),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Stack(
+                  children: [
+                    // Mock Vector Polygon Map Graphic
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _TerritoryHeroMapPainter(),
+                      ),
+                    ),
+
+                    // Top Left Territory Stats Overlay
+                    Positioned(
+                      top: 16,
+                      left: 18,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Total Territory',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            totalAreaSqKm > 0 ? '${totalAreaSqKm.toStringAsFixed(1)} km²' : '12.4 km²',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              '↗ +23% this month',
+                              style: TextStyle(
+                                color: AppColors.accent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // --- "NEW AREA UNLOCKED!" BANNER ---
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    height: 48,
+                    width: 48,
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+                    ),
+                    child: const Icon(Icons.terrain_rounded, color: AppColors.accent, size: 24),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'New area unlocked!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          'Riverside South Sector',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white54, size: 16),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // --- "YOUR STATS" SECTION ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Your Stats',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                // Week | Month | Year Pill Toggle
+                Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildTimePill(0, 'Week'),
+                      _buildTimePill(1, 'Month'),
+                      _buildTimePill(2, 'Year'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 14),
+
+            // 4 Stats Cards Grid
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatTile(
+                    title: 'Runs',
+                    icon: Icons.directions_run_rounded,
+                    value: '${(profile.totalDistanceKm / 4).round().clamp(1, 99)}',
+                    delta: '+33%',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildStatTile(
+                    title: 'Distance',
+                    icon: Icons.location_on_rounded,
+                    value: '${profile.totalDistanceKm.toStringAsFixed(1)} km',
+                    delta: '+21%',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildStatTile(
+                    title: 'Territory',
+                    icon: Icons.map_rounded,
+                    value: totalAreaSqKm > 0 ? '${totalAreaSqKm.toStringAsFixed(1)} km²' : '12.4 km²',
+                    delta: '+40%',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildStatTile(
+                    title: 'Calories',
+                    icon: Icons.local_fire_department_rounded,
+                    value: '${(profile.totalDistanceKm * 65).round().clamp(150, 99999)}',
+                    delta: '+18%',
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // --- INSPIRATION STORY BANNER ("Bigger routes. Bolder stories.") ---
+            Container(
+              height: 100,
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(22),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF1E2638),
+                    AppColors.surface,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Text(
+                          'Bigger routes.\nBolder stories.',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            height: 1.15,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          'Keep exploring.',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 18),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabPill(int index, String label) {
+    final isSelected = _tabFilterIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _tabFilterIndex = index;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.surface2 : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: pad.bottom + 24,
-            child: _MapBottomSheet(
-              onStartRun: () => showRunStartAnimation(context),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppColors.textMuted,
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimePill(int index, String label) {
+    final isSelected = _timeFilterIndex == index;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _timeFilterIndex = index;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.surface2 : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.textMuted,
+            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+            fontSize: 11,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatTile({
+    required String title,
+    required IconData icon,
+    required String value,
+    required String delta,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 8),
+          Icon(icon, color: Colors.white70, size: 18),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            delta,
+            style: const TextStyle(
+              color: AppColors.accent,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -1133,283 +987,83 @@ class MapScreen extends StatelessWidget {
   }
 }
 
-class _MapIconButton extends StatelessWidget {
-  const _MapIconButton({required this.icon, required this.onPressed});
-
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface.withValues(alpha: 0.92),
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed,
-        child: SizedBox(
-          width: 46,
-          height: 46,
-          child: Icon(icon, size: 22, color: Colors.white),
-        ),
-      ),
-    );
-  }
-}
-
-/// Stylized dark “map” — blocks, roads, and a glowing red route (no tiles).
-class _PlaceholderMapCanvas extends StatelessWidget {
-  const _PlaceholderMapCanvas();
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: _MapPlaceholderPainter(),
-      child: const SizedBox.expand(),
-    );
-  }
-}
-
-class _MapPlaceholderPainter extends CustomPainter {
+/// Custom Painter for the Territory Map Hero Card Preview
+class _TerritoryHeroMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final bg = Paint()..color = const Color(0xFF0C0C0E);
-    canvas.drawRect(Offset.zero & size, bg);
-
-    final blockPaint = Paint()..color = const Color(0xFF121215);
-    final blockBorder = Paint()
-      ..color = const Color(0xFF1E1E22)
+    // Dark Grid map background
+    final gridPaint = Paint()
+      ..color = const Color(0xFF1E2230)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+      ..strokeWidth = 0.8;
 
-    const cell = 56.0;
-    for (double y = -cell; y < size.height + cell; y += cell) {
-      for (double x = -cell; x < size.width + cell; x += cell) {
-        final int hash = ((x.toInt() * 73856093) ^ (y.toInt() * 19349663)).abs();
-        if ((hash % 100) > 42) {
-          final r = RRect.fromRectAndRadius(
-            Rect.fromLTWH(x + 2, y + 2, cell - 4, cell - 4),
-            const Radius.circular(6),
-          );
-          canvas.drawRRect(r, blockPaint);
-          canvas.drawRRect(r, blockBorder);
-        }
-      }
+    for (double x = 0; x < size.width; x += 28) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y < size.height; y += 28) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
-    final roadPaint = Paint()
-      ..color = const Color(0xFF252529)
-      ..strokeWidth = 3
-      ..strokeCap = StrokeCap.round;
+    // Territory 1 (Left Polygon)
+    final poly1 = Path()
+      ..moveTo(size.width * 0.15, size.height * 0.45)
+      ..lineTo(size.width * 0.28, size.height * 0.35)
+      ..lineTo(size.width * 0.38, size.height * 0.55)
+      ..lineTo(size.width * 0.30, size.height * 0.80)
+      ..lineTo(size.width * 0.18, size.height * 0.72)
+      ..close();
 
-    for (var i = 0.0; i < size.width; i += 88) {
-      canvas.drawLine(Offset(i, 0), Offset(i + 40, size.height), roadPaint);
-    }
-    for (var j = 0.0; j < size.height; j += 72) {
-      canvas.drawLine(Offset(0, j), Offset(size.width, j + 24), roadPaint);
-    }
+    final fillPaint1 = Paint()
+      ..color = const Color(0xFF00E676).withValues(alpha: 0.18)
+      ..style = PaintingStyle.fill;
+    final strokePaint1 = Paint()
+      ..color = const Color(0xFF00E676)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
 
-    final path = Path();
-    path.moveTo(size.width * 0.18, size.height * 0.72);
-    path.cubicTo(
-      size.width * 0.32,
-      size.height * 0.62,
-      size.width * 0.38,
-      size.height * 0.38,
-      size.width * 0.52,
-      size.height * 0.32,
-    );
-    path.cubicTo(
-      size.width * 0.68,
-      size.height * 0.26,
-      size.width * 0.78,
-      size.height * 0.42,
-      size.width * 0.82,
-      size.height * 0.28,
-    );
+    canvas.drawPath(poly1, fillPaint1);
+    canvas.drawPath(poly1, strokePaint1);
 
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = AppColors.accent.withValues(alpha: 0.25)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 10
-        ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
-    );
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = AppColors.accent
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.5
-        ..strokeCap = StrokeCap.round,
-    );
+    // Territory 2 (Large Right Polygon - Conquered)
+    final poly2 = Path()
+      ..moveTo(size.width * 0.48, size.height * 0.30)
+      ..lineTo(size.width * 0.65, size.height * 0.20)
+      ..lineTo(size.width * 0.88, size.height * 0.32)
+      ..lineTo(size.width * 0.82, size.height * 0.65)
+      ..lineTo(size.width * 0.62, size.height * 0.75)
+      ..lineTo(size.width * 0.45, size.height * 0.58)
+      ..close();
 
-    final dot = Paint()..color = Colors.white;
-    canvas.drawCircle(Offset(size.width * 0.18, size.height * 0.72), 6, dot);
-    canvas.drawCircle(Offset(size.width * 0.82, size.height * 0.28), 6, dot);
-    canvas.drawCircle(
-      Offset(size.width * 0.82, size.height * 0.28),
-      12,
-      Paint()
-        ..color = AppColors.accent.withValues(alpha: 0.35)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
+    final fillPaint2 = Paint()
+      ..color = const Color(0xFF00E676).withValues(alpha: 0.32)
+      ..style = PaintingStyle.fill;
+    final strokePaint2 = Paint()
+      ..color = const Color(0xFF00E676)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
 
-    final vignette = ui.Gradient.radial(
-      Offset(size.width * 0.5, size.height * 0.45),
-      size.shortestSide * 0.85,
-      [
-        Colors.transparent,
-        Colors.black.withValues(alpha: 0.55),
-      ],
-      [0.45, 1],
-    );
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..shader = vignette,
-    );
+    canvas.drawPath(poly2, fillPaint2);
+    canvas.drawPath(poly2, strokePaint2);
+
+    // Glowing Runner Waypoint Pin
+    final runnerPos = Offset(size.width * 0.82, size.height * 0.65);
+    final glowPaint = Paint()
+      ..color = const Color(0xFF2979FF).withValues(alpha: 0.4)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(runnerPos, 14, glowPaint);
+
+    final dotPaint = Paint()
+      ..color = const Color(0xFF2979FF)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(runnerPos, 6, dotPaint);
+
+    final dotBorder = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawCircle(runnerPos, 6, dotBorder);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-
-class _MapBottomSheet extends StatelessWidget {
-  const _MapBottomSheet({required this.onStartRun});
-
-  final VoidCallback onStartRun;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.65)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
-            blurRadius: 32,
-            offset: const Offset(0, 18),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Territory outline',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 2,
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ),
-              Text(
-                'Live preview',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          const Row(
-            children: [
-              Expanded(
-                child: _MapMetric(label: 'Area', value: '0 km²'),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _MapMetric(label: 'Blocks', value: '0'),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: _MapMetric(label: 'Streak', value: '0 d'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                elevation: 0,
-                backgroundColor: AppColors.accent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-              onPressed: onStartRun,
-              child: const Text(
-                'START RUN',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MapMetric extends StatelessWidget {
-  const _MapMetric({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-      decoration: BoxDecoration(
-        color: AppColors.bgElevated,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.45)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label.toUpperCase(),
-            style: TextStyle(
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.1,
-              color: AppColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.3,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
