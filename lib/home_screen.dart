@@ -63,7 +63,9 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentPosition = LatLng(position.latitude, position.longitude);
           });
-          _mapController.move(_currentPosition!, 15.0);
+          try {
+            _mapController.move(_currentPosition!, 15.0);
+          } catch (_) {}
         }
       });
   }

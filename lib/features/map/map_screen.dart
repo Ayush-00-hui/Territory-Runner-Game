@@ -110,7 +110,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           _currentLocation = LatLng(pos.latitude, pos.longitude);
           _updateHexagon(pos);
         });
-        _mapController.move(_currentLocation!, 17.0);
         _rivalService.initializeRivals(_currentLocation!);
         _rivalService.startSimulation();
       }
@@ -429,7 +428,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _recenter() {
     if (_currentLocation != null) {
-      _mapController.move(_currentLocation!, 17.0);
+      try {
+        _mapController.move(_currentLocation!, 17.0);
+      } catch (_) {
+        // MapController not yet mounted
+      }
     }
   }
 
