@@ -119,6 +119,12 @@ class TerritoryService {
     await saveProfile(profile);
   }
 
+  /// Saves a specific territory (e.g. captured by rival faction or cloud sync)
+  Future<void> saveTerritory(Territory territory) async {
+    await _territoryBox.put(territory.id, territory);
+    _captureEventController.add(territory);
+  }
+
   /// Wipe all territories (e.g. for testing)
   Future<void> resetTerritories() async {
     await _territoryBox.clear();

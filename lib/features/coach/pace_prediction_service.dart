@@ -35,7 +35,7 @@ class PacePredictionService {
     // Base distance starts at 2.5km for Level 1, scaling gradually with level and logged distance
     final double levelFactor = (profile.level - 1) * 0.45;
     final double historyFactor = math.min(3.0, profile.totalDistanceKm * 0.05);
-    final double streakBonus = math.min(1.0, profile.currentStreak * 0.08);
+    final double streakBonus = math.min(1.0, math.max(0, profile.currentStreak - 1) * 0.08);
 
     double targetDist = 2.5 + levelFactor + historyFactor + streakBonus;
     targetDist = double.parse(targetDist.clamp(1.5, 15.0).toStringAsFixed(1));

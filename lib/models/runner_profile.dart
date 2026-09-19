@@ -45,6 +45,7 @@ class RunnerProfile {
   /// Increments claimed hexes and awards +10 XP per hex
   bool claimHex() {
     totalHexesClaimed++;
+    _evaluateBadges();
     return addXp(10);
   }
 

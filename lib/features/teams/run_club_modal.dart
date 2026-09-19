@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import '../../main.dart';
+import 'team_service.dart';
 
 class RunClubModal extends StatefulWidget {
-  const RunClubModal({super.key});
+  final LatLng? userLocation;
+  const RunClubModal({super.key, this.userLocation});
 
-  static void show(BuildContext context) {
+  static void show(BuildContext context, {LatLng? userLocation}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -12,7 +15,7 @@ class RunClubModal extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (ctx) => const RunClubModal(),
+      builder: (ctx) => RunClubModal(userLocation: userLocation),
     );
   }
 
@@ -128,44 +131,8 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
   }
 
   Widget _buildNearbyRunnersTab() {
-    final nearbyRunners = [
-      {
-        'name': 'Nova_Strider',
-        'dist': '320m away',
-        'pace': '5\'12"/km',
-        'level': 4,
-        'status': 'Currently running in Sector 8a10',
-        'avatar': 'N',
-        'color': const Color(0xFF00F0FF),
-      },
-      {
-        'name': 'HexVeloCity',
-        'dist': '680m away',
-        'pace': '5\'45"/km',
-        'level': 6,
-        'status': 'Conquered 3 hexes today',
-        'avatar': 'H',
-        'color': const Color(0xFF8A2BE2),
-      },
-      {
-        'name': 'AeroKnight',
-        'dist': '1.2 km away',
-        'pace': '6\'10"/km',
-        'level': 2,
-        'status': 'Active warm-up',
-        'avatar': 'A',
-        'color': const Color(0xFFFF0055),
-      },
-      {
-        'name': 'CyberPhantom',
-        'dist': '1.8 km away',
-        'pace': '4\'55"/km',
-        'level': 9,
-        'status': 'On a 7-day streak',
-        'avatar': 'C',
-        'color': const Color(0xFF00FF88),
-      },
-    ];
+    final userPos = widget.userLocation ?? const LatLng(37.7749, -122.4194);
+    final nearbyRunners = TeamService().getNearbyRunners(userPos);
 
     return ListView(
       physics: const BouncingScrollPhysics(),
@@ -183,7 +150,7 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '4 Active runners conquering territory within 2.0 km of your coordinates',
+                  'Active runners conquering territory within 2.0 km of your live coordinates',
                   style: TextStyle(color: AppColors.textPrimary, fontSize: 12, height: 1.3),
                 ),
               ),
@@ -204,11 +171,11 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
               children: [
                 CircleAvatar(
                   radius: 22,
-                  backgroundColor: (runner['color'] as Color).withValues(alpha: 0.2),
+                  backgroundColor: runner.color.withValues(alpha: 0.2),
                   child: Text(
-                    runner['avatar'] as String,
+                    runner.avatar,
                     style: TextStyle(
-                      color: runner['color'] as Color,
+                      color: runner.color,
                       fontWeight: FontWeight.w900,
                       fontSize: 18,
                     ),
@@ -222,7 +189,7 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
                       Row(
                         children: [
                           Text(
-                            runner['name'] as String,
+                            runner.name,
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -237,7 +204,7 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              'Lvl ${runner['level']}',
+                              'Lvl ${runner.level}',
                               style: const TextStyle(
                                 color: AppColors.accent,
                                 fontSize: 10,
@@ -249,12 +216,12 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${runner['dist']} • Pace: ${runner['pace']}',
+                        '${runner.formattedDistanceTo(userPos)} • Pace: ${runner.pace}',
                         style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        runner['status'] as String,
+                        runner.status,
                         style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
                       ),
                     ],
@@ -270,7 +237,7 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('⚡ High-five sent to ${runner['name']}!'),
+                        content: Text('⚡ High-five sent to ${runner.name}!'),
                         duration: const Duration(seconds: 2),
                       ),
                     );

@@ -50,3 +50,7 @@ ios/Runner/GoogleService-Info.plist
 
 # Widget Preview related
 .widget_preview/
+
+# Local test database artifacts
+test_hive/
+test_hive_route/

@@ -11,6 +11,8 @@ import '../routing/route_service.dart';
 import '../security/anomaly_service.dart';
 import '../coach/pace_prediction_service.dart';
 import '../coach/llm_coach_service.dart';
+import '../coach/voice_coach_service.dart';
+import '../gameplay/rival_agent_service.dart';
 import '../../main.dart'; // For AppColors and animations
 import '../../core/utils/constants.dart';
 
@@ -30,14 +32,18 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final AnomalyService _anomalyService = AnomalyService();
   final PacePredictionService _paceService = PacePredictionService();
   final LLMCoachService _coachService = LLMCoachService();
+  final VoiceCoachService _voiceCoach = VoiceCoachService();
+  final RivalAgentService _rivalService = RivalAgentService();
   
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
+  StreamSubscription<List<RivalAgent>>? _rivalSub;
   
   LatLng? _currentLocation;
   String? _currentHexId;
   List<String> _capturedHexes = [];
   bool _isRunActive = false;
+  int _lastAnnouncedKm = 0;
 
   // AI Route Suggestion State
   SuggestedRoute? _activeSuggestedRoute;
@@ -112,6 +118,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           _updateHexagon(pos);
         });
         _mapController.move(_currentLocation!, 17.0);
+        _rivalService.initializeRivals(_currentLocation!);
+        _rivalService.startSimulation();
       }
     }
 
@@ -123,6 +131,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           _updateHexagon(pos);
         });
       }
+    });
+
+    _rivalSub = _rivalService.onRivalsUpdated.listen((_) {
+      if (mounted) setState(() {});
     });
   }
 
@@ -145,6 +157,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           final p1 = _runCoordinates[_runCoordinates.length - 2];
           final p2 = _runCoordinates.last;
           _runDistanceKm += (Geolocator.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude) / 1000.0);
+          
+          final int currentKmFloor = _runDistanceKm.floor();
+          if (currentKmFloor > _lastAnnouncedKm && currentKmFloor >= 1) {
+            _lastAnnouncedKm = currentKmFloor;
+            _voiceCoach.announceDistanceMilestone(currentKmFloor, _computeCurrentPace());
+          }
         }
       }
       
@@ -159,11 +177,20 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               setState(() {
                 _hexesClaimedThisRun++;
               });
+              _voiceCoach.announceHexConquered(_hexesClaimedThisRun);
             }
           });
         }
       }
     }
+  }
+
+  String _computeCurrentPace() {
+    if (_runDistanceKm <= 0 || _runDurationSeconds <= 0) return "6'00\"/km";
+    final double pace = (_runDurationSeconds / 60.0) / _runDistanceKm;
+    final int paceMin = pace.floor().clamp(2, 20);
+    final int paceSec = ((pace - paceMin) * 60).round().clamp(0, 59);
+    return "$paceMin'${paceSec.toString().padLeft(2, '0')}\"/km";
   }
 
   void _toggleRun() {
@@ -175,6 +202,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _hexesClaimedThisRun = 0;
         _runDistanceKm = 0.0;
         _runDurationSeconds = 0;
+        _lastAnnouncedKm = 0;
         _runCoordinates.clear();
       });
 
@@ -188,12 +216,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       });
 
       showRunStartAnimation(context);
+      _voiceCoach.announceRunStart();
+
       if (_currentHexId != null) {
         _territoryService.captureTerritory(_currentHexId!).then((captured) {
           if (captured && mounted) {
             setState(() {
               _hexesClaimedThisRun++;
             });
+            _voiceCoach.announceHexConquered(_hexesClaimedThisRun);
           }
         });
       }
@@ -208,6 +239,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _isRunActive = false;
       });
 
+      _voiceCoach.announceRunComplete(finalDistance, finalHexes);
       _territoryService.addRunDistance(finalDistance);
       _showRunCompleteSummary(finalDistance, finalSeconds, finalHexes);
     }
@@ -396,6 +428,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void dispose() {
     _positionSub?.cancel();
     _territorySub?.cancel();
+    _rivalSub?.cancel();
+    _rivalService.stopSimulation();
     _runTimer?.cancel();
     _locationService.stopTracking();
     super.dispose();
@@ -409,24 +443,26 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   List<Polygon> _buildPolygons() {
     final List<Polygon> polygons = [];
+    final territories = _territoryService.getCapturedTerritoryObjects();
+    final Set<String> renderedHexes = {};
     
-    // Draw all permanently captured hexes
-    for (String hexId in _capturedHexes) {
-      final vertices = _h3Service.getHexagonVertices(hexId);
-      if (vertices.length == 6) {
+    // Draw all permanently captured hexes with their owner faction color
+    for (final territory in territories) {
+      if (territory.polygon.length == 6) {
         polygons.add(
           Polygon(
-            points: vertices,
-            color: AppColors.accent.withValues(alpha: 0.35),
-            borderColor: AppColors.accent,
+            points: territory.polygon,
+            color: territory.color.withValues(alpha: 0.35),
+            borderColor: territory.color,
             borderStrokeWidth: 2.0,
           ),
         );
+        renderedHexes.add(territory.id);
       }
     }
     
     // Draw current outline if not already captured
-    if (_currentHexId != null && !_capturedHexes.contains(_currentHexId!)) {
+    if (_currentHexId != null && !renderedHexes.contains(_currentHexId!)) {
       final vertices = _h3Service.getHexagonVertices(_currentHexId!);
       if (vertices.length == 6) {
         polygons.add(
@@ -441,6 +477,75 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
     
     return polygons;
+  }
+
+  List<Marker> _buildMarkers() {
+    final List<Marker> markers = [];
+    
+    // User Location Marker
+    if (_currentLocation != null) {
+      markers.add(
+        Marker(
+          point: _currentLocation!,
+          width: 40,
+          height: 40,
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.accent,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.6),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // AI Rival Runners Markers
+    for (final rival in _rivalService.rivals) {
+      markers.add(
+        Marker(
+          point: rival.currentPosition,
+          width: 34,
+          height: 34,
+          child: Tooltip(
+            message: '${rival.name} (${rival.faction})',
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: rival.color,
+                border: Border.all(color: Colors.white, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: rival.color.withValues(alpha: 0.6),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  rival.name.substring(0, 1),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return markers;
   }
 
   @override
@@ -495,29 +600,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         ],
                       ),
                       
-                    // Current User Location Marker
+                    // Live Markers (Player & Rival Runners)
                     MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _currentLocation!,
-                          width: 40,
-                          height: 40,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.accent,
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.accent.withValues(alpha: 0.6),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                      markers: _buildMarkers(),
                     ),
                   ],
                 ),
