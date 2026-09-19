@@ -25,7 +25,7 @@ class RunClubModal extends StatefulWidget {
 
 class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final Set<String> _joinedClubs = {'Cyber Dawn Saturday 10K'};
+  final Set<String> _joinedClubs = {'Solar Dawn Saturday 10K'};
 
   @override
   void initState() {
@@ -255,22 +255,22 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
   Widget _buildWeekendClubsTab() {
     final clubs = [
       {
-        'title': 'Cyber Dawn Saturday 10K',
+        'title': 'Solar Dawn Saturday 10K',
         'schedule': 'Every Saturday • 6:30 AM',
         'location': 'Central Park Metro Gate 4',
         'members': 38,
         'pace': 'Moderate (5:30 - 6:30 min/km)',
         'tag': 'WEEKEND 10K',
-        'color': const Color(0xFF00F0FF),
+        'color': AppColors.accent, // Volt Lime
       },
       {
-        'title': 'Midnight Neon 5K Jog',
+        'title': 'Twilight Sprint 5K Interval',
         'schedule': 'Every Friday Night • 8:00 PM',
-        'location': 'Cyber City Skyline Loop',
+        'location': 'Downtown Track & Skyline Loop',
         'members': 62,
-        'pace': 'Social / Casual (6:30 - 7:30 min/km)',
-        'tag': 'NIGHT RUN',
-        'color': const Color(0xFF8A2BE2),
+        'pace': 'Tempo / Speed (4:30 - 5:30 min/km)',
+        'tag': 'SPEED WORK',
+        'color': AppColors.secondary, // Solar Sprint Orange
       },
       {
         'title': 'Sunday Long Run & Recovery',
@@ -279,7 +279,7 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
         'members': 24,
         'pace': 'Endurance (5:45 - 6:45 min/km)',
         'tag': 'HALF MARATHON',
-        'color': const Color(0xFFFF9900),
+        'color': const Color(0xFF00E676), // Emerald
       },
       {
         'title': 'Sector Domination Turf War',
@@ -288,7 +288,7 @@ class _RunClubModalState extends State<RunClubModal> with SingleTickerProviderSt
         'members': 45,
         'pace': 'Competitive Conquest',
         'tag': 'HEX BATTLE',
-        'color': const Color(0xFFFF0055),
+        'color': const Color(0xFFFF1744), // Hot Crimson
       },
     ];
 

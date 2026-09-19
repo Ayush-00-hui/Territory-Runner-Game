@@ -67,8 +67,8 @@ class RivalAgentService {
       {
         'id': 'rival_syndicate_1',
         'name': 'Syndicate_Stride',
-        'faction': 'Neon Syndicate',
-        'color': const Color(0xFF8A2BE2), // Electric Violet
+        'faction': 'Solar Syndicate',
+        'color': const Color(0xFFFF9100), // Solar Amber
         'level': 6,
       },
       {

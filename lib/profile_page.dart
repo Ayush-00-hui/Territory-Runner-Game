@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'features/gameplay/territory_service.dart';
 import 'models/runner_profile.dart';
 import 'services/firebase_service.dart';
+import 'main.dart'; // For AppColors
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -29,7 +30,7 @@ class _ProfilePageState extends State<ProfilePage>
 
     _pageController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 900),
     );
 
     _fadeAnimation = CurvedAnimation(
@@ -43,7 +44,7 @@ class _ProfilePageState extends State<ProfilePage>
     ).animate(
       CurvedAnimation(
         parent: _pageController,
-        curve: const Interval(0.00, 0.30, curve: Curves.easeOutCubic),
+        curve: const Interval(0.00, 0.35, curve: Curves.easeOutCubic),
       ),
     );
 
@@ -53,7 +54,7 @@ class _ProfilePageState extends State<ProfilePage>
     ).animate(
       CurvedAnimation(
         parent: _pageController,
-        curve: const Interval(0.15, 0.45, curve: Curves.easeOutCubic),
+        curve: const Interval(0.20, 0.55, curve: Curves.easeOutCubic),
       ),
     );
 
@@ -63,7 +64,7 @@ class _ProfilePageState extends State<ProfilePage>
     ).animate(
       CurvedAnimation(
         parent: _pageController,
-        curve: const Interval(0.30, 0.60, curve: Curves.easeOutCubic),
+        curve: const Interval(0.40, 0.75, curve: Curves.easeOutCubic),
       ),
     );
 
@@ -102,7 +103,7 @@ class _ProfilePageState extends State<ProfilePage>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF14151F),
+      backgroundColor: AppColors.bgElevated,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
@@ -121,37 +122,50 @@ class _ProfilePageState extends State<ProfilePage>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.shield_rounded, color: Color(0xFF00F0FF), size: 22),
+                            Icon(Icons.sports_score_rounded, color: AppColors.accent, size: 24),
                             SizedBox(width: 8),
                             Text(
-                              'Runner Cloud Login',
+                              'ATHLETE CLOUD SYNC',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.1,
                               ),
                             ),
                           ],
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white70),
+                          icon: const Icon(Icons.close, color: Colors.white60),
                           onPressed: () => Navigator.pop(ctx),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
 
                     // Auth Method Selector (Phone OTP vs Email)
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1C1D2A),
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
                       ),
                       child: Row(
                         children: [
@@ -164,17 +178,17 @@ class _ProfilePageState extends State<ProfilePage>
                                 });
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                padding: const EdgeInsets.symmetric(vertical: 11),
                                 decoration: BoxDecoration(
-                                  color: authMode == 0 ? const Color(0xFF00F0FF) : Colors.transparent,
+                                  color: authMode == 0 ? AppColors.accent : Colors.transparent,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Center(
                                   child: Text(
-                                    '📱 Phone (SMS OTP)',
+                                    '📱 Mobile OTP',
                                     style: TextStyle(
-                                      color: authMode == 0 ? Colors.black : Colors.white70,
-                                      fontWeight: FontWeight.bold,
+                                      color: authMode == 0 ? Colors.black : AppColors.textSecondary,
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 13,
                                     ),
                                   ),
@@ -190,17 +204,17 @@ class _ProfilePageState extends State<ProfilePage>
                                 });
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                padding: const EdgeInsets.symmetric(vertical: 11),
                                 decoration: BoxDecoration(
-                                  color: authMode == 1 ? const Color(0xFF00F0FF) : Colors.transparent,
+                                  color: authMode == 1 ? AppColors.accent : Colors.transparent,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Center(
                                   child: Text(
                                     '✉️ Email Login',
                                     style: TextStyle(
-                                      color: authMode == 1 ? Colors.black : Colors.white70,
-                                      fontWeight: FontWeight.bold,
+                                      color: authMode == 1 ? Colors.black : AppColors.textSecondary,
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 13,
                                     ),
                                   ),
@@ -217,29 +231,30 @@ class _ProfilePageState extends State<ProfilePage>
                       // --- PHONE OTP MODE ---
                       if (!codeSent) ...[
                         const Text(
-                          'Enter your mobile number to receive a one-time SMS verification code:',
-                          style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.3),
+                          'Enter your mobile number to verify your runner profile and sync conquered sectors:',
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         TextField(
                           controller: phoneController,
                           keyboardType: TextInputType.phone,
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                           decoration: InputDecoration(
-                            labelText: 'Phone Number (with country code e.g. +91...)',
-                            labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
-                            prefixIcon: const Icon(Icons.phone, color: Color(0xFF00F0FF)),
+                            labelText: 'Mobile Number (+ country code e.g. +91...)',
+                            labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                            prefixIcon: const Icon(Icons.phone_iphone, color: AppColors.accent),
                             filled: true,
-                            fillColor: const Color(0xFF1C1D2A),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                            fillColor: AppColors.surface,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00F0FF),
+                            backgroundColor: AppColors.accent,
                             foregroundColor: Colors.black,
-                            minimumSize: const Size.fromHeight(50),
+                            minimumSize: const Size.fromHeight(52),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           onPressed: isLoading
@@ -274,23 +289,21 @@ class _ProfilePageState extends State<ProfilePage>
                                         showDialog(
                                           context: context,
                                           builder: (ctx) => AlertDialog(
-                                            backgroundColor: const Color(0xFF14151F),
-                                            title: const Text('Firebase Phone Auth Notice', style: TextStyle(color: Colors.white)),
+                                            backgroundColor: AppColors.surface,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                            title: const Text('Athlete Auth Notice', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                                             content: Text(
                                               'Firebase returned: ${e.message ?? e.code}\n\n'
-                                              'To fix real SMS OTP:\n'
-                                              '1. Add SHA-256 fingerprint in Firebase Console.\n'
-                                              '2. Or add "$phone" under Firebase -> Authentication -> Phone numbers for testing (with OTP 123456).\n\n'
-                                              'Would you like to continue with Demo Login?',
-                                              style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                                              'To authenticate seamlessly in testing, you can tap Demo Login below.',
+                                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
                                             ),
                                             actions: [
                                               TextButton(
                                                 onPressed: () => Navigator.pop(ctx),
-                                                child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+                                                child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
                                               ),
                                               ElevatedButton(
-                                                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00F0FF), foregroundColor: Colors.black),
+                                                style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.black),
                                                 onPressed: () async {
                                                   Navigator.pop(ctx);
                                                   final profile = _territoryService.getProfile();
@@ -300,11 +313,11 @@ class _ProfilePageState extends State<ProfilePage>
                                                     Navigator.pop(context);
                                                     setState(() {});
                                                     ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('🎉 Logged in with Phone!')),
+                                                      const SnackBar(content: Text('⚡ Athlete Profile Synced!')),
                                                     );
                                                   }
                                                 },
-                                                child: const Text('Demo Login'),
+                                                child: const Text('Demo Login', style: TextStyle(fontWeight: FontWeight.bold)),
                                               ),
                                             ],
                                           ),
@@ -325,35 +338,36 @@ class _ProfilePageState extends State<ProfilePage>
                                 },
                           child: isLoading
                               ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                              : const Text('Send SMS OTP', style: TextStyle(fontWeight: FontWeight.bold)),
+                              : const Text('Send SMS Verification Code', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                         ),
                       ] else ...[
                         Text(
                           'Enter the 6-digit OTP code sent to ${phoneController.text}:',
-                          style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         TextField(
                           controller: otpController,
                           keyboardType: TextInputType.number,
                           maxLength: 6,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontSize: 22, letterSpacing: 8, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
                           decoration: InputDecoration(
                             counterText: '',
                             hintText: '••••••',
                             hintStyle: const TextStyle(color: Colors.white24),
                             filled: true,
-                            fillColor: const Color(0xFF1C1D2A),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                            fillColor: AppColors.surface,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF00F0FF),
+                            backgroundColor: AppColors.accent,
                             foregroundColor: Colors.black,
-                            minimumSize: const Size.fromHeight(50),
+                            minimumSize: const Size.fromHeight(52),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           onPressed: isLoading
@@ -377,7 +391,7 @@ class _ProfilePageState extends State<ProfilePage>
                                       Navigator.pop(ctx);
                                       setState(() {});
                                       ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('🎉 Logged in & synced successfully!')),
+                                        const SnackBar(content: Text('⚡ Athlete Profile Synced & Connected!')),
                                       );
                                     }
                                   } catch (e) {
@@ -391,14 +405,14 @@ class _ProfilePageState extends State<ProfilePage>
                                 },
                           child: isLoading
                               ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                              : const Text('Verify OTP & Enter Grid', style: TextStyle(fontWeight: FontWeight.bold)),
+                              : const Text('Verify Code & Connect', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                         ),
                         TextButton(
                           onPressed: () {
                             setModalState(() => codeSent = false);
                           },
                           child: const Center(
-                            child: Text('Change Phone Number', style: TextStyle(color: Color(0xFF00F0FF))),
+                            child: Text('Change Phone Number', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
                           ),
                         ),
                       ],
@@ -409,14 +423,15 @@ class _ProfilePageState extends State<ProfilePage>
                           controller: nameController,
                           style: const TextStyle(color: Colors.white),
                           decoration: InputDecoration(
-                            labelText: 'Runner Nickname',
-                            labelStyle: const TextStyle(color: Colors.white60),
+                            labelText: 'Athlete Display Name',
+                            labelStyle: const TextStyle(color: AppColors.textMuted),
                             filled: true,
-                            fillColor: const Color(0xFF1C1D2A),
+                            fillColor: AppColors.surface,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
                           ),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                       ],
                       TextField(
                         controller: emailController,
@@ -424,31 +439,33 @@ class _ProfilePageState extends State<ProfilePage>
                         keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                           labelText: 'Email Address',
-                          labelStyle: const TextStyle(color: Colors.white60),
+                          labelStyle: const TextStyle(color: AppColors.textMuted),
                           filled: true,
-                          fillColor: const Color(0xFF1C1D2A),
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: passController,
                         obscureText: true,
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Password',
-                          labelStyle: const TextStyle(color: Colors.white60),
+                          labelStyle: const TextStyle(color: AppColors.textMuted),
                           filled: true,
-                          fillColor: const Color(0xFF1C1D2A),
+                          fillColor: AppColors.surface,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF00F0FF),
+                          backgroundColor: AppColors.accent,
                           foregroundColor: Colors.black,
-                          minimumSize: const Size.fromHeight(50),
+                          minimumSize: const Size.fromHeight(52),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         onPressed: () async {
@@ -457,7 +474,7 @@ class _ProfilePageState extends State<ProfilePage>
                               await _firebaseService.signUpWithEmail(
                                 emailController.text.trim(),
                                 passController.text.trim(),
-                                nameController.text.trim().isEmpty ? 'CyberRunner' : nameController.text.trim(),
+                                nameController.text.trim().isEmpty ? 'StrideRunner' : nameController.text.trim(),
                               );
                             } else {
                               await _firebaseService.signInWithEmail(
@@ -469,7 +486,7 @@ class _ProfilePageState extends State<ProfilePage>
                               Navigator.pop(ctx);
                               setState(() {});
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('🎉 Logged in & synced successfully!')),
+                                const SnackBar(content: Text('⚡ Athlete Account Synced!')),
                               );
                             }
                           } catch (e) {
@@ -481,11 +498,11 @@ class _ProfilePageState extends State<ProfilePage>
                           }
                         },
                         child: Text(
-                          isSignUp ? 'Create Cloud Account' : 'Log In with Email',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          isSignUp ? 'Create Athlete Profile' : 'Log In with Email',
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 10),
                       TextButton(
                         onPressed: () {
                           setModalState(() {
@@ -494,8 +511,8 @@ class _ProfilePageState extends State<ProfilePage>
                         },
                         child: Center(
                           child: Text(
-                            isSignUp ? 'Already have an account? Sign In' : 'New runner? Create Account',
-                            style: const TextStyle(color: Color(0xFF00F0FF)),
+                            isSignUp ? 'Already registered? Log In' : 'New runner? Create Profile',
+                            style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -512,31 +529,26 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
-    const Color bg = Color(0xFF090A0F);
-    const Color card = Color(0xFF14151F);
-    const Color accent = Color(0xFF00F0FF);
-    const Color accent2 = Color(0xFF8A2BE2);
-    const Color textPrimary = Color(0xFFF8FAFC);
-    const Color textSecondary = Color(0xFFA0AEC0);
-
     return Scaffold(
-      backgroundColor: bg,
+      backgroundColor: AppColors.bgDeep,
       appBar: AppBar(
-        backgroundColor: bg,
+        backgroundColor: AppColors.bgDeep,
         elevation: 0,
         title: const Text(
-          'Runner Profile',
+          'ATHLETE HUB',
           style: TextStyle(
-            color: textPrimary,
-            fontWeight: FontWeight.bold,
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 17,
+            letterSpacing: 1.5,
           ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.cloud_sync, color: accent),
+            icon: const Icon(Icons.cloud_sync_outlined, color: AppColors.accent),
             onPressed: _showAuthDialog,
-            tooltip: 'Cloud Sync / Auth',
+            tooltip: 'Cloud Sync',
           ),
         ],
       ),
@@ -551,30 +563,28 @@ class _ProfilePageState extends State<ProfilePage>
           return FadeTransition(
             opacity: _fadeAnimation,
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // --- HERO ATHLETE CARD ---
                   SlideTransition(
                     position: _topSlideAnimation,
                     child: Container(
                       width: double.infinity,
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(24),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1D2440), Color(0xFF11182B)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.06),
+                          color: AppColors.border,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: accent.withValues(alpha: 0.15),
-                            blurRadius: 24,
-                            offset: const Offset(0, 12),
+                            color: Colors.black.withValues(alpha: 0.35),
+                            blurRadius: 20,
+                            offset: const Offset(0, 10),
                           ),
                         ],
                       ),
@@ -582,31 +592,28 @@ class _ProfilePageState extends State<ProfilePage>
                         children: [
                           Row(
                             children: [
+                              // Avatar Badge
                               Container(
-                                height: 72,
-                                width: 72,
+                                height: 68,
+                                width: 68,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: const LinearGradient(
-                                    colors: [accent, accent2],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
+                                  color: AppColors.accent,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: accent.withValues(alpha: 0.35),
-                                      blurRadius: 20,
-                                      spreadRadius: 1,
+                                      color: AppColors.accent.withValues(alpha: 0.3),
+                                      blurRadius: 18,
+                                      spreadRadius: 2,
                                     ),
                                   ],
                                 ),
                                 child: Center(
                                   child: Text(
-                                    profile.username.isNotEmpty ? profile.username[0].toUpperCase() : 'C',
+                                    profile.username.isNotEmpty ? profile.username[0].toUpperCase() : 'R',
                                     style: const TextStyle(
                                       color: Colors.black,
                                       fontSize: 28,
-                                      fontWeight: FontWeight.w800,
+                                      fontWeight: FontWeight.w900,
                                     ),
                                   ),
                                 ),
@@ -617,55 +624,59 @@ class _ProfilePageState extends State<ProfilePage>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      profile.username,
+                                      profile.username.toUpperCase(),
                                       style: const TextStyle(
-                                        color: textPrimary,
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        letterSpacing: 0.5,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
-                                    Text(
-                                      'Territory Runner • Level ${profile.level}',
-                                      style: const TextStyle(
-                                        color: textSecondary,
-                                        fontSize: 13,
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface2,
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '${profile.totalHexesClaimed} Hexagons Claimed',
-                                      style: const TextStyle(
-                                        color: textPrimary,
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
+                                      child: Text(
+                                        'LEVEL ${profile.level} ATHLETE',
+                                        style: const TextStyle(
+                                          color: AppColors.accent,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.8,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
+                              // Streak Flame Badge
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 12,
                                   vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.07),
+                                  color: AppColors.secondary.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4)),
                                 ),
                                 child: Row(
                                   children: [
                                     const Icon(
                                       Icons.local_fire_department,
-                                      color: Colors.orange,
-                                      size: 18,
+                                      color: AppColors.secondary,
+                                      size: 20,
                                     ),
-                                    const SizedBox(width: 6),
+                                    const SizedBox(width: 4),
                                     Text(
                                       '${profile.currentStreak}',
                                       style: const TextStyle(
-                                        color: textPrimary,
-                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w900,
                                       ),
                                     ),
                                   ],
@@ -673,7 +684,8 @@ class _ProfilePageState extends State<ProfilePage>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 20),
+                          // XP Bar
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -681,31 +693,33 @@ class _ProfilePageState extends State<ProfilePage>
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   const Text(
-                                    'XP Progress',
+                                    'TIER PROGRESSION',
                                     style: TextStyle(
-                                      color: textSecondary,
-                                      fontSize: 13,
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 1.0,
                                     ),
                                   ),
                                   Text(
                                     '${profile.xp} / $nextLevelXp XP',
                                     style: const TextStyle(
-                                      color: textPrimary,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
                                     ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 10),
+                              const SizedBox(height: 8),
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(20),
+                                borderRadius: BorderRadius.circular(10),
                                 child: LinearProgressIndicator(
                                   value: xpProgress,
-                                  minHeight: 10,
-                                  backgroundColor: Colors.white.withValues(alpha: 0.08),
+                                  minHeight: 8,
+                                  backgroundColor: AppColors.surface2,
                                   valueColor: const AlwaysStoppedAnimation<Color>(
-                                    accent,
+                                    AppColors.accent,
                                   ),
                                 ),
                               ),
@@ -716,14 +730,16 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
+                  // --- METRIC OVERVIEW GRID ---
                   const Text(
-                    'Overview',
+                    'PERFORMANCE TELEMETRY',
                     style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.4,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -739,41 +755,47 @@ class _ProfilePageState extends State<ProfilePage>
                       childAspectRatio: 1.45,
                       children: [
                         _StatCard(
-                          icon: Icons.route,
-                          title: 'Total Distance',
-                          value: '${profile.totalDistanceKm.toStringAsFixed(1)} km',
+                          icon: Icons.route_rounded,
+                          title: 'TOTAL DISTANCE',
+                          value: '${profile.totalDistanceKm.toStringAsFixed(1)} KM',
+                          iconColor: AppColors.accent,
                           delay: 0,
                         ),
                         _StatCard(
-                          icon: Icons.bolt,
-                          title: 'Current Streak',
-                          value: '${profile.currentStreak} Days',
-                          delay: 100,
+                          icon: Icons.local_fire_department_rounded,
+                          title: 'ACTIVE STREAK',
+                          value: '${profile.currentStreak} DAYS',
+                          iconColor: AppColors.secondary,
+                          delay: 80,
                         ),
                         _StatCard(
-                          icon: Icons.map,
-                          title: 'Territories',
-                          value: '$territoriesCount Hexes',
-                          delay: 200,
+                          icon: Icons.hexagon_outlined,
+                          title: 'SECTORS SECURED',
+                          value: '$territoriesCount HEXES',
+                          iconColor: AppColors.accent,
+                          delay: 160,
                         ),
                         _StatCard(
-                          icon: Icons.military_tech,
-                          title: 'Level & Tier',
-                          value: 'Lvl ${profile.level}',
-                          delay: 300,
+                          icon: Icons.military_tech_rounded,
+                          title: 'ATHLETE TIER',
+                          value: 'LVL ${profile.level}',
+                          iconColor: AppColors.accent,
+                          delay: 240,
                         ),
                       ],
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
+                  // --- TROPHY CASE & ACHIEVEMENTS ---
                   const Text(
-                    'Achievements & Badges',
+                    'TROPHY CASE & BADGES',
                     style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.4,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -783,28 +805,28 @@ class _ProfilePageState extends State<ProfilePage>
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: card,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                        border: Border.all(color: AppColors.border),
                       ),
                       child: Column(
                         children: [
                           _AchievementTile(
-                            icon: Icons.emoji_events,
+                            icon: Icons.emoji_events_rounded,
                             title: 'First Conquest',
-                            subtitle: 'Claim your first hexagonal sector',
+                            subtitle: 'Claim your first hexagonal sector on foot',
                             unlocked: profile.badges.contains('First Conquest'),
                           ),
                           const SizedBox(height: 10),
                           _AchievementTile(
-                            icon: Icons.local_fire_department,
+                            icon: Icons.military_tech_rounded,
                             title: 'Sector Commander',
-                            subtitle: 'Claim 25 unique hexagonal territories',
+                            subtitle: 'Conquer 25 unique hexagonal territories',
                             unlocked: profile.badges.contains('Sector Commander'),
                           ),
                           const SizedBox(height: 10),
                           _AchievementTile(
-                            icon: Icons.public,
+                            icon: Icons.bolt_rounded,
                             title: '10K Centurion',
                             subtitle: 'Log over 10.0 total kilometers on foot',
                             unlocked: profile.badges.contains('10K Centurion'),
@@ -814,14 +836,16 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
+                  // --- SETTINGS & DATA SYNC ---
                   const Text(
-                    'Settings & Cloud',
+                    'DATA & PLATFORM',
                     style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.4,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -830,28 +854,28 @@ class _ProfilePageState extends State<ProfilePage>
                     position: _settingsSlideAnimation,
                     child: Container(
                       decoration: BoxDecoration(
-                        color: card,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+                        border: Border.all(color: AppColors.border),
                       ),
                       child: Column(
                         children: [
                           _OptionTile(
-                            icon: Icons.cloud_done_outlined,
+                            icon: Icons.cloud_done_rounded,
                             title: _firebaseService.isInitialized
-                                ? 'Firebase Connected (${_firebaseService.currentUsername})'
-                                : 'Offline Storage (Tap to Sign In)',
+                                ? 'Cloud Connected (${_firebaseService.currentUsername})'
+                                : 'Offline Local Storage (Tap to Sync)',
                             onTap: _showAuthDialog,
                           ),
-                          const Divider(height: 1, color: Color(0x22FFFFFF)),
+                          const Divider(height: 1, color: AppColors.border),
                           _OptionTile(
-                            icon: Icons.refresh,
-                            title: 'Reset Local Territories (Dev)',
+                            icon: Icons.refresh_rounded,
+                            title: 'Reset Local Territories (Dev Mode)',
                             onTap: () async {
                               await _territoryService.resetTerritories();
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Territories reset.')),
+                                  const SnackBar(content: Text('Territories reset to initial grid.')),
                                 );
                               }
                             },
@@ -874,25 +898,22 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final String title;
   final String value;
+  final Color iconColor;
   final int delay;
 
   const _StatCard({
     required this.icon,
     required this.title,
     required this.value,
+    required this.iconColor,
     required this.delay,
   });
 
   @override
   Widget build(BuildContext context) {
-    const Color card = Color(0xFF14151F);
-    const Color textPrimary = Colors.white;
-    const Color textSecondary = Color(0xFFA0AEC0);
-    const Color accent = Color(0xFF00F0FF);
-
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.94, end: 1.0),
-      duration: Duration(milliseconds: 500 + delay),
+      duration: Duration(milliseconds: 400 + delay),
       curve: Curves.easeOutBack,
       builder: (context, scale, child) {
         return Transform.scale(
@@ -901,38 +922,34 @@ class _StatCard extends StatelessWidget {
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: card,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: accent, size: 22),
+            Icon(icon, color: iconColor, size: 22),
             const Spacer(),
             Text(
               value,
               style: const TextStyle(
-                color: textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+                color: Colors.white,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.4,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               title,
               style: const TextStyle(
-                color: textSecondary,
-                fontSize: 12,
+                color: AppColors.textMuted,
+                fontSize: 10,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
               ),
             ),
           ],
@@ -957,31 +974,28 @@ class _AchievementTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color textPrimary = Colors.white;
-    const Color textSecondary = Color(0xFFA0AEC0);
-
     final Color iconBg =
-        unlocked ? const Color(0xFF00F0FF) : Colors.white.withValues(alpha: 0.06);
-    final Color iconColor = unlocked ? Colors.black : Colors.grey;
+        unlocked ? AppColors.accent : AppColors.surface2;
+    final Color iconColor = unlocked ? Colors.black : Colors.white30;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOut,
+      duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
+        color: AppColors.surface2.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: unlocked ? AppColors.accent.withValues(alpha: 0.3) : AppColors.border),
       ),
       child: Row(
         children: [
           Container(
-            height: 46,
-            width: 46,
+            height: 44,
+            width: 44,
             decoration: BoxDecoration(
               color: iconBg,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: iconColor),
+            child: Icon(icon, color: iconColor, size: 22),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -991,15 +1005,16 @@ class _AchievementTile extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    color: textPrimary,
-                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 3),
                 Text(
                   subtitle,
                   style: const TextStyle(
-                    color: textSecondary,
+                    color: AppColors.textSecondary,
                     fontSize: 12,
                   ),
                 ),
@@ -1007,8 +1022,8 @@ class _AchievementTile extends StatelessWidget {
             ),
           ),
           Icon(
-            unlocked ? Icons.check_circle : Icons.lock_outline,
-            color: unlocked ? const Color(0xFF00F0FF) : Colors.grey,
+            unlocked ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
+            color: unlocked ? AppColors.accent : Colors.white24,
             size: 20,
           ),
         ],
@@ -1030,24 +1045,22 @@ class _OptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color titleColor = Colors.white;
-
     return Material(
       color: Colors.transparent,
       child: ListTile(
-        leading: Icon(icon, color: const Color(0xFF00F0FF)),
+        leading: Icon(icon, color: AppColors.accent, size: 22),
         title: Text(
           title,
           style: const TextStyle(
-            color: titleColor,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
+            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
           ),
         ),
-        trailing: Icon(
+        trailing: const Icon(
           Icons.arrow_forward_ios_rounded,
-          size: 16,
-          color: titleColor.withValues(alpha: 0.5),
+          size: 14,
+          color: AppColors.textMuted,
         ),
         onTap: onTap,
       ),

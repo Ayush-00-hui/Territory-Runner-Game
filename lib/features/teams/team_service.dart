@@ -48,10 +48,10 @@ class TeamService {
   List<NearbyRunner> getNearbyRunners(LatLng userPos) {
     // Generate realistic proximity offsets around user's coordinates
     final offsets = [
-      {'dLat': 0.0028, 'dLng': 0.0019, 'name': 'Nova_Strider', 'pace': "5'12\"/km", 'lvl': 4, 'avatar': 'N', 'color': const Color(0xFF00F0FF), 'status': 'Running in your sector'},
-      {'dLat': -0.0045, 'dLng': 0.0032, 'name': 'HexVeloCity', 'pace': "5'45\"/km", 'lvl': 6, 'avatar': 'H', 'color': const Color(0xFF8A2BE2), 'status': 'Conquered 3 hexes today'},
-      {'dLat': 0.0075, 'dLng': -0.0062, 'name': 'AeroKnight', 'pace': "6'10\"/km", 'lvl': 2, 'avatar': 'A', 'color': const Color(0xFFFF0055), 'status': 'Active warm-up'},
-      {'dLat': -0.0110, 'dLng': -0.0090, 'name': 'CyberPhantom', 'pace': "4'55\"/km", 'lvl': 9, 'avatar': 'C', 'color': const Color(0xFF00FF88), 'status': 'On a 7-day streak'},
+      {'dLat': 0.0028, 'dLng': 0.0019, 'name': 'Nova_Strider', 'pace': "5'12\"/km", 'lvl': 4, 'avatar': 'N', 'color': const Color(0xFFCCFF00), 'status': 'Running in your sector'},
+      {'dLat': -0.0045, 'dLng': 0.0032, 'name': 'HexVeloCity', 'pace': "5'45\"/km", 'lvl': 6, 'avatar': 'H', 'color': const Color(0xFFFF5722), 'status': 'Conquered 3 hexes today'},
+      {'dLat': 0.0075, 'dLng': -0.0062, 'name': 'AeroKnight', 'pace': "6'10\"/km", 'lvl': 2, 'avatar': 'A', 'color': const Color(0xFFFF1744), 'status': 'Active warm-up'},
+      {'dLat': -0.0110, 'dLng': -0.0090, 'name': 'SprintPhantom', 'pace': "4'55\"/km", 'lvl': 9, 'avatar': 'S', 'color': const Color(0xFF00E676), 'status': 'On a 7-day streak'},
     ];
 
     return offsets.map((data) {

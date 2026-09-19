@@ -17,7 +17,7 @@ class Territory {
     required this.polygon,
     required this.areaSqMeters,
     required this.capturedAt,
-    this.color = const Color(0xFF00F0FF),
+    this.color = const Color(0xFFCCFF00),
     this.isPendingReview = false,
   });
 
@@ -66,7 +66,7 @@ class Territory {
       capturedAt: json['capturedAt'] != null
           ? DateTime.parse(json['capturedAt'] as String)
           : DateTime.now(),
-      color: json['color'] != null ? Color(json['color'] as int) : const Color(0xFF00F0FF),
+      color: json['color'] != null ? Color(json['color'] as int) : const Color(0xFFCCFF00),
       isPendingReview: json['isPendingReview'] as bool? ?? false,
     );
   }

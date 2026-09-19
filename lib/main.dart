@@ -22,17 +22,18 @@ void main() async {
 }
 
 abstract final class AppColors {
-  static const Color bgDeep = Color(0xFF090A0F); // Deep space background
-  static const Color bgElevated = Color(0xFF14151F); // Elevated dark surface
-  static const Color surface = Color(0xFF1C1D2A); // Glassmorphism base surface
-  static const Color surface2 = Color(0xFF26283A); // Slightly lighter surface
-  static const Color border = Color(0xFF3B3E52); // Subtle cyber borders
-  static const Color textPrimary = Color(0xFFF8FAFC); // Crisp white text
-  static const Color textSecondary = Color(0xFFA0AEC0); // Muted slate text
-  static const Color textMuted = Color(0xFF718096); // Very muted text
-  static const Color accent = Color(0xFF00F0FF); // Neon Cyan
-  static const Color accentSecondary = Color(0xFF8A2BE2); // Electric Violet
-  static const Color accentGlow = Color(0x3300F0FF); // Cyan glow
+  static const Color bgDeep = Color(0xFF0C0D10); // Carbon matte black
+  static const Color bgElevated = Color(0xFF14151B); // Elevated performance dark surface
+  static const Color surface = Color(0xFF1B1D25); // Premium athletic plate
+  static const Color surface2 = Color(0xFF242733); // High-contrast metric card
+  static const Color border = Color(0xFF2E313D); // Subtle athletic border
+  static const Color textPrimary = Color(0xFFFFFFFF); // Crisp pure white text
+  static const Color textSecondary = Color(0xFF94A3B8); // Muted athletic slate text
+  static const Color textMuted = Color(0xFF64748B); // Low-emphasis text
+  static const Color accent = Color(0xFFCCFF00); // High-Vis Volt Lime (Nike NRC accent)
+  static const Color accentSecondary = Color(0xFFFF5722); // Solar Sprint Orange (Heat / Streak)
+  static const Color secondary = Color(0xFFFF5722); // Solar Sprint Orange alias
+  static const Color accentGlow = Color(0x33CCFF00); // Volt glow
 }
 
 Path _runPreviewPath(Size size) {
@@ -990,15 +991,15 @@ class _StartRunButtonState extends State<_StartRunButton>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.play_arrow_rounded, size: 28, color: Colors.white),
+                  Icon(Icons.bolt_rounded, size: 28, color: Color(0xFF0C0D10)),
                   SizedBox(width: 8),
                   Text(
-                    'START RUN',
+                    'START CONQUEST',
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: 1.6,
-                      color: Colors.white,
+                      color: Color(0xFF0C0D10),
                     ),
                   ),
                 ],

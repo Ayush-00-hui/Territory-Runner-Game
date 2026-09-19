@@ -586,7 +586,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         polylines: [
                           Polyline(
                             points: _activeSuggestedRoute!.polyline,
-                            color: const Color(0xFF00F0FF),
+                            color: AppColors.accent,
                             strokeWidth: 4.5,
                           ),
                         ],
