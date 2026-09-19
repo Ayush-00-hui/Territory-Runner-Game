@@ -1,35 +1,129 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../models/runner_profile.dart';
+import '../../models/territory.dart';
+import '../../services/firebase_service.dart';
+import 'h3_service.dart';
 
 class TerritoryService {
   static final TerritoryService _instance = TerritoryService._internal();
   factory TerritoryService() => _instance;
 
-  late final Box<String> _box;
+  late final Box<Territory> _territoryBox;
+  late final Box<RunnerProfile> _profileBox;
+  final H3Service _h3Service = H3Service();
+  final FirebaseService _firebaseService = FirebaseService();
+
+  final StreamController<Territory> _captureEventController = StreamController<Territory>.broadcast();
+  Stream<Territory> get onTerritoryCaptured => _captureEventController.stream;
 
   TerritoryService._internal() {
-    _box = Hive.box<String>('territories');
+    _territoryBox = Hive.box<Territory>('territories_v2');
+    _profileBox = Hive.box<RunnerProfile>('profile');
+    _initProfileIfNeeded();
   }
 
-  /// Returns all currently captured hex IDs
+  void _initProfileIfNeeded() {
+    if (_profileBox.isEmpty) {
+      _profileBox.put(
+        'current_user',
+        RunnerProfile(
+          id: _firebaseService.currentUserId,
+          username: _firebaseService.currentUsername,
+          totalDistanceKm: 0.0,
+          xp: 0,
+          level: 1,
+          badges: ['Cyber Rookie'],
+          totalHexesClaimed: 0,
+          currentStreak: 1,
+        ),
+      );
+    }
+  }
+
+  /// Returns active runner profile
+  RunnerProfile getProfile() {
+    _initProfileIfNeeded();
+    return _profileBox.get('current_user')!;
+  }
+
+  /// Updates and saves the runner profile
+  Future<void> saveProfile(RunnerProfile profile) async {
+    await _profileBox.put('current_user', profile);
+    unawaited(_firebaseService.syncProfileToCloud(profile));
+  }
+
+  /// Returns all currently captured hex IDs (for backwards compatibility)
   List<String> getCapturedTerritories() {
-    return _box.values.toList();
+    return _territoryBox.values.map((t) => t.id).toList();
+  }
+
+  /// Returns all currently captured Territory model objects
+  List<Territory> getCapturedTerritoryObjects() {
+    return _territoryBox.values.toList();
+  }
+
+  /// Checks if a specific hex is already captured by the user
+  bool isTerritoryCaptured(String hexId) {
+    return _territoryBox.containsKey(hexId);
   }
 
   /// Capture a new territory hex
-  /// Returns true if it was newly captured, false if it was already owned
-  Future<bool> captureTerritory(String hexId) async {
-    if (_box.values.contains(hexId)) {
+  /// Calculates real vertices, area in m², awards +10 XP, and syncs
+  Future<bool> captureTerritory(
+    String hexId, {
+    String? ownerId,
+    bool isPendingReview = false,
+  }) async {
+    if (_territoryBox.containsKey(hexId)) {
       return false; // Already captured
     }
-    await _box.add(hexId);
+
+    final String activeOwner = ownerId ?? _firebaseService.currentUserId;
+    final vertices = _h3Service.getHexagonVertices(hexId);
+    final double area = _h3Service.getHexagonAreaSqMeters(hexId);
+
+    final newTerritory = Territory(
+      id: hexId,
+      ownerId: activeOwner,
+      polygon: vertices,
+      areaSqMeters: area,
+      capturedAt: DateTime.now(),
+      isPendingReview: isPendingReview,
+    );
+
+    // Persist locally in Hive
+    await _territoryBox.put(hexId, newTerritory);
+
+    // Award +10 XP and increment claimed hex count in RunnerProfile
+    final profile = getProfile();
+    final bool leveledUp = profile.claimHex();
+    await saveProfile(profile);
+
+    debugPrint('[TerritoryService] Hex $hexId captured! Total claimed: ${profile.totalHexesClaimed}, XP: ${profile.xp}, Level: ${profile.level} (Leveled up: $leveledUp)');
+
+    // Emit live capture event
+    _captureEventController.add(newTerritory);
+
+    // Sync to Cloud Firestore
+    unawaited(_firebaseService.syncTerritoryToCloud(newTerritory));
+
     return true;
+  }
+
+  /// Records distance added during a run
+  Future<void> addRunDistance(double km) async {
+    final profile = getProfile();
+    profile.addDistance(km);
+    await saveProfile(profile);
   }
 
   /// Wipe all territories (e.g. for testing)
   Future<void> resetTerritories() async {
-    await _box.clear();
+    await _territoryBox.clear();
   }
 
   /// Listen to changes in territories to update UI in real-time
-  Stream<BoxEvent> get territoryStream => _box.watch();
+  Stream<BoxEvent> get territoryStream => _territoryBox.watch();
 }

@@ -2,6 +2,10 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'profile_page.dart';
 import 'features/map/map_screen.dart';
+import 'features/teams/run_club_modal.dart';
+import 'models/territory.dart';
+import 'models/runner_profile.dart';
+import 'services/firebase_service.dart';
 
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -9,7 +13,11 @@ import 'package:hive_flutter/hive_flutter.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  await Hive.openBox<String>('territories');
+  Hive.registerAdapter(TerritoryAdapter());
+  Hive.registerAdapter(RunnerProfileAdapter());
+  await Hive.openBox<Territory>('territories_v2');
+  await Hive.openBox<RunnerProfile>('profile');
+  await FirebaseService().initialize();
   runApp(const TerritoryApp());
 }
 
@@ -514,6 +522,7 @@ class HomeScreen extends StatelessWidget {
                           _PillBadge(
                             icon: Icons.bolt_rounded,
                             label: 'RUN CLUB',
+                            onTap: () => RunClubModal.show(context),
                           ),
                         ],
                       ),
@@ -645,34 +654,42 @@ class _LogoMark extends StatelessWidget {
 }
 
 class _PillBadge extends StatelessWidget {
-  const _PillBadge({required this.icon, required this.label});
+  const _PillBadge({required this.icon, required this.label, this.onTap});
 
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: AppColors.accent),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 18, color: AppColors.accent),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

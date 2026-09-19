@@ -1,0 +1,37 @@
+{
+  "model_type": "ZScoreMahalanobisAnomalyDetector",
+  "feature_names": [
+    "avg_speed_kmh",
+    "max_acceleration_ms2",
+    "heading_change_rate_degs",
+    "sinuosity",
+    "stop_frequency"
+  ],
+  "means": [
+    9.85,
+    1.42,
+    6.35,
+    0.88,
+    0.05
+  ],
+  "stds": [
+    2.15,
+    0.68,
+    2.80,
+    0.09,
+    0.04
+  ],
+  "feature_weights": [
+    2.5,
+    2.0,
+    1.2,
+    1.0,
+    0.8
+  ],
+  "anomaly_threshold": 3.0,
+  "hard_rules": {
+    "max_human_speed_kmh": 25.0,
+    "max_teleport_speed_kmh": 120.0,
+    "max_acceleration_ms2": 8.0
+  }
+}

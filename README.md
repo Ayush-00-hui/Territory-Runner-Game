@@ -1,87 +1,94 @@
-# 🏃‍♂️ Territory Runner
+# 🏃‍♂️ Territory Runner (AI-Powered Fitness Conquest)
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Flutter-%2302569B.svg?style=for-the-badge&logo=Flutter&logoColor=white" alt="Flutter" />
-  <img src="https://img.shields.io/badge/Dart-%230175C2.svg?style=for-the-badge&logo=dart&logoColor=white" alt="Dart" />
-  <img src="https://img.shields.io/badge/Firebase-%23039BE5.svg?style=for-the-badge&logo=Firebase&logoColor=white" alt="Firebase" />
+  <img src="https://img.shields.io/badge/Flutter-3.13+-02569B.svg?style=for-the-badge&logo=Flutter&logoColor=white" alt="Flutter" />
+  <img src="https://img.shields.io/badge/Dart-3.0+-0175C2.svg?style=for-the-badge&logo=dart&logoColor=white" alt="Dart" />
+  <img src="https://img.shields.io/badge/H3_Geospatial-Resolution_10-orange.svg?style=for-the-badge" alt="H3 Indexing" />
+  <img src="https://img.shields.io/badge/Google_Gemini-LLM_Coach-blueviolet.svg?style=for-the-badge" alt="Gemini" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=for-the-badge" alt="License" />
 </div>
 
 <br>
 
-**Territory Runner** is a visually stunning, location-based run tracking application built with Flutter. Track your runs, claim geographic blocks, and keep your streak alive with minimal noise and maximum momentum. 
-
-Think of it as fitness meets gaming: sweat it out in the real world to conquer your virtual territory!
+**Territory Runner** is a location-based fitness and territory conquest app built with Flutter. Sweat it out in the real world to claim real-world hexagonal territory on an interactive cyber-themed live map.
 
 ---
 
-## ✨ Key Features
+## ✨ Implemented Features
 
-- **📍 Live Location Tracking:** Precise and continuous tracking of your current position on the map using `geolocator` and `flutter_map`.
-- **🎮 Territory Claiming:** Turn your city into a game board! Claim areas based on your running routes and expand your domain powered by H3 geospatial indexing.
-- **🏃‍♂️ Advanced Runner Profiles:** Track your total distance, level up by earning XP, and unlock special badges as you hit new milestones.
-- **🎨 Premium Dark UI:** A sleek, immersive dark-themed interface inspired by modern fitness apps, featuring micro-animations, glowing accents, and haptic feedback.
-- **🤖 AI Integration:** Powered by `google_generative_ai` for smart insights and dynamic interactions tailored to your running habits.
-- **☁️ Cloud Sync:** Securely save your progress, territories, and profile data in real-time with Firebase Auth and Firestore.
-- **💾 Offline Capabilities:** Built-in caching using Hive ensures your run data is safe even in spotty network conditions.
+### 📍 1. Real-Time H3 Hexagonal Conquest (`lib/features/gameplay/`)
+- **H3 Geospatial Indexing:** Uses H3 Resolution 10 (~65.9m edge length, ~15,047 m² area, ~131.8m diameter), perfectly scaled for urban running and walking blocks.
+- **Dynamic Hex Capture:** Computes geodesic 6-vertex boundaries, calculates area in square meters, and awards **+10 XP** per conquered sector.
+- **Hive Typed Persistence:** Offline-first caching with custom Hive `TypeAdapter<Territory>` and `TypeAdapter<RunnerProfile>`.
 
-## 🛠️ Tech Stack & Architecture
+### 🧭 2. AI Route Recommendation Engine (`lib/features/routing/`)
+- **Orienteering Problem Formulation:** Solves the loop route synthesis problem on the H3 hex graph (maximizing unclaimed hex prizes within target distance budget).
+- **Two-Phase Optimization:**
+  1. *Greedy baseline* loop construction with start/return constraints.
+  2. *2-Opt local search* and greedy node insertion under a 400ms on-device budget.
+- **Map Overlay:** One-tap "Suggest AI Route" button with glowing polyline overlay on `MapScreen`.
 
-- **Frontend:** [Flutter](https://flutter.dev/) & Dart
-- **Maps & Location:** `flutter_map`, `latlong2`, `geolocator`, `maps_toolkit`, `h3_ffi`
-- **Backend & Database:** Firebase Auth, Cloud Firestore
-- **Local Storage:** Hive
-- **Additional Tools:** `audioplayers` (Audio), `vibration` (Haptics), Provider (State Management)
+### 🛡️ 3. Anti-Cheat & GPS Anomaly Detection (`lib/features/security/`)
+- **Telemetry Feature Extraction:** Real-time sliding window analysis of instant speed, max acceleration ($\Delta v / \Delta t$), heading change rate, path sinuosity, and stop frequency.
+- **Multi-Tier Detection:**
+  - Fast rule-based hard filters (`isMocked == true`, instant speed > 25 km/h, teleport jumps > 50m in < 1s).
+  - Statistical weighted Z-Score/Mahalanobis anomaly scoring model trained offline (`scripts/train_anomaly_model.py`).
+- **Non-blocking Flagging:** Suspicious captures are flagged as `isPendingReview: true` without interrupting the run.
+
+### 🤖 4. Gemini AI Post-Run Coach (`lib/features/coach/`)
+- **Post-Run Telemetry Digest:** Feeds distance, duration, average pace splits, newly claimed sectors, level, and streaks into `google_generative_ai` (Gemini 1.5 Flash).
+- **Strict Schema Parsing:** Returns structured `{ summary, tip, moodTag }` with retry recovery and offline fallback.
+- **Interactive Conquest Summary:** Dark cyber-athletic post-run modal with stats breakdowns and tactical tips.
+
+### 📈 5. Adaptive Pace & Distance Prediction (`lib/features/coach/`)
+- Fits athletic decay and progression curves to user level, historical distance, and streaks to predict achievable target distances and pacing.
+- Seamlessly feeds predicted distances into the AI Route Recommendation Engine.
+
+### ☁️ 6. Cloud Sync & Firebase Auth (`lib/services/`)
+- **Firebase Auth:** Supports Email/Password and Anonymous single-tap authentication.
+- **Cloud Firestore:** Real-time territory and profile synchronization with a *server-timestamp-wins* conflict resolution rule for contested territories.
+
+---
+
+## 🗺️ Roadmap (Future Scope)
+
+- [ ] **Reinforcement Learning (RL) Rival Agents:** AI runners that simulate opposing factions contesting player hexes.
+- [ ] **RAG-based Coaching & Voice Cues:** Real-time audio commentary and contextual hydration/nutrition retrieval during active runs.
+- [ ] **Local Multiplayer Guild Battles:** Team-based polygon territory mergers and faction turf wars.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework:** [Flutter](https://flutter.dev/) & Dart 3
+- **Geospatial & Maps:** `flutter_map`, `latlong2`, `geolocator`, H3 Geodesic Indexing
+- **AI & ML:** `google_generative_ai` (Gemini), Scikit-Learn Anomaly Classifier
+- **Local Storage:** `hive_flutter` with custom TypeAdapters
+- **Cloud & Auth:** Firebase Core, Firebase Auth, Cloud Firestore
 
 ---
 
 ## 🚀 Getting Started
 
-Follow these instructions to set up the project locally on your machine.
+### 1. Clone and Install
+```bash
+git clone https://github.com/Ayush-00-hui/Territory-Runner-Game.git
+cd Territory-Runner-Game
+flutter pub get
+```
 
-### Prerequisites
+### 2. Configure Environment (Optional for Gemini AI)
+Pass your Gemini API key when launching the app:
+```bash
+flutter run --dart-define=GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+```
 
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) (Version 3.13.2 or higher)
-- Android Studio or Xcode (for emulation/compilation)
-- A Firebase project setup (Required for Auth & Firestore)
-- A Google Maps / Gemini API Key (if applicable based on usage)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Ayush-00-hui/Territory-Runner-Game.git
-   cd Territory-Runner-Game
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   flutter pub get
-   ```
-
-3. **Configure Firebase:**
-   Make sure you have your `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS) configured properly from your Firebase Console. Place them in their respective native directories.
-
-4. **Run the application:**
-   ```bash
-   flutter run
-   ```
+### 3. Run Tests & Benchmarks
+```bash
+flutter test
+```
 
 ---
-
-## 📸 Screenshots
-*(Coming Soon - Add your app screenshots here to showcase the beautiful UI!)*
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/Ayush-00-hui/Territory-Runner-Game/issues) if you want to contribute.
 
 ## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-<div align="center">
-  <i>Built with ❤️ for runners and gamers.</i>
-</div>
+Licensed under the [MIT License](LICENSE).
