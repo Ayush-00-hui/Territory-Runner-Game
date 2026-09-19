@@ -1181,11 +1181,11 @@ class _MapPlaceholderPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
-    final rnd = math.Random(7);
     const cell = 56.0;
     for (double y = -cell; y < size.height + cell; y += cell) {
       for (double x = -cell; x < size.width + cell; x += cell) {
-        if (rnd.nextDouble() > 0.42) {
+        final int hash = ((x.toInt() * 73856093) ^ (y.toInt() * 19349663)).abs();
+        if ((hash % 100) > 42) {
           final r = RRect.fromRectAndRadius(
             Rect.fromLTWH(x + 2, y + 2, cell - 4, cell - 4),
             const Radius.circular(6),

@@ -113,7 +113,7 @@ class RivalAgentService {
   /// Steps autonomous rivals to conquer adjacent sectors
   void _stepSimulation() {
     if (_rivals.isEmpty) return;
-    final math.Random rng = math.Random();
+    final math.Random rng = math.Random.secure();
 
     for (final rival in _rivals) {
       final List<String> neighbors = _h3Service.getNeighbors(rival.currentHexId);

@@ -134,7 +134,7 @@ class LocationService {
       // 5 meters is approx 0.000045 degrees.
       
       // Randomly drift the heading for realistic pathing
-      _simHeading += (math.Random().nextDouble() - 0.5) * 10;
+      _simHeading += (math.Random.secure().nextDouble() - 0.5) * 10;
       
       final double distance = 0.000045;
       final double rad = _simHeading * math.pi / 180;
