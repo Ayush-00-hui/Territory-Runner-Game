@@ -1019,7 +1019,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                               textBaseline: TextBaseline.alphabetic,
                               children: [
                                 Text(
-                                  _isRunActive ? _runDistanceKm.toStringAsFixed(2) : '5.12',
+                                  _isRunActive ? _runDistanceKm.toStringAsFixed(2) : '0.00',
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 28,
@@ -1072,7 +1072,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             Text(
                               _isRunActive
                                   ? _formatDuration(_movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds)
-                                  : '28:17',
+                                  : '00:00',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 22,
@@ -1099,7 +1099,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              _isRunActive ? _computeCurrentSplitPace() : "5'30\"",
+                              _isRunActive ? _computeCurrentSplitPace() : "--'--\"",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 22,
@@ -1116,7 +1116,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
                     // Secondary Telemetry Row: Speed | Calories | Satellite Precision | Domain Claims
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: BorderRadius.circular(14),
@@ -1169,62 +1169,71 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
 
                     // Bottom Controls Row: Manual Seal Domain Button | Center Giant Play/Pause | Finish Button
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         // Left Manual "SEAL SHAPE" Override Button
-                        GestureDetector(
-                          onTap: _sealCurrentShape,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF8A2BE2).withValues(alpha: 0.25),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFF8A2BE2), width: 1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF8A2BE2).withValues(alpha: 0.3),
-                                  blurRadius: 12,
-                                  spreadRadius: 1,
-                                ),
-                              ],
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.shield_rounded, color: Color(0xFF00F0FF), size: 18),
-                                SizedBox(width: 6),
-                                Text(
-                                  'SEAL SHAPE',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 11,
-                                    letterSpacing: 0.8,
+                        Flexible(
+                          child: GestureDetector(
+                            onTap: _sealCurrentShape,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 150),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF8A2BE2).withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFF8A2BE2), width: 1.5),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF8A2BE2).withValues(alpha: 0.3),
+                                    blurRadius: 10,
+                                    spreadRadius: 1,
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.shield_rounded, color: Color(0xFF00F0FF), size: 16),
+                                  SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      'SEAL SHAPE',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 10,
+                                        letterSpacing: 0.6,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
+
+                        const SizedBox(width: 8),
 
                         // Center Giant Glowing Neon Green Play/Pause Action Button
                         GestureDetector(
                           onTap: _toggleRun,
                           child: Container(
-                            height: 64,
-                            width: 64,
+                            height: 60,
+                            width: 60,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: AppColors.accent,
                               boxShadow: [
                                 BoxShadow(
                                   color: AppColors.accent.withValues(alpha: 0.5),
-                                  blurRadius: 24,
-                                  spreadRadius: 4,
+                                  blurRadius: 20,
+                                  spreadRadius: 3,
                                 ),
                               ],
                             ),
@@ -1232,48 +1241,57 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                               child: Icon(
                                 _isRunActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
                                 color: Colors.black,
-                                size: 36,
+                                size: 34,
                               ),
                             ),
                           ),
                         ),
 
+                        const SizedBox(width: 8),
+
                         // Right Slide to Finish / Complete Button
-                        GestureDetector(
-                          onTap: () {
-                            if (_isRunActive) {
-                              _toggleRun(); // Finish run
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Tap the center play button to begin tracking')),
-                              );
-                            }
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _isRunActive ? Colors.redAccent.withValues(alpha: 0.2) : AppColors.surface2,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: _isRunActive ? Colors.redAccent : AppColors.border),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  _isRunActive ? Icons.stop_rounded : Icons.lock_outline_rounded,
-                                  color: _isRunActive ? Colors.redAccent : Colors.white70,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _isRunActive ? 'FINISH' : 'LOCKED',
-                                  style: TextStyle(
+                        Flexible(
+                          child: GestureDetector(
+                            onTap: () {
+                              if (_isRunActive) {
+                                _toggleRun(); // Finish run
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Tap the center play button to begin tracking')),
+                                );
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+                              decoration: BoxDecoration(
+                                color: _isRunActive ? Colors.redAccent.withValues(alpha: 0.2) : AppColors.surface2,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: _isRunActive ? Colors.redAccent : AppColors.border),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _isRunActive ? Icons.stop_rounded : Icons.lock_outline_rounded,
                                     color: _isRunActive ? Colors.redAccent : Colors.white70,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 11,
-                                    letterSpacing: 0.8,
+                                    size: 16,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      _isRunActive ? 'FINISH' : 'LOCKED',
+                                      style: TextStyle(
+                                        color: _isRunActive ? Colors.redAccent : Colors.white70,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 10,
+                                        letterSpacing: 0.6,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

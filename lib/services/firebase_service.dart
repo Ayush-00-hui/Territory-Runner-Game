@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/runner_profile.dart';
 import '../models/territory.dart';
 
@@ -15,6 +16,7 @@ class FirebaseService {
 
   FirebaseAuth? _auth;
   FirebaseFirestore? _firestore;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   FirebaseService._internal();
 
@@ -52,9 +54,33 @@ class FirebaseService {
   }
 
   User? get currentUser => _auth?.currentUser;
+  bool get isSignedIn => _auth?.currentUser != null;
 
   /// User auth state changes stream
   Stream<User?>? get authStateChanges => _isInitialized ? _auth?.authStateChanges() : null;
+
+  /// Sign in with Google
+  Future<UserCredential?> signInWithGoogle() async {
+    if (!_isInitialized || _auth == null) {
+      throw Exception('Firebase is not initialized. Please ensure google-services.json is configured.');
+    }
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // User canceled
+        return null;
+      }
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      return await _auth!.signInWithCredential(credential);
+    } catch (e) {
+      debugPrint('[FirebaseService] Google Sign-In failed: $e');
+      rethrow;
+    }
+  }
 
   /// Sign in anonymously for instant zero-friction play
   Future<UserCredential?> signInAnonymously() async {
@@ -132,6 +158,9 @@ class FirebaseService {
   /// Sign Out
   Future<void> signOut() async {
     if (!_isInitialized || _auth == null) return;
+    try {
+      await _googleSignIn.signOut();
+    } catch (_) {}
     await _auth!.signOut();
   }
 

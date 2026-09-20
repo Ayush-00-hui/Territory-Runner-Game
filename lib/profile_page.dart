@@ -1057,7 +1057,7 @@ class _ProfilePageState extends State<ProfilePage>
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 16),
+                              const SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1066,10 +1066,10 @@ class _ProfilePageState extends State<ProfilePage>
                                       children: [
                                         Flexible(
                                           child: Text(
-                                            profile.username.toUpperCase(),
+                                            profile.username.isNotEmpty ? profile.username.toUpperCase() : 'ATHLETE',
                                             style: const TextStyle(
                                               color: Colors.white,
-                                              fontSize: 18,
+                                              fontSize: 16,
                                               fontWeight: FontWeight.w900,
                                               letterSpacing: 0.5,
                                             ),
@@ -1086,16 +1086,18 @@ class _ProfilePageState extends State<ProfilePage>
                                               shape: BoxShape.circle,
                                               border: Border.all(color: AppColors.border),
                                             ),
-                                            child: const Icon(Icons.edit_rounded, color: AppColors.accent, size: 14),
+                                            child: const Icon(Icons.edit_rounded, color: AppColors.accent, size: 12),
                                           ),
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 4),
-                                    Row(
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                           decoration: BoxDecoration(
                                             color: AppColors.surface2,
                                             borderRadius: BorderRadius.circular(8),
@@ -1104,17 +1106,16 @@ class _ProfilePageState extends State<ProfilePage>
                                             'LEVEL ${profile.level} ATHLETE',
                                             style: const TextStyle(
                                               color: AppColors.accent,
-                                              fontSize: 10,
+                                              fontSize: 9,
                                               fontWeight: FontWeight.w800,
-                                              letterSpacing: 0.8,
+                                              letterSpacing: 0.6,
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 6),
                                         GestureDetector(
                                           onTap: () => _showFactionSelectionDialog(profile),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                             decoration: BoxDecoration(
                                               color: const Color(0xFF8A2BE2).withValues(alpha: 0.25),
                                               borderRadius: BorderRadius.circular(8),
@@ -1123,15 +1124,15 @@ class _ProfilePageState extends State<ProfilePage>
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                const Icon(Icons.shield_rounded, color: Color(0xFF00F0FF), size: 12),
+                                                const Icon(Icons.shield_rounded, color: Color(0xFF00F0FF), size: 11),
                                                 const SizedBox(width: 4),
                                                 Text(
                                                   profile.faction.isNotEmpty ? profile.faction : 'FACTION',
                                                   style: const TextStyle(
                                                     color: Color(0xFF00F0FF),
-                                                    fontSize: 10,
+                                                    fontSize: 9,
                                                     fontWeight: FontWeight.w900,
-                                                    letterSpacing: 0.5,
+                                                    letterSpacing: 0.4,
                                                   ),
                                                 ),
                                               ],
@@ -1143,30 +1144,32 @@ class _ProfilePageState extends State<ProfilePage>
                                   ],
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               // Streak Flame Badge
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
+                                  horizontal: 10,
+                                  vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
                                   color: AppColors.secondary.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(14),
+                                  borderRadius: BorderRadius.circular(12),
                                   border: Border.all(color: AppColors.secondary.withValues(alpha: 0.4)),
                                 ),
                                 child: Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
                                     const Icon(
                                       Icons.local_fire_department,
                                       color: AppColors.secondary,
-                                      size: 20,
+                                      size: 18,
                                     ),
-                                    const SizedBox(width: 4),
+                                    const SizedBox(width: 3),
                                     Text(
                                       '${profile.currentStreak}',
                                       style: const TextStyle(
                                         color: Colors.white,
-                                        fontSize: 15,
+                                        fontSize: 14,
                                         fontWeight: FontWeight.w900,
                                       ),
                                     ),
@@ -1175,8 +1178,8 @@ class _ProfilePageState extends State<ProfilePage>
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
-                          // XP Bar
+                          const SizedBox(height: 18),
+                          // Tier Progression Bar
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -1186,17 +1189,17 @@ class _ProfilePageState extends State<ProfilePage>
                                   const Text(
                                     'TIER PROGRESSION',
                                     style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 1.0,
+                                      color: AppColors.textMuted,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.1,
                                     ),
                                   ),
                                   Text(
                                     '${profile.xp} / $nextLevelXp XP',
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 12,
+                                      fontSize: 11,
                                       fontWeight: FontWeight.w800,
                                     ),
                                   ),
@@ -1259,7 +1262,7 @@ class _ProfilePageState extends State<ProfilePage>
                               metrics: [
                                 {'label': 'Lifetime Distance', 'val': '${profile.totalDistanceKm.toStringAsFixed(2)} km'},
                                 {'label': 'Weekly Estimated', 'val': '${(profile.totalDistanceKm / 4).toStringAsFixed(1)} km/wk'},
-                                {'label': 'Hex Discovery Density', 'val': '${territoriesCount > 0 ? (profile.totalDistanceKm / territoriesCount).toStringAsFixed(2) : '0.0'} km/hex'},
+                                {'label': 'Pace Rating', 'val': 'Active Runner'},
                               ],
                             );
                           },
@@ -1274,7 +1277,7 @@ class _ProfilePageState extends State<ProfilePage>
                             _showStatDetailModal(
                               title: 'STREAK TELEMETRY',
                               value: '${profile.currentStreak} DAYS',
-                              description: 'Continuous daily conquest momentum. Running and claiming at least 1 hex daily keeps your streak multiplier active.',
+                              description: 'Continuous daily conquest momentum. Running and claiming territory daily keeps your streak active.',
                               metrics: [
                                 {'label': 'Active Streak Days', 'val': '${profile.currentStreak} days'},
                                 {'label': 'Streak Multiplier Bonus', 'val': '+${(profile.currentStreak * 2).clamp(0, 50)}% XP'},
@@ -1284,21 +1287,29 @@ class _ProfilePageState extends State<ProfilePage>
                           },
                         ),
                         _StatCard(
-                          icon: Icons.hexagon_outlined,
-                          title: 'SECTORS SECURED',
-                          value: '$territoriesCount HEXES',
+                          icon: Icons.terrain_rounded,
+                          title: 'TOTAL TERRITORY',
+                          value: () {
+                            final captured = _territoryService.getCapturedTerritoryObjects();
+                            final double totalAreaM2 = captured.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+                            if (totalAreaM2 >= 10000) {
+                              return '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} KM²';
+                            }
+                            return '${totalAreaM2.toStringAsFixed(0)} M²';
+                          }(),
                           iconColor: AppColors.accent,
                           delay: 160,
                           onTap: () {
-                            final totalAreaSqKm = (territoriesCount * 0.015047).clamp(0.0, 999.0);
+                            final captured = _territoryService.getCapturedTerritoryObjects();
+                            final double totalAreaM2 = captured.fold(0.0, (sum, t) => sum + t.areaSqMeters);
                             _showStatDetailModal(
                               title: 'TERRITORY TELEMETRY',
-                              value: '$territoriesCount HEXES',
-                              description: 'Unique spatial H3 hexagonal cells permanently conquered under your runner faction.',
+                              value: '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} KM²',
+                              description: 'Post-union sovereign territory polygons permanently claimed on foot.',
                               metrics: [
-                                {'label': 'Captured Hexagons', 'val': '$territoriesCount cells'},
-                                {'label': 'Controlled Area', 'val': '${totalAreaSqKm.toStringAsFixed(2)} km²'},
-                                {'label': 'Square Meters', 'val': '${(territoriesCount * 15047).toStringAsFixed(0)} m²'},
+                                {'label': 'Captured Polygons', 'val': '${captured.length} sectors'},
+                                {'label': 'Controlled Area', 'val': '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} km²'},
+                                {'label': 'Square Meters', 'val': '${totalAreaM2.toStringAsFixed(0)} m²'},
                               ],
                             );
                           },
@@ -1313,11 +1324,11 @@ class _ProfilePageState extends State<ProfilePage>
                             _showStatDetailModal(
                               title: 'RANK & TIER TELEMETRY',
                               value: 'LEVEL ${profile.level}',
-                              description: 'Athlete experience tier. Progressing tiers grants improved sector claim speed and flight telemetry capabilities.',
+                              description: 'Athlete experience tier. Progressing tiers grants improved sector claim speed and prestige insignia.',
                               metrics: [
                                 {'label': 'Current Level', 'val': 'Level ${profile.level}'},
                                 {'label': 'Experience Points', 'val': '${profile.xp} / ${profile.level * 250} XP'},
-                                {'label': 'Perks Unlocked', 'val': 'Zero-G Gliding, 1.5x Airborne'},
+                                {'label': 'Perks Unlocked', 'val': 'Territory Sovereign, Speed Burst'},
                               ],
                             );
                           },
@@ -1354,14 +1365,14 @@ class _ProfilePageState extends State<ProfilePage>
                           _AchievementTile(
                             icon: Icons.emoji_events_rounded,
                             title: 'First Conquest',
-                            subtitle: 'Claim your first hexagonal sector on foot',
+                            subtitle: 'Claim your first territory polygon on foot',
                             unlocked: profile.badges.contains('First Conquest') || territoriesCount >= 1,
                             onTap: () {
                               _showBadgeDetailModal(
                                 title: 'First Conquest',
-                                subtitle: 'Claim your first hexagonal sector on foot',
+                                subtitle: 'Claim your first territory polygon on foot',
                                 unlocked: profile.badges.contains('First Conquest') || territoriesCount >= 1,
-                                criteria: 'Capture at least 1 real-world H3 cell in GPS tracking mode.',
+                                criteria: 'Enclose and claim at least 1 real-world polygon in GPS tracking mode.',
                                 reward: '+50 XP, "Pioneer Runner" Title',
                               );
                             },
@@ -1369,16 +1380,16 @@ class _ProfilePageState extends State<ProfilePage>
                           const SizedBox(height: 10),
                           _AchievementTile(
                             icon: Icons.military_tech_rounded,
-                            title: 'Sector Commander',
-                            subtitle: 'Conquer 25 unique hexagonal territories',
-                            unlocked: profile.badges.contains('Sector Commander') || territoriesCount >= 25,
+                            title: 'Territory Sovereign',
+                            subtitle: 'Conquer over 10,000 m² of sovereign ground',
+                            unlocked: profile.badges.contains('Territory Sovereign') || profile.badges.contains('Sector Commander') || territoriesCount >= 5,
                             onTap: () {
                               _showBadgeDetailModal(
-                                title: 'Sector Commander',
-                                subtitle: 'Conquer 25 unique hexagonal territories',
-                                unlocked: profile.badges.contains('Sector Commander') || territoriesCount >= 25,
-                                criteria: 'Conquer and secure 25 separate hexagonal sectors.',
-                                reward: '+200 XP, "Sector Commander" Faction Insignia',
+                                title: 'Territory Sovereign',
+                                subtitle: 'Conquer over 10,000 m² of sovereign ground',
+                                unlocked: profile.badges.contains('Territory Sovereign') || profile.badges.contains('Sector Commander') || territoriesCount >= 5,
+                                criteria: 'Enclose and secure vast contiguous territory polygons.',
+                                reward: '+200 XP, "Sovereign Runner" Faction Insignia',
                               );
                             },
                           ),

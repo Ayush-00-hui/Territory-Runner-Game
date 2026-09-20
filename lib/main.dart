@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'features/auth/auth_screen.dart';
 import 'profile_page.dart';
 import 'features/map/map_screen.dart';
 import 'features/gameplay/territory_service.dart';
@@ -343,8 +344,33 @@ class _RunOverlayTrackPainter extends CustomPainter {
       oldDelegate.progress != progress;
 }
 
-class TerritoryApp extends StatelessWidget {
+class TerritoryApp extends StatefulWidget {
   const TerritoryApp({super.key});
+
+  @override
+  State<TerritoryApp> createState() => _TerritoryAppState();
+}
+
+class _TerritoryAppState extends State<TerritoryApp> {
+  bool _isAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final firebaseService = FirebaseService();
+    if (firebaseService.isSignedIn) {
+      _isAuthenticated = true;
+    } else {
+      final profileBox = Hive.box<RunnerProfile>('profile');
+      final currentUser = profileBox.get('current_user');
+      if (currentUser != null &&
+          currentUser.username.isNotEmpty &&
+          currentUser.username != 'CyberRunner' &&
+          currentUser.username != 'local_runner') {
+        _isAuthenticated = true;
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -361,7 +387,15 @@ class TerritoryApp extends StatelessWidget {
           surface: AppColors.surface,
         ),
       ),
-      home: const MainScreen(),
+      home: _isAuthenticated
+          ? const MainScreen()
+          : AuthScreen(
+              onAuthenticated: () {
+                setState(() {
+                  _isAuthenticated = true;
+                });
+              },
+            ),
     );
   }
 }
@@ -464,8 +498,9 @@ class _HomeScreenState extends State<HomeScreen> {
     final topPad = MediaQuery.paddingOf(context).top;
     final territoryService = TerritoryService();
     final profile = territoryService.getProfile();
-    final territoriesCount = territoryService.getCapturedTerritories().length;
-    final totalAreaSqKm = (territoriesCount * 0.015047).clamp(0.0, 999.0);
+    final capturedTerritories = territoryService.getCapturedTerritoryObjects();
+    final double totalAreaSqMeters = capturedTerritories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+    final double totalAreaSqKm = totalAreaSqMeters / 1000000.0;
 
     return Scaffold(
       backgroundColor: AppColors.bgDeep,
@@ -503,7 +538,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
-                // Level 6 Crown Badge Capsule
+                // Level Crown Badge Capsule
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
@@ -545,7 +580,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Run 12 km to Lvl ${profile.level + 1}',
+                        'Run to Lvl ${profile.level + 1}',
                         style: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 9,
@@ -630,7 +665,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            totalAreaSqKm > 0 ? '${totalAreaSqKm.toStringAsFixed(1)} km²' : '12.4 km²',
+                            totalAreaSqKm > 0
+                                ? '${totalAreaSqKm.toStringAsFixed(2)} km²'
+                                : (totalAreaSqMeters > 0 ? '${totalAreaSqMeters.toStringAsFixed(0)} m²' : '0.00 km²'),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -646,7 +683,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Text(
-                              '↗ +23% this month',
+                              '↗ Sovereign Territory',
                               style: TextStyle(
                                 color: AppColors.accent,
                                 fontSize: 11,
@@ -690,7 +727,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          'New area unlocked!',
+                          'Territory Conquest Engine',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 15,
@@ -699,7 +736,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         SizedBox(height: 3),
                         Text(
-                          'Riverside South Sector',
+                          'Run closed loops to enclose and claim ground',
                           style: TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
@@ -755,8 +792,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: _buildStatTile(
                     title: 'Runs',
                     icon: Icons.directions_run_rounded,
-                    value: '${(profile.totalDistanceKm / 4).round().clamp(1, 99)}',
-                    delta: '+33%',
+                    value: '${(profile.totalDistanceKm > 0 ? (profile.totalDistanceKm / 3.0).ceil() : 0)}',
+                    delta: '+100%',
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -765,7 +802,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: 'Distance',
                     icon: Icons.location_on_rounded,
                     value: '${profile.totalDistanceKm.toStringAsFixed(1)} km',
-                    delta: '+21%',
+                    delta: 'Total',
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -773,8 +810,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: _buildStatTile(
                     title: 'Territory',
                     icon: Icons.map_rounded,
-                    value: totalAreaSqKm > 0 ? '${totalAreaSqKm.toStringAsFixed(1)} km²' : '12.4 km²',
-                    delta: '+40%',
+                    value: totalAreaSqKm > 0
+                        ? '${totalAreaSqKm.toStringAsFixed(2)} km²'
+                        : (totalAreaSqMeters > 0 ? '${totalAreaSqMeters.toStringAsFixed(0)} m²' : '0.0 km²'),
+                    delta: '${capturedTerritories.length} polys',
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -782,8 +821,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: _buildStatTile(
                     title: 'Calories',
                     icon: Icons.local_fire_department_rounded,
-                    value: '${(profile.totalDistanceKm * 65).round().clamp(150, 99999)}',
-                    delta: '+18%',
+                    value: '${(profile.totalDistanceKm * 65).round()}',
+                    delta: 'kcal',
                   ),
                 ),
               ],
