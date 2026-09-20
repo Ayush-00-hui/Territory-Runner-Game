@@ -1,5 +1,7 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:territory_runner/features/physics/flight_physics_controller.dart';
 import 'package:territory_runner/main.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/models/territory.dart';
@@ -20,11 +22,14 @@ void main() {
   });
 
   tearDownAll(() async {
+    FlightPhysicsController().stopPhysicsLoop();
     await Hive.close();
   });
 
   testWidgets('TerritoryApp smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const TerritoryApp());
     expect(find.byType(TerritoryApp), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
   });
 }
+
