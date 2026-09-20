@@ -729,15 +729,17 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       ),
                     ),
                     children: [
-                      // Clean Dark Theme Map Tiles (100% Free, No Watermarks, No API Key Required)
+                      // Ultra-fast Dark Theme Map Tiles (CartoDB Dark Matter - Free, No API Key, up to Zoom 20)
                       TileLayer(
                         urlTemplate: AppConstants.mapApiKey.isNotEmpty
                             ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
-                            : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+                            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+                        subdomains: const ['a', 'b', 'c', 'd'],
+                        maxZoom: 20,
                         additionalOptions: {
                           'accessToken': AppConstants.mapApiKey,
                         },
-                        userAgentPackageName: 'com.territoryrunner.app',
+                        userAgentPackageName: 'com.example.territory_runner',
                       ),
                       
                       // Conquered Territories Polygon Overlay (Arbitrary Enclosures & Merged Polygons)
