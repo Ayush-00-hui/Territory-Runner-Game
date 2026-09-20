@@ -52,12 +52,13 @@ class RunnerProfile {
     return addXp(awardedXp);
   }
 
-  /// Claims an arbitrary enclosed polygon territory and awards dynamic XP scaled to area (m² / 20 * multiplier)
+  /// Claims an arbitrary enclosed polygon territory and awards dynamic XP scaled to area: max(100, round(Area / 20)) * multiplier
   int claimPolygonArea(double areaSqMeters, {double multiplier = 1.0}) {
     totalHexesClaimed++;
     _evaluateBadges();
-    final int baseAward = (areaSqMeters / 20.0).round().clamp(10, 5000);
-    final int awardedXp = (baseAward * multiplier).round();
+    final int baseAward = (areaSqMeters / 20.0).round();
+    final int effectiveBase = baseAward < 100 ? 100 : baseAward;
+    final int awardedXp = (effectiveBase * multiplier).round();
     addXp(awardedXp);
     return awardedXp;
   }

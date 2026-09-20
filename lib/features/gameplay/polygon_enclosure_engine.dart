@@ -35,15 +35,53 @@ class PolygonEnclosureEngine {
   PolygonEnclosureEngine({
     this.minClosureDistanceMeters = 35.0,
     this.minPointsRequired = 4,
-    this.minLoopDistanceMeters = 50.0,
+    this.minLoopDistanceMeters = 40.0,
   });
 
   List<LatLng> get currentPath => List.unmodifiable(_path);
   int get pointCount => _path.length;
 
   void clear() {
-    _path.clear;
-    _timestamps.clear;
+    _path.clear();
+    _timestamps.clear();
+  }
+
+  /// Manual "SEAL CURRENT SHAPE" override action.
+  /// Force-closes the active GPS path into a sovereign territory polygon.
+  EnclosedLoopEvent? sealCurrentPath() {
+    if (_path.length < 3) return null;
+
+    final now = DateTime.now();
+    final List<LatLng> closedPoints = List<LatLng>.from(_path);
+    // Connect back to the first vertex if not already adjacent
+    if (closedPoints.first.latitude != closedPoints.last.latitude ||
+        closedPoints.first.longitude != closedPoints.last.longitude) {
+      closedPoints.add(closedPoints.first);
+    }
+
+    final loopLength = _calculatePathDistance(closedPoints);
+    final areaSqM = computeGeodesicShoelaceArea(closedPoints);
+    final areaSqKm = areaSqM / 1000000.0;
+
+    final event = EnclosedLoopEvent(
+      polygon: closedPoints,
+      areaSqMeters: areaSqM,
+      areaSqKm: areaSqKm,
+      loopDistanceMeters: loopLength,
+      closedAt: now,
+    );
+
+    debugPrint(
+      '[PolygonEnclosureEngine] ⚡ Manually SEALED current shape! Points: ${closedPoints.length}, Perimeter: ${loopLength.toStringAsFixed(1)}m, Area: ${areaSqM.toStringAsFixed(1)}m²',
+    );
+
+    final lastPos = _path.last;
+    _path.clear();
+    _timestamps.clear();
+    _path.add(lastPos);
+    _timestamps.add(now);
+
+    return event;
   }
 
   /// Ingests a new GPS position and checks for arbitrary polygon loop enclosure.

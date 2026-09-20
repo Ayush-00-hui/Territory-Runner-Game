@@ -70,12 +70,20 @@ void main() {
       expect(profile.xp, 25);
       expect(profile.totalHexesClaimed, 2);
 
-      // Arbitrary polygon claim: 1000 m² -> 1000 / 20 * 1.5 = 75 XP
+      // Arbitrary polygon claim: 1000 m² -> max(100, 1000 / 20) * 1.5 = 150 XP
       final gainedXp = profile.claimPolygonArea(1000.0, multiplier: 1.5);
-      expect(gainedXp, 75);
-      expect(profile.xp, 100);
+      expect(gainedXp, 150);
+      expect(profile.xp, 175);
       expect(profile.totalHexesClaimed, 3);
       expect(profile.faction, 'Quantum Pulse');
+
+      // Larger polygon claim: 4000 m² -> max(100, 200) * 1.0 = 200 XP
+      // Total XP gained = 175 + 200 = 375. Level 1 needs 250 XP -> Level 2 with 125 XP remaining.
+      final gainedXp2 = profile.claimPolygonArea(4000.0, multiplier: 1.0);
+      expect(gainedXp2, 200);
+      expect(profile.level, 2);
+      expect(profile.xp, 125);
+      expect(profile.totalHexesClaimed, 4);
     });
   });
 }

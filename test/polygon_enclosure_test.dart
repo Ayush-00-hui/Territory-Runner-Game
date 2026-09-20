@@ -82,5 +82,20 @@ void main() {
       expect(PolygonEnclosureEngine.computeGeodesicShoelaceArea([LatLng(0, 0)]), 0.0);
       expect(PolygonEnclosureEngine.computeGeodesicShoelaceArea([LatLng(0, 0), LatLng(1, 1)]), 0.0);
     });
+
+    test('sealCurrentPath manual override closes open polygon path and calculates area', () {
+      final engine = PolygonEnclosureEngine();
+      engine.addPosition(LatLng(51.5000, -0.1200));
+      engine.addPosition(LatLng(51.5009, -0.1200));
+      engine.addPosition(LatLng(51.5009, -0.12144));
+      engine.addPosition(LatLng(51.5000, -0.12144));
+
+      final manualEvent = engine.sealCurrentPath();
+      expect(manualEvent, isNotNull);
+      expect(manualEvent!.polygon.length, 5); // 4 points + closed back to first
+      expect(manualEvent.areaSqMeters, greaterThan(9000.0));
+      expect(manualEvent.areaSqKm, greaterThan(0.009));
+      expect(engine.pointCount, 1);
+    });
   });
 }

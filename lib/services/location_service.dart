@@ -3,6 +3,14 @@ import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Simulation modes for desktop, browser, and indoor development
+enum VirtualPacerMode {
+  none, // Real GNSS Hardware Stream
+  walking, // 5.0 km/h (~1.39 m/s)
+  running, // 10.0 km/h (~2.78 m/s)
+  sprinting, // 15.0 km/h (~4.17 m/s)
+}
+
 class LocationService {
   static final LocationService _instance = LocationService._internal();
   factory LocationService() => _instance;
@@ -12,14 +20,17 @@ class LocationService {
   final StreamController<Position> _locationController = StreamController<Position>.broadcast();
   
   bool isSimulationMode = false;
+  VirtualPacerMode _pacerMode = VirtualPacerMode.none;
   Timer? _simulationTimer;
   
   // Default simulation start point (e.g., San Francisco)
   double _simLat = 37.7749;
   double _simLng = -122.4194;
   double _simHeading = 45.0; // Moving North-East
+  Position? _lastValidPosition;
 
   Stream<Position> get locationStream => _locationController.stream;
+  VirtualPacerMode get pacerMode => _pacerMode;
 
   /// Checks if this is the first time the app is asking for location.
   Future<bool> isFirstTimePermissionRequest() async {
@@ -62,6 +73,10 @@ class LocationService {
   }
 
   Future<Position?> getCurrentLocation() async {
+    if (_pacerMode != VirtualPacerMode.none) {
+      return _generateSimulatedPosition();
+    }
+
     final hasPermission = await requestPermission();
     
     if (!hasPermission || isSimulationMode) {
@@ -70,17 +85,65 @@ class LocationService {
     }
 
     try {
-      return await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.bestForNavigation,
+        ),
       );
+      if (isValidFix(pos, _lastValidPosition)) {
+        _lastValidPosition = pos;
+        return pos;
+      }
+      return _lastValidPosition ?? pos;
     } catch (e) {
-      // Fallback if real GPS throws an exception (e.g. in some emulators/desktops)
       isSimulationMode = true;
       return _generateSimulatedPosition();
     }
   }
 
-  void startTracking() async {
+  /// Noise Gate & Jitter Filtering:
+  /// 1. Reject fixes with satellite accuracy dilution > 30 meters.
+  /// 2. Suppress stationary GPS wandering (displacement < 1.8m when velocity < 2.0 km/h).
+  /// 3. Reject impossible teleportation velocity spikes (> 50 km/h) unless Zero-G is active.
+  bool isValidFix(Position newPos, Position? lastPos, {bool isZeroG = false}) {
+    // 1. Accuracy dilution gate
+    if (newPos.accuracy > 30.0) {
+      return false;
+    }
+
+    if (lastPos == null) {
+      return true;
+    }
+
+    final double distanceMeters = Geolocator.distanceBetween(
+      lastPos.latitude,
+      lastPos.longitude,
+      newPos.latitude,
+      newPos.longitude,
+    );
+
+    final double timeDeltaSeconds = (newPos.timestamp.difference(lastPos.timestamp).inMilliseconds / 1000.0).abs();
+    final double calculatedSpeedKmh = timeDeltaSeconds > 0 ? (distanceMeters / timeDeltaSeconds) * 3.6 : 0.0;
+
+    // 2. Stationary jitter gate: ignore small wandering < 1.8m if speed < 2.0 km/h
+    if (distanceMeters < 1.8 && (newPos.speed * 3.6 < 2.0 || calculatedSpeedKmh < 2.0)) {
+      return false;
+    }
+
+    // 3. Teleportation spike gate: ignore impossible speed > 50 km/h unless Zero-G glide
+    if (!isZeroG && (calculatedSpeedKmh > 50.0 || (newPos.speed * 3.6 > 50.0 && timeDeltaSeconds < 5.0))) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void startTracking({bool isZeroG = false}) async {
+    if (_pacerMode != VirtualPacerMode.none) {
+      _startSimulation();
+      return;
+    }
+
     final hasPermission = await requestPermission();
     
     if (!hasPermission || isSimulationMode) {
@@ -90,17 +153,19 @@ class LocationService {
     }
 
     try {
-      final LocationSettings locationSettings = LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5, // Updates every 5 meters
+      const LocationSettings locationSettings = LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 1, // High-frequency sub-meter sampling
       );
 
       _positionStreamSubscription = Geolocator.getPositionStream(
         locationSettings: locationSettings,
       ).listen((Position position) {
-        _locationController.add(position);
+        if (isValidFix(position, _lastValidPosition, isZeroG: isZeroG)) {
+          _lastValidPosition = position;
+          _locationController.add(position);
+        }
       }, onError: (e) {
-        // Fallback to simulation on error
         isSimulationMode = true;
         _startSimulation();
       });
@@ -118,46 +183,75 @@ class LocationService {
     _simulationTimer = null;
   }
 
+  void setVirtualPacer(VirtualPacerMode mode) {
+    _pacerMode = mode;
+    if (mode == VirtualPacerMode.none) {
+      isSimulationMode = false;
+      _simulationTimer?.cancel();
+      startTracking();
+    } else {
+      isSimulationMode = true;
+      _positionStreamSubscription?.cancel();
+      _startSimulation();
+    }
+  }
+
   void dispose() {
     stopTracking();
     _locationController.close();
   }
 
-  // --- INTERACTIVE SIMULATION MODE ---
+  // --- VIRTUAL PACER & SATELLITE GNSS SIMULATION ENGINE ---
 
   void _startSimulation() {
     _simulationTimer?.cancel();
-    // Simulate movement every 1 second
+    // 1Hz simulation clock
     _simulationTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      // Move slightly (approx 5 meters per second = ~18 km/h running pace)
-      // 1 degree latitude is approx 111km.
-      // 5 meters is approx 0.000045 degrees.
+      double targetSpeedMps = 2.78; // Default 10 km/h
+      switch (_pacerMode) {
+        case VirtualPacerMode.walking:
+          targetSpeedMps = 1.39; // 5 km/h
+          break;
+        case VirtualPacerMode.running:
+          targetSpeedMps = 2.78; // 10 km/h
+          break;
+        case VirtualPacerMode.sprinting:
+          targetSpeedMps = 4.17; // 15 km/h
+          break;
+        case VirtualPacerMode.none:
+          targetSpeedMps = 2.78;
+          break;
+      }
+
+      // Natural micro-oscillation heading drift for lifelike athletic curves
+      _simHeading += (math.Random.secure().nextDouble() - 0.5) * 8.0;
       
-      // Randomly drift the heading for realistic pathing
-      _simHeading += (math.Random.secure().nextDouble() - 0.5) * 10;
+      // 1 deg lat ~= 111,139 meters
+      final double distanceMeters = targetSpeedMps;
+      final double deltaLat = (distanceMeters / 111139.0) * math.cos(_simHeading * math.pi / 180.0);
+      final double deltaLng = (distanceMeters / (111139.0 * math.cos(_simLat * math.pi / 180.0))) * math.sin(_simHeading * math.pi / 180.0);
       
-      final double distance = 0.000045;
-      final double rad = _simHeading * math.pi / 180;
+      _simLat += deltaLat;
+      _simLng += deltaLng;
       
-      _simLat += distance * math.cos(rad);
-      _simLng += distance * math.sin(rad);
-      
-      _locationController.add(_generateSimulatedPosition());
+      final simPos = _generateSimulatedPosition(speedMps: targetSpeedMps);
+      _lastValidPosition = simPos;
+      _locationController.add(simPos);
     });
   }
 
-  Position _generateSimulatedPosition() {
+  Position _generateSimulatedPosition({double speedMps = 2.78}) {
     return Position(
       latitude: _simLat,
       longitude: _simLng,
       timestamp: DateTime.now(),
-      accuracy: 5.0,
-      altitude: 0.0,
-      altitudeAccuracy: 0.0,
+      accuracy: 3.5,
+      altitude: 12.0,
+      altitudeAccuracy: 1.0,
       heading: _simHeading,
-      headingAccuracy: 0.0,
-      speed: 5.0,
-      speedAccuracy: 0.0,
+      headingAccuracy: 2.0,
+      speed: speedMps,
+      speedAccuracy: 0.2,
       isMocked: true,
     );
   }
