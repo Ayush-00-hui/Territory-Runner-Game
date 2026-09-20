@@ -729,17 +729,24 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       ),
                     ),
                     children: [
-                      // Ultra-fast Dark Theme Map Tiles (CartoDB Dark Matter - Free, No API Key, up to Zoom 20)
+                      // Clean, Watermark-Free Global Dark Map (OpenStreetMap with Dark Shader Matrix)
                       TileLayer(
                         urlTemplate: AppConstants.mapApiKey.isNotEmpty
                             ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
-                            : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
-                        subdomains: const ['a', 'b', 'c', 'd'],
-                        maxZoom: 20,
-                        additionalOptions: {
-                          'accessToken': AppConstants.mapApiKey,
-                        },
+                            : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        maxZoom: 19,
                         userAgentPackageName: 'com.example.territory_runner',
+                        tileBuilder: (context, tileWidget, tile) {
+                          return ColorFiltered(
+                            colorFilter: const ColorFilter.matrix(<double>[
+                              -0.82, 0, 0, 0, 230,
+                              0, -0.82, 0, 0, 230,
+                              0, 0, -0.82, 0, 230,
+                              0, 0, 0, 1.0, 0,
+                            ]),
+                            child: tileWidget,
+                          );
+                        },
                       ),
                       
                       // Conquered Territories Polygon Overlay (Arbitrary Enclosures & Merged Polygons)
