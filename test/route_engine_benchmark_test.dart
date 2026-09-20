@@ -1,12 +1,8 @@
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:territory_runner/features/routing/route_service.dart';
 import 'package:territory_runner/features/gameplay/polygon_enclosure_engine.dart';
-import 'package:territory_runner/models/runner_profile.dart';
-import 'package:territory_runner/models/territory.dart';
 
 void main() {
   final RouteService routeService = RouteService();
