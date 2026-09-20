@@ -87,7 +87,7 @@ class FlightPhysicsController extends ChangeNotifier {
 
   // Particle micro-thruster buffer
   final List<SlipstreamParticle> particles = [];
-  final math.Random _rng = math.Random(42);
+  final math.Random _rng = math.Random.secure();
 
   KinematicState get kinematicState => _kinematicState;
   GravityTier get gravityTier => _gravityTier;
