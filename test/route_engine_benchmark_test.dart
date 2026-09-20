@@ -9,33 +9,9 @@ import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/models/territory.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
-  late RouteService routeService;
-  late Directory tempDir;
+  final RouteService routeService = RouteService();
   const LatLng startPos = LatLng(37.7749, -122.4194);
   const double targetBudgetKm = 3.0; // 3km target run
-
-  setUpAll(() async {
-    tempDir = Directory.systemTemp.createTempSync('hive_route_test_');
-    Hive.init(tempDir.path);
-    if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(TerritoryAdapter());
-    }
-    if (!Hive.isAdapterRegistered(1)) {
-      Hive.registerAdapter(RunnerProfileAdapter());
-    }
-    await Hive.openBox<Territory>('territories_v3');
-    await Hive.openBox<RunnerProfile>('profile');
-    routeService = RouteService();
-  });
-
-  tearDownAll(() async {
-    await Hive.close();
-    try {
-      tempDir.deleteSync(recursive: true);
-    } catch (_) {}
-  });
 
   group('Route Recommendation Engine Benchmarks', () {
     test('RouteService produces a closed valid loop within distance budget', () {

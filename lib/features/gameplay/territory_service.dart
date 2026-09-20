@@ -12,8 +12,8 @@ class TerritoryService {
   static final TerritoryService _instance = TerritoryService._internal();
   factory TerritoryService() => _instance;
 
-  late final Box<Territory> _territoryBox;
-  late final Box<RunnerProfile> _profileBox;
+  Box<Territory>? get _territoryBox => Hive.isBoxOpen('territories_v3') ? Hive.box<Territory>('territories_v3') : null;
+  Box<RunnerProfile>? get _profileBox => Hive.isBoxOpen('profile') ? Hive.box<RunnerProfile>('profile') : null;
   final FirebaseService _firebaseService = FirebaseService();
 
   final StreamController<Territory> _captureEventController = StreamController<Territory>.broadcast();
@@ -22,16 +22,16 @@ class TerritoryService {
   static const double _coordScale = 10000000.0; // 1e7 for high-precision GPS integer clipping
 
   TerritoryService._internal() {
-    _territoryBox = Hive.box<Territory>('territories_v3');
-    _profileBox = Hive.box<RunnerProfile>('profile');
-    _initProfileIfNeeded();
     _cleanLegacyHexes();
+    _initProfileIfNeeded();
   }
 
   void _cleanLegacyHexes() {
+    final box = _territoryBox;
+    if (box == null) return;
     final keysToDelete = <dynamic>[];
-    for (final key in _territoryBox.keys) {
-      final t = _territoryBox.get(key);
+    for (final key in box.keys) {
+      final t = box.get(key);
       if (t != null) {
         if (t.id.startsWith('hex_') || t.id.startsWith('8') || t.polygon.length == 6) {
           keysToDelete.add(key);
@@ -39,13 +39,15 @@ class TerritoryService {
       }
     }
     for (final k in keysToDelete) {
-      _territoryBox.delete(k);
+      box.delete(k);
     }
   }
 
   void _initProfileIfNeeded() {
-    if (_profileBox.isEmpty) {
-      _profileBox.put(
+    final box = _profileBox;
+    if (box == null) return;
+    if (box.isEmpty) {
+      box.put(
         'current_user',
         RunnerProfile(
           id: _firebaseService.currentUserId,
@@ -76,23 +78,41 @@ class TerritoryService {
   /// Returns active runner profile
   RunnerProfile getProfile() {
     _initProfileIfNeeded();
-    return _profileBox.get('current_user')!;
+    final box = _profileBox;
+    return box?.get('current_user') ??
+        RunnerProfile(
+          id: _firebaseService.currentUserId,
+          username: _firebaseService.currentUsername,
+          totalDistanceKm: 0.0,
+          xp: 0,
+          level: 1,
+          badges: ['Cyber Rookie'],
+          totalHexesClaimed: 0,
+          currentStreak: 1,
+        );
   }
 
   /// Updates and saves the runner profile
   Future<void> saveProfile(RunnerProfile profile) async {
-    await _profileBox.put('current_user', profile);
+    final box = _profileBox;
+    if (box != null) {
+      await box.put('current_user', profile);
+    }
     unawaited(_firebaseService.syncProfileToCloud(profile));
   }
 
   /// Returns all currently captured territory IDs
   List<String> getCapturedTerritories() {
-    return _territoryBox.values.map((t) => t.id).toList();
+    final box = _territoryBox;
+    if (box == null) return [];
+    return box.values.map((t) => t.id).toList();
   }
 
   /// Returns all currently captured Territory model objects
   List<Territory> getCapturedTerritoryObjects() {
-    return _territoryBox.values.toList();
+    final box = _territoryBox;
+    if (box == null) return [];
+    return box.values.toList();
   }
 
   /// Captures an arbitrary enclosed GPS polygon as sovereign player territory.
@@ -109,9 +129,12 @@ class TerritoryService {
     final String activeOwner = ownerId ?? _firebaseService.currentUserId;
     final Color activeColor = color ?? const Color(0xFF00E676);
     final newPath64 = latLngsToPath64(polygon);
+    final box = _territoryBox;
 
     // 1. Clipper Union: merge with the player's existing captured shapes
-    final playerExistingTerritories = _territoryBox.values.where((t) => t.ownerId == activeOwner).toList();
+    final playerExistingTerritories = box != null
+        ? box.values.where((t) => t.ownerId == activeOwner).toList()
+        : <Territory>[];
     final Paths64 playerExistingPaths = [];
     for (final t in playerExistingTerritories) {
       for (final poly in t.polygons) {
@@ -136,8 +159,10 @@ class TerritoryService {
     );
 
     // Remove previous fragmented territories for this player to store the unified MultiPolygon
-    for (final t in playerExistingTerritories) {
-      await _territoryBox.delete(t.id);
+    if (box != null) {
+      for (final t in playerExistingTerritories) {
+        await box.delete(t.id);
+      }
     }
 
     final String territoryId = 'poly_${activeOwner}_territory';
@@ -152,10 +177,15 @@ class TerritoryService {
       isPendingReview: isPendingReview,
     );
 
-    await _territoryBox.put(territoryId, unifiedTerritory);
+    if (box != null) {
+      await box.put(territoryId, unifiedTerritory);
+    }
 
     // 2. Clipper Difference: contest and clip overlapping rival territories
-    final rivalTerritories = _territoryBox.values.where((t) => t.ownerId != activeOwner).toList();
+    final rivalTerritories = box != null
+        ? box.values.where((t) => t.ownerId != activeOwner).toList()
+        : <Territory>[];
+
     for (final rival in rivalTerritories) {
       final Paths64 rivalPaths = [];
       for (final poly in rival.polygons) {
@@ -173,7 +203,9 @@ class TerritoryService {
 
         if (clippedRivalPaths.isEmpty) {
           // Rival territory completely overtaken
-          await _territoryBox.delete(rival.id);
+          if (box != null) {
+            await box.delete(rival.id);
+          }
           debugPrint('[TerritoryService] Rival territory ${rival.id} completely conquered by $activeOwner');
         } else {
           final List<List<LatLng>> clippedMultiPolys = clippedRivalPaths.map(path64ToLatLngs).toList();
@@ -187,7 +219,9 @@ class TerritoryService {
             polygons: clippedMultiPolys,
             areaSqMeters: remainingArea,
           );
-          await _territoryBox.put(rival.id, updatedRival);
+          if (box != null) {
+            await box.put(rival.id, updatedRival);
+          }
           debugPrint('[TerritoryService] Rival territory ${rival.id} clipped to ${remainingArea.toStringAsFixed(1)} m²');
         }
       }
@@ -220,16 +254,16 @@ class TerritoryService {
 
   /// Saves a specific territory (e.g. captured by rival faction or cloud sync)
   Future<void> saveTerritory(Territory territory) async {
-    await _territoryBox.put(territory.id, territory);
+    await _territoryBox?.put(territory.id, territory);
     _captureEventController.add(territory);
   }
 
   /// Wipe all territories (e.g. for testing)
   Future<void> resetTerritories() async {
-    await _territoryBox.clear();
+    await _territoryBox?.clear();
   }
 
   /// Listen to changes in territories to update UI in real-time
-  Stream<BoxEvent> get territoryStream => _territoryBox.watch();
+  Stream<BoxEvent> get territoryStream => _territoryBox?.watch() ?? const Stream.empty();
 }
 
