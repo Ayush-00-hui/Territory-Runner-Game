@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'profile_page.dart';
 import 'features/map/map_screen.dart';
-import 'features/teams/run_club_modal.dart';
 import 'features/gameplay/territory_service.dart';
 import 'models/territory.dart';
 import 'models/runner_profile.dart';
@@ -402,7 +401,6 @@ class _MainScreenState extends State<MainScreen> {
               children: [
                 _buildNavItem(0, Icons.home_rounded, 'Home'),
                 _buildNavItem(1, Icons.explore_rounded, 'Explore'),
-                _buildCommunityNavItem(),
                 _buildNavItem(2, Icons.person_rounded, 'Profile'),
               ],
             ),
@@ -436,34 +434,6 @@ class _MainScreenState extends State<MainScreen> {
               fontSize: 11,
               fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
               color: isSelected ? Colors.white : AppColors.textMuted,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCommunityNavItem() {
-    return GestureDetector(
-      onTap: () {
-        RunClubModal.show(context);
-      },
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(
-            Icons.groups_rounded,
-            size: 24,
-            color: AppColors.textMuted,
-          ),
-          SizedBox(height: 4),
-          Text(
-            'Community',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textMuted,
             ),
           ),
         ],

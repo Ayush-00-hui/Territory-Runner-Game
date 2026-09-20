@@ -15,9 +15,7 @@ import '../coach/pace_prediction_service.dart';
 import '../coach/llm_coach_service.dart';
 import '../coach/voice_coach_service.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
-import '../gameplay/rival_agent_service.dart';
 import '../physics/flight_physics_controller.dart';
-import '../teams/run_club_modal.dart';
 import '../sensors/sensor_explore_screen.dart';
 import '../../main.dart'; // For AppColors and animations
 import '../../core/utils/constants.dart';
@@ -39,13 +37,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final PacePredictionService _paceService = PacePredictionService();
   final LLMCoachService _coachService = LLMCoachService();
   final VoiceCoachService _voiceCoach = VoiceCoachService();
-  final RivalAgentService _rivalService = RivalAgentService();
   final FlightPhysicsController _flightPhysics = FlightPhysicsController();
   final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
   
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
-  StreamSubscription<List<RivalAgent>>? _rivalSub;
   
   LatLng? _currentLocation;
   String? _currentHexId;
@@ -189,8 +185,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           _satelliteAccuracyMeters = pos.accuracy;
           _updateHexagon(pos);
         });
-        _rivalService.initializeRivals(_currentLocation!);
-        _rivalService.startSimulation();
       }
     }
 
@@ -210,10 +204,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           }
         });
       }
-    });
-
-    _rivalSub = _rivalService.onRivalsUpdated.listen((_) {
-      if (mounted) setState(() {});
     });
   }
 
@@ -643,8 +633,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _flightPhysics.stopPhysicsLoop();
     _positionSub?.cancel();
     _territorySub?.cancel();
-    _rivalSub?.cancel();
-    _rivalService.stopSimulation();
     _runTimer?.cancel();
     _locationService.stopTracking();
     super.dispose();
@@ -962,44 +950,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 ),
               ),
             ],
-          ),
-        ),
-      );
-    }
-
-    // AI Rival Runners Markers
-    for (final rival in _rivalService.rivals) {
-      markers.add(
-        Marker(
-          point: rival.currentPosition,
-          width: 32,
-          height: 32,
-          child: Tooltip(
-            message: '${rival.name} (${rival.faction})',
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: rival.color,
-                border: Border.all(color: Colors.white, width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: rival.color.withValues(alpha: 0.6),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  rival.name.substring(0, 1),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ),
           ),
         ),
       );
@@ -1945,9 +1895,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               context,
               MaterialPageRoute(builder: (_) => const SensorExploreScreen()),
             );
-          } else if (index == 2) {
-            // Leaderboard / Squads
-            RunClubModal.show(context);
           }
         },
         child: Container(

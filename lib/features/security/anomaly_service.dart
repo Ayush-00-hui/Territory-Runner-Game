@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:geolocator/geolocator.dart';
 
 /// Result of anomaly scoring on a trajectory window
@@ -23,29 +25,63 @@ class AnomalyResult {
   );
 }
 
-/// On-device Anti-Cheat and GPS Anomaly Detection Service.
+/// On-Device Rule-Based & Statistical Heuristic GPS Anomaly Detector.
 ///
-/// Features extracted:
-/// 1. Average speed (km/h)
-/// 2. Max acceleration (m/s²)
-/// 3. Heading change rate (deg/s)
-/// 4. Path sinuosity (straight-line / actual path)
-/// 5. Stop frequency
+/// Multi-stage verification architecture:
+/// - Tier 1: Deterministic Physical Constraints (isMocked, human velocity ceiling, teleport jump).
+/// - Tier 2: Calibrated Statistical Heuristic scoring (Z-score weighted deviations on
+///   speed, acceleration, heading jerk, path sinuosity, and stop frequency).
 ///
-/// Architecture:
-/// - Tier 1: Fast deterministic rule filters (speed > 25km/h, teleport jump, isMocked)
-/// - Tier 2: Weighted statistical anomaly scorer trained offline on genuine vs spoofed traces.
+/// Model configuration and calibrated baseline statistics are loaded dynamically from
+/// `assets/models/gps_anomaly_detector.json`.
 class AnomalyService {
   static final AnomalyService _instance = AnomalyService._internal();
   factory AnomalyService() => _instance;
 
-  AnomalyService._internal();
+  AnomalyService._internal() {
+    loadModelConfig();
+  }
 
-  // Baseline genuine running distribution parameters
-  static const List<double> _means = [9.85, 1.42, 6.35, 0.88, 0.05];
-  static const List<double> _stds = [2.15, 0.68, 2.80, 0.09, 0.04];
-  static const List<double> _weights = [2.5, 2.0, 1.2, 1.0, 0.8];
-  static const double _anomalyThreshold = 3.0;
+  // Calibrated baseline parameters (fallback defaults or dynamically populated from JSON)
+  List<double> _means = [9.85, 1.42, 6.35, 0.88, 0.05];
+  List<double> _stds = [2.15, 0.68, 2.80, 0.09, 0.04];
+  List<double> _weights = [2.5, 2.0, 1.2, 1.0, 0.8];
+  double _anomalyThreshold = 3.0;
+  double _maxHumanSpeedKmh = 25.0;
+  bool _isConfigLoaded = false;
+
+  bool get isConfigLoaded => _isConfigLoaded;
+
+  /// Loads baseline statistical parameters from the asset JSON configuration
+  Future<void> loadModelConfig([String assetPath = 'assets/models/gps_anomaly_detector.json']) async {
+    try {
+      final String jsonStr = await rootBundle.loadString(assetPath);
+      final Map<String, dynamic> data = jsonDecode(jsonStr) as Map<String, dynamic>;
+
+      if (data.containsKey('means') && data['means'] is List) {
+        _means = (data['means'] as List).map((e) => (e as num).toDouble()).toList();
+      }
+      if (data.containsKey('stds') && data['stds'] is List) {
+        _stds = (data['stds'] as List).map((e) => (e as num).toDouble()).toList();
+      }
+      if (data.containsKey('feature_weights') && data['feature_weights'] is List) {
+        _weights = (data['feature_weights'] as List).map((e) => (e as num).toDouble()).toList();
+      }
+      if (data.containsKey('anomaly_threshold') && data['anomaly_threshold'] is num) {
+        _anomalyThreshold = (data['anomaly_threshold'] as num).toDouble();
+      }
+      if (data.containsKey('hard_rules') && data['hard_rules'] is Map) {
+        final hardRules = data['hard_rules'] as Map;
+        if (hardRules.containsKey('max_human_speed_kmh')) {
+          _maxHumanSpeedKmh = (hardRules['max_human_speed_kmh'] as num).toDouble();
+        }
+      }
+      _isConfigLoaded = true;
+      debugPrint('[AnomalyService] Statistical anomaly detector configured from $assetPath');
+    } catch (e) {
+      debugPrint('[AnomalyService] Using calibrated in-memory baseline parameters (asset load deferred): $e');
+    }
+  }
 
   /// Scores a sliding window of recent GPS positions
   AnomalyResult scoreSegment(List<Position> positions) {
@@ -67,12 +103,12 @@ class AnomalyService {
 
     // Check 2: Instantaneous human speed ceiling (> 25 km/h is impossible for recreational runners)
     final double instantSpeedKmh = latest.speed * 3.6;
-    if (instantSpeedKmh > 25.0) {
+    if (instantSpeedKmh > _maxHumanSpeedKmh) {
       debugPrint('[AnomalyService] CHEAT DETECTED: Instant speed ${instantSpeedKmh.toStringAsFixed(1)} km/h exceeds human limits');
       return AnomalyResult(
         isAnomaly: true,
-        anomalyScore: 10.0 + (instantSpeedKmh - 25.0),
-        reason: 'Instantaneous speed exceeded 25 km/h ($instantSpeedKmh km/h)',
+        anomalyScore: 10.0 + (instantSpeedKmh - _maxHumanSpeedKmh),
+        reason: 'Instantaneous speed exceeded ${_maxHumanSpeedKmh.toStringAsFixed(0)} km/h ($instantSpeedKmh km/h)',
         features: {'speed_kmh': instantSpeedKmh},
       );
     }
@@ -105,7 +141,7 @@ class AnomalyService {
       return AnomalyResult.genuine;
     }
 
-    // --- Tier 2: Multi-Feature ML Anomaly Scoring ---
+    // --- Tier 2: Multi-Feature Statistical Anomaly Scoring ---
     final Map<String, double> features = _extractFeatures(positions);
     final List<double> fVector = [
       features['avg_speed'] ?? 0.0,

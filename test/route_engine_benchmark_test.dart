@@ -67,7 +67,7 @@ void main() {
       // Simulate N=20 random walks of equivalent distance budget
       const int numRandomWalks = 20;
       int totalRandomHexes = 0;
-      final math.Random rng = math.Random.secure();
+      final math.Random rng = math.Random(42);
 
       for (int i = 0; i < numRandomWalks; i++) {
         final Set<String> visitedInRandom = {};

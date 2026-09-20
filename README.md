@@ -7,7 +7,7 @@
 [![H3 Geospatial](https://img.shields.io/badge/H3_Geospatial-Resolution_10-22c55e.svg?style=for-the-badge)](https://h3geo.org/)
 [![Google Gemini](https://img.shields.io/badge/Google_Gemini-1.5_Flash-8b5cf6.svg?style=for-the-badge&logo=google&logoColor=white)](https://aistudio.google.com/)
 [![Firebase](https://img.shields.io/badge/Firebase-Auth_%26_Firestore-ffca28.svg?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
-[![Tests](https://img.shields.io/badge/Tests-19%2F19_Passing-brightgreen.svg?style=for-the-badge)](test/)
+[![Tests](https://img.shields.io/badge/Tests-All_Passing-brightgreen.svg?style=for-the-badge)](test/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
 <br>
@@ -106,7 +106,7 @@ Where:
 1. **Frontier Exploration:** Computes an outward target waypoint vector oriented toward dense uncaptured hex clusters.
 2. **2-Opt Loop Construction:** Performs greedy node insertion followed by 2-opt edge-swap heuristics to ensure a smooth, runnable circular trajectory returning to the starting point.
 
-> 📊 **Benchmark Results:** The AI Route Engine yields an average of **+22.4% more territory captured** per kilometer compared to unguided random walks under identical distance budgets.
+> 📊 **Benchmark Results:** The AI Route Engine consistently outperforms random walks in territory acquisition efficiency during benchmark testing under identical distance budgets.
 
 ---
 

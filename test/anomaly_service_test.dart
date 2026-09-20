@@ -3,6 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:territory_runner/features/security/anomaly_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('AnomalyService Anti-Cheat Tests', () {
     final AnomalyService anomalyService = AnomalyService();
 
