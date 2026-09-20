@@ -602,6 +602,177 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  void _showFactionSelectionDialog(RunnerProfile profile) {
+    final factions = [
+      {
+        'name': 'Cyber Vanguard',
+        'tag': 'SYSTEM GUARDIANS',
+        'color': const Color(0xFF00E676),
+        'icon': Icons.security_rounded,
+        'perk': 'Precision spatial radar & fast polygon enclosure recognition (+10% base claim speed)',
+      },
+      {
+        'name': 'Solar Syndicate',
+        'tag': 'KINETIC CONQUERORS',
+        'color': const Color(0xFFFF9100),
+        'icon': Icons.wb_sunny_rounded,
+        'perk': 'Solar endurance surge & stamina battery efficiency (+15% cadence recharge boost)',
+      },
+      {
+        'name': 'Quantum Pulse',
+        'tag': 'ANTI-GRAVITY DRIFTERS',
+        'color': const Color(0xFF8A2BE2),
+        'icon': Icons.bolt_rounded,
+        'perk': 'Zero-G sub-orbital glide thrust & +40% sprint momentum conversion multiplier',
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgElevated,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Row(
+                children: [
+                  Icon(Icons.flag_rounded, color: AppColors.accent, size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'FACTION ALIGNMENT',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Pledge allegiance to a runner syndicate to represent them on the territorial map grid and unlock tactical flight bonuses:',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
+              ),
+              const SizedBox(height: 20),
+              ...factions.map((f) {
+                final isSelected = profile.faction == f['name'];
+                final factionColor = f['color'] as Color;
+                final factionIcon = f['icon'] as IconData;
+
+                return GestureDetector(
+                  onTap: () async {
+                    HapticFeedback.mediumImpact();
+                    profile.faction = f['name'] as String;
+                    await _territoryService.saveProfile(profile);
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                    }
+                    setState(() {});
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: AppColors.surface,
+                          content: Text(
+                            'Aligned with ${f['name']} Syndicate! ⚡',
+                            style: TextStyle(color: factionColor, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      );
+                    }
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: isSelected ? factionColor.withValues(alpha: 0.15) : AppColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: isSelected ? factionColor : AppColors.border,
+                        width: isSelected ? 1.8 : 1.0,
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: factionColor.withValues(alpha: 0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(factionIcon, color: factionColor, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    f['name'] as String,
+                                    style: TextStyle(
+                                      color: isSelected ? factionColor : Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: factionColor.withValues(alpha: 0.25),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        'ACTIVE',
+                                        style: TextStyle(color: factionColor, fontSize: 10, fontWeight: FontWeight.w900),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                f['tag'] as String,
+                                style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                f['perk'] as String,
+                                style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showStatDetailModal({
     required String title,
     required String value,
@@ -921,21 +1092,53 @@ class _ProfilePageState extends State<ProfilePage>
                                       ],
                                     ),
                                     const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surface2,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        'LEVEL ${profile.level} ATHLETE',
-                                        style: const TextStyle(
-                                          color: AppColors.accent,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.8,
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surface2,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            'LEVEL ${profile.level} ATHLETE',
+                                            style: const TextStyle(
+                                              color: AppColors.accent,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w800,
+                                              letterSpacing: 0.8,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: () => _showFactionSelectionDialog(profile),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF8A2BE2).withValues(alpha: 0.25),
+                                              borderRadius: BorderRadius.circular(8),
+                                              border: Border.all(color: const Color(0xFF8A2BE2), width: 1.0),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.shield_rounded, color: Color(0xFF00F0FF), size: 12),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  profile.faction.isNotEmpty ? profile.faction : 'FACTION',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF00F0FF),
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w900,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),

@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 class RunnerProfile {
   String id;
   String username;
+  String faction;
   double totalDistanceKm;
   int xp;
   int level;
@@ -13,6 +14,7 @@ class RunnerProfile {
   RunnerProfile({
     required this.id,
     required this.username,
+    this.faction = 'Cyber Vanguard',
     this.totalDistanceKm = 0.0,
     this.xp = 0,
     this.level = 1,
@@ -42,12 +44,22 @@ class RunnerProfile {
     _evaluateBadges();
   }
 
-  /// Increments claimed hexes and awards XP with optional flight multiplier
+  /// Increments claimed hexes/territories and awards XP with optional flight multiplier
   bool claimHex({double multiplier = 1.0}) {
     totalHexesClaimed++;
     _evaluateBadges();
     final int awardedXp = (10 * multiplier).round();
     return addXp(awardedXp);
+  }
+
+  /// Claims an arbitrary enclosed polygon territory and awards dynamic XP scaled to area (m² / 20 * multiplier)
+  int claimPolygonArea(double areaSqMeters, {double multiplier = 1.0}) {
+    totalHexesClaimed++;
+    _evaluateBadges();
+    final int baseAward = (areaSqMeters / 20.0).round().clamp(10, 5000);
+    final int awardedXp = (baseAward * multiplier).round();
+    addXp(awardedXp);
+    return awardedXp;
   }
 
   void _evaluateBadges() {
@@ -73,6 +85,7 @@ class RunnerProfile {
   Map<String, dynamic> toJson() => {
     'id': id,
     'username': username,
+    'faction': faction,
     'totalDistanceKm': totalDistanceKm,
     'xp': xp,
     'level': level,
@@ -85,6 +98,7 @@ class RunnerProfile {
     return RunnerProfile(
       id: json['id'] as String? ?? 'local_user',
       username: json['username'] as String? ?? 'CyberRunner',
+      faction: json['faction'] as String? ?? 'Cyber Vanguard',
       totalDistanceKm: (json['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
       xp: json['xp'] as int? ?? 0,
       level: json['level'] as int? ?? 1,
@@ -110,6 +124,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
     return RunnerProfile(
       id: fields[0] as String,
       username: fields[1] as String,
+      faction: (fields[8] as String?) ?? 'Cyber Vanguard',
       totalDistanceKm: (fields[2] as num).toDouble(),
       xp: fields[3] as int,
       level: fields[4] as int,
@@ -122,7 +137,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
   @override
   void write(BinaryWriter writer, RunnerProfile obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -138,6 +153,8 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
       ..writeByte(6)
       ..write(obj.totalHexesClaimed)
       ..writeByte(7)
-      ..write(obj.currentStreak);
+      ..write(obj.currentStreak)
+      ..writeByte(8)
+      ..write(obj.faction);
   }
 }

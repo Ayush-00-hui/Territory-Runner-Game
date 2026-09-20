@@ -13,9 +13,11 @@ import '../security/anomaly_service.dart';
 import '../coach/pace_prediction_service.dart';
 import '../coach/llm_coach_service.dart';
 import '../coach/voice_coach_service.dart';
+import '../gameplay/polygon_enclosure_engine.dart';
 import '../gameplay/rival_agent_service.dart';
 import '../physics/flight_physics_controller.dart';
 import '../teams/run_club_modal.dart';
+import '../sensors/sensor_explore_screen.dart';
 import '../../main.dart'; // For AppColors and animations
 import '../../core/utils/constants.dart';
 
@@ -38,6 +40,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final VoiceCoachService _voiceCoach = VoiceCoachService();
   final RivalAgentService _rivalService = RivalAgentService();
   final FlightPhysicsController _flightPhysics = FlightPhysicsController();
+  final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
   
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
@@ -95,18 +98,71 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          title: const Text('Realtime GPS Needed', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          content: const Text(
-            'Territory Runner requires your background location to let you capture territories in the real world!\n\nIf you deny this, the app will fall back to a Virtual Simulation Mode.',
-            style: TextStyle(color: AppColors.textSecondary, height: 1.4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: AppColors.accent, width: 1.2)),
+          title: const Row(
+            children: [
+              Icon(Icons.satellite_alt_rounded, color: AppColors.accent, size: 24),
+              SizedBox(width: 10),
+              Text(
+                'TACTICAL HUD AUTHORIZATION',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.1),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Territory Runner requires Geolocation & 3-Axis Kinematic Motion Sensors to calculate sub-orbital glide physics and enclose real-world sovereign polygons.',
+                style: TextStyle(color: AppColors.textSecondary, height: 1.4, fontSize: 13),
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Column(
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.gps_fixed_rounded, color: Color(0xFF00E676), size: 16),
+                        SizedBox(width: 8),
+                        Text('High-Accuracy GPS (Sub-meter)', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.sensors_rounded, color: Color(0xFF00F0FF), size: 16),
+                        SizedBox(width: 8),
+                        Text('6DOF Gyroscope & Accelerometer', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'If denied or restricted, the engine falls back gracefully to localized virtual simulation mode.',
+                style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontStyle: FontStyle.italic),
+              ),
+            ],
           ),
           actions: [
-            TextButton(
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               onPressed: () {
                 Navigator.of(ctx).pop();
               },
-              child: const Text('GOT IT', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+              child: const Text('ENGAGE SENSORS & PROCEED', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
             ),
           ],
         ),
@@ -159,6 +215,36 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       if (_isRunActive) {
         _runCoordinates.add(_currentLocation!);
+        
+        // 1. Arbitrary Polygon Enclosure Tracking
+        final loopEvent = _polygonEngine.addPosition(_currentLocation!);
+        if (loopEvent != null) {
+          final multiplier = _flightPhysics.conquestMultiplier;
+          _territoryService.capturePolygonTerritory(
+            polygon: loopEvent.polygon,
+            areaSqMeters: loopEvent.areaSqMeters,
+            multiplier: multiplier,
+          ).then((_) {
+            if (mounted) {
+              setState(() {
+                _hexesClaimedThisRun++;
+              });
+              HapticFeedback.heavyImpact();
+              _voiceCoach.announceHexConquered(_hexesClaimedThisRun);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: AppColors.surface,
+                  duration: const Duration(seconds: 3),
+                  content: Text(
+                    '⚡ Arbitrary Loop Enclosed! +${(loopEvent.areaSqMeters / 20 * multiplier).round()} XP (${loopEvent.areaSqMeters.toStringAsFixed(0)} m²)',
+                    style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              );
+            }
+          });
+        }
+
         if (_runCoordinates.length >= 2) {
           final p1 = _runCoordinates[_runCoordinates.length - 2];
           final p2 = _runCoordinates.last;
@@ -209,6 +295,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void _toggleRun() {
     if (!_isRunActive) {
       // START RUN
+      _polygonEngine.clear();
       setState(() {
         _isRunActive = true;
         _hexesClaimedThisRun = 0;
@@ -684,9 +771,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     final territories = _territoryService.getCapturedTerritoryObjects();
     final Set<String> renderedHexes = {};
     
-    // Draw all permanently captured hexes with glowing neon green outline
+    // Draw all permanently captured hexes & arbitrary polygons with glowing outline
     for (final territory in territories) {
-      if (territory.polygon.length == 6) {
+      if (territory.polygon.length >= 3) {
         polygons.add(
           Polygon(
             points: territory.polygon,
@@ -842,22 +929,34 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       userAgentPackageName: 'com.territoryrunner.app',
                     ),
                     
-                    // Conquered Territories Polygon Overlay
+                    // Conquered Territories Polygon Overlay (Arbitrary Enclosures & Hexagons)
                     PolygonLayer(
                       polygons: _buildPolygons(),
                     ),
 
-                    // AI Recommended Route Polyline Overlay
-                    if (_activeSuggestedRoute != null)
-                      PolylineLayer(
-                        polylines: [
+                    // Active Runner Breadcrumb Trail & AI Suggested Route
+                    PolylineLayer(
+                      polylines: [
+                        if (_isRunActive && _runCoordinates.length >= 2)
+                          Polyline(
+                            points: _runCoordinates,
+                            color: const Color(0xFF00E676),
+                            strokeWidth: 4.0,
+                          ),
+                        if (_polygonEngine.currentPath.length >= 2)
+                          Polyline(
+                            points: _polygonEngine.currentPath,
+                            color: const Color(0xFF00F0FF),
+                            strokeWidth: 2.5,
+                          ),
+                        if (_activeSuggestedRoute != null)
                           Polyline(
                             points: _activeSuggestedRoute!.polyline,
-                            color: AppColors.accent,
-                            strokeWidth: 4.5,
+                            color: const Color(0xFFFF9100),
+                            strokeWidth: 4.0,
                           ),
-                        ],
-                      ),
+                      ],
+                    ),
                       
                     // Live Markers (Player & Rival Runners)
                     MarkerLayer(
@@ -932,9 +1031,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: AppColors.border),
                       ),
-                      child: const Text(
-                        'Run to own.',
-                        style: TextStyle(
+                      child: Text(
+                        profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -1013,13 +1112,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             ],
                           ),
                           Text(
-                            _flightPhysics.isThrusterEngaged
-                                ? 'INVERTED -0.35g'
-                                : (_flightPhysics.isAirborne ? 'GLIDING (Zero-G)' : 'GROUND LEVEL'),
+                            _flightPhysics.kinematicState == KinematicState.zeroGSubOrbitalGlide
+                                ? 'ZERO-G GLIDE (-0.4G)'
+                                : 'GROUND TRACTION (1.0G)',
                             style: TextStyle(
-                              color: _flightPhysics.isThrusterEngaged
+                              color: _flightPhysics.kinematicState == KinematicState.zeroGSubOrbitalGlide
                                   ? const Color(0xFF00F0FF)
-                                  : (_flightPhysics.isAirborne ? const Color(0xFF8A2BE2) : AppColors.textSecondary),
+                                  : AppColors.textSecondary,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                             ),
@@ -1028,47 +1127,65 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       ),
                     ],
                   ),
-                  if (_flightPhysics.isAirborne)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF8A2BE2).withValues(alpha: 0.35),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF8A2BE2)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.bolt_rounded, color: Color(0xFF00F0FF), size: 14),
-                          SizedBox(width: 3),
-                          Text(
-                            '1.5x XP BOOST',
-                            style: TextStyle(color: Color(0xFF00F0FF), fontWeight: FontWeight.w900, fontSize: 10),
+                  Row(
+                    children: [
+                      if (_flightPhysics.momentumBoostActive)
+                        Container(
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF9100).withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFF9100)),
                           ),
-                        ],
-                      ),
-                    )
-                  else
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 48,
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: _flightPhysics.energy / 100.0,
-                              backgroundColor: Colors.white12,
-                              color: const Color(0xFF00F0FF),
-                              minHeight: 6,
+                          child: const Text(
+                            '+40% BOOST',
+                            style: TextStyle(color: Color(0xFFFF9100), fontWeight: FontWeight.w900, fontSize: 9),
+                          ),
+                        ),
+                      if (_flightPhysics.isAirborne)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF8A2BE2).withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF8A2BE2)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.bolt_rounded, color: Color(0xFF00F0FF), size: 14),
+                              SizedBox(width: 3),
+                              Text(
+                                '1.5x XP',
+                                style: TextStyle(color: Color(0xFF00F0FF), fontWeight: FontWeight.w900, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Row(
+                          children: [
+                            SizedBox(
+                              width: 48,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: _flightPhysics.energy / 100.0,
+                                  backgroundColor: Colors.white12,
+                                  color: const Color(0xFF00F0FF),
+                                  minHeight: 6,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${_flightPhysics.energy.toStringAsFixed(0)}%',
+                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w700),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${_flightPhysics.energy.toStringAsFixed(0)}%',
-                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w700),
-                        ),
-                      ],
-                    ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -1374,7 +1491,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           setState(() {
             _selectedModeTab = index;
           });
-          if (index == 2) {
+          if (index == 1) {
+            // Sensor Explore Screen (6DOF Oscilloscope & Telemetry)
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SensorExploreScreen()),
+            );
+          } else if (index == 2) {
             // Leaderboard / Squads
             RunClubModal.show(context);
           }

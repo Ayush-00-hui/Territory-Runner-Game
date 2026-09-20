@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
@@ -113,6 +114,53 @@ class TerritoryService {
     unawaited(_firebaseService.syncTerritoryToCloud(newTerritory));
 
     return true;
+  }
+
+  /// Captures an arbitrary enclosed GPS polygon as sovereign player territory
+  /// Calculates area, awards dynamic XP scaled to area (m² / 20 * multiplier), and syncs
+  Future<Territory> capturePolygonTerritory({
+    required List<LatLng> polygon,
+    required double areaSqMeters,
+    String? ownerId,
+    Color? color,
+    bool isPendingReview = false,
+    double? multiplier,
+  }) async {
+    final String territoryId = 'poly_${DateTime.now().millisecondsSinceEpoch}_${polygon.length}';
+    final String activeOwner = ownerId ?? _firebaseService.currentUserId;
+    final Color activeColor = color ?? const Color(0xFF00E676);
+
+    final newTerritory = Territory(
+      id: territoryId,
+      ownerId: activeOwner,
+      polygon: polygon,
+      areaSqMeters: areaSqMeters,
+      capturedAt: DateTime.now(),
+      color: activeColor,
+      isPendingReview: isPendingReview,
+    );
+
+    // Persist locally in Hive
+    await _territoryBox.put(territoryId, newTerritory);
+
+    // Award dynamic XP based on enclosed area (Base XP = Area / 20 * multiplier)
+    final profile = getProfile();
+    final effectiveMultiplier = multiplier ?? FlightPhysicsController().conquestMultiplier;
+    final int gainedXp = profile.claimPolygonArea(areaSqMeters, multiplier: effectiveMultiplier);
+    await saveProfile(profile);
+
+    // Recharge quantum flux battery on loop closure (+5%)
+    FlightPhysicsController().rechargeEnergy(5.0);
+
+    debugPrint('[TerritoryService] Arbitrary Polygon $territoryId claimed! Area: ${areaSqMeters.toStringAsFixed(1)}m², XP: +$gainedXp, Total claims: ${profile.totalHexesClaimed}');
+
+    // Emit live capture event
+    _captureEventController.add(newTerritory);
+
+    // Sync to Cloud Firestore
+    unawaited(_firebaseService.syncTerritoryToCloud(newTerritory));
+
+    return newTerritory;
   }
 
   /// Records distance added during a run

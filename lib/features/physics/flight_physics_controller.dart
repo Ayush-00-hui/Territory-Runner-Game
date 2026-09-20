@@ -3,7 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Single particle for anti-gravity slipstream visual effects
+/// Kinematic State Modes for Anti-Gravity Movement Physics
+enum KinematicState {
+  groundTraction, // 1.0G, friction: 0.82
+  zeroGSubOrbitalGlide, // -0.4G, friction: 0.985
+}
+
+/// Single particle for anti-gravity micro-thruster slipstream visual effects
 class SlipstreamParticle {
   double x;
   double y;
@@ -32,39 +38,54 @@ class SlipstreamParticle {
   bool get isDead => opacity <= 0.0;
 }
 
-/// Anti-Gravity Flight Physics & Telemetry Controller
+/// Anti-Gravity Movement Physics, Kinematics & Flight Telemetry Controller
 class FlightPhysicsController extends ChangeNotifier {
   static final FlightPhysicsController _instance = FlightPhysicsController._internal();
   factory FlightPhysicsController() => _instance;
 
   FlightPhysicsController._internal();
 
-  // Physics Constants
-  static const double gravity = 9.81; // m/s²
-  static const double invertedGravityAccel = -3.43; // -0.35g upward acceleration (m/s²)
-  static const double maxAltitudeMeters = 85.0; // Flight ceiling
-  static const double terminalDescentSpeed = 12.0; // m/s
-  static const double maxClimbSpeed = 18.0; // m/s
+  // Kinematic Physics Constants
+  static const double groundGravity = 9.81; // 1.0G (m/s²)
+  static const double zeroGGravity = -3.924; // -0.4G upward sub-orbital lift (m/s²)
+  static const double groundFriction = 0.82; // Ground traction coefficient
+  static const double zeroGFriction = 0.985; // Low-drag sub-orbital glide coefficient
+  static const double minHoverAltitudeMeters = 2.5; // Hovering floor
+  static const double maxHoverAltitudeMeters = 15.0; // Hovering sub-orbital ceiling
+  static const double maxFlightCeilingMeters = 85.0; // Terminal flight ceiling
 
   // State
+  KinematicState _kinematicState = KinematicState.groundTraction;
   bool _isThrusterEngaged = false;
-  double _altitude = 0.0; // Current altitude in meters (0 to 85m)
+  double _altitude = 0.0; // Meters (0.0 to 85.0m)
   double _verticalVelocity = 0.0; // m/s
-  double _energy = 100.0; // 0 to 100%
+  double _forwardVelocity = 0.0; // m/s
+  double _energy = 100.0; // Quantum Flux Energy Battery (0% - 100%)
+  bool _momentumBoostActive = false;
+  double _pitchDeg = 0.0; // Gyroscope pitch tilt (-25° to +25°)
+  double _rollDeg = 0.0; // Gyroscope roll tilt (-25° to +25°)
+  double _runningCadenceSpM = 0.0; // Steps per minute for battery cadence recharge
+
   Timer? _physicsTimer;
   DateTime? _lastTick;
 
-  // Particle slipstream buffer
+  // Particle micro-thruster buffer
   final List<SlipstreamParticle> particles = [];
   final math.Random _rng = math.Random.secure();
 
+  KinematicState get kinematicState => _kinematicState;
   bool get isThrusterEngaged => _isThrusterEngaged;
   double get altitude => _altitude;
   double get verticalVelocity => _verticalVelocity;
+  double get forwardVelocity => _forwardVelocity;
   double get energy => _energy;
-  bool get isAirborne => _altitude > 1.5;
+  bool get isAirborne => _altitude >= 1.5 || _kinematicState == KinematicState.zeroGSubOrbitalGlide;
+  bool get momentumBoostActive => _momentumBoostActive;
+  double get pitchDeg => _pitchDeg;
+  double get rollDeg => _rollDeg;
+  double get friction => _kinematicState == KinematicState.zeroGSubOrbitalGlide ? zeroGFriction : groundFriction;
 
-  /// 1.5x Multiplier for XP & Territory points while airborne
+  /// 1.5x Multiplier for XP & Territory points while in Zero-G / Airborne
   double get conquestMultiplier => isAirborne ? 1.5 : 1.0;
 
   void startPhysicsLoop() {
@@ -78,17 +99,42 @@ class FlightPhysicsController extends ChangeNotifier {
     _physicsTimer = null;
   }
 
-  /// Engages thruster (e.g. Hold-to-Glide or Toggle)
-  void setThruster(bool active) {
+  /// Engages or disengages Zero-G sub-orbital glide thrusters
+  void setThruster(bool active, {double currentRunSpeedMps = 3.5}) {
     if (_isThrusterEngaged != active) {
       _isThrusterEngaged = active;
-      if (active) {
+
+      if (active && _energy > 5.0) {
+        _kinematicState = KinematicState.zeroGSubOrbitalGlide;
+        // Momentum Conservation: Convert sprint kinetic energy into +40% forward glide velocity boost
+        _forwardVelocity = (currentRunSpeedMps > 0 ? currentRunSpeedMps : 3.5) * 1.40;
+        _momentumBoostActive = true;
         HapticFeedback.heavyImpact();
       } else {
+        _kinematicState = KinematicState.groundTraction;
+        _momentumBoostActive = false;
         HapticFeedback.lightImpact();
       }
       notifyListeners();
     }
+  }
+
+  /// Recharges Quantum Flux battery (e.g. on territory loop closure or cadence)
+  void rechargeEnergy(double amount) {
+    _energy = (_energy + amount).clamp(0.0, 100.0);
+    notifyListeners();
+  }
+
+  /// Updates live runner cadence for kinetic ground battery recharge
+  void updateCadence(double stepsPerMinute) {
+    _runningCadenceSpM = stepsPerMinute;
+  }
+
+  /// Updates gyroscope 6DOF attitude orientation (Pitch and Roll)
+  void updateGyroscopeOrientation(double pitch, double roll) {
+    _pitchDeg = pitch.clamp(-25.0, 25.0);
+    _rollDeg = roll.clamp(-25.0, 25.0);
+    notifyListeners();
   }
 
   void _tick() {
@@ -96,25 +142,47 @@ class FlightPhysicsController extends ChangeNotifier {
     final double dt = _lastTick != null ? (now.difference(_lastTick!).inMilliseconds / 1000.0).clamp(0.01, 0.1) : 0.033;
     _lastTick = now;
 
-    if (_isThrusterEngaged && _energy > 0) {
-      // Apply inverted gravity acceleration
-      _verticalVelocity = (_verticalVelocity - (invertedGravityAccel * 3.5 * dt)).clamp(-terminalDescentSpeed, maxClimbSpeed);
-      // Deplete thruster energy
-      _energy = (_energy - (15.0 * dt)).clamp(0.0, 100.0);
-      if (_energy <= 0) {
+    if (_kinematicState == KinematicState.zeroGSubOrbitalGlide && _energy > 0) {
+      // 1. Quantum Flux battery depletion: 1.8% per second
+      _energy = (_energy - (1.8 * dt)).clamp(0.0, 100.0);
+
+      if (_energy <= 0.0) {
+        _kinematicState = KinematicState.groundTraction;
         _isThrusterEngaged = false;
+        _momentumBoostActive = false;
         HapticFeedback.vibrate();
       }
-      _spawnSlipstreamParticles();
+
+      // 2. Harmonic vertical hovering damping towards target (between 2.5m - 15m)
+      const double targetHoverAltitude = 8.5; // Mid-point of 2.5m - 15m range
+      final double altitudeError = targetHoverAltitude - _altitude;
+      const double springK = 3.2;
+      const double dampingC = 1.8;
+      final double springForce = (springK * altitudeError) - (dampingC * _verticalVelocity);
+
+      // Apply -0.4G upward kinematic lift + spring hover damping
+      _verticalVelocity += (-zeroGGravity + springForce) * dt;
+      _verticalVelocity = _verticalVelocity.clamp(-8.0, 12.0);
+
+      // Apply low-drag glide friction (0.985)
+      _forwardVelocity *= math.pow(zeroGFriction, dt * 30.0);
+
+      _spawnMicroThrusterParticles();
     } else {
-      // Normal gravitational descent
-      _verticalVelocity = (_verticalVelocity - (gravity * dt)).clamp(-terminalDescentSpeed, maxClimbSpeed);
-      // Recharge energy when thrusters are off
-      _energy = (_energy + (20.0 * dt)).clamp(0.0, 100.0);
+      // Ground Traction Mode: 1.0G gravity descent
+      _verticalVelocity = (_verticalVelocity - (groundGravity * dt)).clamp(-15.0, 15.0);
+
+      // Kinetic battery recharge on ground (cadence based recharge: ~2.5% per sec)
+      final double cadenceBoost = _runningCadenceSpM > 60 ? (_runningCadenceSpM / 160.0) * 2.5 : 1.2;
+      _energy = (_energy + (cadenceBoost * dt)).clamp(0.0, 100.0);
+
+      // Ground friction (0.82)
+      _forwardVelocity *= math.pow(groundFriction, dt * 30.0);
+      _momentumBoostActive = false;
     }
 
-    // Integrate altitude
-    _altitude = (_altitude + (_verticalVelocity * dt)).clamp(0.0, maxAltitudeMeters);
+    // Integrate vertical altitude
+    _altitude = (_altitude + (_verticalVelocity * dt)).clamp(0.0, maxFlightCeilingMeters);
 
     if (_altitude <= 0.0) {
       _altitude = 0.0;
@@ -132,16 +200,16 @@ class FlightPhysicsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _spawnSlipstreamParticles() {
+  void _spawnMicroThrusterParticles() {
     for (int i = 0; i < 3; i++) {
       particles.add(
         SlipstreamParticle(
-          x: _rng.nextDouble(),
-          y: 0.95 + (_rng.nextDouble() * 0.05),
-          vx: (_rng.nextDouble() - 0.5) * 0.01,
-          vy: -(_rng.nextDouble() * 0.04 + 0.02),
-          size: _rng.nextDouble() * 4.0 + 2.0,
-          opacity: 0.85,
+          x: 0.5 + (_rng.nextDouble() - 0.5) * 0.15,
+          y: 0.90 + (_rng.nextDouble() * 0.08),
+          vx: (_rng.nextDouble() - 0.5) * 0.015,
+          vy: -(_rng.nextDouble() * 0.05 + 0.025),
+          size: _rng.nextDouble() * 4.5 + 2.5,
+          opacity: 0.90,
           color: _rng.nextBool() ? const Color(0xFF00F0FF) : const Color(0xFF8A2BE2),
         ),
       );
@@ -155,7 +223,7 @@ class FlightPhysicsController extends ChangeNotifier {
   }
 }
 
-/// Custom canvas painter for anti-gravity slipstream particles
+/// Custom canvas painter for anti-gravity micro-thruster slipstream particles
 class SlipstreamPainter extends CustomPainter {
   final List<SlipstreamParticle> particles;
   SlipstreamPainter({required this.particles});
@@ -172,14 +240,14 @@ class SlipstreamPainter extends CustomPainter {
       final center = Offset(p.x * size.width, p.y * size.height);
       canvas.drawCircle(center, p.size, paint);
 
-      // Trailing speed streak
+      // Trailing micro-thruster speed streak
       final tailPaint = Paint()
-        ..color = p.color.withValues(alpha: p.opacity * 0.5)
-        ..strokeWidth = p.size * 0.8
+        ..color = p.color.withValues(alpha: p.opacity * 0.55)
+        ..strokeWidth = p.size * 0.85
         ..strokeCap = StrokeCap.round;
       canvas.drawLine(
         center,
-        Offset(center.dx - (p.vx * size.width * 8), center.dy - (p.vy * size.height * 8)),
+        Offset(center.dx - (p.vx * size.width * 10), center.dy - (p.vy * size.height * 10)),
         tailPaint,
       );
     }
@@ -188,4 +256,3 @@ class SlipstreamPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant SlipstreamPainter oldDelegate) => true;
 }
-
