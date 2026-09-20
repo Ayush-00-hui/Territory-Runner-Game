@@ -22,9 +22,25 @@ class TerritoryService {
   static const double _coordScale = 10000000.0; // 1e7 for high-precision GPS integer clipping
 
   TerritoryService._internal() {
-    _territoryBox = Hive.box<Territory>('territories_v2');
+    _territoryBox = Hive.box<Territory>('territories_v3');
     _profileBox = Hive.box<RunnerProfile>('profile');
     _initProfileIfNeeded();
+    _cleanLegacyHexes();
+  }
+
+  void _cleanLegacyHexes() {
+    final keysToDelete = <dynamic>[];
+    for (final key in _territoryBox.keys) {
+      final t = _territoryBox.get(key);
+      if (t != null) {
+        if (t.id.startsWith('hex_') || t.id.startsWith('8') || t.polygon.length == 6) {
+          keysToDelete.add(key);
+        }
+      }
+    }
+    for (final k in keysToDelete) {
+      _territoryBox.delete(k);
+    }
   }
 
   void _initProfileIfNeeded() {

@@ -16,7 +16,7 @@ void main() {
     if (!Hive.isAdapterRegistered(1)) {
       Hive.registerAdapter(RunnerProfileAdapter());
     }
-    await Hive.openBox<Territory>('territories_v2');
+    await Hive.openBox<Territory>('territories_v3');
     await Hive.openBox<RunnerProfile>('profile');
   });
 

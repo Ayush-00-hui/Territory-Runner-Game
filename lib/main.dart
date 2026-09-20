@@ -17,7 +17,7 @@ void main() async {
   await Hive.initFlutter();
   Hive.registerAdapter(TerritoryAdapter());
   Hive.registerAdapter(RunnerProfileAdapter());
-  await Hive.openBox<Territory>('territories_v2');
+  await Hive.openBox<Territory>('territories_v3');
   await Hive.openBox<RunnerProfile>('profile');
   await FirebaseService().initialize();
   runApp(const TerritoryApp());
