@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -11,11 +12,13 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late RouteService routeService;
+  late Directory tempDir;
   const LatLng startPos = LatLng(37.7749, -122.4194);
   const double targetBudgetKm = 3.0; // 3km target run
 
   setUpAll(() async {
-    Hive.init('./test_hive_route');
+    tempDir = Directory.systemTemp.createTempSync('hive_route_test_');
+    Hive.init(tempDir.path);
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(TerritoryAdapter());
     }
@@ -29,6 +32,9 @@ void main() {
 
   tearDownAll(() async {
     await Hive.close();
+    try {
+      tempDir.deleteSync(recursive: true);
+    } catch (_) {}
   });
 
   group('Route Recommendation Engine Benchmarks', () {

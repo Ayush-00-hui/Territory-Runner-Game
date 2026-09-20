@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -7,9 +8,11 @@ import 'package:territory_runner/models/territory.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late Directory tempDir;
 
   setUpAll(() async {
-    Hive.init('./test_hive_widget');
+    tempDir = Directory.systemTemp.createTempSync('hive_widget_test_');
+    Hive.init(tempDir.path);
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(TerritoryAdapter());
     }
@@ -22,6 +25,9 @@ void main() {
 
   tearDownAll(() async {
     await Hive.close();
+    try {
+      tempDir.deleteSync(recursive: true);
+    } catch (_) {}
   });
 
   testWidgets('TerritoryApp smoke test', (WidgetTester tester) async {
