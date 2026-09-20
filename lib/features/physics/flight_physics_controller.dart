@@ -56,7 +56,7 @@ class FlightPhysicsController extends ChangeNotifier {
 
   // Particle slipstream buffer
   final List<SlipstreamParticle> particles = [];
-  final math.Random _rng = math.Random();
+  final math.Random _rng = math.Random.secure();
 
   bool get isThrusterEngaged => _isThrusterEngaged;
   double get altitude => _altitude;
