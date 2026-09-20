@@ -9,8 +9,17 @@ and exports model parameters and decision boundaries to JSON / weights for on-de
 
 import json
 import math
-import random
+import secrets
 import os
+
+rng = secrets.SystemRandom()
+
+def _gauss(mu, sigma):
+    # Box-Muller transform using secure random
+    u1 = max(1e-10, rng.random())
+    u2 = rng.random()
+    z0 = math.sqrt(-2.0 * math.log(u1)) * math.cos(2.0 * math.pi * u2)
+    return mu + z0 * sigma
 
 def generate_synthetic_running_trace(num_points=100):
     """Generates genuine running telemetry: speed 7-14 km/h, natural heading drift, small noise"""
@@ -22,9 +31,9 @@ def generate_synthetic_running_trace(num_points=100):
 
     for _ in range(num_points):
         # Human running acceleration/deceleration fluctuations
-        speed_kmh = max(5.0, min(18.0, speed_kmh + random.gauss(0, 0.4)))
+        speed_kmh = max(5.0, min(18.0, speed_kmh + _gauss(0, 0.4)))
         # Natural heading wobble
-        bearing = (bearing + random.gauss(0, 8.0)) % 360.0
+        bearing = (bearing + _gauss(0, 8.0)) % 360.0
         
         # Advance position by 1 second step
         speed_ms = speed_kmh / 3.6
@@ -32,8 +41,8 @@ def generate_synthetic_running_trace(num_points=100):
         d_lng = (speed_ms * math.sin(math.radians(bearing))) / (111139.0 * math.cos(math.radians(lat)))
         
         # Add small GPS jitter (+- 1-2m)
-        lat += d_lat + random.gauss(0, 0.00001)
-        lng += d_lng + random.gauss(0, 0.00001)
+        lat += d_lat + _gauss(0, 0.00001)
+        lng += d_lng + _gauss(0, 0.00001)
         
         points.append({
             'latitude': lat,
@@ -53,9 +62,9 @@ def generate_vehicle_trace(num_points=100):
     bearing = 90.0
 
     for _ in range(num_points):
-        speed_kmh = max(35.0, min(100.0, speed_kmh + random.gauss(0, 1.5)))
+        speed_kmh = max(35.0, min(100.0, speed_kmh + _gauss(0, 1.5)))
         # Cars travel on long straight roads with minimal jitter
-        bearing = (bearing + random.gauss(0, 1.0)) % 360.0
+        bearing = (bearing + _gauss(0, 1.0)) % 360.0
         speed_ms = speed_kmh / 3.6
         d_lat = (speed_ms * math.cos(math.radians(bearing))) / 111139.0
         d_lng = (speed_ms * math.sin(math.radians(bearing))) / (111139.0 * math.cos(math.radians(lat)))
@@ -78,15 +87,15 @@ def generate_teleport_trace(num_points=50):
     lng = -122.4194
 
     for _ in range(num_points):
-        if random.random() < 0.2:
+        if rng.random() < 0.2:
             # Huge sudden jump 200m - 1000m
-            lat += random.choice([-1, 1]) * random.uniform(0.002, 0.01)
-            lng += random.choice([-1, 1]) * random.uniform(0.002, 0.01)
+            lat += rng.choice([-1, 1]) * rng.uniform(0.002, 0.01)
+            lng += rng.choice([-1, 1]) * rng.uniform(0.002, 0.01)
         points.append({
             'latitude': lat,
             'longitude': lng,
-            'speed': random.uniform(0, 5),
-            'heading': random.uniform(0, 360),
+            'speed': rng.uniform(0, 5),
+            'heading': rng.uniform(0, 360),
             'timestamp': len(points) * 1000
         })
     return points
