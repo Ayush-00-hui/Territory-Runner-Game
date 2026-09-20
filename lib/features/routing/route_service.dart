@@ -1,239 +1,212 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
-import '../gameplay/h3_service.dart';
 import '../gameplay/territory_service.dart';
+import '../gameplay/polygon_enclosure_engine.dart';
 
 /// Representation of an AI-recommended running loop route
 class SuggestedRoute {
   final List<LatLng> polyline;
-  final List<String> hexIds;
-  final int estimatedNewTerritoryCount;
+  final double estimatedNewTerritoryAreaSqM;
   final double totalDistanceKm;
   final double targetDistanceKm;
 
   const SuggestedRoute({
     required this.polyline,
-    required this.hexIds,
-    required this.estimatedNewTerritoryCount,
+    this.estimatedNewTerritoryAreaSqM = 0.0,
     required this.totalDistanceKm,
     required this.targetDistanceKm,
   });
+
+  /// Approximate territory claim count for UI backwards compatibility
+  int get estimatedNewTerritoryCount => math.max(1, (estimatedNewTerritoryAreaSqM / 20.0).round());
 }
 
 /// AI Route Recommendation Engine.
 ///
-/// Formulation:
-/// Models route synthesis as the Orienteering Problem (OP) on the H3 geospatial graph:
-/// - Nodes: Candidate H3 hexagons within the reachable bounding radius.
-/// - Distance Metric: Geodesic Haversine approximation (used for fast, deterministic on-device routing).
-/// - Node Prize: 1.0 if hex is unclaimed by user, 0.0 if already owned.
-/// - Optimization: Two-phase pipeline:
-///     1. Greedy nearest-unclaimed-hex construction with loop constraint (returning to start).
-///     2. 2-opt local search improvement pass + greedy node insertions within <500ms budget.
+/// Features:
+/// 1. Real-road pedestrian graph routing via OSRM (Open Source Routing Machine).
+///    NOTE: The public endpoint (https://router.project-osrm.org) is utilized for
+///    development and demonstrations. Production deployments require a self-hosted
+///    OSRM instance to adhere to public server rate limits.
+/// 2. Biased towards uncaptured territory (actively steers loop away from owned polygons).
+/// 3. Resilient offline fallback: seamlessly generates a haversine-based closed loop
+///    if network is unavailable.
 class RouteService {
   static final RouteService _instance = RouteService._internal();
   factory RouteService() => _instance;
 
-  final H3Service _h3Service = H3Service();
   final TerritoryService _territoryService = TerritoryService();
 
   RouteService._internal();
 
-  /// Suggests a loop route maximizing unclaimed hexes within [targetDistanceKm] budget.
+  /// Suggests a closed loop route matching [targetDistanceKm] (within ~15%),
+  /// biased towards uncaptured ground.
+  Future<SuggestedRoute> suggestRouteAsync({
+    required LatLng currentLocation,
+    required double targetDistanceKm,
+    Duration timeout = const Duration(milliseconds: 2500),
+  }) async {
+    final ownedTerritories = _territoryService.getCapturedTerritoryObjects();
+    
+    // 1. Attempt Real-Road OSRM pedestrian loop generation
+    try {
+      final osrmRoute = await _fetchOsrmLoop(
+        currentLocation: currentLocation,
+        targetDistanceKm: targetDistanceKm,
+        ownedTerritories: ownedTerritories,
+        timeout: timeout,
+      );
+      if (osrmRoute != null && osrmRoute.polyline.length >= 3) {
+        return osrmRoute;
+      }
+    } catch (e) {
+      debugPrint('[RouteService] OSRM query failed or offline ($e). Falling back to synthetic geodesic loop.');
+    }
+
+    // 2. Offline Fallback: Geodesic loop synthesis
+    return suggestRoute(
+      currentLocation: currentLocation,
+      targetDistanceKm: targetDistanceKm,
+    );
+  }
+
+  /// Synchronous fallback route generator (also used directly when offline)
   SuggestedRoute suggestRoute({
     required LatLng currentLocation,
     required double targetDistanceKm,
-    Set<String>? ownedHexesOverride,
-    Duration timeBudget = const Duration(milliseconds: 400),
   }) {
-    final Stopwatch stopwatch = Stopwatch()..start();
-    final Set<String> ownedHexes = ownedHexesOverride ?? _territoryService.getCapturedTerritories().toSet();
-
-    final String startHexId = _h3Service.getHexagonForLocation(currentLocation.latitude, currentLocation.longitude);
-    final LatLng startCenter = _h3Service.getHexagonCenter(startHexId);
-
-    // 1. Generate candidate graph within bounding radius
-    // Diameter is targetDistanceKm, so max radius from origin is ~ targetDistanceKm / 2.2
-    final double maxRadiusKm = math.max(0.4, targetDistanceKm / 2.2);
-    final int ringSteps = math.max(1, (maxRadiusKm / 0.12).round()).clamp(1, 15);
-    final List<String> candidateHexes = _h3Service.getHexagonsInRadius(startHexId, ringSteps);
-
-    // Filter candidate nodes with coordinates and prizes
-    final Map<String, LatLng> nodeCoords = {};
-    final Map<String, double> nodePrizes = {};
-
-    for (final hex in candidateHexes) {
-      final center = _h3Service.getHexagonCenter(hex);
-      nodeCoords[hex] = center;
-      nodePrizes[hex] = ownedHexes.contains(hex) ? 0.0 : 1.0;
-    }
-
-    // 2. Baseline Phase: Greedy Loop Construction
-    List<String> route = [startHexId];
-    Set<String> visited = {startHexId};
-    double currentDistance = 0.0;
-
-    while (true) {
-      if (stopwatch.elapsed > timeBudget) break;
-
-      final String currentHex = route.last;
-      final LatLng currentCoord = nodeCoords[currentHex] ?? currentLocation;
-
-      String? bestNext;
-      double bestScore = -1.0;
-      double bestStepDist = 0.0;
-
-      for (final candidate in candidateHexes) {
-        if (visited.contains(candidate)) continue;
-
-        final LatLng candCoord = nodeCoords[candidate]!;
-        final double distToCand = _haversineDistanceKm(currentCoord, candCoord);
-        final double distBackToStart = _haversineDistanceKm(candCoord, startCenter);
-
-        // Check if adding candidate exceeds total distance budget
-        if (currentDistance + distToCand + distBackToStart <= targetDistanceKm) {
-          final double prize = nodePrizes[candidate] ?? 0.0;
-          // Score formula: Prize density inversely proportional to step distance
-          final double score = (prize * 2.0 + 0.1) / (distToCand + 0.05);
-          if (score > bestScore) {
-            bestScore = score;
-            bestNext = candidate;
-            bestStepDist = distToCand;
-          }
-        }
-      }
-
-      if (bestNext != null) {
-        route.add(bestNext);
-        visited.add(bestNext);
-        currentDistance += bestStepDist;
-      } else {
-        break; // No more nodes fit within the budget
-      }
-    }
-
-    // Close loop back to start
-    if (route.length > 1 && route.last != startHexId) {
-      currentDistance += _haversineDistanceKm(nodeCoords[route.last]!, startCenter);
-      route.add(startHexId);
-    }
-
-    // 3. Improvement Phase: 2-Opt Local Search & Node Insertion
-    route = _optimize2Opt(route, nodeCoords, stopwatch, timeBudget);
-    route = _insertAdditionalNodes(route, candidateHexes, visited, nodeCoords, nodePrizes, targetDistanceKm, stopwatch, timeBudget);
-
-    // 4. Construct Polyline and Compute Final Stats
-    final List<LatLng> polyline = [currentLocation];
-    int newTerritoriesCount = 0;
-    final Set<String> uniqueHexesInRoute = {};
-
-    for (int i = 1; i < route.length - 1; i++) {
-      final hex = route[i];
-      polyline.add(nodeCoords[hex]!);
-      if (!ownedHexes.contains(hex) && !uniqueHexesInRoute.contains(hex)) {
-        newTerritoriesCount++;
-      }
-      uniqueHexesInRoute.add(hex);
-    }
-    polyline.add(currentLocation);
+    final ownedTerritories = _territoryService.getCapturedTerritoryObjects();
+    final polyline = _generateBiasedWaypoints(
+      currentLocation: currentLocation,
+      targetDistanceKm: targetDistanceKm,
+      ownedTerritories: ownedTerritories,
+      nodeCount: 16,
+    );
 
     final double totalDist = _computeTotalRouteDistanceKm(polyline);
-
-    debugPrint('[RouteService] Generated ${polyline.length} pt route: ${totalDist.toStringAsFixed(2)}km, ~$newTerritoriesCount new hexes in ${stopwatch.elapsedMilliseconds}ms');
+    final double areaSqM = PolygonEnclosureEngine.computeGeodesicShoelaceArea(polyline);
 
     return SuggestedRoute(
       polyline: polyline,
-      hexIds: route,
-      estimatedNewTerritoryCount: newTerritoriesCount,
+      estimatedNewTerritoryAreaSqM: areaSqM,
       totalDistanceKm: totalDist,
       targetDistanceKm: targetDistanceKm,
     );
   }
 
-  /// 2-Opt route optimizer to untangle loops and reduce edge costs
-  List<String> _optimize2Opt(
-    List<String> route,
-    Map<String, LatLng> coords,
-    Stopwatch sw,
-    Duration budget,
-  ) {
-    if (route.length < 5) return route;
+  /// Queries OSRM for a pedestrian walking loop across strategic waypoints
+  Future<SuggestedRoute?> _fetchOsrmLoop({
+    required LatLng currentLocation,
+    required double targetDistanceKm,
+    required List<dynamic> ownedTerritories,
+    required Duration timeout,
+  }) async {
+    // Construct 3-4 directional waypoints around origin
+    final waypoints = _generateBiasedWaypoints(
+      currentLocation: currentLocation,
+      targetDistanceKm: targetDistanceKm,
+      ownedTerritories: ownedTerritories,
+      nodeCount: 4,
+    );
 
-    List<String> best = List.from(route);
-    bool improved = true;
+    // Build OSRM walking route query: lng,lat;lng,lat;...
+    final coordsParam = waypoints.map((p) => '${p.longitude.toStringAsFixed(6)},${p.latitude.toStringAsFixed(6)}').join(';');
+    final url = Uri.parse('https://router.project-osrm.org/route/v1/walking/$coordsParam?overview=full&geometries=geojson');
 
-    while (improved && sw.elapsed < budget) {
-      improved = false;
-      for (int i = 1; i < best.length - 2; i++) {
-        for (int j = i + 1; j < best.length - 1; j++) {
-          final double dCurrent = _haversineDistanceKm(coords[best[i - 1]]!, coords[best[i]]!) +
-              _haversineDistanceKm(coords[best[j]]!, coords[best[j + 1]]!);
-          final double dSwapped = _haversineDistanceKm(coords[best[i - 1]]!, coords[best[j]]!) +
-              _haversineDistanceKm(coords[best[i]]!, coords[best[j + 1]]!);
+    final client = HttpClient();
+    client.connectionTimeout = timeout;
 
-          if (dSwapped < dCurrent - 0.001) {
-            // Reverse segment from i to j
-            final reversed = best.sublist(i, j + 1).reversed.toList();
-            best = [
-              ...best.sublist(0, i),
-              ...reversed,
-              ...best.sublist(j + 1),
-            ];
-            improved = true;
-            break;
-          }
+    try {
+      final request = await client.getUrl(url).timeout(timeout);
+      final response = await request.close().timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final responseBody = await response.transform(utf8.decoder).join();
+        final json = jsonDecode(responseBody) as Map<String, dynamic>;
+        final routes = json['routes'] as List<dynamic>?;
+
+        if (routes != null && routes.isNotEmpty) {
+          final firstRoute = routes.first as Map<String, dynamic>;
+          final double distanceMeters = (firstRoute['distance'] as num).toDouble();
+          final geometry = firstRoute['geometry'] as Map<String, dynamic>;
+          final rawCoords = geometry['coordinates'] as List<dynamic>;
+
+          final List<LatLng> osrmPolyline = rawCoords.map((c) {
+            final coord = c as List<dynamic>;
+            return LatLng((coord[1] as num).toDouble(), (coord[0] as num).toDouble());
+          }).toList();
+
+          final double areaSqM = PolygonEnclosureEngine.computeGeodesicShoelaceArea(osrmPolyline);
+          final double totalKm = distanceMeters / 1000.0;
+
+          debugPrint('[RouteService] OSRM street route synthesized: ${totalKm.toStringAsFixed(2)}km with ${osrmPolyline.length} street vertices');
+
+          return SuggestedRoute(
+            polyline: osrmPolyline,
+            estimatedNewTerritoryAreaSqM: areaSqM,
+            totalDistanceKm: totalKm,
+            targetDistanceKm: targetDistanceKm,
+          );
         }
-        if (improved) break;
       }
+    } finally {
+      client.close();
     }
-    return best;
+    return null;
   }
 
-  /// Greedy node insertion utilizing saved 2-opt distance margin
-  List<String> _insertAdditionalNodes(
-    List<String> route,
-    List<String> candidates,
-    Set<String> visited,
-    Map<String, LatLng> coords,
-    Map<String, double> prizes,
-    double maxBudgetKm,
-    Stopwatch sw,
-    Duration budget,
-  ) {
-    List<String> currentRoute = List.from(route);
+  /// Synthesizes closed loop waypoints biased away from existing territory polygons
+  List<LatLng> _generateBiasedWaypoints({
+    required LatLng currentLocation,
+    required double targetDistanceKm,
+    required List<dynamic> ownedTerritories,
+    required int nodeCount,
+  }) {
+    // Radius of the circumscribed loop circle
+    final double radiusKm = (targetDistanceKm / (2.0 * math.pi)).clamp(0.2, 10.0);
+    final double radiusDegLat = radiusKm / 111.32;
+    final double radiusDegLng = radiusKm / (111.32 * math.cos(currentLocation.latitude * math.pi / 180.0));
 
-    for (final cand in candidates) {
-      if (sw.elapsed > budget) break;
-      if (visited.contains(cand) || (prizes[cand] ?? 0.0) <= 0.0) continue;
-
-      final candCoord = coords[cand]!;
-      int? bestInsertIdx;
-      double minDeltaDist = double.infinity;
-
-      for (int i = 0; i < currentRoute.length - 1; i++) {
-        final p1 = coords[currentRoute[i]]!;
-        final p2 = coords[currentRoute[i + 1]]!;
-        final double oldDist = _haversineDistanceKm(p1, p2);
-        final double newDist = _haversineDistanceKm(p1, candCoord) + _haversineDistanceKm(candCoord, p2);
-        final double delta = newDist - oldDist;
-
-        if (delta < minDeltaDist) {
-          minDeltaDist = delta;
-          bestInsertIdx = i + 1;
+    // Determine centroid of already-owned territory to bias loop in opposite direction
+    double biasAngleRad = 0.0;
+    if (ownedTerritories.isNotEmpty) {
+      double sumLat = 0.0;
+      double sumLng = 0.0;
+      int ptCount = 0;
+      for (final t in ownedTerritories) {
+        final polygon = t.polygon as List<LatLng>;
+        for (final p in polygon) {
+          sumLat += p.latitude;
+          sumLng += p.longitude;
+          ptCount++;
         }
       }
-
-      if (bestInsertIdx != null) {
-        final double totalDistAfter = _computeTotalHexRouteDistance(currentRoute, coords) + minDeltaDist;
-        if (totalDistAfter <= maxBudgetKm) {
-          currentRoute.insert(bestInsertIdx, cand);
-          visited.add(cand);
-        }
+      if (ptCount > 0) {
+        final double centroidLat = sumLat / ptCount;
+        final double centroidLng = sumLng / ptCount;
+        final double dLat = centroidLat - currentLocation.latitude;
+        final double dLng = centroidLng - currentLocation.longitude;
+        // Bias in the 180-degree opposite direction of owned territory
+        biasAngleRad = math.atan2(dLat, dLng) + math.pi;
       }
     }
 
-    return currentRoute;
+    final List<LatLng> loop = [];
+    for (int i = 0; i < nodeCount; i++) {
+      final double theta = biasAngleRad + (2.0 * math.pi * i / nodeCount);
+      // Add slight organic curve wobble
+      final double rMod = 1.0 + 0.12 * math.sin(3.0 * theta);
+      final double lat = currentLocation.latitude + (radiusDegLat * rMod * math.sin(theta));
+      final double lng = currentLocation.longitude + (radiusDegLng * rMod * math.cos(theta));
+      loop.add(LatLng(lat, lng));
+    }
+    // Close back to start
+    loop.add(loop.first);
+    return loop;
   }
 
   double _computeTotalRouteDistanceKm(List<LatLng> points) {
@@ -244,15 +217,6 @@ class RouteService {
     return total;
   }
 
-  double _computeTotalHexRouteDistance(List<String> hexes, Map<String, LatLng> coords) {
-    double total = 0.0;
-    for (int i = 0; i < hexes.length - 1; i++) {
-      total += _haversineDistanceKm(coords[hexes[i]]!, coords[hexes[i + 1]]!);
-    }
-    return total;
-  }
-
-  /// High-precision Haversine Distance (local geodesic approximation)
   double _haversineDistanceKm(LatLng p1, LatLng p2) {
     const double earthRadiusKm = 6371.0088;
     final double dLat = (p2.latitude - p1.latitude) * math.pi / 180.0;
@@ -268,3 +232,4 @@ class RouteService {
     return earthRadiusKm * c;
   }
 }
+

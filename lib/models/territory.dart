@@ -6,6 +6,7 @@ class Territory {
   final String id;
   final String ownerId;
   final List<LatLng> polygon;
+  final List<List<LatLng>> polygons;
   final double areaSqMeters;
   final DateTime capturedAt;
   final Color color;
@@ -15,16 +16,18 @@ class Territory {
     required this.id,
     required this.ownerId,
     required this.polygon,
+    List<List<LatLng>>? polygons,
     required this.areaSqMeters,
     required this.capturedAt,
     this.color = const Color(0xFFCCFF00),
     this.isPendingReview = false,
-  });
+  }) : polygons = polygons ?? (polygon.isNotEmpty ? [polygon] : []);
 
   Territory copyWith({
     String? id,
     String? ownerId,
     List<LatLng>? polygon,
+    List<List<LatLng>>? polygons,
     double? areaSqMeters,
     DateTime? capturedAt,
     Color? color,
@@ -34,6 +37,7 @@ class Territory {
       id: id ?? this.id,
       ownerId: ownerId ?? this.ownerId,
       polygon: polygon ?? this.polygon,
+      polygons: polygons ?? this.polygons,
       areaSqMeters: areaSqMeters ?? this.areaSqMeters,
       capturedAt: capturedAt ?? this.capturedAt,
       color: color ?? this.color,
@@ -45,6 +49,7 @@ class Territory {
     'id': id,
     'ownerId': ownerId,
     'polygon': polygon.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
+    'polygons': polygons.map((poly) => poly.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList()).toList(),
     'areaSqMeters': areaSqMeters,
     'capturedAt': capturedAt.toIso8601String(),
     'color': color.toARGB32(),
@@ -58,10 +63,25 @@ class Territory {
       return LatLng((map['lat'] as num).toDouble(), (map['lng'] as num).toDouble());
     }).toList();
 
+    final rawPolygons = json['polygons'] as List<dynamic>?;
+    List<List<LatLng>> multiPolys = [];
+    if (rawPolygons != null) {
+      multiPolys = rawPolygons.map((polyList) {
+        final list = polyList as List<dynamic>;
+        return list.map((p) {
+          final map = p as Map<String, dynamic>;
+          return LatLng((map['lat'] as num).toDouble(), (map['lng'] as num).toDouble());
+        }).toList();
+      }).toList();
+    } else if (points.isNotEmpty) {
+      multiPolys = [points];
+    }
+
     return Territory(
       id: json['id'] as String,
       ownerId: json['ownerId'] as String? ?? 'anonymous_runner',
-      polygon: points,
+      polygon: points.isNotEmpty ? points : (multiPolys.isNotEmpty ? multiPolys.first : []),
+      polygons: multiPolys,
       areaSqMeters: (json['areaSqMeters'] as num?)?.toDouble() ?? 15047.0,
       capturedAt: json['capturedAt'] != null
           ? DateTime.parse(json['capturedAt'] as String)

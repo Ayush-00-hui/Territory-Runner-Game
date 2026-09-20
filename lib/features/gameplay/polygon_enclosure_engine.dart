@@ -26,6 +26,7 @@ class EnclosedLoopEvent {
 class PolygonEnclosureEngine {
   final List<LatLng> _path = [];
   final List<DateTime> _timestamps = [];
+  String? _lastInvalidReason;
   
   // Enclosure configuration parameters
   final double minClosureDistanceMeters; // Proximity threshold to trigger closed loop
@@ -40,15 +41,18 @@ class PolygonEnclosureEngine {
 
   List<LatLng> get currentPath => List.unmodifiable(_path);
   int get pointCount => _path.length;
+  String? get lastInvalidReason => _lastInvalidReason;
 
   void clear() {
     _path.clear();
     _timestamps.clear();
+    _lastInvalidReason = null;
   }
 
   /// Manual "SEAL CURRENT SHAPE" override action.
   /// Force-closes the active GPS path into a sovereign territory polygon.
   EnclosedLoopEvent? sealCurrentPath() {
+    _lastInvalidReason = null;
     if (_path.length < 3) return null;
 
     final now = DateTime.now();
@@ -57,6 +61,12 @@ class PolygonEnclosureEngine {
     if (closedPoints.first.latitude != closedPoints.last.latitude ||
         closedPoints.first.longitude != closedPoints.last.longitude) {
       closedPoints.add(closedPoints.first);
+    }
+
+    if (hasSelfIntersection(closedPoints)) {
+      _lastInvalidReason = 'Loop crossed itself — try again';
+      debugPrint('[PolygonEnclosureEngine] ❌ Manual seal rejected: $_lastInvalidReason');
+      return null;
     }
 
     final loopLength = _calculatePathDistance(closedPoints);
@@ -87,6 +97,7 @@ class PolygonEnclosureEngine {
   /// Ingests a new GPS position and checks for arbitrary polygon loop enclosure.
   /// Returns [EnclosedLoopEvent] if a valid loop was closed, or null otherwise.
   EnclosedLoopEvent? addPosition(LatLng position, [DateTime? timestamp]) {
+    _lastInvalidReason = null;
     final now = timestamp ?? DateTime.now();
 
     if (_path.isNotEmpty) {
@@ -133,6 +144,13 @@ class PolygonEnclosureEngine {
         final loopLength = _calculatePathDistance(loopPoints);
 
         if (loopLength >= minLoopDistanceMeters) {
+          // Self-intersection validation: check if loop crossed itself
+          if (hasSelfIntersection(loopPoints)) {
+            _lastInvalidReason = 'Loop crossed itself — try again';
+            debugPrint('[PolygonEnclosureEngine] ❌ Loop enclosure rejected: $_lastInvalidReason');
+            return null;
+          }
+
           final areaSqM = computeGeodesicShoelaceArea(loopPoints);
           final areaSqKm = areaSqM / 1000000.0;
 
@@ -161,6 +179,44 @@ class PolygonEnclosureEngine {
     }
 
     return null;
+  }
+
+  /// Checks if line segments (p1->p2) and (p3->p4) properly cross
+  static bool doSegmentsIntersect(LatLng p1, LatLng p2, LatLng p3, LatLng p4) {
+    double ccw(LatLng a, LatLng b, LatLng c) {
+      return (b.longitude - a.longitude) * (c.latitude - a.latitude) -
+          (b.latitude - a.latitude) * (c.longitude - a.longitude);
+    }
+
+    final d1 = ccw(p3, p4, p1);
+    final d2 = ccw(p3, p4, p2);
+    final d3 = ccw(p1, p2, p3);
+    final d4 = ccw(p1, p2, p4);
+
+    if (((d1 > 1e-9 && d2 < -1e-9) || (d1 < -1e-9 && d2 > 1e-9)) &&
+        ((d3 > 1e-9 && d4 < -1e-9) || (d3 < -1e-9 && d4 > 1e-9))) {
+      return true;
+    }
+    return false;
+  }
+
+  /// Validates whether a closed or open polygon path contains self-intersections
+  static bool hasSelfIntersection(List<LatLng> polygon) {
+    if (polygon.length < 4) return false;
+    final int n = polygon.length;
+    for (int i = 0; i < n - 1; i++) {
+      final p1 = polygon[i];
+      final p2 = polygon[i + 1];
+      for (int j = i + 2; j < n - 1; j++) {
+        if (i == 0 && j == n - 2) continue; // Ignore shared start-end vertex in closed ring
+        final p3 = polygon[j];
+        final p4 = polygon[j + 1];
+        if (doSegmentsIntersect(p1, p2, p3, p4)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /// Calculates total linear path distance in meters using geodesic Haversine

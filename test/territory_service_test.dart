@@ -17,14 +17,16 @@ void main() {
       expect(profile.xp, equals(10)); // 260 - 250
     });
 
-    test('claimHex awards 10 XP and unlocks First Conquest badge', () {
+    test('claimPolygonArea awards scaled XP and unlocks First Conquest and Territory Sovereign badges', () {
       final profile = RunnerProfile(id: 'test_2', username: 'GridRider');
       expect(profile.totalHexesClaimed, equals(0));
 
-      profile.claimHex();
+      final int xp = profile.claimPolygonArea(2500.0); // 2500 / 20 = 125 XP
       expect(profile.totalHexesClaimed, equals(1));
-      expect(profile.xp, equals(10));
+      expect(xp, equals(125));
+      expect(profile.xp, equals(125));
       expect(profile.badges.contains('First Conquest'), isTrue);
+      expect(profile.badges.contains('Territory Sovereign'), isTrue);
     });
 
     test('addDistance unlocks 10K Centurion badge when reaching 10km', () {

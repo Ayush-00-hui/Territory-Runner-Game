@@ -83,19 +83,26 @@ void main() {
       expect(PolygonEnclosureEngine.computeGeodesicShoelaceArea([LatLng(0, 0), LatLng(1, 1)]), 0.0);
     });
 
-    test('sealCurrentPath manual override closes open polygon path and calculates area', () {
+    test('Self-intersecting loop (figure-8) is rejected with clear error reason', () {
       final engine = PolygonEnclosureEngine();
-      engine.addPosition(LatLng(51.5000, -0.1200));
-      engine.addPosition(LatLng(51.5009, -0.1200));
-      engine.addPosition(LatLng(51.5009, -0.12144));
-      engine.addPosition(LatLng(51.5000, -0.12144));
+      // Figure-8 loop intersecting in the center
+      // (0,0) -> (10,10) -> (10,0) -> (0,10) -> (0,0)
+      final p1 = LatLng(51.5000, -0.1200);
+      final p2 = LatLng(51.5010, -0.1210);
+      final p3 = LatLng(51.5010, -0.1200);
+      final p4 = LatLng(51.5000, -0.1210);
+
+      expect(PolygonEnclosureEngine.hasSelfIntersection([p1, p2, p3, p4, p1]), isTrue);
+
+      engine.addPosition(p1);
+      engine.addPosition(p2);
+      engine.addPosition(p3);
+      engine.addPosition(p4);
 
       final manualEvent = engine.sealCurrentPath();
-      expect(manualEvent, isNotNull);
-      expect(manualEvent!.polygon.length, 5); // 4 points + closed back to first
-      expect(manualEvent.areaSqMeters, greaterThan(9000.0));
-      expect(manualEvent.areaSqKm, greaterThan(0.009));
-      expect(engine.pointCount, 1);
+      expect(manualEvent, isNull);
+      expect(engine.lastInvalidReason, equals('Loop crossed itself — try again'));
     });
   });
 }
+

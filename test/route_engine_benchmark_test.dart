@@ -1,10 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:territory_runner/features/gameplay/h3_service.dart';
 import 'package:territory_runner/features/routing/route_service.dart';
+import 'package:territory_runner/features/gameplay/polygon_enclosure_engine.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/models/territory.dart';
 
@@ -12,11 +11,8 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late RouteService routeService;
-  late H3Service h3Service;
   const LatLng startPos = LatLng(37.7749, -122.4194);
   const double targetBudgetKm = 3.0; // 3km target run
-  late String startHex;
-  late Set<String> mockOwnedHexes;
 
   setUpAll(() async {
     Hive.init('./test_hive_route');
@@ -29,9 +25,6 @@ void main() {
     await Hive.openBox<Territory>('territories_v2');
     await Hive.openBox<RunnerProfile>('profile');
     routeService = RouteService();
-    h3Service = H3Service();
-    startHex = h3Service.getHexagonForLocation(startPos.latitude, startPos.longitude);
-    mockOwnedHexes = h3Service.getNeighbors(startHex).take(3).toSet()..add(startHex);
   });
 
   tearDownAll(() async {
@@ -39,85 +32,72 @@ void main() {
   });
 
   group('Route Recommendation Engine Benchmarks', () {
-
     test('RouteService produces a closed valid loop within distance budget', () {
       final SuggestedRoute route = routeService.suggestRoute(
         currentLocation: startPos,
         targetDistanceKm: targetBudgetKm,
-        ownedHexesOverride: mockOwnedHexes,
       );
 
       expect(route.polyline.length, greaterThanOrEqualTo(3));
-      // First and last point should be near start position
-      expect(route.polyline.first.latitude, equals(startPos.latitude));
-      expect(route.polyline.last.latitude, equals(startPos.latitude));
+      // First and last point should form a closed loop
+      expect(route.polyline.first.latitude, equals(route.polyline.last.latitude));
+      expect(route.polyline.first.longitude, equals(route.polyline.last.longitude));
       expect(route.totalDistanceKm, lessThanOrEqualTo(targetBudgetKm * 1.15)); // Within 15% tolerance
-      expect(route.estimatedNewTerritoryCount, greaterThan(0));
+      expect(route.estimatedNewTerritoryAreaSqM, greaterThan(1000.0));
     });
 
-    test('Benchmark: RouteService Orienteering vs N Random Walks', () {
+    test('Benchmark: AI Biased Route Loop vs Random Walks on Polygon Area', () {
       final SuggestedRoute aiRoute = routeService.suggestRoute(
         currentLocation: startPos,
         targetDistanceKm: targetBudgetKm,
-        ownedHexesOverride: mockOwnedHexes,
       );
 
-      final int aiHexesClaimed = aiRoute.estimatedNewTerritoryCount;
+      final double aiAreaSqM = aiRoute.estimatedNewTerritoryAreaSqM;
 
-      // Simulate N=20 random walks of equivalent distance budget
+      // Simulate N=20 random walk closed loops of equivalent distance budget
       const int numRandomWalks = 20;
-      int totalRandomHexes = 0;
-      final math.Random rng = math.Random(42);
+      double totalRandomAreaSqM = 0.0;
+      final math.Random rng = math.Random(42); // Seeded for deterministic reproducible benchmarks
 
       for (int i = 0; i < numRandomWalks; i++) {
-        final Set<String> visitedInRandom = {};
-        double distWalked = 0.0;
-        String currentHex = startHex;
+        final List<LatLng> randomLoop = [startPos];
+        double currentLat = startPos.latitude;
+        double currentLng = startPos.longitude;
+        double heading = rng.nextDouble() * 2.0 * math.pi;
 
-        while (distWalked < targetBudgetKm) {
-          final neighbors = h3Service.getNeighbors(currentHex);
-          final nextHex = neighbors[rng.nextInt(neighbors.length)];
-          final LatLng nextCenter = h3Service.getHexagonCenter(nextHex);
-          final LatLng startCenter = h3Service.getHexagonCenter(startHex);
-          final double returnDist = (Geolocator.distanceBetween(
-                nextCenter.latitude,
-                nextCenter.longitude,
-                startCenter.latitude,
-                startCenter.longitude,
-              ) /
-              1000.0);
+        const int steps = 12;
+        final double stepKm = targetBudgetKm / (steps + 1);
 
-          if (distWalked + 0.13 + returnDist > targetBudgetKm) {
-            break;
-          }
-
-          if (!mockOwnedHexes.contains(nextHex)) {
-            visitedInRandom.add(nextHex);
-          }
-          distWalked += 0.13;
-          currentHex = nextHex;
+        for (int s = 0; s < steps; s++) {
+          heading += (rng.nextDouble() - 0.5) * 1.2; // random drift
+          currentLat += (stepKm / 111.32) * math.sin(heading);
+          currentLng += (stepKm / 111.32) * math.cos(heading);
+          randomLoop.add(LatLng(currentLat, currentLng));
         }
-        totalRandomHexes += visitedInRandom.length;
+        randomLoop.add(startPos); // close loop
+
+        final double randomArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(randomLoop);
+        totalRandomAreaSqM += randomArea;
       }
 
-      final double avgRandomHexes = totalRandomHexes / numRandomWalks;
-      final double percentImprovement = ((aiHexesClaimed - avgRandomHexes) / (avgRandomHexes > 0 ? avgRandomHexes : 1)) * 100.0;
+      final double avgRandomAreaSqM = totalRandomAreaSqM / numRandomWalks;
+      final double percentImprovement = ((aiAreaSqM - avgRandomAreaSqM) / (avgRandomAreaSqM > 0 ? avgRandomAreaSqM : 1)) * 100.0;
 
       // ignore: avoid_print
       print('====================================================');
       // ignore: avoid_print
       print('ROUTE ENGINE BENCHMARK RESULTS:');
       // ignore: avoid_print
-      print('AI Orienteering Route: $aiHexesClaimed new hexes (${aiRoute.totalDistanceKm.toStringAsFixed(2)} km)');
+      print('AI Biased Loop Area  : ${aiAreaSqM.toStringAsFixed(0)} m² (${aiRoute.totalDistanceKm.toStringAsFixed(2)} km)');
       // ignore: avoid_print
-      print('Average Random Walk  : ${avgRandomHexes.toStringAsFixed(1)} new hexes');
+      print('Average Random Walk  : ${avgRandomAreaSqM.toStringAsFixed(0)} m²');
       // ignore: avoid_print
-      print('AI Route Improvement : +${percentImprovement.toStringAsFixed(1)}% new territory claimed');
+      print('AI Route Improvement : +${percentImprovement.toStringAsFixed(1)}% new ground enclosed');
       // ignore: avoid_print
       print('====================================================');
 
-      expect(aiHexesClaimed, greaterThanOrEqualTo(avgRandomHexes.round()),
-          reason: 'AI route recommendation should outperform random walks in territory acquisition efficiency');
+      expect(aiAreaSqM, greaterThan(avgRandomAreaSqM),
+          reason: 'AI route recommendation should outperform unguided random loops in territory acquisition');
     });
   });
 }
