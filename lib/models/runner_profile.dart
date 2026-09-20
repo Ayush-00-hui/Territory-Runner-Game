@@ -68,6 +68,9 @@ class RunnerProfile {
     if (totalHexesClaimed >= 1 && !current.contains('First Conquest')) {
       current.add('First Conquest');
     }
+    if (totalHexesClaimed >= 1 && !current.contains('Territory Sovereign')) {
+      current.add('Territory Sovereign');
+    }
     if (totalHexesClaimed >= 25 && !current.contains('Sector Commander')) {
       current.add('Sector Commander');
     }

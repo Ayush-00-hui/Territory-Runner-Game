@@ -31,14 +31,15 @@ class LocationService {
 
   Stream<Position> get locationStream => _locationController.stream;
   VirtualPacerMode get pacerMode => _pacerMode;
+  double get simHeading => _simHeading;
 
-  /// Checks if this is the first time the app is asking for location.
+  /// Checks local storage for first-time permission grant
   Future<bool> isFirstTimePermissionRequest() async {
     final prefs = await SharedPreferences.getInstance();
     return !(prefs.getBool('has_requested_location_permission') ?? false);
   }
 
-  /// Mark that we have requested permission to avoid showing the pre-modal again.
+  /// Mark that we have requested permission to avoid showing the pre-modal again
   Future<void> markPermissionRequested() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('has_requested_location_permission', true);
@@ -101,10 +102,10 @@ class LocationService {
     }
   }
 
-  /// Noise Gate & Jitter Filtering:
+  /// High-Precision Jitter & Multipath Outlier Filtering:
   /// 1. Reject fixes with satellite accuracy dilution > 30 meters.
   /// 2. Suppress stationary GPS wandering (displacement < 1.8m when velocity < 2.0 km/h).
-  /// 3. Reject impossible teleportation velocity spikes (> 50 km/h) unless Zero-G is active.
+  /// 3. Discard satellite multipath outliers > 35 km/h (unless Zero-G mode is active).
   bool isValidFix(Position newPos, Position? lastPos, {bool isZeroG = false}) {
     // 1. Accuracy dilution gate
     if (newPos.accuracy > 30.0) {
@@ -130,8 +131,8 @@ class LocationService {
       return false;
     }
 
-    // 3. Teleportation spike gate: ignore impossible speed > 50 km/h unless Zero-G glide
-    if (!isZeroG && (calculatedSpeedKmh > 50.0 || (newPos.speed * 3.6 > 50.0 && timeDeltaSeconds < 5.0))) {
+    // 3. Satellite multipath outlier gate: discard impossible spikes > 35 km/h unless Zero-G is active
+    if (!isZeroG && (calculatedSpeedKmh > 35.0 || (newPos.speed * 3.6 > 35.0 && timeDeltaSeconds < 5.0))) {
       return false;
     }
 
@@ -153,9 +154,10 @@ class LocationService {
     }
 
     try {
+      // 5m distance filter for battery-friendly, high-accuracy GPS streams
       const LocationSettings locationSettings = LocationSettings(
         accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 1, // High-frequency sub-meter sampling
+        distanceFilter: 5,
       );
 
       _positionStreamSubscription = Geolocator.getPositionStream(
@@ -193,6 +195,25 @@ class LocationService {
       isSimulationMode = true;
       _positionStreamSubscription?.cancel();
       _startSimulation();
+    }
+  }
+
+  /// Interactive keyboard simulation movement (W/A/S/D and Arrow keys)
+  void moveSimulatedRunner({double forwardMeters = 0.0, double turnDegrees = 0.0}) {
+    _simHeading = (_simHeading + turnDegrees) % 360.0;
+    if (_simHeading < 0) _simHeading += 360.0;
+
+    if (forwardMeters != 0.0) {
+      final double deltaLat = (forwardMeters / 111139.0) * math.cos(_simHeading * math.pi / 180.0);
+      final double deltaLng = (forwardMeters / (111139.0 * math.cos(_simLat * math.pi / 180.0))) * math.sin(_simHeading * math.pi / 180.0);
+      
+      _simLat += deltaLat;
+      _simLng += deltaLng;
+
+      final double speed = (forwardMeters.abs() / 0.5).clamp(1.0, 6.0);
+      final simPos = _generateSimulatedPosition(speedMps: speed);
+      _lastValidPosition = simPos;
+      _locationController.add(simPos);
     }
   }
 

@@ -8,6 +8,7 @@ import 'models/runner_profile.dart';
 import 'services/firebase_service.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 void main() async {
@@ -35,6 +36,9 @@ abstract final class AppColors {
   static const Color secondary = Color(0xFFFF5722); // Solar Orange alias
   static const Color accentGlow = Color(0x3300E676); // Neon glow
   static const Color positiveGreen = Color(0xFF00E676); // +XX% delta green chip
+  static const Color actionRed = Color(0xFFFF3366); // Action Red
+  static const Color cyanThruster = Color(0xFF00F0FF); // Cyan Thruster
+  static const Color amberStreak = Color(0xFFFFB800); // Amber Streak
 }
 
 Path _runPreviewPath(Size size) {
@@ -453,6 +457,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _tabFilterIndex = 0; // 0 = Map, 1 = Stats, 2 = Achievements
   int _timeFilterIndex = 1; // 0 = Week, 1 = Month, 2 = Year
+  int _hydrationMl = 1750;
 
   @override
   Widget build(BuildContext context) {
@@ -782,6 +787,175 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // --- MOTIVATIONAL COACHING TIP BANNER ---
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.cyanThruster.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.cyanThruster.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.tips_and_updates_rounded, color: AppColors.cyanThruster, size: 18),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ATHLETIC COACH TIP',
+                          style: TextStyle(color: AppColors.cyanThruster, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.1),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Maintaining 170–180 SPM cadence reduces joint impact stress by 22% during territory conquest.',
+                          style: TextStyle(color: Colors.white70, fontSize: 11, height: 1.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // --- INTERACTIVE QUICK-LOG HYDRATION TRACKER ---
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF00B0FF).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.water_drop_rounded, color: Color(0xFF00B0FF), size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'DAILY HYDRATION',
+                                style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.1),
+                              ),
+                              Text(
+                                '$_hydrationMl / 2,500 mL',
+                                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00B0FF).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF00B0FF).withValues(alpha: 0.4)),
+                        ),
+                        child: Text(
+                          '${((_hydrationMl / 2500.0) * 100).round()}% TARGET',
+                          style: const TextStyle(color: Color(0xFF00B0FF), fontSize: 10, fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(6),
+                    child: LinearProgressIndicator(
+                      value: (_hydrationMl / 2500.0).clamp(0.0, 1.0),
+                      backgroundColor: Colors.white10,
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00B0FF)),
+                      minHeight: 8,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            HapticFeedback.lightImpact();
+                            setState(() {
+                              _hydrationMl = (_hydrationMl + 250).clamp(0, 5000);
+                            });
+                          },
+                          icon: const Icon(Icons.add_rounded, size: 16, color: Color(0xFF00B0FF)),
+                          label: const Text('+250 mL', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            backgroundColor: AppColors.surface2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            HapticFeedback.mediumImpact();
+                            setState(() {
+                              _hydrationMl = (_hydrationMl + 500).clamp(0, 5000);
+                            });
+                          },
+                          icon: const Icon(Icons.local_drink_rounded, size: 16, color: Color(0xFF00B0FF)),
+                          label: const Text('+500 mL', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.border),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            backgroundColor: AppColors.surface2,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: () {
+                          HapticFeedback.selectionClick();
+                          setState(() {
+                            _hydrationMl = 0;
+                          });
+                        },
+                        icon: const Icon(Icons.refresh_rounded, size: 18, color: AppColors.textMuted),
+                        tooltip: 'Reset hydration',
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 20),

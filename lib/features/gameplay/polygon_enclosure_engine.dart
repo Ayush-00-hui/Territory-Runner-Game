@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
 
 /// Event dispatched when a runner closes an arbitrary GPS loop
 class EnclosedLoopEvent {
@@ -22,7 +21,8 @@ class EnclosedLoopEvent {
 
 /// Arbitrary Shape Polygon Territory Enclosure Engine
 /// Continuously tracks GPS breadcrumbs, detects loop closures (<= 35m),
-/// and computes accurate geodesic surface area via the Shoelace Formula on a local tangent plane.
+/// filters satellite multipath outliers (> 35 km/h), and computes accurate
+/// geodesic surface area via the Shoelace Formula on a local equirectangular tangent plane.
 class PolygonEnclosureEngine {
   final List<LatLng> _path = [];
   final List<DateTime> _timestamps = [];
@@ -91,16 +91,23 @@ class PolygonEnclosureEngine {
 
     if (_path.isNotEmpty) {
       final lastPoint = _path.last;
-      final distFromLast = Geolocator.distanceBetween(
-        lastPoint.latitude,
-        lastPoint.longitude,
-        position.latitude,
-        position.longitude,
-      );
+      final distFromLast = haversineDistanceMeters(lastPoint, position);
 
-      // Filter out stationary noise (< 2.0 meters)
-      if (distFromLast < 2.0) {
+      // Filter out stationary noise (< 1.8 meters)
+      if (distFromLast < 1.8) {
         return null;
+      }
+
+      // Discard satellite multipath outlier jumps (> 35 km/h)
+      if (_timestamps.isNotEmpty) {
+        final double dtSec = (now.difference(_timestamps.last).inMilliseconds / 1000.0).abs();
+        if (dtSec >= 0.5 && dtSec <= 5.0) {
+          final double speedKmh = (distFromLast / dtSec) * 3.6;
+          if (speedKmh > 35.0) {
+            debugPrint('[PolygonEnclosureEngine] Jitter outlier rejected: ${speedKmh.toStringAsFixed(1)} km/h');
+            return null;
+          }
+        }
       }
     }
 
@@ -118,12 +125,7 @@ class PolygonEnclosureEngine {
     // Check backwards from the earliest points to find closure
     for (int i = 0; i <= currentIndex - minPointsRequired; i++) {
       final candidatePoint = _path[i];
-      final distance = Geolocator.distanceBetween(
-        currentPos.latitude,
-        currentPos.longitude,
-        candidatePoint.latitude,
-        candidatePoint.longitude,
-      );
+      final distance = haversineDistanceMeters(currentPos, candidatePoint);
 
       if (distance <= minClosureDistanceMeters) {
         // Calculate the sub-path forming this loop
@@ -161,18 +163,27 @@ class PolygonEnclosureEngine {
     return null;
   }
 
-  /// Calculates total linear path distance in meters
+  /// Calculates total linear path distance in meters using geodesic Haversine
   double _calculatePathDistance(List<LatLng> points) {
     double totalDistance = 0.0;
     for (int i = 0; i < points.length - 1; i++) {
-      totalDistance += Geolocator.distanceBetween(
-        points[i].latitude,
-        points[i].longitude,
-        points[i + 1].latitude,
-        points[i + 1].longitude,
-      );
+      totalDistance += haversineDistanceMeters(points[i], points[i + 1]);
     }
     return totalDistance;
+  }
+
+  /// High-precision Haversine geodesic distance in meters on WGS84 sphere
+  static double haversineDistanceMeters(LatLng p1, LatLng p2) {
+    const double earthRadius = 6378137.0;
+    final double dLat = (p2.latitude - p1.latitude) * (math.pi / 180.0);
+    final double dLng = (p2.longitude - p1.longitude) * (math.pi / 180.0);
+    final double lat1 = p1.latitude * (math.pi / 180.0);
+    final double lat2 = p2.latitude * (math.pi / 180.0);
+
+    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.sin(dLng / 2) * math.sin(dLng / 2) * math.cos(lat1) * math.cos(lat2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    return earthRadius * c;
   }
 
   /// Calculates exact surface area of an arbitrary polygon in square meters

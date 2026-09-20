@@ -958,6 +958,49 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     return markers;
   }
 
+  final FocusNode _keyboardFocusNode = FocusNode();
+
+  void _cycleGravityTier() {
+    final tiers = GravityTier.values;
+    final nextIndex = (_flightPhysics.gravityTier.index + 1) % tiers.length;
+    _flightPhysics.setGravityTier(tiers[nextIndex]);
+    HapticFeedback.selectionClick();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surface,
+        duration: const Duration(seconds: 2),
+        content: Text(
+          'Gravity Tier: ${tiers[nextIndex].label}',
+          style: TextStyle(color: tiers[nextIndex].themeColor, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  void _handleKeyEvent(KeyEvent event) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.keyW || event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        _locationService.moveSimulatedRunner(forwardMeters: 6.0);
+      } else if (event.logicalKey == LogicalKeyboardKey.keyS || event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        _locationService.moveSimulatedRunner(forwardMeters: -4.0);
+      } else if (event.logicalKey == LogicalKeyboardKey.keyA || event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+        _locationService.moveSimulatedRunner(turnDegrees: -15.0);
+      } else if (event.logicalKey == LogicalKeyboardKey.keyD || event.logicalKey == LogicalKeyboardKey.arrowRight) {
+        _locationService.moveSimulatedRunner(turnDegrees: 15.0);
+      } else if (event.logicalKey == LogicalKeyboardKey.space) {
+        _flightPhysics.setThruster(!_flightPhysics.isThrusterEngaged, currentRunSpeedMps: _currentSpeedKmh / 3.6);
+      } else if (event.logicalKey == LogicalKeyboardKey.digit1) {
+        _flightPhysics.setGravityTier(GravityTier.standard);
+      } else if (event.logicalKey == LogicalKeyboardKey.digit2) {
+        _flightPhysics.setGravityTier(GravityTier.lunar);
+      } else if (event.logicalKey == LogicalKeyboardKey.digit3) {
+        _flightPhysics.setGravityTier(GravityTier.zeroG);
+      } else if (event.logicalKey == LogicalKeyboardKey.digit4) {
+        _flightPhysics.setGravityTier(GravityTier.invertedBoost);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pad = MediaQuery.paddingOf(context);
@@ -966,300 +1009,303 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     final territoriesCount = _territoryService.getCapturedTerritories().length;
     final totalAreaSqKm = (territoriesCount * 0.015047).clamp(0.0, 999.0);
 
-    return Scaffold(
-      backgroundColor: AppColors.bgDeep,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // 1. The Interactive Fullscreen Map
-          _currentLocation == null
-              ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
-              : FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _currentLocation!,
-                    initialZoom: 17.0,
-                    backgroundColor: AppColors.bgDeep,
-                    onTap: (tapPosition, point) {
-                      _inspectSectorAt(point);
-                    },
-                    interactionOptions: const InteractionOptions(
-                      flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                    ),
-                  ),
-                  children: [
-                    // Clean Dark Theme Map Tiles (100% Free, No Watermarks, No API Key Required)
-                    TileLayer(
-                      urlTemplate: AppConstants.mapApiKey.isNotEmpty
-                          ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
-                          : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-                      additionalOptions: {
-                        'accessToken': AppConstants.mapApiKey,
+    return KeyboardListener(
+      focusNode: _keyboardFocusNode..requestFocus(),
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Scaffold(
+        backgroundColor: AppColors.bgDeep,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            // 1. The Interactive Fullscreen Map
+            _currentLocation == null
+                ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+                : FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _currentLocation!,
+                      initialZoom: 17.0,
+                      backgroundColor: AppColors.bgDeep,
+                      onTap: (tapPosition, point) {
+                        _inspectSectorAt(point);
                       },
-                      userAgentPackageName: 'com.territoryrunner.app',
-                    ),
-                    
-                    // Conquered Territories Polygon Overlay (Arbitrary Enclosures & Hexagons)
-                    PolygonLayer(
-                      polygons: _buildPolygons(),
-                    ),
-
-                    // Active Runner Breadcrumb Trail & AI Suggested Route
-                    PolylineLayer(
-                      polylines: [
-                        if (_isRunActive && _runCoordinates.length >= 2)
-                          Polyline(
-                            points: _runCoordinates,
-                            color: const Color(0xFF00E676),
-                            strokeWidth: 4.0,
-                          ),
-                        if (_polygonEngine.currentPath.length >= 2)
-                          Polyline(
-                            points: _polygonEngine.currentPath,
-                            color: const Color(0xFF00F0FF),
-                            strokeWidth: 2.5,
-                          ),
-                        if (_activeSuggestedRoute != null)
-                          Polyline(
-                            points: _activeSuggestedRoute!.polyline,
-                            color: const Color(0xFFFF9100),
-                            strokeWidth: 4.0,
-                          ),
-                      ],
-                    ),
-                      
-                    // Live Markers (Player & Rival Runners)
-                    MarkerLayer(
-                      markers: _buildMarkers(),
-                    ),
-                  ],
-                ),
-
-          // Particle Slipstream Visualizer for Anti-Gravity Propulsion
-          if (_flightPhysics.particles.isNotEmpty)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: CustomPaint(
-                  painter: SlipstreamPainter(particles: _flightPhysics.particles),
-                ),
-              ),
-            ),
-
-          // 2. Top Header Bar ("Good run, Alex 👋" + "Run to own." capsule)
-          Positioned(
-            top: pad.top + 10,
-            left: 20,
-            right: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: AppColors.surface2,
-                          child: Text(
-                            athleteName.isNotEmpty ? athleteName[0].toUpperCase() : 'A',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Good run,',
-                              style: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Text(
-                              '$athleteName 👋',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Text(
-                        profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-
-                // Sub-header Mode Pill Tabs (Run | Explore | Leaderboard | Challenges)
-                Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
                     children: [
-                      _buildModePill(0, 'Run'),
-                      _buildModePill(1, 'Explore'),
-                      _buildModePill(2, 'Leaderboard'),
-                      _buildModePill(3, 'Challenges'),
+                      // Clean Dark Theme Map Tiles (100% Free, No Watermarks, No API Key Required)
+                      TileLayer(
+                        urlTemplate: AppConstants.mapApiKey.isNotEmpty
+                            ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
+                            : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+                        additionalOptions: {
+                          'accessToken': AppConstants.mapApiKey,
+                        },
+                        userAgentPackageName: 'com.territoryrunner.app',
+                      ),
+                      
+                      // Conquered Territories Polygon Overlay (Arbitrary Enclosures & Hexagons)
+                      PolygonLayer(
+                        polygons: _buildPolygons(),
+                      ),
+
+                      // Active Runner Breadcrumb Trail & AI Suggested Route
+                      PolylineLayer(
+                        polylines: [
+                          if (_isRunActive && _runCoordinates.length >= 2)
+                            Polyline(
+                              points: _runCoordinates,
+                              color: const Color(0xFF00E676),
+                              strokeWidth: 4.0,
+                            ),
+                          if (_polygonEngine.currentPath.length >= 2)
+                            Polyline(
+                              points: _polygonEngine.currentPath,
+                              color: const Color(0xFF00F0FF),
+                              strokeWidth: 2.5,
+                            ),
+                          if (_activeSuggestedRoute != null)
+                            Polyline(
+                              points: _activeSuggestedRoute!.polyline,
+                              color: const Color(0xFFFF9100),
+                              strokeWidth: 4.0,
+                            ),
+                        ],
+                      ),
+                        
+                      // Live Markers (Player & Rival Runners)
+                      MarkerLayer(
+                        markers: _buildMarkers(),
+                      ),
                     ],
                   ),
-                ),
-              ],
-            ),
-          ),
 
-          // 3. Anti-Gravity Flight Propulsion Telemetry HUD
-          Positioned(
-            top: pad.top + 115,
-            left: 20,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.surface.withValues(alpha: 0.92),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color: _flightPhysics.isAirborne ? const Color(0xFF00F0FF) : AppColors.border,
-                  width: _flightPhysics.isAirborne ? 1.5 : 1.0,
+            // Particle Slipstream Visualizer for Anti-Gravity Propulsion
+            if (_flightPhysics.particles.isNotEmpty)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomPaint(
+                    painter: SlipstreamPainter(particles: _flightPhysics.particles),
+                  ),
                 ),
-                boxShadow: [
-                  if (_flightPhysics.isAirborne)
-                    BoxShadow(
-                      color: const Color(0xFF00F0FF).withValues(alpha: 0.25),
-                      blurRadius: 16,
-                      spreadRadius: 2,
-                    ),
-                ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+            // 2. Top Header Bar ("Good run, Alex 👋" + "Run to own." capsule)
+            Positioned(
+              top: pad.top + 10,
+              left: 20,
+              right: 20,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Icon(
-                        _flightPhysics.isAirborne ? Icons.rocket_launch_rounded : Icons.flight_takeoff_rounded,
-                        color: _flightPhysics.isAirborne ? const Color(0xFF00F0FF) : AppColors.textMuted,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
                         children: [
-                          Row(
-                            children: [
-                              Text(
-                                'ALT: ${_flightPhysics.altitude.toStringAsFixed(1)}m',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: AppColors.surface2,
+                            child: Text(
+                              athleteName.isNotEmpty ? athleteName[0].toUpperCase() : 'A',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
                               ),
-                              const Text(' / 85m', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
-                            ],
-                          ),
-                          Text(
-                            _flightPhysics.kinematicState == KinematicState.zeroGSubOrbitalGlide
-                                ? 'ZERO-G GLIDE (-0.4G)'
-                                : 'GROUND TRACTION (1.0G)',
-                            style: TextStyle(
-                              color: _flightPhysics.kinematicState == KinematicState.zeroGSubOrbitalGlide
-                                  ? const Color(0xFF00F0FF)
-                                  : AppColors.textSecondary,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
                             ),
                           ),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Good run,',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              Text(
+                                '$athleteName 👋',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Text(
+                          profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Sub-header Mode Pill Tabs (Run | Explore | Leaderboard | Challenges)
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        _buildModePill(0, 'Run'),
+                        _buildModePill(1, 'Explore'),
+                        _buildModePill(2, 'Leaderboard'),
+                        _buildModePill(3, 'Challenges'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 3. Anti-Gravity Flight Propulsion Telemetry HUD
+            Positioned(
+              top: pad.top + 115,
+              left: 20,
+              right: 20,
+              child: GestureDetector(
+                onTap: _cycleGravityTier,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: _flightPhysics.isAirborne ? _flightPhysics.gravityTier.themeColor : AppColors.border,
+                      width: _flightPhysics.isAirborne ? 1.5 : 1.0,
+                    ),
+                    boxShadow: [
+                      if (_flightPhysics.isAirborne)
+                        BoxShadow(
+                          color: _flightPhysics.gravityTier.themeColor.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          spreadRadius: 2,
+                        ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            _flightPhysics.isAirborne ? Icons.rocket_launch_rounded : Icons.flight_takeoff_rounded,
+                            color: _flightPhysics.gravityTier.themeColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    'ALT: ${_flightPhysics.altitude.toStringAsFixed(1)}m',
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+                                  ),
+                                  const Text(' / 85m', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                                ],
+                              ),
+                              Text(
+                                _flightPhysics.gravityTier.label.toUpperCase(),
+                                style: TextStyle(
+                                  color: _flightPhysics.gravityTier.themeColor,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          if (_flightPhysics.momentumBoostActive)
+                            Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF9100).withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFFF9100)),
+                              ),
+                              child: const Text(
+                                '+40% BOOST',
+                                style: TextStyle(color: Color(0xFFFF9100), fontWeight: FontWeight.w900, fontSize: 9),
+                              ),
+                            ),
+                          if (_flightPhysics.isAirborne)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: _flightPhysics.gravityTier.themeColor.withValues(alpha: 0.35),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: _flightPhysics.gravityTier.themeColor),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.bolt_rounded, color: Colors.white, size: 14),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    '1.5x XP',
+                                    style: TextStyle(color: _flightPhysics.gravityTier.themeColor, fontWeight: FontWeight.w900, fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Row(
+                              children: [
+                                SizedBox(
+                                  width: 48,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: _flightPhysics.energy / 100.0,
+                                      backgroundColor: Colors.white12,
+                                      color: const Color(0xFF00F0FF),
+                                      minHeight: 6,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${_flightPhysics.energy.toStringAsFixed(0)}%',
+                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
                         ],
                       ),
                     ],
                   ),
-                  Row(
-                    children: [
-                      if (_flightPhysics.momentumBoostActive)
-                        Container(
-                          margin: const EdgeInsets.only(right: 8),
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFF9100).withValues(alpha: 0.25),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFFF9100)),
-                          ),
-                          child: const Text(
-                            '+40% BOOST',
-                            style: TextStyle(color: Color(0xFFFF9100), fontWeight: FontWeight.w900, fontSize: 9),
-                          ),
-                        ),
-                      if (_flightPhysics.isAirborne)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8A2BE2).withValues(alpha: 0.35),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF8A2BE2)),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.bolt_rounded, color: Color(0xFF00F0FF), size: 14),
-                              SizedBox(width: 3),
-                              Text(
-                                '1.5x XP',
-                                style: TextStyle(color: Color(0xFF00F0FF), fontWeight: FontWeight.w900, fontSize: 10),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 48,
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: _flightPhysics.energy / 100.0,
-                                  backgroundColor: Colors.white12,
-                                  color: const Color(0xFF00F0FF),
-                                  minHeight: 6,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${_flightPhysics.energy.toStringAsFixed(0)}%',
-                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w700),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
 
           // 4. Floating "You own X.X km² here" Pill Overlay on Map
           Positioned(
@@ -1721,6 +1767,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -1961,4 +2008,25 @@ class _SummaryTile extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Particle slipstream visualizer for anti-gravity kinetic vector thrusters
+class SlipstreamPainter extends CustomPainter {
+  final List<SlipstreamParticle> particles;
+
+  const SlipstreamPainter({required this.particles});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    for (final p in particles) {
+      final paint = Paint()
+        ..color = p.color.withValues(alpha: p.opacity)
+        ..style = PaintingStyle.fill;
+      canvas.drawCircle(Offset(center.dx + p.x, center.dy + p.y), p.size, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant SlipstreamPainter oldDelegate) => true;
 }
