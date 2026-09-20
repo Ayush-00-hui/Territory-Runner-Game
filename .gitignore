@@ -54,3 +54,5 @@ ios/Runner/GoogleService-Info.plist
 # Local test database artifacts
 test_hive/
 test_hive_route/
+test_hive_widget/
+test_hive*/

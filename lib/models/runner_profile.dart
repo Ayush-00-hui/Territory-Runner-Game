@@ -42,11 +42,12 @@ class RunnerProfile {
     _evaluateBadges();
   }
 
-  /// Increments claimed hexes and awards +10 XP per hex
-  bool claimHex() {
+  /// Increments claimed hexes and awards XP with optional flight multiplier
+  bool claimHex({double multiplier = 1.0}) {
     totalHexesClaimed++;
     _evaluateBadges();
-    return addXp(10);
+    final int awardedXp = (10 * multiplier).round();
+    return addXp(awardedXp);
   }
 
   void _evaluateBadges() {

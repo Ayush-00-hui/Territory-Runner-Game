@@ -8,7 +8,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   setUpAll(() async {
-    Hive.init('./test_hive');
+    Hive.init('./test_hive_widget');
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(TerritoryAdapter());
     }

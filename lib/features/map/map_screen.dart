@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
@@ -13,6 +14,7 @@ import '../coach/pace_prediction_service.dart';
 import '../coach/llm_coach_service.dart';
 import '../coach/voice_coach_service.dart';
 import '../gameplay/rival_agent_service.dart';
+import '../physics/flight_physics_controller.dart';
 import '../teams/run_club_modal.dart';
 import '../../main.dart'; // For AppColors and animations
 import '../../core/utils/constants.dart';
@@ -35,6 +37,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final LLMCoachService _coachService = LLMCoachService();
   final VoiceCoachService _voiceCoach = VoiceCoachService();
   final RivalAgentService _rivalService = RivalAgentService();
+  final FlightPhysicsController _flightPhysics = FlightPhysicsController();
   
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
@@ -61,6 +64,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void initState() {
     super.initState();
     
+    // Start anti-gravity physics simulation
+    _flightPhysics.startPhysicsLoop();
+    _flightPhysics.addListener(_onFlightPhysicsChanged);
+
     // Listen for new captures
     _territorySub = _territoryService.territoryStream.listen((event) {
       if (mounted) {
@@ -71,6 +78,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPermissionsAndInitLocation();
     });
+  }
+
+  void _onFlightPhysicsChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _checkPermissionsAndInitLocation() async {
@@ -419,6 +432,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   @override
   void dispose() {
+    _flightPhysics.removeListener(_onFlightPhysicsChanged);
+    _flightPhysics.stopPhysicsLoop();
     _positionSub?.cancel();
     _territorySub?.cancel();
     _rivalSub?.cancel();
@@ -426,6 +441,232 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _runTimer?.cancel();
     _locationService.stopTracking();
     super.dispose();
+  }
+
+  void _inspectSectorAt(LatLng point) {
+    final hexId = _h3Service.getHexagonForLocation(point.latitude, point.longitude);
+    final isCaptured = _territoryService.isTerritoryCaptured(hexId);
+    HapticFeedback.selectionClick();
+    _showSectorDetailsSheet(hexId, point, isCaptured);
+  }
+
+  void _showSectorDetailsSheet(String hexId, LatLng point, bool isCaptured) {
+    final areaSqM = _h3Service.getHexagonAreaSqMeters(hexId);
+    final multiplier = _flightPhysics.conquestMultiplier;
+    final baseReward = 10;
+    final totalReward = (baseReward * multiplier).round();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgElevated,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            final isNowCaptured = _territoryService.isTerritoryCaptured(hexId);
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: (isNowCaptured ? AppColors.accent : const Color(0xFF00F0FF)).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.hexagon_outlined,
+                              color: isNowCaptured ? AppColors.accent : const Color(0xFF00F0FF),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'HEX SECTOR TELEMETRY',
+                                style: TextStyle(
+                                  color: AppColors.textMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                              Text(
+                                '#$hexId',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  fontFamily: 'monospace',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isNowCaptured
+                              ? AppColors.accent.withValues(alpha: 0.2)
+                              : Colors.cyanAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isNowCaptured ? AppColors.accent : Colors.cyanAccent,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Text(
+                          isNowCaptured ? 'CONQUERED' : 'UNCLAIMED',
+                          style: TextStyle(
+                            color: isNowCaptured ? AppColors.accent : Colors.cyanAccent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Sector Area', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                            Text('${areaSqM.toStringAsFixed(0)} m²', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                        const Divider(color: Colors.white10, height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('GPS Coordinates', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                            Text(
+                              '${point.latitude.toStringAsFixed(5)}, ${point.longitude.toStringAsFixed(5)}',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        const Divider(color: Colors.white10, height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Text('Conquest Bounty', style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                if (multiplier > 1.0) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF8A2BE2).withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFF8A2BE2), width: 1),
+                                    ),
+                                    child: const Text('1.5x FLIGHT', style: TextStyle(color: Color(0xFF00F0FF), fontSize: 9, fontWeight: FontWeight.w900)),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            Text(
+                              '+$totalReward XP',
+                              style: const TextStyle(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  if (!isNowCaptured) ...[
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.black,
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: () async {
+                        HapticFeedback.heavyImpact();
+                        final success = await _territoryService.captureTerritory(hexId, multiplier: multiplier);
+                        if (!mounted) return;
+                        if (success) {
+                          setModalState(() {});
+                          setState(() {});
+                          if (ctx.mounted) {
+                            Navigator.pop(ctx);
+                          }
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: AppColors.surface,
+                              content: Text(
+                                'Sector #$hexId Conquered! (+$totalReward XP)',
+                                style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('TACTICAL CLAIM SECTOR', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
+                    ),
+                  ] else ...[
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.surface2,
+                        foregroundColor: Colors.white70,
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _mapController.move(point, 17.5);
+                      },
+                      icon: const Icon(Icons.check_circle_outline, color: AppColors.accent),
+                      label: const Text('SECTOR SECURED BY RUNNER', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _recenter() {
@@ -582,6 +823,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     initialCenter: _currentLocation!,
                     initialZoom: 17.0,
                     backgroundColor: AppColors.bgDeep,
+                    onTap: (tapPosition, point) {
+                      _inspectSectorAt(point);
+                    },
                     interactionOptions: const InteractionOptions(
                       flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
                     ),
@@ -621,6 +865,16 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     ),
                   ],
                 ),
+
+          // Particle Slipstream Visualizer for Anti-Gravity Propulsion
+          if (_flightPhysics.particles.isNotEmpty)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: CustomPaint(
+                  painter: SlipstreamPainter(particles: _flightPhysics.particles),
+                ),
+              ),
+            ),
 
           // 2. Top Header Bar ("Good run, Alex 👋" + "Run to own." capsule)
           Positioned(
@@ -712,67 +966,113 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             ),
           ),
 
-          // 3. Map Headline Overlay ("Mark Your Move")
-          if (!_isRunActive)
-            Positioned(
-              top: pad.top + 120,
-              left: 20,
-              right: 20,
+          // 3. Anti-Gravity Flight Propulsion Telemetry HUD
+          Positioned(
+            top: pad.top + 115,
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.surface.withValues(alpha: 0.92),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: _flightPhysics.isAirborne ? const Color(0xFF00F0FF) : AppColors.border,
+                  width: _flightPhysics.isAirborne ? 1.5 : 1.0,
+                ),
+                boxShadow: [
+                  if (_flightPhysics.isAirborne)
+                    BoxShadow(
+                      color: const Color(0xFF00F0FF).withValues(alpha: 0.25),
+                      blurRadius: 16,
+                      spreadRadius: 2,
+                    ),
+                ],
+              ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
-                        'Mark\nYour Move',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w900,
-                          height: 1.05,
-                          letterSpacing: -0.8,
-                        ),
+                  Row(
+                    children: [
+                      Icon(
+                        _flightPhysics.isAirborne ? Icons.rocket_launch_rounded : Icons.flight_takeoff_rounded,
+                        color: _flightPhysics.isAirborne ? const Color(0xFF00F0FF) : AppColors.textMuted,
+                        size: 20,
                       ),
-                      SizedBox(height: 6),
-                      Text(
-                        'Run. Map. Own. Turn your runs\ninto your territory.',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 12,
-                          height: 1.35,
-                        ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'ALT: ${_flightPhysics.altitude.toStringAsFixed(1)}m',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+                              ),
+                              const Text(' / 85m', style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                            ],
+                          ),
+                          Text(
+                            _flightPhysics.isThrusterEngaged
+                                ? 'INVERTED -0.35g'
+                                : (_flightPhysics.isAirborne ? 'GLIDING (Zero-G)' : 'GROUND LEVEL'),
+                            style: TextStyle(
+                              color: _flightPhysics.isThrusterEngaged
+                                  ? const Color(0xFF00F0FF)
+                                  : (_flightPhysics.isAirborne ? const Color(0xFF8A2BE2) : AppColors.textSecondary),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.88),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Icon(Icons.terrain_rounded, color: AppColors.accent, size: 20),
-                        SizedBox(height: 4),
-                        Text(
-                          'More grounds\nahead.',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            height: 1.2,
+                  if (_flightPhysics.isAirborne)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8A2BE2).withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF8A2BE2)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.bolt_rounded, color: Color(0xFF00F0FF), size: 14),
+                          SizedBox(width: 3),
+                          Text(
+                            '1.5x XP BOOST',
+                            style: TextStyle(color: Color(0xFF00F0FF), fontWeight: FontWeight.w900, fontSize: 10),
                           ),
+                        ],
+                      ),
+                    )
+                  else
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 48,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: _flightPhysics.energy / 100.0,
+                              backgroundColor: Colors.white12,
+                              color: const Color(0xFF00F0FF),
+                              minHeight: 6,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_flightPhysics.energy.toStringAsFixed(0)}%',
+                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w700),
                         ),
                       ],
                     ),
-                  ),
                 ],
               ),
             ),
+          ),
 
           // 4. Floating "You own X.X km² here" Pill Overlay on Map
           Positioned(
@@ -809,12 +1109,53 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             ),
           ),
 
-          // 5. Left Floating Action Buttons (Compass, AI Route Layers, Recenter)
+          // 5. Left Floating Action Buttons (Compass, AI Route Layers, Recenter, Thrusters)
           Positioned(
             left: 20,
             bottom: pad.bottom + 170,
             child: Column(
               children: [
+                // Anti-Gravity Thruster Hold-To-Glide Button
+                GestureDetector(
+                  onTapDown: (_) => _flightPhysics.setThruster(true),
+                  onTapUp: (_) => _flightPhysics.setThruster(false),
+                  onTapCancel: () => _flightPhysics.setThruster(false),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    height: 52,
+                    width: 52,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: _flightPhysics.isThrusterEngaged
+                            ? [const Color(0xFF00F0FF), const Color(0xFF8A2BE2)]
+                            : [AppColors.surface, AppColors.surface2],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      border: Border.all(
+                        color: _flightPhysics.isThrusterEngaged ? const Color(0xFF00F0FF) : const Color(0xFF8A2BE2),
+                        width: 1.8,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (_flightPhysics.isThrusterEngaged ? const Color(0xFF00F0FF) : const Color(0xFF8A2BE2))
+                              .withValues(alpha: 0.5),
+                          blurRadius: 14,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Icon(
+                        Icons.rocket_rounded,
+                        color: _flightPhysics.isThrusterEngaged ? Colors.black : const Color(0xFF00F0FF),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 _buildFloatingCircleButton(
                   icon: Icons.navigation_rounded,
                   onTap: _recenter,

@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
 import '../../services/firebase_service.dart';
+import '../physics/flight_physics_controller.dart';
 import 'h3_service.dart';
 
 class TerritoryService {
@@ -70,11 +71,12 @@ class TerritoryService {
   }
 
   /// Capture a new territory hex
-  /// Calculates real vertices, area in m², awards +10 XP, and syncs
+  /// Calculates real vertices, area in m², awards XP (with flight bonus), and syncs
   Future<bool> captureTerritory(
     String hexId, {
     String? ownerId,
     bool isPendingReview = false,
+    double? multiplier,
   }) async {
     if (_territoryBox.containsKey(hexId)) {
       return false; // Already captured
@@ -96,12 +98,13 @@ class TerritoryService {
     // Persist locally in Hive
     await _territoryBox.put(hexId, newTerritory);
 
-    // Award +10 XP and increment claimed hex count in RunnerProfile
+    // Award XP and increment claimed hex count in RunnerProfile (applies flight multiplier)
     final profile = getProfile();
-    final bool leveledUp = profile.claimHex();
+    final effectiveMultiplier = multiplier ?? FlightPhysicsController().conquestMultiplier;
+    final bool leveledUp = profile.claimHex(multiplier: effectiveMultiplier);
     await saveProfile(profile);
 
-    debugPrint('[TerritoryService] Hex $hexId captured! Total claimed: ${profile.totalHexesClaimed}, XP: ${profile.xp}, Level: ${profile.level} (Leveled up: $leveledUp)');
+    debugPrint('[TerritoryService] Hex $hexId captured with ${effectiveMultiplier}x bonus! Total claimed: ${profile.totalHexesClaimed}, XP: ${profile.xp}, Level: ${profile.level} (Leveled up: $leveledUp)');
 
     // Emit live capture event
     _captureEventController.add(newTerritory);
