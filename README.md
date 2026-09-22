@@ -251,6 +251,19 @@ flutter test
 
 ---
 
+## 📸 Screenshots
+
+*(Coming soon: App screenshots showcasing the map, territory, and coaching interface!)*
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome!
+Feel free to check the [issues page](https://github.com/Ayush-00-hui/Territory-Runner-Game/issues) if you want to contribute.
+
+---
+
 ## 📄 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
