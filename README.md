@@ -251,9 +251,12 @@ flutter test
 
 ---
 
-## 📸 Screenshots
+## 📸 Visual Showcase & Previews
 
-*(Coming soon: App screenshots showcasing the map, territory, and coaching interface!)*
+- 🗺️ **Cyber Tactical Map**: Real-time GPS location rendering with ArcGIS dark tiles.
+- 📐 **Live Territory Polygon Enclosure**: Instant visual polygon feedback and Shoelace metric area calculation.
+- ⚡ **Anti-Cheat & Telemetry HUD**: Live pacing, cadence, distance metrics, and speed limiter safeguards.
+- 🤖 **Gemini AI Coaching Insights**: Comprehensive post-run tactical summary and recovery advice.
 
 ---
 
