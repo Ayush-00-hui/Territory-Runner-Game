@@ -199,13 +199,39 @@ territory_runner/
 ## ⚡ Key Features
 
 - 🟢 **Arbitrary Loop Territory Conquest:** Run any real-world shape to claim sovereign territory with dynamic $m^2$ calculation.
+- ⚡ **Hybrid Claiming Engine:** Real-time breadcrumb trail claiming plus massive bonus area rewards upon completing closed loops.
 - ✂️ **Clipper2 Geometric Engine:** Overlapping loops merge into seamless MultiPolygons; running into rival territory carves away their land.
+- 🎮 **Classroom / Viva Simulation Mode:** Built-in test harness to simulate realistic GPX running loops on emulators or indoors without physical outdoor running.
 - 🛣️ **OSRM Real-Road Routing:** Generates circular running paths along real walkable sidewalks and streets tailored to your distance goal.
-- 🛡️ **Zero-Tolerance Anti-Cheat:** Multi-stage filtering prevents vehicles, cycling, or GPS spoofing from tainting the leaderboard.
-- 🤖 **Gemini AI Workout Debrief:** Actionable workout insights, pacing critiques, and recovery tips powered by Google Gemini.
+- 🛡️ **Multi-Tier Anti-Cheat Engine:** Z-Score Mahalanobis anomaly detection prevents vehicles, cycling, or GPS spoofing from tainting the leaderboard.
+- 🤖 **Gemini AI Workout Debrief:** Actionable workout insights, pacing critiques, and tactical recovery tips powered by Google Gemini.
 - 🏆 **Gamified Progression:** Earn dynamic XP scaled to captured area, unlock milestone badges (*First Conquest, Territory Sovereign, 10K Centurion*), and build streaks.
 - 🔋 **Offline-First Resilience:** Conquered territories are stored in local high-speed Hive boxes and synchronized to Cloud Firestore when online.
 - 🗺️ **Clean Dark Map Aesthetics:** Watermark-free, high-contrast dark cartography matching modern athletic HUD designs.
+
+---
+
+## 🗺️ Roadmap & Major Project Evolution
+
+```mermaid
+graph LR
+    subgraph Minor ["Minor Project Phase (Current)"]
+        FlutterClient[Flutter + Dart Client] --> LocalMath[Clipper2 + Shoelace Engine]
+        FlutterClient --> FirebaseSync[Firebase Auth + Firestore]
+        FlutterClient --> GeminiCoach[Google Gemini AI Coach]
+    end
+
+    subgraph Major ["Major Project Phase (Planned Future Scope)"]
+        GoServer[Go High-Performance Microservice] --> PostGIS[(PostgreSQL + PostGIS)]
+        GoServer --> RedisStream[(Redis Real-time PubSub)]
+        GoServer --> WebSockets[Bi-directional WebSockets]
+    end
+
+    FlutterClient -.->|Scale Out| GoServer
+```
+
+* **Phase 1 (Minor Project MVP - Active):** Flutter cross-platform client with client-side Clipper2 geometry, Hive offline cache, Firebase authentication & sync, and Google Gemini AI post-run debriefs.
+* **Phase 2 (Major Project Scalability):** Server-authoritative game engine in **Go (Golang)** with **PostgreSQL + PostGIS** for backend polygon spatial indexing (`ST_Contains`, `ST_Intersects`, `ST_Union`) and **Redis** for real-time MMO player presence over **WebSockets**.
 
 ---
 
