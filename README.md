@@ -248,12 +248,19 @@ cd Territory-Runner-Game
 flutter pub get
 ```
 
-### 2. Run the Application
+### 2. Configure Environment (Optional)
+To enable Gemini AI post-run debriefs, set your Google Generative AI API key in your environment or configuration:
+```bash
+flutter run --dart-define=GEMINI_API_KEY=your_api_key_here
+```
+*Note: If no API key is provided, the on-device heuristic AI coach fallback will activate automatically.*
+
+### 3. Run the Application
 ```bash
 flutter run
 ```
 
-### 3. Run Tests
+### 4. Run Tests & Algorithmic Benchmarks
 ```bash
 flutter test
 ```
