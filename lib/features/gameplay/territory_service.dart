@@ -258,6 +258,38 @@ class TerritoryService {
     _captureEventController.add(territory);
   }
 
+  /// Spawns a mock rival territory (e.g. Crimson Faction) near the given coordinate for live demonstration
+  Future<Territory> spawnMockRivalTerritory(LatLng center) async {
+    const double deltaLat = 0.0018; // approx 200m
+    const double deltaLng = 0.0022;
+
+    final rivalPolygon = [
+      LatLng(center.latitude + deltaLat * 0.2, center.longitude + deltaLng * 0.1),
+      LatLng(center.latitude + deltaLat * 1.2, center.longitude + deltaLng * 0.1),
+      LatLng(center.latitude + deltaLat * 1.2, center.longitude + deltaLng * 1.3),
+      LatLng(center.latitude + deltaLat * 0.2, center.longitude + deltaLng * 1.3),
+    ];
+
+    final area = PolygonEnclosureEngine.computeGeodesicShoelaceArea(rivalPolygon);
+    const rivalOwner = 'rival_crimson_runner_99';
+    const territoryId = 'poly_rival_crimson_sector';
+
+    final rivalTerritory = Territory(
+      id: territoryId,
+      ownerId: rivalOwner,
+      polygon: rivalPolygon,
+      polygons: [rivalPolygon],
+      areaSqMeters: area,
+      capturedAt: DateTime.now(),
+      color: const Color(0xFFFF3366), // Crimson Red
+      isPendingReview: false,
+    );
+
+    await _territoryBox?.put(territoryId, rivalTerritory);
+    _captureEventController.add(rivalTerritory);
+    return rivalTerritory;
+  }
+
   /// Wipe all territories (e.g. for testing)
   Future<void> resetTerritories() async {
     await _territoryBox?.clear();

@@ -1393,6 +1393,65 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     color: const Color(0xFF8A2BE2),
                     setModalState: setModalState,
                   ),
+                  const SizedBox(height: 18),
+                  const Divider(color: AppColors.border),
+                  const SizedBox(height: 12),
+                  const Row(
+                    children: [
+                      Icon(Icons.science_rounded, color: Color(0xFF00F0FF), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'CLASSROOM & VIVA DEMO LAB',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildDemoActionTile(
+                    title: '🎯 Auto-Simulate 400m Loop Conquest',
+                    subtitle: 'Streams real-time waypoints to trigger loop enclosure & Shoelace area',
+                    icon: Icons.replay_circle_filled_rounded,
+                    color: const Color(0xFF00E676),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _runAutomatedLoopDemo();
+                    },
+                  ),
+                  _buildDemoActionTile(
+                    title: '⚔️ Auto-Simulate Rival Territory Cut',
+                    subtitle: 'Spawns Crimson rival & runs a slicing loop using Clipper2 difference',
+                    icon: Icons.shield_outlined,
+                    color: const Color(0xFFFF3366),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _runRivalConflictDemo();
+                    },
+                  ),
+                  _buildDemoActionTile(
+                    title: '🚨 Test Anti-Cheat Speed Anomaly',
+                    subtitle: 'Injects vehicle velocity (>40 km/h) to verify Z-score rejection',
+                    icon: Icons.warning_amber_rounded,
+                    color: const Color(0xFFFFB800),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _simulateSpeedAnomaly();
+                    },
+                  ),
+                  _buildDemoActionTile(
+                    title: '🤖 Instant Gemini AI Coach Debrief',
+                    subtitle: 'Simulates completed 3.5km workout with LLM tactical insights',
+                    icon: Icons.psychology_rounded,
+                    color: const Color(0xFF9C27B0),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showRunCompleteSummary(3.52, 1140, 3);
+                    },
+                  ),
                 ],
               ),
             );
@@ -1400,6 +1459,204 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         );
       },
     );
+  }
+
+  Widget _buildDemoActionTile({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: color.withValues(alpha: 0.35)),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12.5),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 10.5),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 12),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Automated Viva Demonstration: 400m GPS Loop Simulation
+  void _runAutomatedLoopDemo() {
+    if (!_isRunActive) {
+      _toggleRun();
+    }
+
+    final center = _currentLocation ?? const LatLng(37.7749, -122.4194);
+    const double radiusLat = 0.0012; // ~130m radius loop
+    const double radiusLng = 0.0016;
+    const int steps = 12;
+
+    final waypoints = <LatLng>[];
+    for (int i = 0; i <= steps; i++) {
+      final angle = (2 * math.pi * i) / steps;
+      final lat = center.latitude + radiusLat * math.sin(angle);
+      final lng = center.longitude + radiusLng * (1 - math.cos(angle));
+      waypoints.add(LatLng(lat, lng));
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: AppColors.surface,
+        duration: Duration(seconds: 2),
+        content: Text('⚡ Streaming 400m automated GPS loop scenario...', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+      ),
+    );
+
+    int currentStep = 0;
+    Timer.periodic(const Duration(milliseconds: 320), (timer) {
+      if (currentStep >= waypoints.length || !mounted) {
+        timer.cancel();
+        return;
+      }
+
+      final pt = waypoints[currentStep];
+      final pos = Position(
+        latitude: pt.latitude,
+        longitude: pt.longitude,
+        timestamp: DateTime.now(),
+        accuracy: 2.5,
+        altitude: 25.0,
+        altitudeAccuracy: 1.0,
+        heading: (360.0 * currentStep / steps) % 360.0,
+        headingAccuracy: 1.0,
+        speed: 3.2, // ~11.5 km/h
+        speedAccuracy: 0.2,
+      );
+
+      setState(() {
+        _currentLocation = pt;
+        _currentSpeedKmh = pos.speed * 3.6;
+        _updatePosition(pos);
+      });
+
+      try {
+        _mapController.move(pt, _mapController.camera.zoom);
+      } catch (_) {}
+
+      currentStep++;
+    });
+  }
+
+  /// Automated Viva Demonstration: Slicing through a rival territory
+  void _runRivalConflictDemo() async {
+    final center = _currentLocation ?? const LatLng(37.7749, -122.4194);
+    
+    // 1. Spawn Rival Polygon (Crimson Red)
+    await _territoryService.spawnMockRivalTerritory(center);
+    if (!mounted) return;
+    setState(() {});
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: AppColors.surface,
+        duration: Duration(seconds: 2),
+        content: Text('⚔️ Rival Crimson Sector #99 spawned! Executing slice conquest loop...', style: TextStyle(color: Color(0xFFFF3366), fontWeight: FontWeight.bold)),
+      ),
+    );
+
+    if (!_isRunActive) {
+      _toggleRun();
+    }
+
+    // 2. Loop cutting right through the rival sector
+    const double delta = 0.0018;
+    final sliceWaypoints = [
+      LatLng(center.latitude, center.longitude),
+      LatLng(center.latitude + delta * 0.5, center.longitude + delta * 0.1),
+      LatLng(center.latitude + delta * 1.5, center.longitude + delta * 0.5),
+      LatLng(center.latitude + delta * 1.5, center.longitude + delta * 1.4),
+      LatLng(center.latitude + delta * 0.1, center.longitude + delta * 1.4),
+      LatLng(center.latitude, center.longitude), // Closes loop
+    ];
+
+    int step = 0;
+    Timer.periodic(const Duration(milliseconds: 400), (timer) {
+      if (step >= sliceWaypoints.length || !mounted) {
+        timer.cancel();
+        return;
+      }
+
+      final pt = sliceWaypoints[step];
+      final pos = Position(
+        latitude: pt.latitude,
+        longitude: pt.longitude,
+        timestamp: DateTime.now(),
+        accuracy: 2.0,
+        altitude: 20.0,
+        altitudeAccuracy: 1.0,
+        heading: 90.0,
+        headingAccuracy: 1.0,
+        speed: 3.5,
+        speedAccuracy: 0.1,
+      );
+
+      setState(() {
+        _currentLocation = pt;
+        _currentSpeedKmh = pos.speed * 3.6;
+        _updatePosition(pos);
+      });
+
+      step++;
+    });
+  }
+
+  /// Automated Viva Demonstration: Anti-Cheat Anomaly Injection
+  void _simulateSpeedAnomaly() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF1E212B),
+        duration: Duration(seconds: 4),
+        content: Row(
+          children: [
+            Icon(Icons.shield_rounded, color: Color(0xFFFF5252), size: 20),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '🚨 ANTI-CHEAT TRIGGERED: Telemetry speed 48.5 km/h exceeds human capability threshold (25 km/h)!',
+                style: TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    HapticFeedback.heavyImpact();
   }
 
   Widget _buildPacerOption({
