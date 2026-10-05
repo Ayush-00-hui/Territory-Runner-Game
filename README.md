@@ -211,6 +211,19 @@ territory_runner/
 
 ---
 
+## 🎮 Classroom & Viva Demonstration Lab
+
+For indoor academic evaluations and emulator testing, Territory Runner includes an interactive **Viva Demo Suite** accessible directly from the Tactical HUD:
+
+| Scenario | Demonstration Trigger | Underlying Algorithmic Mechanics |
+| :--- | :--- | :--- |
+| 🎯 **400m Closed Loop Simulation** | `Auto-Simulate Loop` | Generates 12 interpolated GPS waypoints, verifies loop closure, and executes the **Shoelace Geodesic Area Formula** to dynamically award $+12,850\text{ m}^2$ territory. |
+| ⚔️ **Rival Territory Slicing** | `Auto-Simulate Rival Slice` | Spawns a **Crimson Rival Sector #99** polygon and runs a cross-cutting loop, proving real-time **Clipper2 Boolean Difference** area carving. |
+| 🚨 **Anti-Cheat Anomaly Defense** | `Test Anti-Cheat Anomaly` | Injects an impossible $48.5\text{ km/h}$ vehicle speed packet to demonstrate **Z-Score Mahalanobis distance rejection** and UI alerting. |
+| 🤖 **Gemini AI Coach Insights** | `Instant AI Debrief` | Synthesizes a completed 3.5km workout into structured JSON prompts processed by **Google Gemini 1.5 Flash** for tactical running recommendations. |
+
+---
+
 ## 🗺️ Roadmap & Major Project Evolution
 
 ```mermaid
