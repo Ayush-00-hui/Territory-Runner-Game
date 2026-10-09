@@ -390,3 +390,9 @@ Feel free to check the [issues page](https://github.com/Ayush-00-hui/Territory-R
 ## 📄 License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+  <sub>⚡ Powered by Cyber-Athletic Fitness Gamification</sub>
+</div>
