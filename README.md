@@ -13,7 +13,7 @@
 
 <br>
 
-**Territory Runner** is a high-performance, real-time location-based fitness gamification application. By running, jogging, or walking in the physical world, athletes conquer arbitrary closed-loop GPS territory polygons on an interactive dark cybernetic tactical map, competing for territory sovereignty, unlocking milestone achievements, and receiving AI coaching insights.
+**Territory Runner** is an advanced, real-time location-based fitness gamification application. By running, jogging, or walking in the physical world, athletes conquer arbitrary closed-loop GPS territory polygons on an interactive dark cybernetic tactical map, competing for territory sovereignty, unlocking milestone achievements, and receiving AI coaching insights.
 
 [✨ Key Features](#-key-features) • [🏗️ Architecture](#%EF%B8%8F-system-architecture) • [🧮 Algorithms](#-core-algorithms--mathematical-formulations) • [🎮 Viva Demo Lab](#-classroom--viva-demonstration-lab) • [🚀 Quick Start](#-getting-started)
 
