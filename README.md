@@ -31,12 +31,16 @@
   - [3. OSRM Real-Road Network Route Synthesis](#3-osrm-real-road-network-route-synthesis)
   - [4. Multi-Tier Anti-Cheat & Kinematic Anomaly Detection](#4-multi-tier-anti-cheat--kinematic-anomaly-detection)
   - [5. Adaptive Athletic Progression & LLM Coaching](#5-adaptive-athletic-progression--llm-coaching)
+  - [6. Offline-First Resilience & Graceful Cloud Degradation](#6-offline-first-resilience--graceful-cloud-degradation)
 - [Technology Stack](#%EF%B8%8F-technology-stack)
 - [Project Directory Structure](#-project-directory-structure)
 - [Key Features & Tactical UI](#-key-features)
 - [Classroom & Viva Demonstration Lab](#-classroom--viva-demonstration-lab)
+  - [Interactive Viva Demo Suite](#-classroom--viva-demonstration-lab)
+  - [Virtual Pacer & Desktop Telemetry Simulator](#-virtual-pacer--desktop-telemetry-simulator)
 - [Roadmap & Scalability Evolution](#%EF%B8%8F-roadmap--major-project-evolution)
 - [Getting Started & Configuration](#-getting-started)
+  - [Environment Configuration Flags](#-environment-configuration-flags)
 - [Test Suite & Algorithmic Benchmarks](#-test-suite--quality-verification)
 - [Contributing & License](#-contributing)
 
@@ -197,6 +201,15 @@ Telemetry streams pass through a real-time sliding window anti-cheat evaluator:
 
 ---
 
+### 6. Offline-First Resilience & Graceful Cloud Degradation
+Territory Runner implements a resilient local-first architecture to guarantee continuous usability in zero-connectivity environments (forest trails, tunnels, or offline running tracks):
+
+* **Local Authority via Hive NoSQL:** All geographic MultiPolygon coordinates, run telemetry, and runner profile state are written directly to high-throughput binary Hive TypeAdapters with sub-millisecond persistence latency.
+* **Non-Blocking Cloud Sync (Firestore):** When network connectivity is active, state is lazily synchronized to Google Cloud Firestore using server-side timestamps and idempotent document IDs.
+* **Zero-Config Anonymous Fallback:** If Firebase configuration or network credentials are not provisioned, the engine seamlessly routes sessions through an isolated `'local_runner'` session without throwing exceptions or interrupting user workouts.
+
+---
+
 ## 🛠️ Technology Stack
 
 | Layer | Technology | Details / Purpose |
@@ -288,6 +301,17 @@ For indoor academic evaluations and emulator testing, Territory Runner includes 
 | 🚨 **Anti-Cheat Anomaly Defense** | `Test Anti-Cheat Anomaly` | Injects an impossible $48.5\text{ km/h}$ vehicle speed packet. | Instant rejection with red HUD banner: *"Cheat Detected: Vehicle speed exceeds human sprint limit"*. |
 | 🤖 **Gemini AI Coach Insights** | `Instant AI Debrief` | Synthesizes a completed 3.5km workout into structured JSON prompts processed by **Google Gemini 1.5 Flash**. | AI Tactical Debrief modal appears with pacing critique, recovery advice, and effort score. |
 
+### 🕹️ Virtual Pacer & Desktop Telemetry Simulator
+
+To allow developers, reviewers, and evaluators to test all location-based mechanics directly on desktop environments (Windows, macOS, Linux) or emulators without outdoor GNSS hardware:
+
+| Simulator Mode | Speed Profile | Kinematic Velocity | Verification Target |
+| :--- | :--- | :--- | :--- |
+| 🚶 **Virtual Pacer: Walking** | Gentle Pace | $5.0\text{ km/h}$ ($1.39\text{ m/s}$) | Breadcrumb trail updates, base XP accrual rate |
+| 🏃 **Virtual Pacer: Running** | Athletic Pace | $10.0\text{ km/h}$ ($2.78\text{ m/s}$) | Standard polygon loop enclosure and Shoelace metric |
+| ⚡ **Virtual Pacer: Sprinting** | High Intensity | $15.0\text{ km/h}$ ($4.17\text{ m/s}$) | Velocity boundary testing below anti-cheat limits |
+| ⌨️ **Keyboard Step Simulator** | Arrow Keys / WASD | Stepped $\Delta \text{lat}/\Delta \text{lng}$ | Fine-grained custom geometric polygon shapes |
+
 ---
 
 ## 🗺️ Roadmap & Major Project Evolution
@@ -335,6 +359,14 @@ flutter run --dart-define=GEMINI_API_KEY=your_api_key_here
 ```
 > [!NOTE]
 > *If no API key is provided, the on-device heuristic AI coach fallback will activate automatically.*
+
+#### ⚙️ Environment Configuration Flags
+| Flag / Define | Type | Default Value | Description |
+| :--- | :--- | :--- | :--- |
+| `GEMINI_API_KEY` | String | `""` (Empty) | Google Generative AI API key for Gemini 1.5 Flash tactical debriefs |
+| `MAP_TILE_PROVIDER` | String | `ArcGIS World Dark` | Base tile layer endpoint (ArcGIS, OpenStreetMap, or custom tiles) |
+| `OSRM_BASE_URL` | String | `router.project-osrm.org` | Open Source Routing Machine pedestrian service URL |
+| `ENABLE_ANOMALY_LOGS` | Boolean | `true` | Prints kinematic telemetry and anti-cheat decisions to console |
 
 ### 3. Run the Application
 ```bash
