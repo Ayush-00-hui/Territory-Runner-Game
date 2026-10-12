@@ -426,5 +426,5 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ---
 
 <div align="center">
-  <sub>⚡ Powered by Cyber-Athletic Fitness Gamification</sub>
+  <sub>⚡ Powered by Cyber-Athletic Fitness Gamification • Built with Flutter & Dart 🏃‍♂️</sub>
 </div>
