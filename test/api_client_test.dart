@@ -138,5 +138,54 @@ void main() {
       expect(territories.first.polygons.first.length, equals(5));
       expect(territories.first.areaSqMeters, equals(12500.0));
     });
+
+    test('getLeaderboard parses sorted ranking entries from backend', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/v1/leaderboard');
+        expect(request.url.queryParameters['limit'], equals('10'));
+
+        return http.Response(
+          jsonEncode({
+            'leaderboard': [
+              {
+                'rank': 1,
+                'user_id': 'usr_alpha',
+                'username': 'ApexRunner',
+                'faction': 'Cyber Vanguard',
+                'total_area_sqm': 45000.0,
+                'total_runs': 12,
+                'xp': 2400,
+                'level': 5,
+              },
+              {
+                'rank': 2,
+                'user_id': 'usr_beta',
+                'username': 'ShadowSprint',
+                'faction': 'Neon Syndicate',
+                'total_area_sqm': 32000.0,
+                'total_runs': 8,
+                'xp': 1600,
+                'level': 3,
+              },
+            ],
+            'count': 2,
+          }),
+          200,
+        );
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      final entries = await apiClient.getLeaderboard(limit: 10);
+
+      expect(entries.length, equals(2));
+      expect(entries[0].rank, equals(1));
+      expect(entries[0].username, equals('ApexRunner'));
+      expect(entries[0].totalAreaSqm, equals(45000.0));
+      expect(entries[0].level, equals(5));
+
+      expect(entries[1].rank, equals(2));
+      expect(entries[1].username, equals('ShadowSprint'));
+    });
   });
 }
+

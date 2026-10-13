@@ -14,6 +14,8 @@ import '../coach/llm_coach_service.dart';
 import '../coach/voice_coach_service.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
 import '../../services/sync_queue.dart';
+import '../../services/api_client.dart';
+import '../../models/leaderboard_entry.dart';
 import '../../main.dart'; // For AppColors and animations
 import '../../core/utils/constants.dart';
 
@@ -33,6 +35,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final LLMCoachService _coachService = LLMCoachService();
   final VoiceCoachService _voiceCoach = VoiceCoachService();
   final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
+  final ApiClient _apiClient = ApiClient();
+  Timer? _rivalPollingTimer;
   
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
@@ -70,6 +74,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (mounted) {
         setState(() {});
       }
+    });
+
+    // Poll rival territories every 20 seconds while map screen is open
+    _rivalPollingTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      _fetchVisibleRivals();
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -596,8 +605,34 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _positionSub?.cancel();
     _territorySub?.cancel();
     _runTimer?.cancel();
+    _rivalPollingTimer?.cancel();
     _locationService.stopTracking();
     super.dispose();
+  }
+
+  /// Polls server for live rival territories within current visible map bounds
+  Future<void> _fetchVisibleRivals() async {
+    if (!mounted || _currentLocation == null) return;
+    try {
+      final bounds = _mapController.camera.visibleBounds;
+      final serverTerritories = await _apiClient.getTerritoriesInBBox(
+        minLng: bounds.west,
+        minLat: bounds.south,
+        maxLng: bounds.east,
+        maxLat: bounds.north,
+      );
+
+      final myId = _territoryService.getProfile().id;
+      for (final t in serverTerritories) {
+        // Only ingest rival territories from polling so we don't overwrite optimistic local previews
+        if (t.ownerId != myId) {
+          await _territoryService.saveTerritory(t);
+        }
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('[MapScreen] Error polling rival territories: $e');
+    }
   }
 
   void _inspectSectorAt(LatLng point) {
@@ -1758,6 +1793,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           setState(() {
             _selectedModeTab = index;
           });
+          if (index == 2) {
+            _showLeaderboardModal();
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1777,6 +1815,201 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Displays live global leaderboard ranking from the Go backend
+  void _showLeaderboardModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bgElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return FutureBuilder<List<LeaderboardEntry>>(
+              future: _apiClient.getLeaderboard(limit: 50),
+              builder: (context, snapshot) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.emoji_events_rounded, color: AppColors.accent, size: 22),
+                              SizedBox(width: 8),
+                              Text(
+                                'GLOBAL LEADERBOARD',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        const Expanded(
+                          child: Center(
+                            child: CircularProgressIndicator(color: AppColors.accent),
+                          ),
+                        )
+                      else if (snapshot.hasError)
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.cloud_off_rounded, color: Colors.white38, size: 40),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Offline or server unreachable\n${snapshot.error}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (!snapshot.hasData || snapshot.data!.isEmpty)
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'No runners recorded yet. Claim territory to rank #1!',
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: ListView.separated(
+                            controller: scrollController,
+                            itemCount: snapshot.data!.length,
+                            separatorBuilder: (_, __) => const Divider(color: AppColors.border, height: 1),
+                            itemBuilder: (context, index) {
+                              final entry = snapshot.data![index];
+                              final isCurrent = entry.userId == _territoryService.getProfile().id;
+
+                              Color rankColor = Colors.white70;
+                              if (entry.rank == 1) rankColor = const Color(0xFFFFD700); // Gold
+                              if (entry.rank == 2) rankColor = const Color(0xFFC0C0C0); // Silver
+                              if (entry.rank == 3) rankColor = const Color(0xFFCD7F32); // Bronze
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: isCurrent ? AppColors.accent.withValues(alpha: 0.12) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 32,
+                                      child: Text(
+                                        '#${entry.rank}',
+                                        style: TextStyle(
+                                          color: rankColor,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                entry.username,
+                                                style: TextStyle(
+                                                  color: isCurrent ? AppColors.accent : Colors.white,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              if (isCurrent) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.accent,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: const Text('YOU', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900)),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${entry.faction} • Lvl ${entry.level} • ${entry.totalRuns} runs',
+                                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          entry.totalAreaSqm >= 1000000
+                                              ? '${(entry.totalAreaSqm / 1000000).toStringAsFixed(2)} km²'
+                                              : '${entry.totalAreaSqm.toStringAsFixed(0)} m²',
+                                          style: const TextStyle(
+                                            color: AppColors.accent,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const Text(
+                                          'CLAIMED',
+                                          style: TextStyle(color: AppColors.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 

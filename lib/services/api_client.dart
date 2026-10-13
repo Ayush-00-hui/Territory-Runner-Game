@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import '../models/leaderboard_entry.dart';
 import '../models/runner_profile.dart';
 import '../models/territory.dart';
 import 'firebase_service.dart';
@@ -277,6 +279,9 @@ class ApiClient {
           }
         }
 
+        final isSelf = ownerId == _firebaseService.currentUserId;
+        final color = isSelf ? const Color(0xFF00E676) : const Color(0xFFFF3366);
+
         territories.add(Territory(
           id: id,
           ownerId: ownerId,
@@ -284,6 +289,7 @@ class ApiClient {
           polygons: multiPolys,
           areaSqMeters: areaSqm,
           capturedAt: DateTime.now(),
+          color: color,
         ));
       }
       return territories;
@@ -294,6 +300,29 @@ class ApiClient {
       statusCode: response.statusCode,
       code: errorBody['error'] ?? 'TERRITORY_ERROR',
       message: errorBody['detail'] ?? 'Failed to load territories',
+    );
+  }
+
+  /// Fetches global leaderboard ranked by total captured territory area (GET /v1/leaderboard)
+  Future<List<LeaderboardEntry>> getLeaderboard({int limit = 50}) async {
+    final uri = Uri.parse('$baseUrl/v1/leaderboard?limit=$limit');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final list = data['leaderboard'] as List<dynamic>? ?? [];
+      return list.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>)).toList();
+    }
+
+    final errorBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errorBody['error'] ?? 'LEADERBOARD_ERROR',
+      message: errorBody['detail'] ?? 'Failed to load leaderboard',
     );
   }
 
