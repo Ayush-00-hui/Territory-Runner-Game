@@ -1,0 +1,40 @@
+services:
+  postgis:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: territory_postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: runner
+      POSTGRES_PASSWORD: runnerpass
+      POSTGRES_DB: territory_runner
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./migrations/000001_init_schema.up.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U runner -d territory_runner"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: territory_backend
+    restart: unless-stopped
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      ENV: "development"
+      AUTH_MODE: "dev"
+      DATABASE_URL: "postgres://runner:runnerpass@postgis:5432/territory_runner?sslmode=disable"
+      GEMINI_API_KEY: ""
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:
