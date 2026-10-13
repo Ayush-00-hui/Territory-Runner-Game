@@ -13,6 +13,7 @@ import '../coach/pace_prediction_service.dart';
 import '../coach/llm_coach_service.dart';
 import '../coach/voice_coach_service.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
+import '../../services/sync_queue.dart';
 import '../../main.dart'; // For AppColors and animations
 import '../../core/utils/constants.dart';
 
@@ -399,6 +400,18 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       _voiceCoach.announceRunComplete(finalDistance, finalHexes);
       _territoryService.addRunDistance(finalDistance);
+
+      // Phase 2: Enqueue run in offline sync queue and trigger server synchronization
+      if (_runCoordinates.length >= 3) {
+        SyncQueueService().enqueueRun(
+          points: List<LatLng>.from(_runCoordinates),
+          durationSeconds: finalSeconds,
+          distanceMeters: finalDistance * 1000.0,
+          clientPreviewArea: 0.0,
+          clientPreviewXp: finalHexes * 100,
+        );
+      }
+
       _showRunCompleteSummary(finalDistance, finalSeconds, finalHexes);
     }
   }
@@ -834,21 +847,28 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const _SyncStatusBadge(),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Text(
+                              profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -1801,6 +1821,94 @@ class _SummaryTile extends StatelessWidget {
         const SizedBox(height: 4),
         Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
       ],
+    );
+  }
+}
+
+class _SyncStatusBadge extends StatelessWidget {
+  const _SyncStatusBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final syncQueue = SyncQueueService();
+    return ValueListenableBuilder<SyncStatus>(
+      valueListenable: syncQueue.statusNotifier,
+      builder: (context, status, _) {
+        return ValueListenableBuilder<int>(
+          valueListenable: syncQueue.unsettledCountNotifier,
+          builder: (context, count, _) {
+            Color color;
+            IconData icon;
+            String text;
+
+            switch (status) {
+              case SyncStatus.synced:
+                color = const Color(0xFF00E676);
+                icon = Icons.cloud_done_rounded;
+                text = 'SYNCED';
+                break;
+              case SyncStatus.syncing:
+                color = const Color(0xFF29B6F6);
+                icon = Icons.sync_rounded;
+                text = 'SYNCING';
+                break;
+              case SyncStatus.pending:
+                color = const Color(0xFFFFB300);
+                icon = Icons.cloud_upload_rounded;
+                text = count > 0 ? 'PENDING ($count)' : 'PENDING';
+                break;
+              case SyncStatus.offline:
+                color = const Color(0xFFFF5252);
+                icon = Icons.cloud_off_rounded;
+                text = count > 0 ? 'OFFLINE ($count)' : 'OFFLINE';
+                break;
+            }
+
+            return GestureDetector(
+              onTap: () {
+                syncQueue.syncPendingRuns();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: AppColors.surface,
+                    duration: const Duration(seconds: 2),
+                    content: Text(
+                      status == SyncStatus.synced
+                          ? 'All runs synced with server authority.'
+                          : 'Triggering background cloud sync...',
+                      style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: color.withValues(alpha: 0.8), width: 1.2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 13, color: color),
+                    const SizedBox(width: 5),
+                    Text(
+                      text,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
