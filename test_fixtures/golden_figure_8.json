@@ -1,0 +1,17 @@
+{
+  "name": "golden_figure_8",
+  "description": "Self-intersecting figure-8 GPS loop crossing itself in the middle",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 40.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": false,
+  "expected_rejection_reason": "Loop crossed itself — try again",
+  "points": [
+    { "latitude": 51.5000, "longitude": -0.1200, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.5010, "longitude": -0.1210, "timestamp": "2026-10-13T10:01:00Z" },
+    { "latitude": 51.5010, "longitude": -0.1200, "timestamp": "2026-10-13T10:02:00Z" },
+    { "latitude": 51.5000, "longitude": -0.1210, "timestamp": "2026-10-13T10:03:00Z" },
+    { "latitude": 51.5000, "longitude": -0.1200, "timestamp": "2026-10-13T10:04:00Z" }
+  ]
+}
