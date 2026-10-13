@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws"
+	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +24,12 @@ func setupTestServer() (http.Handler, store.Store) {
 	memStore := store.NewMemoryStore()
 	cfg := &config.Config{AuthMode: "dev", Env: "development"}
 	authenticator := auth.NewAuthenticator(cfg)
-	apiHandler := api.NewAPI(memStore, nil)
+	wsHub := ws.NewHub(nil)
+	go wsHub.Run()
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithWebSocketHub(wsHub),
+		api.WithAuthenticator(authenticator),
+	)
 	router := api.SetupRouter(apiHandler, authenticator)
 	return router, memStore
 }
@@ -218,4 +226,39 @@ func TestRunCoachEndpoint(t *testing.T) {
 	assert.Contains(t, resp["summary"], "3.80 km")
 	assert.NotEmpty(t, resp["tip"])
 	assert.NotEmpty(t, resp["mood_tag"])
+}
+
+func TestWebSocketEndpoint(t *testing.T) {
+	router, _ := setupTestServer()
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/v1/ws?dev_user=ws_tester"
+
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	require.NoError(t, err)
+	defer conn.Close()
+	assert.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+
+	// Send presence update
+	msg := ws.InboundMessage{
+		Type:      ws.TypePresenceUpdate,
+		Latitude:  51.502,
+		Longitude: -0.122,
+		Speed:     3.0,
+		Heading:   45.0,
+	}
+	err = conn.WriteJSON(msg)
+	require.NoError(t, err)
+
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	_, p, err := conn.ReadMessage()
+	require.NoError(t, err)
+
+	var presence ws.PresenceMessage
+	err = json.Unmarshal(p, &presence)
+	require.NoError(t, err)
+	assert.Equal(t, ws.TypeRunnerPresence, presence.Type)
+	assert.Equal(t, "ws_tester", presence.UserID)
+	assert.Equal(t, 51.502, presence.Latitude)
 }

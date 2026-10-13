@@ -30,34 +30,43 @@ func NewAuthenticator(cfg *config.Config) *Authenticator {
 	return &Authenticator{cfg: cfg}
 }
 
+// AuthenticateRequest extracts user ID from headers or query parameters (ideal for WebSockets).
+func (a *Authenticator) AuthenticateRequest(r *http.Request) (string, error) {
+	if a.cfg.AuthMode == "dev" {
+		devUser := r.Header.Get("X-Dev-User")
+		if devUser == "" {
+			devUser = r.URL.Query().Get("dev_user")
+		}
+		if devUser == "" {
+			devUser = r.URL.Query().Get("user_id")
+		}
+		if devUser != "" {
+			return devUser, nil
+		}
+		return "dev_runner_local", nil
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	token := ""
+	if strings.HasPrefix(authHeader, "Bearer ") {
+		token = strings.TrimPrefix(authHeader, "Bearer ")
+	} else {
+		token = r.URL.Query().Get("token")
+	}
+
+	if token == "" {
+		return "", ErrUnauthorized
+	}
+	return token, nil
+}
+
 // Middleware injects verified runner identity into request context.
 func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var uid string
-
-		if a.cfg.AuthMode == "dev" {
-			// Dev mode: accept X-Dev-User header for swift local testing
-			devUser := r.Header.Get("X-Dev-User")
-			if devUser != "" {
-				uid = devUser
-			} else {
-				uid = "dev_runner_local"
-			}
-		} else {
-			// Production / Staging: extract and verify Firebase Bearer token
-			authHeader := r.Header.Get("Authorization")
-			if !strings.HasPrefix(authHeader, "Bearer ") {
-				http.Error(w, `{"error":"unauthorized","detail":"missing Bearer token"}`, http.StatusUnauthorized)
-				return
-			}
-			token := strings.TrimPrefix(authHeader, "Bearer ")
-			if token == "" {
-				http.Error(w, `{"error":"unauthorized","detail":"empty token"}`, http.StatusUnauthorized)
-				return
-			}
-			// In production, token is decoded/verified via Firebase Admin SDK.
-			// For testing without live credentials, we extract the subject claim or UID.
-			uid = token
+		uid, err := a.AuthenticateRequest(r)
+		if err != nil {
+			http.Error(w, `{"error":"unauthorized","detail":"missing or invalid authentication credentials"}`, http.StatusUnauthorized)
+			return
 		}
 
 		ctx := context.WithValue(r.Context(), userIDKey, uid)

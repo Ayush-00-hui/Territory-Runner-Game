@@ -218,6 +218,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	var playerTotalArea float64
 	var areaClaimed float64
 	var xpAwarded int
+	var rivalsAffected []string
 
 	// 3. Process spatial loop capture if loop was closed
 	if loop != nil && len(loop.Polygon) >= 3 {
@@ -247,11 +248,20 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 				area_sqm = ST_Area(ST_Difference(geom, ST_GeomFromText($1, 4326))::geography),
 				updated_at = NOW()
 			WHERE owner_id != $2
-			  AND ST_Intersects(geom, ST_GeomFromText($1, 4326));
+			  AND ST_Intersects(geom, ST_GeomFromText($1, 4326))
+			RETURNING owner_id;
 		`
-		if _, err := tx.Exec(ctx, diffQuery, polyWKT, run.UserID); err != nil {
+		rows, err := tx.Query(ctx, diffQuery, polyWKT, run.UserID)
+		if err != nil {
 			return nil, fmt.Errorf("failed to clip rival territories: %w", err)
 		}
+		for rows.Next() {
+			var rOwner string
+			if scanErr := rows.Scan(&rOwner); scanErr == nil && rOwner != "" {
+				rivalsAffected = append(rivalsAffected, rOwner)
+			}
+		}
+		rows.Close()
 
 		// Clean up overtaken rival territories
 		cleanupQuery := `
@@ -314,6 +324,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		XpAwarded:          xpAwarded,
 		PlayerTotalAreaSqm: playerTotalArea,
 		TerritoryGeoJSON:   territoryGeoJSON,
+		RivalsAffected:     rivalsAffected,
 	}, nil
 }
 

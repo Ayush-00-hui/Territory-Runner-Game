@@ -16,6 +16,7 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws"
 )
 
 func main() {
@@ -61,7 +62,15 @@ func main() {
 
 	authenticator := auth.NewAuthenticator(cfg)
 	coachSvc := coach.NewService(cfg.GeminiAPIKey, coach.WithLogger(logger))
-	apiHandler := api.NewAPI(dataStore, logger, api.WithCoachService(coachSvc))
+	wsHub := ws.NewHub(logger)
+	go wsHub.Run()
+	defer wsHub.Stop()
+
+	apiHandler := api.NewAPI(dataStore, logger,
+		api.WithCoachService(coachSvc),
+		api.WithWebSocketHub(wsHub),
+		api.WithAuthenticator(authenticator),
+	)
 	router := api.SetupRouter(apiHandler, authenticator)
 
 	server := &http.Server{

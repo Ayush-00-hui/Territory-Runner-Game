@@ -49,8 +49,9 @@ type CaptureResult struct {
 	LoopDetected        bool    `json:"loop_detected"`
 	AreaClaimedSqm      float64 `json:"area_claimed_sqm"`
 	XpAwarded           int     `json:"xp_awarded"`
-	PlayerTotalAreaSqm  float64 `json:"player_total_area_sqm"`
-	TerritoryGeoJSON    string  `json:"territory_geojson,omitempty"`
+	PlayerTotalAreaSqm  float64  `json:"player_total_area_sqm"`
+	TerritoryGeoJSON    string   `json:"territory_geojson,omitempty"`
+	RivalsAffected      []string `json:"rivals_affected,omitempty"`
 }
 
 // LeaderboardEntry represents a ranked runner.

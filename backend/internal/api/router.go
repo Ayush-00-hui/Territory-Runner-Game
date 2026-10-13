@@ -32,6 +32,9 @@ func SetupRouter(api *API, authenticator *auth.Authenticator) http.Handler {
 	// Public Health Endpoint
 	r.Get("/healthz", api.HandleHealthz)
 
+	// Real-Time WebSocket Route
+	r.Get("/v1/ws", api.HandleWebSocket)
+
 	// API v1 routes
 	r.Route("/v1", func(v1 chi.Router) {
 		v1.Use(authenticator.Middleware)

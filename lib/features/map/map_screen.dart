@@ -15,7 +15,9 @@ import '../coach/voice_coach_service.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
 import '../../services/sync_queue.dart';
 import '../../services/api_client.dart';
+import '../../services/websocket_service.dart';
 import '../../models/leaderboard_entry.dart';
+import '../../models/ws_events.dart';
 import '../../main.dart'; // For AppColors and animations
 import '../../core/utils/constants.dart';
 
@@ -36,7 +38,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final VoiceCoachService _voiceCoach = VoiceCoachService();
   final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
   final ApiClient _apiClient = ApiClient();
+  final WebSocketService _wsService = WebSocketService();
   Timer? _rivalPollingTimer;
+
+  // Real-time WebSocket presence and alert state
+  final Map<String, RunnerPresenceEvent> _activeRivalRunners = {};
+  StreamSubscription<RunnerPresenceEvent>? _wsPresenceSub;
+  StreamSubscription<String>? _wsRunnerLeftSub;
+  StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
+  StreamSubscription<ConquestBroadcastEvent>? _wsBroadcastSub;
   
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
@@ -79,6 +89,74 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     // Poll rival territories every 20 seconds while map screen is open
     _rivalPollingTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       _fetchVisibleRivals();
+    });
+
+    // Real-time WebSocket: Connect and listen for live rival runners and territory intrusion alerts
+    _wsService.connect();
+    _wsPresenceSub = _wsService.presenceStream.listen((presence) {
+      if (mounted) {
+        setState(() {
+          _activeRivalRunners[presence.userId] = presence;
+        });
+      }
+    });
+
+    _wsRunnerLeftSub = _wsService.runnerLeftStream.listen((userId) {
+      if (mounted) {
+        setState(() {
+          _activeRivalRunners.remove(userId);
+        });
+      }
+    });
+
+    _wsAlertSub = _wsService.alertStream.listen((alert) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF1E1015),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFFF3366), width: 1.5),
+          ),
+          content: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'TERRITORY INTRUSION DETECTED',
+                      style: TextStyle(
+                        color: Color(0xFFFF3366),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      alert.message,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      _fetchVisibleRivals();
+    });
+
+    _wsBroadcastSub = _wsService.broadcastStream.listen((_) {
+      if (mounted) {
+        _fetchVisibleRivals();
+      }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -184,6 +262,14 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             } catch (_) {}
           }
         });
+
+        // Broadcast live kinematic presence to peers via WebSocket
+        _wsService.sendPresenceUpdate(
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          speed: pos.speed,
+          heading: pos.heading,
+        );
       }
     });
   }
@@ -606,6 +692,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _territorySub?.cancel();
     _runTimer?.cancel();
     _rivalPollingTimer?.cancel();
+    _wsPresenceSub?.cancel();
+    _wsRunnerLeftSub?.cancel();
+    _wsAlertSub?.cancel();
+    _wsBroadcastSub?.cancel();
+    _wsService.disconnect();
     _locationService.stopTracking();
     super.dispose();
   }
@@ -717,6 +808,47 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       spreadRadius: 2,
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Active Rival Runners broadcast over real-time WebSocket
+    for (final rival in _activeRivalRunners.values) {
+      markers.add(
+        Marker(
+          point: rival.position,
+          width: 90,
+          height: 52,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFFF3366), width: 1.2),
+                ),
+                child: Text(
+                  rival.username,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Transform.rotate(
+                angle: rival.heading * (math.pi / 180.0),
+                child: const Icon(
+                  Icons.navigation_rounded,
+                  color: Color(0xFFFF3366),
+                  size: 22,
                 ),
               ),
             ],

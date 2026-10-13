@@ -14,17 +14,20 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 // API encapsulates HTTP handlers and service dependencies.
 type API struct {
-	store    store.Store
-	geoEng   *geo.Engine
-	detector *anticheat.Detector
-	coachSvc *coach.Service
-	logger   *slog.Logger
+	store         store.Store
+	geoEng        *geo.Engine
+	detector      *anticheat.Detector
+	coachSvc      *coach.Service
+	wsHub         *ws.Hub
+	authenticator *auth.Authenticator
+	logger        *slog.Logger
 }
 
 // Option configures API dependencies.
@@ -36,6 +39,20 @@ func WithCoachService(svc *coach.Service) Option {
 		if svc != nil {
 			a.coachSvc = svc
 		}
+	}
+}
+
+// WithWebSocketHub injects a real-time WebSocket hub.
+func WithWebSocketHub(hub *ws.Hub) Option {
+	return func(a *API) {
+		a.wsHub = hub
+	}
+}
+
+// WithAuthenticator injects the authenticator for WebSocket handshakes.
+func WithAuthenticator(auth *auth.Authenticator) Option {
+	return func(a *API) {
+		a.authenticator = auth
 	}
 }
 
@@ -189,12 +206,20 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		runRecord.Status = "flagged_review"
 	}
 
-	// 4. Atomic transaction with advisory lock to mutate territories safely
 	result, err := a.store.CaptureRunAndMutateTerritories(r.Context(), runRecord, primaryLoop, req.Points)
 	if err != nil {
 		a.logger.Error("failed to capture run and mutate territories", "error", err)
 		writeError(w, http.StatusInternalServerError, "TRANSACTION_FAILED", "Failed to persist territory capture")
 		return
+	}
+
+	// 5. Fan out real-time conquest broadcast and targeted victim alerts
+	if a.wsHub != nil && result.LoopDetected && result.AreaClaimedSqm > 0 {
+		username := "Runner_" + uid[:min(6, len(uid))]
+		if u, err := a.store.GetUser(r.Context(), uid); err == nil && u != nil {
+			username = u.Username
+		}
+		a.wsHub.BroadcastConquest(uid, username, result.AreaClaimedSqm, result.RivalsAffected)
 	}
 
 	writeJSON(w, http.StatusCreated, result)
@@ -327,6 +352,36 @@ func (a *API) HandleRunCoach(w http.ResponseWriter, r *http.Request) {
 
 	insight := a.coachSvc.GenerateInsight(r.Context(), req)
 	writeJSON(w, http.StatusOK, insight)
+}
+
+// HandleWebSocket handles GET /v1/ws real-time WebSocket connection upgrades.
+func (a *API) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
+	if a.wsHub == nil {
+		writeError(w, http.StatusServiceUnavailable, "WS_DISABLED", "WebSocket hub is not enabled")
+		return
+	}
+
+	uid := auth.GetUserID(r.Context())
+	if uid == "" && a.authenticator != nil {
+		var err error
+		uid, err = a.authenticator.AuthenticateRequest(r)
+		if err != nil {
+			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing or invalid credentials for WebSocket")
+			return
+		}
+	}
+	if uid == "" {
+		uid = "dev_runner_local"
+	}
+
+	username := "Runner_" + uid[:min(6, len(uid))]
+	faction := "Cyber Vanguard"
+	if u, err := a.store.GetUser(r.Context(), uid); err == nil && u != nil {
+		username = u.Username
+		faction = u.Faction
+	}
+
+	a.wsHub.ServeWS(w, r, uid, username, faction)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

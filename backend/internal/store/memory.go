@@ -177,6 +177,15 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	m.runs[run.IdempotencyKey] = &runCopy
 	m.runsByOrder = append(m.runsByOrder, run.IdempotencyKey)
 
+	var rivalsAffected []string
+	if loop != nil {
+		for _, t := range m.territories {
+			if t.OwnerID != run.UserID {
+				rivalsAffected = append(rivalsAffected, t.OwnerID)
+			}
+		}
+	}
+
 	return &CaptureResult{
 		RunID:              run.ID,
 		IdempotencyKey:     run.IdempotencyKey,
@@ -188,6 +197,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		XpAwarded:          xpAwarded,
 		PlayerTotalAreaSqm: playerTotalArea,
 		TerritoryGeoJSON:   geojson,
+		RivalsAffected:     rivalsAffected,
 	}, nil
 }
 
