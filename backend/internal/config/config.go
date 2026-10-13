@@ -21,7 +21,7 @@ type Config struct {
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() (*Config, error) {
-	port := getEnv("PORT", "8080")
+	port := getEnv("PORT", "8085")
 	dbURL := getEnv("DATABASE_URL", "postgres://runner:runnerpass@localhost:5432/territory_runner?sslmode=disable")
 	authMode := getEnv("AUTH_MODE", "dev")
 	env := getEnv("ENV", "development")

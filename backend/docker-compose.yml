@@ -28,13 +28,13 @@ services:
       postgis:
         condition: service_healthy
     environment:
-      PORT: "8080"
+      PORT: "8085"
       ENV: "development"
       AUTH_MODE: "dev"
       DATABASE_URL: "postgres://runner:runnerpass@postgis:5432/territory_runner?sslmode=disable"
       GEMINI_API_KEY: ""
     ports:
-      - "8080:8080"
+      - "8085:8085"
 
 volumes:
   pgdata:
