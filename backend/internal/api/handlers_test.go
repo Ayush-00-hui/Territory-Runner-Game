@@ -190,3 +190,32 @@ func TestGetMeProfile(t *testing.T) {
 	assert.Equal(t, "profile_tester", u.ID)
 	assert.Equal(t, "Cyber Vanguard", u.Faction)
 }
+
+func TestRunCoachEndpoint(t *testing.T) {
+	router, _ := setupTestServer()
+
+	coachReq := map[string]interface{}{
+		"distance_km":      3.8,
+		"duration_seconds": 1320,
+		"hexes_claimed":    5,
+		"current_pace":     "5'47\"/km",
+	}
+	body, _ := json.Marshal(coachReq)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs/run_test_coach_99/coach", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "coach_runner")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp map[string]interface{}
+	err := json.Unmarshal(rec.Body.Bytes(), &resp)
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, resp["summary"])
+	assert.Contains(t, resp["summary"], "3.80 km")
+	assert.NotEmpty(t, resp["tip"])
+	assert.NotEmpty(t, resp["mood_tag"])
+}

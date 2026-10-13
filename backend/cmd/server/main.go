@@ -13,6 +13,7 @@ import (
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 )
@@ -59,7 +60,8 @@ func main() {
 	defer dataStore.Close()
 
 	authenticator := auth.NewAuthenticator(cfg)
-	apiHandler := api.NewAPI(dataStore, logger)
+	coachSvc := coach.NewService(cfg.GeminiAPIKey, coach.WithLogger(logger))
+	apiHandler := api.NewAPI(dataStore, logger, api.WithCoachService(coachSvc))
 	router := api.SetupRouter(apiHandler, authenticator)
 
 	server := &http.Server{

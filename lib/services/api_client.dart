@@ -109,6 +109,7 @@ class ApiClient {
     Future<http.Response> Function() requestFn, {
     int? maxRetries,
     Duration initialDelay = const Duration(milliseconds: 500),
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final retries = maxRetries ?? this.maxRetries;
     int attempts = 0;
@@ -118,7 +119,7 @@ class ApiClient {
     while (true) {
       attempts++;
       try {
-        final response = await requestFn().timeout(const Duration(seconds: 10));
+        final response = await requestFn().timeout(timeout);
         // Only retry on transient 5xx server errors
         if (response.statusCode >= 500 && attempts <= retries) {
           debugPrint('[ApiClient] Server error ${response.statusCode}, retry $attempts/$retries');
@@ -323,6 +324,47 @@ class ApiClient {
       statusCode: response.statusCode,
       code: errorBody['error'] ?? 'LEADERBOARD_ERROR',
       message: errorBody['detail'] ?? 'Failed to load leaderboard',
+    );
+  }
+
+  /// Requests post-run coaching insight from backend Gemini proxy (POST /v1/runs/{id}/coach)
+  Future<Map<String, dynamic>> getRunCoachInsight({
+    required String runId,
+    required double distanceKm,
+    required int durationSeconds,
+    required int hexesClaimed,
+    String? currentPace,
+    int? level,
+    int? streakDays,
+    double? totalDistanceKm,
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/runs/$runId/coach');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({
+      'distance_km': distanceKm,
+      'duration_seconds': durationSeconds,
+      'hexes_claimed': hexesClaimed,
+      'current_pace': currentPace ?? '',
+      'level': level ?? 1,
+      'streak_days': streakDays ?? 0,
+      'total_distance_km': totalDistanceKm ?? 0.0,
+    });
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+      maxRetries: 0,
+      timeout: const Duration(seconds: 2),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    final errorBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errorBody['error'] ?? 'COACH_ERROR',
+      message: errorBody['detail'] ?? 'Failed to get coach insight',
     );
   }
 

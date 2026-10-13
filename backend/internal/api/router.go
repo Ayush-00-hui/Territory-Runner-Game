@@ -39,6 +39,7 @@ func SetupRouter(api *API, authenticator *auth.Authenticator) http.Handler {
 		v1.Get("/me", api.HandleGetMe)
 		v1.Post("/runs", api.HandleSubmitRun)
 		v1.Get("/runs", api.HandleGetRuns)
+		v1.Post("/runs/{id}/coach", api.HandleRunCoach)
 		v1.Get("/territories", api.HandleGetTerritories)
 		v1.Get("/leaderboard", api.HandleGetLeaderboard)
 	})

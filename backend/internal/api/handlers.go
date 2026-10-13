@@ -11,8 +11,10 @@ import (
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -21,20 +23,38 @@ type API struct {
 	store    store.Store
 	geoEng   *geo.Engine
 	detector *anticheat.Detector
+	coachSvc *coach.Service
 	logger   *slog.Logger
 }
 
+// Option configures API dependencies.
+type Option func(*API)
+
+// WithCoachService injects a custom coach service.
+func WithCoachService(svc *coach.Service) Option {
+	return func(a *API) {
+		if svc != nil {
+			a.coachSvc = svc
+		}
+	}
+}
+
 // NewAPI creates an API handler instance.
-func NewAPI(s store.Store, logger *slog.Logger) *API {
+func NewAPI(s store.Store, logger *slog.Logger, opts ...Option) *API {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &API{
+	a := &API{
 		store:    s,
 		geoEng:   geo.NewEngine(),
 		detector: anticheat.NewDetector(),
+		coachSvc: coach.NewService("", coach.WithLogger(logger)),
 		logger:   logger,
 	}
+	for _, opt := range opts {
+		opt(a)
+	}
+	return a
 }
 
 // HandleHealthz handles GET /healthz liveness checks.
@@ -283,6 +303,30 @@ func (a *API) HandleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"leaderboard": lb,
 	})
+}
+
+// HandleRunCoach handles POST /v1/runs/{id}/coach.
+func (a *API) HandleRunCoach(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	runID := chi.URLParam(r, "id")
+	if runID == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_RUN_ID", "Run ID is required")
+		return
+	}
+
+	var req coach.RunContext
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
+	req.RunID = runID
+
+	insight := a.coachSvc.GenerateInsight(r.Context(), req)
+	writeJSON(w, http.StatusOK, insight)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

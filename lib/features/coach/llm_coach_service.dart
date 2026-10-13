@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
 import '../../models/runner_profile.dart';
+import '../../services/api_client.dart';
 
 enum CoachMood { celebratory, encouraging, analytical }
 
@@ -33,117 +32,52 @@ class CoachInsight {
   }
 }
 
-/// LLM Post-Run Coach powered by Gemini
+/// LLM Post-Run Coach powered by Go backend Gemini proxy
+///
+/// Security: The Gemini API key never touches the mobile client. All LLM calls
+/// are securely proxied through POST /v1/runs/{id}/coach on the Go server.
+/// Resilient: If the server is offline or unreachable, the client seamlessly falls
+/// back to the deterministic on-device athletic heuristic without crashing.
 class LLMCoachService {
   static final LLMCoachService _instance = LLMCoachService._internal();
-  factory LLMCoachService() => _instance;
 
-  // Retrieve API key from environment / dart-define
-  static const String _geminiApiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+  ApiClient _apiClient = ApiClient();
 
-  GenerativeModel? _model;
-
-  LLMCoachService._internal() {
-    if (_geminiApiKey.isNotEmpty) {
-      try {
-        _model = GenerativeModel(
-          model: 'gemini-1.5-flash',
-          apiKey: _geminiApiKey,
-          generationConfig: GenerationConfig(
-            responseMimeType: 'application/json',
-            temperature: 0.4,
-          ),
-        );
-      } catch (e) {
-        debugPrint('[LLMCoachService] Error initializing GenerativeModel: $e');
-      }
+  factory LLMCoachService({ApiClient? apiClient}) {
+    if (apiClient != null) {
+      _instance._apiClient = apiClient;
     }
+    return _instance;
   }
+
+  LLMCoachService._internal();
 
   /// Evaluates a completed run session and produces tailored coaching insights
   Future<CoachInsight> generateRunInsight({
+    String? runId,
     required double distanceKm,
     required int durationSeconds,
     required int hexesClaimed,
     required RunnerProfile profile,
     String? currentPaceFormatted,
   }) async {
-    final Map<String, dynamic> runContext = {
-      'distanceKm': distanceKm,
-      'durationSeconds': durationSeconds,
-      'durationFormatted': "${(durationSeconds ~/ 60)}m ${durationSeconds % 60}s",
-      'averagePace': currentPaceFormatted ?? "6'15\"/km",
-      'hexesClaimedThisRun': hexesClaimed,
-      'totalHexesClaimedLifetime': profile.totalHexesClaimed,
-      'runnerLevel': profile.level,
-      'currentStreakDays': profile.currentStreak,
-      'totalDistanceLifetimeKm': profile.totalDistanceKm,
-    };
+    final targetRunId = runId ?? 'run_${DateTime.now().millisecondsSinceEpoch}';
 
-    if (_model == null) {
-      debugPrint('[LLMCoachService] Gemini API key not set; using smart on-device coaching heuristic.');
-      return CoachInsight.fallback(
+    try {
+      final res = await _apiClient.getRunCoachInsight(
+        runId: targetRunId,
         distanceKm: distanceKm,
-        hexesClaimed: hexesClaimed,
         durationSeconds: durationSeconds,
+        hexesClaimed: hexesClaimed,
+        currentPace: currentPaceFormatted,
+        level: profile.level,
+        streakDays: profile.currentStreak,
+        totalDistanceKm: profile.totalDistanceKm,
       );
-    }
 
-    final String prompt = '''
-You are the AI Running & Territory Conquest Coach in "Territory Runner".
-Analyze this completed run session data:
-${jsonEncode(runContext)}
-
-Provide a motivational coaching response in STRICT JSON matching this schema:
-{
-  "summary": "1-2 sentences highlighting performance, distance, and territory expansion achievements.",
-  "tip": "1 tactical, athletic advice for recovery or pacing on their next hexagonal route.",
-  "moodTag": "celebratory" | "encouraging" | "analytical"
-}
-Do NOT include markdown wrapping or extra text. Output raw JSON only.
-''';
-
-    try {
-      final response = await _model!.generateContent([Content.text(prompt)]);
-      final rawText = response.text?.trim() ?? '';
-      return _parseCoachJson(rawText, distanceKm, hexesClaimed, durationSeconds);
-    } catch (e) {
-      debugPrint('[LLMCoachService] Gemini generation failed: $e. Retrying once...');
-      try {
-        final retryResponse = await _model!.generateContent([
-          Content.text('Return strictly JSON matching: {"summary":"...","tip":"...","moodTag":"celebratory"} for a ${distanceKm.toStringAsFixed(1)}km run capturing $hexesClaimed hexes.')
-        ]);
-        final retryText = retryResponse.text?.trim() ?? '';
-        return _parseCoachJson(retryText, distanceKm, hexesClaimed, durationSeconds);
-      } catch (retryError) {
-        debugPrint('[LLMCoachService] Gemini retry failed: $retryError');
-        return CoachInsight.fallback(
-          distanceKm: distanceKm,
-          hexesClaimed: hexesClaimed,
-          durationSeconds: durationSeconds,
-        );
-      }
-    }
-  }
-
-  CoachInsight _parseCoachJson(
-    String rawJson,
-    double distanceKm,
-    int hexesClaimed,
-    int durationSeconds,
-  ) {
-    try {
-      // Clean potential markdown blocks
-      String clean = rawJson;
-      if (clean.startsWith('```json')) clean = clean.substring(7);
-      if (clean.startsWith('```')) clean = clean.substring(3);
-      if (clean.endsWith('```')) clean = clean.substring(0, clean.length - 3);
-      clean = clean.trim();
-
-      final data = jsonDecode(clean) as Map<String, dynamic>;
-      final summary = data['summary'] as String? ?? '';
-      final tip = data['tip'] as String? ?? '';
-      final moodStr = (data['moodTag'] as String?)?.toLowerCase() ?? 'encouraging';
+      final summary = res['summary'] as String? ?? '';
+      final tip = res['tip'] as String? ?? '';
+      final moodStr = (res['mood_tag'] as String? ?? res['moodTag'] as String? ?? 'encouraging').toLowerCase();
 
       CoachMood mood = CoachMood.encouraging;
       if (moodStr == 'celebratory') mood = CoachMood.celebratory;
@@ -153,7 +87,7 @@ Do NOT include markdown wrapping or extra text. Output raw JSON only.
         return CoachInsight(summary: summary, tip: tip, moodTag: mood);
       }
     } catch (e) {
-      debugPrint('[LLMCoachService] JSON parsing error: $e. Raw text: $rawJson');
+      debugPrint('[LLMCoachService] Backend coach proxy unavailable ($e); using smart on-device coaching heuristic.');
     }
 
     return CoachInsight.fallback(
