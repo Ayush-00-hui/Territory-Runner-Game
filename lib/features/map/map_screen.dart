@@ -1912,7 +1912,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           child: ListView.separated(
                             controller: scrollController,
                             itemCount: snapshot.data!.length,
-                            separatorBuilder: (_, __) => const Divider(color: AppColors.border, height: 1),
+                            separatorBuilder: (context, index) => const Divider(color: AppColors.border, height: 1),
                             itemBuilder: (context, index) {
                               final entry = snapshot.data![index];
                               final isCurrent = entry.userId == _territoryService.getProfile().id;
