@@ -317,24 +317,44 @@ To allow developers, reviewers, and evaluators to test all location-based mechan
 ## 🗺️ Roadmap & Major Project Evolution
 
 ```mermaid
-graph LR
-    subgraph Minor ["Minor Project Phase (Current)"]
-        FlutterClient[Flutter + Dart Client] --> LocalMath[Clipper2 + Shoelace Engine]
-        FlutterClient --> FirebaseSync[Firebase Auth + Firestore]
-        FlutterClient --> GeminiCoach[Google Gemini AI Coach]
+```mermaid
+graph TD
+    subgraph Client ["Flutter Mobile Client (Offline-First)"]
+        UI[Tactical Map HUD & Leaderboard]
+        LocalEngine[Clipper2 Preview & Loop Enclosure]
+        HiveQueue[(Hive Offline Sync Queue)]
+        ApiClient[ApiClient with Exponential Backoff]
+        UI --> LocalEngine
+        LocalEngine --> HiveQueue
+        HiveQueue --> ApiClient
     end
 
-    subgraph Major ["Major Project Phase (Planned Future Scope)"]
-        GoServer[Go High-Performance Microservice] --> PostGIS[(PostgreSQL + PostGIS)]
-        GoServer --> RedisStream[(Redis Real-time PubSub)]
-        GoServer --> WebSockets[Bi-directional WebSockets]
+    subgraph Backend ["Go 1.22+ Server-Authoritative Backend (:8085)"]
+        ChiRouter[Chi HTTP Router]
+        AntiCheat[Kinematic Anomaly & Spoof Filter]
+        GeoEngine[Go Geo Enclosure Engine]
+        AdvisoryLock[Transaction-Scoped Spatial Advisory Lock]
+        CoachProxy[Gemini LLM Coach Proxy]
+        ApiClient --> ChiRouter
+        ChiRouter --> AntiCheat
+        ChiRouter --> GeoEngine
+        GeoEngine --> AdvisoryLock
+        ChiRouter --> CoachProxy
     end
 
-    FlutterClient -.->|Scale Out| GoServer
+    subgraph Persistence ["Spatial Persistence Layer"]
+        PostGIS[(PostgreSQL + PostGIS 16)]
+        MemStore[(Hermetic In-Memory Dev Store)]
+        AdvisoryLock --> PostGIS
+        AdvisoryLock -.->|Local Dev Fallback| MemStore
+    end
 ```
 
-* **Phase 1 (Active MVP):** Flutter cross-platform client with client-side Clipper2 geometry, Hive offline cache, Firebase authentication & sync, and Google Gemini AI post-run debriefs.
-* **Phase 2 (Scalable MMO Backend):** Server-authoritative game engine in **Go (Golang)** with **PostgreSQL + PostGIS** for backend polygon spatial indexing (`ST_Contains`, `ST_Intersects`, `ST_Union`) and **Redis** for real-time MMO player presence over **WebSockets**.
+### 🌟 Key Backend & Architecture Highlights:
+* 🔒 **Server-Authoritative Loop Validation:** Mirror parity with Dart enclosure rules (35m threshold, 4 min points, CCW orientation, Shoelace area).
+* 🛡️ **Transaction-Scoped Advisory Lock:** `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` serializes concurrent spatial mutations without Redis.
+* 📦 **Offline-First Resilience:** Client-side Clipper2 generates instant optimistic previews. Runs enqueue into persistent Hive storage and sync sequentially with server PostGIS reconciliation.
+* 🤖 **Secure Gemini LLM Proxy:** Gemini API key is isolated on Go server (`POST /v1/runs/{id}/coach`); mobile clients never expose cloud credentials.
 
 ---
 
@@ -343,35 +363,43 @@ graph LR
 ### Prerequisites
 - [Flutter SDK (v3.13.0 or higher)](https://flutter.dev/docs/get-started/install)
 - [Dart SDK (v3.0.0 or higher)](https://dart.dev/get-dart)
-- Android Studio / Xcode / VS Code with Flutter extensions
+- [Go (v1.22 or higher)](https://go.dev/dl/) *(optional if using Docker)*
+- [Docker & Docker Compose](https://www.docker.com/) *(optional for local PostGIS)*
 
-### 1. Clone & Install
+### 1. Start the Go + PostGIS Backend
+You can run the backend via Docker or directly with Go:
+
 ```bash
-git clone https://github.com/Ayush-00-hui/Territory-Runner-Game.git
-cd Territory-Runner-Game
-flutter pub get
+# Option A: Run complete stack via Docker Compose
+cd backend
+docker compose up -d
+
+# Option B: Run locally (falls back to hermetic in-memory store if Postgres is offline)
+cd backend
+go run ./cmd/server
+```
+The server listens on **port 8085** (`http://localhost:8085`).
+
+### 2. Connect Flutter Client
+When running on an Android Emulator:
+```bash
+# Forward port 8085 from Android emulator to host
+adb reverse tcp:8085 tcp:8085
+
+# Run Flutter app
+flutter run -d emulator-5554
+```
+*(By default, the Android emulator connects to `http://10.0.2.2:8085` or `http://localhost:8085` via `adb reverse`).*
+
+### 3. Run Test Suites
+```bash
+# Run Flutter tests (33/33 Passing)
+flutter test
+
+# Run Go backend tests
+cd backend && go test -v ./...
 ```
 
-### 2. Configure Environment (Optional)
-To enable Gemini AI post-run debriefs, set your Google Generative AI API key in your environment or configuration:
-```bash
-flutter run --dart-define=GEMINI_API_KEY=your_api_key_here
-```
-> [!NOTE]
-> *If no API key is provided, the on-device heuristic AI coach fallback will activate automatically.*
-
-#### ⚙️ Environment Configuration Flags
-| Flag / Define | Type | Default Value | Description |
-| :--- | :--- | :--- | :--- |
-| `GEMINI_API_KEY` | String | `""` (Empty) | Google Generative AI API key for Gemini 1.5 Flash tactical debriefs |
-| `MAP_TILE_PROVIDER` | String | `ArcGIS World Dark` | Base tile layer endpoint (ArcGIS, OpenStreetMap, or custom tiles) |
-| `OSRM_BASE_URL` | String | `router.project-osrm.org` | Open Source Routing Machine pedestrian service URL |
-| `ENABLE_ANOMALY_LOGS` | Boolean | `true` | Prints kinematic telemetry and anti-cheat decisions to console |
-
-### 3. Run the Application
-```bash
-flutter run
-```
 
 ### 4. Run Tests & Algorithmic Benchmarks
 ```bash

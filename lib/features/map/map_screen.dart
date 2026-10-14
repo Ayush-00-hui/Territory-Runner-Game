@@ -13,6 +13,11 @@ import '../coach/pace_prediction_service.dart';
 import '../coach/llm_coach_service.dart';
 import '../coach/voice_coach_service.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
+import '../../services/sync_queue.dart';
+import '../../services/api_client.dart';
+import '../../services/websocket_service.dart';
+import '../../models/leaderboard_entry.dart';
+import '../../models/ws_events.dart';
 import '../../main.dart'; // For AppColors and animations
 import '../../core/utils/constants.dart';
 
@@ -32,6 +37,16 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final LLMCoachService _coachService = LLMCoachService();
   final VoiceCoachService _voiceCoach = VoiceCoachService();
   final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
+  final ApiClient _apiClient = ApiClient();
+  final WebSocketService _wsService = WebSocketService();
+  Timer? _rivalPollingTimer;
+
+  // Real-time WebSocket presence and alert state
+  final Map<String, RunnerPresenceEvent> _activeRivalRunners = {};
+  StreamSubscription<RunnerPresenceEvent>? _wsPresenceSub;
+  StreamSubscription<String>? _wsRunnerLeftSub;
+  StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
+  StreamSubscription<ConquestBroadcastEvent>? _wsBroadcastSub;
   
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
@@ -68,6 +83,79 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _territorySub = _territoryService.territoryStream.listen((event) {
       if (mounted) {
         setState(() {});
+      }
+    });
+
+    // Poll rival territories every 20 seconds while map screen is open
+    _rivalPollingTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      _fetchVisibleRivals();
+    });
+
+    // Real-time WebSocket: Connect and listen for live rival runners and territory intrusion alerts
+    _wsService.connect();
+    _wsPresenceSub = _wsService.presenceStream.listen((presence) {
+      if (mounted) {
+        setState(() {
+          _activeRivalRunners[presence.userId] = presence;
+        });
+      }
+    });
+
+    _wsRunnerLeftSub = _wsService.runnerLeftStream.listen((userId) {
+      if (mounted) {
+        setState(() {
+          _activeRivalRunners.remove(userId);
+        });
+      }
+    });
+
+    _wsAlertSub = _wsService.alertStream.listen((alert) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF1E1015),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFFF3366), width: 1.5),
+          ),
+          content: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'TERRITORY INTRUSION DETECTED',
+                      style: TextStyle(
+                        color: Color(0xFFFF3366),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      alert.message,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      _fetchVisibleRivals();
+    });
+
+    _wsBroadcastSub = _wsService.broadcastStream.listen((_) {
+      if (mounted) {
+        _fetchVisibleRivals();
       }
     });
 
@@ -174,6 +262,14 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             } catch (_) {}
           }
         });
+
+        // Broadcast live kinematic presence to peers via WebSocket
+        _wsService.sendPresenceUpdate(
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          speed: pos.speed,
+          heading: pos.heading,
+        );
       }
     });
   }
@@ -399,6 +495,18 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       _voiceCoach.announceRunComplete(finalDistance, finalHexes);
       _territoryService.addRunDistance(finalDistance);
+
+      // Phase 2: Enqueue run in offline sync queue and trigger server synchronization
+      if (_runCoordinates.length >= 3) {
+        SyncQueueService().enqueueRun(
+          points: List<LatLng>.from(_runCoordinates),
+          durationSeconds: finalSeconds,
+          distanceMeters: finalDistance * 1000.0,
+          clientPreviewArea: 0.0,
+          clientPreviewXp: finalHexes * 100,
+        );
+      }
+
       _showRunCompleteSummary(finalDistance, finalSeconds, finalHexes);
     }
   }
@@ -583,8 +691,39 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _positionSub?.cancel();
     _territorySub?.cancel();
     _runTimer?.cancel();
+    _rivalPollingTimer?.cancel();
+    _wsPresenceSub?.cancel();
+    _wsRunnerLeftSub?.cancel();
+    _wsAlertSub?.cancel();
+    _wsBroadcastSub?.cancel();
+    _wsService.disconnect();
     _locationService.stopTracking();
     super.dispose();
+  }
+
+  /// Polls server for live rival territories within current visible map bounds
+  Future<void> _fetchVisibleRivals() async {
+    if (!mounted || _currentLocation == null) return;
+    try {
+      final bounds = _mapController.camera.visibleBounds;
+      final serverTerritories = await _apiClient.getTerritoriesInBBox(
+        minLng: bounds.west,
+        minLat: bounds.south,
+        maxLng: bounds.east,
+        maxLat: bounds.north,
+      );
+
+      final myId = _territoryService.getProfile().id;
+      for (final t in serverTerritories) {
+        // Only ingest rival territories from polling so we don't overwrite optimistic local previews
+        if (t.ownerId != myId) {
+          await _territoryService.saveTerritory(t);
+        }
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('[MapScreen] Error polling rival territories: $e');
+    }
   }
 
   void _inspectSectorAt(LatLng point) {
@@ -669,6 +808,47 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       spreadRadius: 2,
                     ),
                   ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Active Rival Runners broadcast over real-time WebSocket
+    for (final rival in _activeRivalRunners.values) {
+      markers.add(
+        Marker(
+          point: rival.position,
+          width: 90,
+          height: 52,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFFF3366), width: 1.2),
+                ),
+                child: Text(
+                  rival.username,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Transform.rotate(
+                angle: rival.heading * (math.pi / 180.0),
+                child: const Icon(
+                  Icons.navigation_rounded,
+                  color: Color(0xFFFF3366),
+                  size: 22,
                 ),
               ),
             ],
@@ -834,21 +1014,28 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           ),
                         ],
                       ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text(
-                          profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const _SyncStatusBadge(),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Text(
+                              profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
@@ -1738,6 +1925,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           setState(() {
             _selectedModeTab = index;
           });
+          if (index == 2) {
+            _showLeaderboardModal();
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -1757,6 +1947,201 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Displays live global leaderboard ranking from the Go backend
+  void _showLeaderboardModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bgElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return FutureBuilder<List<LeaderboardEntry>>(
+              future: _apiClient.getLeaderboard(limit: 50),
+              builder: (context, snapshot) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.emoji_events_rounded, color: AppColors.accent, size: 22),
+                              SizedBox(width: 8),
+                              Text(
+                                'GLOBAL LEADERBOARD',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        const Expanded(
+                          child: Center(
+                            child: CircularProgressIndicator(color: AppColors.accent),
+                          ),
+                        )
+                      else if (snapshot.hasError)
+                        Expanded(
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.cloud_off_rounded, color: Colors.white38, size: 40),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Offline or server unreachable\n${snapshot.error}',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else if (!snapshot.hasData || snapshot.data!.isEmpty)
+                        const Expanded(
+                          child: Center(
+                            child: Text(
+                              'No runners recorded yet. Claim territory to rank #1!',
+                              style: TextStyle(color: AppColors.textSecondary),
+                            ),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: ListView.separated(
+                            controller: scrollController,
+                            itemCount: snapshot.data!.length,
+                            separatorBuilder: (context, index) => const Divider(color: AppColors.border, height: 1),
+                            itemBuilder: (context, index) {
+                              final entry = snapshot.data![index];
+                              final isCurrent = entry.userId == _territoryService.getProfile().id;
+
+                              Color rankColor = Colors.white70;
+                              if (entry.rank == 1) rankColor = const Color(0xFFFFD700); // Gold
+                              if (entry.rank == 2) rankColor = const Color(0xFFC0C0C0); // Silver
+                              if (entry.rank == 3) rankColor = const Color(0xFFCD7F32); // Bronze
+
+                              return Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: isCurrent ? AppColors.accent.withValues(alpha: 0.12) : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 32,
+                                      child: Text(
+                                        '#${entry.rank}',
+                                        style: TextStyle(
+                                          color: rankColor,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Text(
+                                                entry.username,
+                                                style: TextStyle(
+                                                  color: isCurrent ? AppColors.accent : Colors.white,
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              if (isCurrent) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.accent,
+                                                    borderRadius: BorderRadius.circular(8),
+                                                  ),
+                                                  child: const Text('YOU', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900)),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${entry.faction} • Lvl ${entry.level} • ${entry.totalRuns} runs',
+                                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          entry.totalAreaSqm >= 1000000
+                                              ? '${(entry.totalAreaSqm / 1000000).toStringAsFixed(2)} km²'
+                                              : '${entry.totalAreaSqm.toStringAsFixed(0)} m²',
+                                          style: const TextStyle(
+                                            color: AppColors.accent,
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        const Text(
+                                          'CLAIMED',
+                                          style: TextStyle(color: AppColors.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1801,6 +2186,94 @@ class _SummaryTile extends StatelessWidget {
         const SizedBox(height: 4),
         Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
       ],
+    );
+  }
+}
+
+class _SyncStatusBadge extends StatelessWidget {
+  const _SyncStatusBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    final syncQueue = SyncQueueService();
+    return ValueListenableBuilder<SyncStatus>(
+      valueListenable: syncQueue.statusNotifier,
+      builder: (context, status, _) {
+        return ValueListenableBuilder<int>(
+          valueListenable: syncQueue.unsettledCountNotifier,
+          builder: (context, count, _) {
+            Color color;
+            IconData icon;
+            String text;
+
+            switch (status) {
+              case SyncStatus.synced:
+                color = const Color(0xFF00E676);
+                icon = Icons.cloud_done_rounded;
+                text = 'SYNCED';
+                break;
+              case SyncStatus.syncing:
+                color = const Color(0xFF29B6F6);
+                icon = Icons.sync_rounded;
+                text = 'SYNCING';
+                break;
+              case SyncStatus.pending:
+                color = const Color(0xFFFFB300);
+                icon = Icons.cloud_upload_rounded;
+                text = count > 0 ? 'PENDING ($count)' : 'PENDING';
+                break;
+              case SyncStatus.offline:
+                color = const Color(0xFFFF5252);
+                icon = Icons.cloud_off_rounded;
+                text = count > 0 ? 'OFFLINE ($count)' : 'OFFLINE';
+                break;
+            }
+
+            return GestureDetector(
+              onTap: () {
+                syncQueue.syncPendingRuns();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: AppColors.surface,
+                    duration: const Duration(seconds: 2),
+                    content: Text(
+                      status == SyncStatus.synced
+                          ? 'All runs synced with server authority.'
+                          : 'Triggering background cloud sync...',
+                      style: TextStyle(color: color, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                );
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: color.withValues(alpha: 0.8), width: 1.2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 13, color: color),
+                    const SizedBox(width: 5),
+                    Text(
+                      text,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

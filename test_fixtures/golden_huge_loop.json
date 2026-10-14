@@ -1,0 +1,17 @@
+{
+  "name": "golden_huge_loop",
+  "description": "Massive loop spanning 10km across exceeding maximum single run capture area",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 40.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": false,
+  "expected_rejection_reason": "Loop area exceeds maximum allowable single run threshold (5000000 m²)",
+  "points": [
+    { "latitude": 51.5000, "longitude": -0.1200, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.5900, "longitude": -0.1200, "timestamp": "2026-10-13T11:00:00Z" },
+    { "latitude": 51.5900, "longitude": -0.0200, "timestamp": "2026-10-13T12:00:00Z" },
+    { "latitude": 51.5000, "longitude": -0.0200, "timestamp": "2026-10-13T13:00:00Z" },
+    { "latitude": 51.5001, "longitude": -0.1201, "timestamp": "2026-10-13T14:00:00Z" }
+  ]
+}

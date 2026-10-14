@@ -1,0 +1,17 @@
+{
+  "name": "golden_tiny_loop",
+  "description": "Sub-threshold tiny loop with perimeter ~15m (below 40m requirement)",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 40.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": false,
+  "expected_rejection_reason": "Loop perimeter below minimum threshold (40.0m)",
+  "points": [
+    { "latitude": 51.50000, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.50004, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:10Z" },
+    { "latitude": 51.50004, "longitude": -0.12005, "timestamp": "2026-10-13T10:00:20Z" },
+    { "latitude": 51.50000, "longitude": -0.12005, "timestamp": "2026-10-13T10:00:30Z" },
+    { "latitude": 51.50001, "longitude": -0.12001, "timestamp": "2026-10-13T10:00:40Z" }
+  ]
+}

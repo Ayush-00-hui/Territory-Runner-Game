@@ -56,3 +56,7 @@ test_hive/
 test_hive_route/
 test_hive_widget/
 test_hive*/
+
+# Go Backend Artifacts
+backend/bin/
+backend/*.exe
