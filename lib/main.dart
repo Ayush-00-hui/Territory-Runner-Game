@@ -9,8 +9,8 @@ import 'models/territory.dart';
 import 'models/runner_profile.dart';
 import 'services/firebase_service.dart';
 import 'features/home/home_screen.dart';
-import 'ui/theme/app_colors.dart';
-export 'ui/theme/app_colors.dart';
+import 'ui/ui.dart';
+export 'ui/ui.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -406,27 +406,27 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 350),
-        child: KeyedSubtree(
-          key: ValueKey(_selectedIndex),
-          child: _pages[_selectedIndex],
-        ),
+      backgroundColor: AppColors.bgDeep,
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _pages,
       ),
       bottomNavigationBar: Container(
+        height: 60 + MediaQuery.paddingOf(context).bottom,
         decoration: BoxDecoration(
           color: AppColors.bgDeep,
           border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         ),
         child: SafeArea(
+          top: false,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(0, Icons.home_rounded, 'Home'),
-                _buildNavItem(1, Icons.explore_rounded, 'Explore'),
-                _buildNavItem(2, Icons.person_rounded, 'Profile'),
+                _buildNavItem(0, Icons.bolt_rounded, 'HOME'),
+                _buildNavItem(1, Icons.map_rounded, 'MAP'),
+                _buildNavItem(2, Icons.person_rounded, 'PROFILE'),
               ],
             ),
           ),
@@ -439,29 +439,51 @@ class _MainScreenState extends State<MainScreen> {
     final bool isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedIndex = index;
-        });
+        if (_selectedIndex != index) {
+          AppMotion.lightTick();
+          setState(() {
+            _selectedIndex = index;
+          });
+        }
       },
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: isSelected ? AppColors.accent : AppColors.textMuted,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 16 : 12,
+          vertical: 6,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: AppSpacing.brFull,
+          border: Border.all(
+            color: isSelected ? AppColors.accent.withValues(alpha: 0.35) : Colors.transparent,
+            width: 1.0,
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
-              color: isSelected ? Colors.white : AppColors.textMuted,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 20,
+              color: isSelected ? AppColors.accent : AppColors.textMuted,
             ),
-          ),
-        ],
+            if (isSelected) ...[
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppText.label.copyWith(
+                  color: AppColors.accent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

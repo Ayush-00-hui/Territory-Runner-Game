@@ -32,6 +32,7 @@ class AppSpacing {
 
   // Border Radius Tokens
   static final BorderRadius br8 = BorderRadius.circular(8.0);
+  static final BorderRadius br10 = BorderRadius.circular(10.0);
   static final BorderRadius br12 = BorderRadius.circular(12.0);
   static final BorderRadius br14 = BorderRadius.circular(14.0);
   static final BorderRadius br16 = BorderRadius.circular(16.0);
