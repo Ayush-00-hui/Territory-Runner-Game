@@ -16,10 +16,15 @@ import '../gameplay/polygon_enclosure_engine.dart';
 import '../../services/sync_queue.dart';
 import '../../services/api_client.dart';
 import '../../services/websocket_service.dart';
-import '../../models/leaderboard_entry.dart';
 import '../../models/ws_events.dart';
-import '../../main.dart'; // For AppColors and animations
-import '../../core/utils/constants.dart';
+import '../../main.dart'; // For showRunStartAnimation
+import '../../ui/ui.dart';
+import 'widgets/mode_tabs.dart';
+import 'widgets/run_hud.dart';
+import 'widgets/map_layers.dart';
+import 'widgets/pacer_sheet.dart';
+import 'widgets/summary_sheet.dart';
+import 'widgets/leaderboard_sheet.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -63,7 +68,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final List<Position> _recentPositions = [];
   final List<LatLng> _runCoordinates = [];
   final List<Position> _rollingPaceWindow = [];
-  int _hexesClaimedThisRun = 0;
+  int _territoriesClaimedThisRun = 0;
   double _runDistanceKm = 0.0;
   Timer? _runTimer;
   int _elapsedDurationSeconds = 0;
@@ -91,7 +96,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _fetchVisibleRivals();
     });
 
-    // Real-time WebSocket: Connect and listen for live rival runners and territory intrusion alerts
+    // Real-time WebSocket: Connect and listen for live rival runners and territory alerts
     _wsService.connect();
     _wsPresenceSub = _wsService.presenceStream.listen((presence) {
       if (mounted) {
@@ -282,7 +287,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _recentPositions.removeAt(0);
       }
 
-      // Rolling window for instantaneous 15-second / 30-meter split pace calculation
+      // Rolling window for instantaneous split pace calculation
       _rollingPaceWindow.add(pos);
       final now = pos.timestamp;
       _rollingPaceWindow.removeWhere((p) => now.difference(p.timestamp).inSeconds > 15);
@@ -299,10 +304,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ).then((_) {
             if (mounted) {
               setState(() {
-                _hexesClaimedThisRun++;
+                _territoriesClaimedThisRun++;
               });
               HapticFeedback.heavyImpact();
-              _voiceCoach.announceHexConquered(_hexesClaimedThisRun);
+              _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   backgroundColor: AppColors.surface,
@@ -357,7 +362,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
-  /// Calculates instantaneous split pace using rolling 15-second / 30-meter moving window
   String _computeCurrentSplitPace() {
     if (_rollingPaceWindow.length >= 2) {
       final pFirst = _rollingPaceWindow.first;
@@ -387,17 +391,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     return "$paceMin'${paceSec.toString().padLeft(2, '0')}\"";
   }
 
-  String _formatDuration(int totalSeconds) {
-    final int hours = totalSeconds ~/ 3600;
-    final int minutes = (totalSeconds % 3600) ~/ 60;
-    final int seconds = totalSeconds % 60;
-    if (hours > 0) {
-      return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-    }
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  /// Manual "SEAL CURRENT SHAPE" override action
   void _sealCurrentShape() {
     if (!_isRunActive) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -414,10 +407,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       ).then((_) {
         if (mounted) {
           setState(() {
-            _hexesClaimedThisRun++;
+            _territoriesClaimedThisRun++;
           });
           HapticFeedback.heavyImpact();
-          _voiceCoach.announceHexConquered(_hexesClaimedThisRun);
+          _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               backgroundColor: AppColors.surface,
@@ -447,7 +440,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _polygonEngine.clear();
       setState(() {
         _isRunActive = true;
-        _hexesClaimedThisRun = 0;
+        _territoriesClaimedThisRun = 0;
         _runDistanceKm = 0.0;
         _elapsedDurationSeconds = 0;
         _movingDurationSeconds = 0;
@@ -486,28 +479,34 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _runTimer?.cancel();
       final int finalSeconds = _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds;
       final double finalDistance = _runDistanceKm;
-      final int finalHexes = _hexesClaimedThisRun;
+      final int finalTerritories = _territoriesClaimedThisRun;
 
       setState(() {
         _isRunActive = false;
         _isAutoPaused = false;
       });
 
-      _voiceCoach.announceRunComplete(finalDistance, finalHexes);
+      _voiceCoach.announceRunComplete(finalDistance, finalTerritories);
       _territoryService.addRunDistance(finalDistance);
 
-      // Phase 2: Enqueue run in offline sync queue and trigger server synchronization
       if (_runCoordinates.length >= 3) {
         SyncQueueService().enqueueRun(
           points: List<LatLng>.from(_runCoordinates),
           durationSeconds: finalSeconds,
           distanceMeters: finalDistance * 1000.0,
           clientPreviewArea: 0.0,
-          clientPreviewXp: finalHexes * 100,
+          clientPreviewXp: finalTerritories * 100,
         );
       }
 
-      _showRunCompleteSummary(finalDistance, finalSeconds, finalHexes);
+      SummarySheet.show(
+        context: context,
+        distanceKm: finalDistance,
+        durationSeconds: finalSeconds,
+        territoriesClaimed: finalTerritories,
+        profile: _territoryService.getProfile(),
+        coachService: _coachService,
+      );
     }
   }
 
@@ -517,7 +516,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     final profile = _territoryService.getProfile();
     final prediction = _paceService.predictTarget(profile);
 
-    // Run Route Recommendation Engine with OSRM Pedestrian Network
     final route = await _routeService.suggestRouteAsync(
       currentLocation: _currentLocation!,
       targetDistanceKm: prediction.predictedDistanceKm,
@@ -540,152 +538,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
-  void _showRunCompleteSummary(double distance, int durationSeconds, int hexesClaimed) async {
-    final profile = _territoryService.getProfile();
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) {
-        return FutureBuilder<CoachInsight>(
-          future: _coachService.generateRunInsight(
-            distanceKm: distance,
-            durationSeconds: durationSeconds,
-            hexesClaimed: hexesClaimed,
-            profile: profile,
-          ),
-          builder: (context, snapshot) {
-            final insight = snapshot.data;
-            final double pace = (distance > 0) ? (durationSeconds / 60.0) / distance : 0.0;
-            final int paceMin = pace.floor();
-            final int paceSec = ((pace - paceMin) * 60).round();
-            final String paceFormatted = "$paceMin'${paceSec.toString().padLeft(2, '0')}\"/km";
-
-            return Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'CONQUEST COMPLETE 🏁',
-                        style: TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white60),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _SummaryTile(title: 'DISTANCE', value: '${distance.toStringAsFixed(2)} km'),
-                      _SummaryTile(title: 'TIME', value: '${durationSeconds ~/ 60}m ${durationSeconds % 60}s'),
-                      _SummaryTile(title: 'AVG PACE', value: paceFormatted),
-                      _SummaryTile(title: 'DOMAINS', value: '+$hexesClaimed'),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: snapshot.connectionState == ConnectionState.waiting
-                        ? const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(12.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    height: 18,
-                                    width: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text(
-                                    'AI Run Coach analyzing telemetry...',
-                                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )
-                        : Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.auto_awesome, color: AppColors.accent, size: 18),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'AI COACH INSIGHT (${insight?.moodTag.name.toUpperCase() ?? 'COACH'})',
-                                    style: const TextStyle(
-                                      color: AppColors.accent,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                insight?.summary ?? 'Great run session!',
-                                style: const TextStyle(color: AppColors.textPrimary, fontSize: 14, height: 1.4),
-                              ),
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: AppColors.bgDeep,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  "💡 Tip: ${insight?.tip ?? 'Keep up the momentum!'}",
-                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.black,
-                      minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('CLAIM REWARDS & CLOSE', style: TextStyle(fontWeight: FontWeight.w800)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
   @override
   void dispose() {
     _positionSub?.cancel();
@@ -701,7 +553,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     super.dispose();
   }
 
-  /// Polls server for live rival territories within current visible map bounds
   Future<void> _fetchVisibleRivals() async {
     if (!mounted || _currentLocation == null) return;
     try {
@@ -715,7 +566,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       final myId = _territoryService.getProfile().id;
       for (final t in serverTerritories) {
-        // Only ingest rival territories from polling so we don't overwrite optimistic local previews
         if (t.ownerId != myId) {
           await _territoryService.saveTerritory(t);
         }
@@ -750,116 +600,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
-  List<Polygon> _buildPolygons() {
-    final List<Polygon> polygons = [];
-    final territories = _territoryService.getCapturedTerritoryObjects();
-    
-    // Draw all permanently captured arbitrary multi-polygons with glowing outline
-    for (final territory in territories) {
-      for (final poly in territory.polygons) {
-        if (poly.length >= 3) {
-          polygons.add(
-            Polygon(
-              points: poly,
-              color: territory.color.withValues(alpha: 0.25),
-              borderColor: territory.color,
-              borderStrokeWidth: 2.5,
-            ),
-          );
-        }
-      }
-    }
-    
-    return polygons;
-  }
-
-  List<Marker> _buildMarkers() {
-    final List<Marker> markers = [];
-    
-    // User Location Waypoint Marker (Glowing Blue dot from reference)
-    if (_currentLocation != null) {
-      markers.add(
-        Marker(
-          point: _currentLocation!,
-          width: 44,
-          height: 44,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF2979FF).withValues(alpha: 0.25),
-                ),
-              ),
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF2979FF),
-                  border: Border.all(color: Colors.white, width: 3.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF2979FF).withValues(alpha: 0.8),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    // Active Rival Runners broadcast over real-time WebSocket
-    for (final rival in _activeRivalRunners.values) {
-      markers.add(
-        Marker(
-          point: rival.position,
-          width: 90,
-          height: 52,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0xFFFF3366), width: 1.2),
-                ),
-                child: Text(
-                  rival.username,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Transform.rotate(
-                angle: rival.heading * (math.pi / 180.0),
-                child: const Icon(
-                  Icons.navigation_rounded,
-                  color: Color(0xFFFF3366),
-                  size: 22,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return markers;
-  }
-
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.keyW || event.logicalKey == LogicalKeyboardKey.arrowUp) {
@@ -874,838 +614,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final pad = MediaQuery.paddingOf(context);
-    final profile = _territoryService.getProfile();
-    final String athleteName = profile.username.isNotEmpty ? profile.username : 'Runner';
-    final territories = _territoryService.getCapturedTerritoryObjects();
-    final double totalAreaSqMeters = territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
-    final double totalAreaSqKm = totalAreaSqMeters / 1000000.0;
-
-    return KeyboardListener(
-      focusNode: _keyboardFocusNode..requestFocus(),
-      autofocus: true,
-      onKeyEvent: _handleKeyEvent,
-      child: Scaffold(
-        backgroundColor: AppColors.bgDeep,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 1. The Interactive Fullscreen Map
-            _currentLocation == null
-                ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
-                : FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _currentLocation!,
-                      initialZoom: 17.0,
-                      backgroundColor: AppColors.bgDeep,
-                      onTap: (tapPosition, point) {
-                        _inspectSectorAt(point);
-                      },
-                      interactionOptions: const InteractionOptions(
-                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                      ),
-                    ),
-                    children: [
-                      // Clean, Watermark-Free Global Dark Map (OpenStreetMap with Dark Shader Matrix)
-                      TileLayer(
-                        urlTemplate: AppConstants.mapApiKey.isNotEmpty
-                            ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
-                            : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        maxZoom: 19,
-                        userAgentPackageName: 'com.example.territory_runner',
-                        tileBuilder: (context, tileWidget, tile) {
-                          return ColorFiltered(
-                            colorFilter: const ColorFilter.matrix(<double>[
-                              -0.82, 0, 0, 0, 230,
-                              0, -0.82, 0, 0, 230,
-                              0, 0, -0.82, 0, 230,
-                              0, 0, 0, 1.0, 0,
-                            ]),
-                            child: tileWidget,
-                          );
-                        },
-                      ),
-                      
-                      // Conquered Territories Polygon Overlay (Arbitrary Enclosures & Merged Polygons)
-                      PolygonLayer(
-                        polygons: _buildPolygons(),
-                      ),
-
-                      // Active Runner Breadcrumb Trail & AI Suggested Route
-                      PolylineLayer(
-                        polylines: [
-                          if (_isRunActive && _runCoordinates.length >= 2)
-                            Polyline(
-                              points: _runCoordinates,
-                              color: const Color(0xFF00E676),
-                              strokeWidth: 4.0,
-                            ),
-                          if (_polygonEngine.currentPath.length >= 2)
-                            Polyline(
-                              points: _polygonEngine.currentPath,
-                              color: const Color(0xFF00F0FF),
-                              strokeWidth: 2.5,
-                            ),
-                          if (_activeSuggestedRoute != null)
-                            Polyline(
-                              points: _activeSuggestedRoute!.polyline,
-                              color: const Color(0xFFFF9100),
-                              strokeWidth: 4.0,
-                            ),
-                        ],
-                      ),
-                        
-                      // Live Markers (Player & Rival Runners)
-                      MarkerLayer(
-                        markers: _buildMarkers(),
-                      ),
-                    ],
-                  ),
-
-            // 2. Top Header Bar ("Good run, Alex 👋" + "Run to own." capsule)
-            Positioned(
-              top: pad.top + 10,
-              left: 20,
-              right: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: AppColors.surface2,
-                            child: Text(
-                              athleteName.isNotEmpty ? athleteName[0].toUpperCase() : 'A',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Good run,',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              Text(
-                                '$athleteName 👋',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const _SyncStatusBadge(),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface.withValues(alpha: 0.9),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Text(
-                              profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Sub-header Mode Pill Tabs (Run | Explore | Leaderboard | Challenges)
-                  Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.85),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      children: [
-                        _buildModePill(0, 'Run'),
-                        _buildModePill(1, 'Explore'),
-                        _buildModePill(2, 'Leaderboard'),
-                        _buildModePill(3, 'Challenges'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 3. Floating "You own X.X km² here" Pill Overlay on Map
-            Positioned(
-              right: 20,
-              bottom: pad.bottom + 175,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surface.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'You own',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w500),
-                    ),
-                    Text(
-                      totalAreaSqKm > 0 ? '${totalAreaSqKm.toStringAsFixed(2)} km²' : '0.00 km²',
-                      style: const TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const Text(
-                      'here',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w500),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // 4. Floating Control Buttons Stack (Left & Right)
-            Positioned(
-              left: 20,
-              bottom: pad.bottom + 230,
-              child: Column(
-                children: [
-                  // Virtual Pacer / Simulation Selector
-                  _buildFloatingCircleButton(
-                    icon: Icons.speed_rounded,
-                    color: _locationService.pacerMode != VirtualPacerMode.none ? const Color(0xFFFF9100) : Colors.white70,
-                    onTap: _showVirtualPacerSheet,
-                  ),
-                  const SizedBox(height: 10),
-                  // Camera Follow vs Free-Pan Toggle
-                  _buildFloatingCircleButton(
-                    icon: _isCameraFollowLocked ? Icons.gps_fixed_rounded : Icons.pan_tool_rounded,
-                    color: _isCameraFollowLocked ? AppColors.accent : Colors.white70,
-                    onTap: () {
-                      setState(() {
-                        _isCameraFollowLocked = !_isCameraFollowLocked;
-                      });
-                      HapticFeedback.selectionClick();
-                      if (_isCameraFollowLocked) _recenter();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildFloatingCircleButton(
-                    icon: Icons.layers_rounded,
-                    onTap: _suggestAiRoute,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildFloatingCircleButton(
-                    icon: Icons.my_location_rounded,
-                    onTap: _recenter,
-                  ),
-                ],
-              ),
-            ),
-
-            // 5. Strava-Grade Live Telemetry HUD Obsidian Glass Card
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: pad.bottom + 12,
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF101218).withValues(alpha: 0.94),
-                  borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: _isAutoPaused ? const Color(0xFFFF9100).withValues(alpha: 0.6) : AppColors.border,
-                    width: 1.2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      blurRadius: 36,
-                      offset: const Offset(0, 16),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Auto-Pause Luminous Banner
-                    if (_isAutoPaused && _isRunActive) ...[
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFF9100).withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFFFF9100), width: 1),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.pause_circle_filled_rounded, color: Color(0xFFFF9100), size: 14),
-                            SizedBox(width: 6),
-                            Text(
-                              'AUTO-PAUSED • MOVING SPEED < 1.5 KM/H',
-                              style: TextStyle(
-                                color: Color(0xFFFF9100),
-                                fontWeight: FontWeight.w900,
-                                fontSize: 10,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    // Core Strava Metric Display: Distance | Moving Time | Split Pace
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        // Massive Distance
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'DISTANCE',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(
-                                  _isRunActive ? _runDistanceKm.toStringAsFixed(2) : '0.00',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -0.5,
-                                    fontFamily: 'monospace',
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  'KM',
-                                  style: TextStyle(
-                                    color: AppColors.accent,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-
-                        // Moving Time
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text(
-                                  'TIME',
-                                  style: TextStyle(
-                                    color: AppColors.textMuted,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.2,
-                                  ),
-                                ),
-                                if (_isRunActive && !_isAutoPaused) ...[
-                                  const SizedBox(width: 4),
-                                  Container(
-                                    width: 6,
-                                    height: 6,
-                                    decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.accent),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _isRunActive
-                                  ? _formatDuration(_movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds)
-                                  : '00:00',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.5,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Instantaneous Split Pace
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text(
-                              'AVG PACE',
-                              style: TextStyle(
-                                color: AppColors.textMuted,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _isRunActive ? _computeCurrentSplitPace() : "--'--\"",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Secondary Telemetry Row: Speed | Calories | Satellite Precision | Domain Claims
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.speed_rounded, color: Color(0xFF00F0FF), size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${_currentSpeedKmh.toStringAsFixed(1)} km/h',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.local_fire_department_rounded, color: Color(0xFFFF9100), size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                '+${(_runDistanceKm * 65.0).round()} kcal',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.satellite_alt_rounded, color: AppColors.accent, size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                '±${_satelliteAccuracyMeters.toStringAsFixed(0)}m',
-                                style: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              const Icon(Icons.shield_outlined, color: Color(0xFF8A2BE2), size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$_hexesClaimedThisRun domains',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // Bottom Controls Row: Manual Seal Domain Button | Center Giant Play/Pause | Finish Button
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Left Manual "SEAL SHAPE" Override Button
-                        Flexible(
-                          child: GestureDetector(
-                            onTap: _sealCurrentShape,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF8A2BE2).withValues(alpha: 0.25),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: const Color(0xFF8A2BE2), width: 1.5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF8A2BE2).withValues(alpha: 0.3),
-                                    blurRadius: 10,
-                                    spreadRadius: 1,
-                                  ),
-                                ],
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.shield_rounded, color: Color(0xFF00F0FF), size: 16),
-                                  SizedBox(width: 5),
-                                  Flexible(
-                                    child: Text(
-                                      'SEAL SHAPE',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 10,
-                                        letterSpacing: 0.6,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 8),
-
-                        // Center Giant Glowing Neon Green Play/Pause Action Button
-                        GestureDetector(
-                          onTap: _toggleRun,
-                          child: Container(
-                            height: 60,
-                            width: 60,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.accent,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.accent.withValues(alpha: 0.5),
-                                  blurRadius: 20,
-                                  spreadRadius: 3,
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: Icon(
-                                _isRunActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                                color: Colors.black,
-                                size: 34,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 8),
-
-                        // Right Slide to Finish / Complete Button
-                        Flexible(
-                          child: GestureDetector(
-                            onTap: () {
-                              if (_isRunActive) {
-                                _toggleRun(); // Finish run
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Tap the center play button to begin tracking')),
-                                );
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
-                              decoration: BoxDecoration(
-                                color: _isRunActive ? Colors.redAccent.withValues(alpha: 0.2) : AppColors.surface2,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: _isRunActive ? Colors.redAccent : AppColors.border),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    _isRunActive ? Icons.stop_rounded : Icons.lock_outline_rounded,
-                                    color: _isRunActive ? Colors.redAccent : Colors.white70,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 5),
-                                  Flexible(
-                                    child: Text(
-                                      _isRunActive ? 'FINISH' : 'LOCKED',
-                                      style: TextStyle(
-                                        color: _isRunActive ? Colors.redAccent : Colors.white70,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 10,
-                                        letterSpacing: 0.6,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showVirtualPacerSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Row(
-                    children: [
-                      Icon(Icons.speed_rounded, color: AppColors.accent, size: 24),
-                      SizedBox(width: 8),
-                      Text(
-                        'VIRTUAL PACER & GNSS SIMULATION',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Select a pacer velocity profile for rapid indoor debugging, desktop simulation, or real hardware GPS:',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
-                  ),
-                  const SizedBox(height: 18),
-                  _buildPacerOption(
-                    mode: VirtualPacerMode.none,
-                    title: 'Real Hardware GNSS Stream',
-                    subtitle: 'Best for navigation (High Accuracy GPS)',
-                    icon: Icons.satellite_alt_rounded,
-                    color: const Color(0xFF00E676),
-                    setModalState: setModalState,
-                  ),
-                  _buildPacerOption(
-                    mode: VirtualPacerMode.walking,
-                    title: 'Virtual Walk — 5.0 km/h',
-                    subtitle: '1.39 m/s with micro-oscillation heading drift',
-                    icon: Icons.directions_walk_rounded,
-                    color: const Color(0xFF00F0FF),
-                    setModalState: setModalState,
-                  ),
-                  _buildPacerOption(
-                    mode: VirtualPacerMode.running,
-                    title: 'Virtual Run — 10.0 km/h',
-                    subtitle: '2.78 m/s standard athletic pacing',
-                    icon: Icons.directions_run_rounded,
-                    color: const Color(0xFFFF9100),
-                    setModalState: setModalState,
-                  ),
-                  _buildPacerOption(
-                    mode: VirtualPacerMode.sprinting,
-                    title: 'Virtual Sprint — 15.0 km/h',
-                    subtitle: '4.17 m/s high-velocity athletic charge',
-                    icon: Icons.bolt_rounded,
-                    color: const Color(0xFF8A2BE2),
-                    setModalState: setModalState,
-                  ),
-                  const SizedBox(height: 18),
-                  const Divider(color: AppColors.border),
-                  const SizedBox(height: 12),
-                  const Row(
-                    children: [
-                      Icon(Icons.science_rounded, color: Color(0xFF00F0FF), size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'CLASSROOM & VIVA DEMO LAB',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.1,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _buildDemoActionTile(
-                    title: '🎯 Auto-Simulate 400m Loop Conquest',
-                    subtitle: 'Streams real-time waypoints to trigger loop enclosure & Shoelace area',
-                    icon: Icons.replay_circle_filled_rounded,
-                    color: const Color(0xFF00E676),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _runAutomatedLoopDemo();
-                    },
-                  ),
-                  _buildDemoActionTile(
-                    title: '⚔️ Auto-Simulate Rival Territory Cut',
-                    subtitle: 'Spawns Crimson rival & runs a slicing loop using Clipper2 difference',
-                    icon: Icons.shield_outlined,
-                    color: const Color(0xFFFF3366),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _runRivalConflictDemo();
-                    },
-                  ),
-                  _buildDemoActionTile(
-                    title: '🚨 Test Anti-Cheat Speed Anomaly',
-                    subtitle: 'Injects vehicle velocity (>40 km/h) to verify Z-score rejection',
-                    icon: Icons.warning_amber_rounded,
-                    color: const Color(0xFFFFB800),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _simulateSpeedAnomaly();
-                    },
-                  ),
-                  _buildDemoActionTile(
-                    title: '🤖 Instant Gemini AI Coach Debrief',
-                    subtitle: 'Simulates completed 3.5km workout with LLM tactical insights',
-                    icon: Icons.psychology_rounded,
-                    color: const Color(0xFF9C27B0),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showRunCompleteSummary(3.52, 1140, 3);
-                    },
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildDemoActionTile({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: color.withValues(alpha: 0.35)),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12.5),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 10.5),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 12),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Automated Viva Demonstration: 400m GPS Loop Simulation
   void _runAutomatedLoopDemo() {
     if (!_isRunActive) {
       _toggleRun();
     }
 
     final center = _currentLocation ?? const LatLng(37.7749, -122.4194);
-    const double radiusLat = 0.0012; // ~130m radius loop
+    const double radiusLat = 0.0012;
     const double radiusLng = 0.0016;
     const int steps = 12;
 
@@ -1742,7 +657,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         altitudeAccuracy: 1.0,
         heading: (360.0 * currentStep / steps) % 360.0,
         headingAccuracy: 1.0,
-        speed: 3.2, // ~11.5 km/h
+        speed: 3.2,
         speedAccuracy: 0.2,
       );
 
@@ -1760,11 +675,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     });
   }
 
-  /// Automated Viva Demonstration: Slicing through a rival territory
   void _runRivalConflictDemo() async {
     final center = _currentLocation ?? const LatLng(37.7749, -122.4194);
     
-    // 1. Spawn Rival Polygon (Crimson Red)
     await _territoryService.spawnMockRivalTerritory(center);
     if (!mounted) return;
     setState(() {});
@@ -1781,7 +694,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _toggleRun();
     }
 
-    // 2. Loop cutting right through the rival sector
     const double delta = 0.0018;
     final sliceWaypoints = [
       LatLng(center.latitude, center.longitude),
@@ -1789,7 +701,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       LatLng(center.latitude + delta * 1.5, center.longitude + delta * 0.5),
       LatLng(center.latitude + delta * 1.5, center.longitude + delta * 1.4),
       LatLng(center.latitude + delta * 0.1, center.longitude + delta * 1.4),
-      LatLng(center.latitude, center.longitude), // Closes loop
+      LatLng(center.latitude, center.longitude),
     ];
 
     int step = 0;
@@ -1823,7 +735,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     });
   }
 
-  /// Automated Viva Demonstration: Anti-Cheat Anomaly Injection
   void _simulateSpeedAnomaly() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -1846,302 +757,239 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     HapticFeedback.heavyImpact();
   }
 
-  Widget _buildPacerOption({
-    required VirtualPacerMode mode,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required StateSetter setModalState,
-  }) {
-    final isSelected = _locationService.pacerMode == mode;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        _locationService.setVirtualPacer(mode);
-        setModalState(() {});
-        setState(() {});
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.surface,
-            duration: const Duration(seconds: 2),
-            content: Text('Pacer mode: $title ⚡', style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.15) : AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? color : AppColors.border,
-            width: isSelected ? 1.8 : 1.0,
-          ),
-        ),
-        child: Row(
+  @override
+  Widget build(BuildContext context) {
+    final pad = MediaQuery.paddingOf(context);
+    final profile = _territoryService.getProfile();
+    final String athleteName = profile.username.isNotEmpty ? profile.username : 'Runner';
+    final territories = _territoryService.getCapturedTerritoryObjects();
+    final double totalAreaSqMeters = territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+    final double totalAreaSqKm = totalAreaSqMeters / 1000000.0;
+
+    return KeyboardListener(
+      focusNode: _keyboardFocusNode..requestFocus(),
+      autofocus: true,
+      onKeyEvent: _handleKeyEvent,
+      child: Scaffold(
+        backgroundColor: AppColors.bgDeep,
+        body: Stack(
+          fit: StackFit.expand,
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
+            // 1. The Interactive Fullscreen Map wrapped in RepaintBoundary
+            _currentLocation == null
+                ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+                : RepaintBoundary(
+                    child: FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _currentLocation!,
+                        initialZoom: 17.0,
+                        backgroundColor: AppColors.bgDeep,
+                        onTap: (tapPosition, point) => _inspectSectorAt(point),
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                        ),
+                      ),
+                      children: [
+                        MapLayers.buildTileLayer(),
+                        MapLayers.buildPolygonLayer(territories),
+                        MapLayers.buildPolylineLayer(
+                          isRunActive: _isRunActive,
+                          runCoordinates: _runCoordinates,
+                          currentEnclosurePath: _polygonEngine.currentPath,
+                          suggestedRouteCoordinates: _activeSuggestedRoute?.polyline,
+                        ),
+                        MapLayers.buildMarkerLayer(
+                          currentLocation: _currentLocation,
+                          activeRivalRunners: _activeRivalRunners,
+                        ),
+                      ],
+                    ),
+                  ),
+
+            // 2. Top Header Bar
+            Positioned(
+              top: pad.top + 10,
+              left: 20,
+              right: 20,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: isSelected ? color : Colors.white,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11)),
-                ],
-              ),
-            ),
-            if (isSelected)
-              Icon(Icons.check_circle_rounded, color: color, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModePill(int index, String title) {
-    final isSelected = _selectedModeTab == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedModeTab = index;
-          });
-          if (index == 2) {
-            _showLeaderboardModal();
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.surface2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Center(
-            child: Text(
-              title,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textMuted,
-                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Displays live global leaderboard ranking from the Go backend
-  void _showLeaderboardModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          expand: false,
-          builder: (context, scrollController) {
-            return FutureBuilder<List<LeaderboardEntry>>(
-              future: _apiClient.getLeaderboard(limit: 50),
-              builder: (context, snapshot) {
-                return Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                  child: Column(
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.white24,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.emoji_events_rounded, color: AppColors.accent, size: 22),
-                              SizedBox(width: 8),
-                              Text(
-                                'GLOBAL LEADERBOARD',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ],
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: AppColors.surface2,
+                            child: Text(
+                              athleteName.isNotEmpty ? athleteName[0].toUpperCase() : 'A',
+                              style: AppText.headingSmall,
+                            ),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Colors.white70),
-                            onPressed: () => Navigator.pop(ctx),
+                          const SizedBox(width: 10),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Good run,', style: AppText.bodySmall),
+                              Text('$athleteName 👋', style: AppText.headingSmall),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
-                      if (snapshot.connectionState == ConnectionState.waiting)
-                        const Expanded(
-                          child: Center(
-                            child: CircularProgressIndicator(color: AppColors.accent),
-                          ),
-                        )
-                      else if (snapshot.hasError)
-                        Expanded(
-                          child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.cloud_off_rounded, color: Colors.white38, size: 40),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Offline or server unreachable\n${snapshot.error}',
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                                ),
-                              ],
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SyncChip(),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface.withValues(alpha: 0.9),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: AppColors.border),
                             ),
-                          ),
-                        )
-                      else if (!snapshot.hasData || snapshot.data!.isEmpty)
-                        const Expanded(
-                          child: Center(
                             child: Text(
-                              'No runners recorded yet. Claim territory to rank #1!',
-                              style: TextStyle(color: AppColors.textSecondary),
+                              profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
+                              style: AppText.bodyBold,
                             ),
                           ),
-                        )
-                      else
-                        Expanded(
-                          child: ListView.separated(
-                            controller: scrollController,
-                            itemCount: snapshot.data!.length,
-                            separatorBuilder: (context, index) => const Divider(color: AppColors.border, height: 1),
-                            itemBuilder: (context, index) {
-                              final entry = snapshot.data![index];
-                              final isCurrent = entry.userId == _territoryService.getProfile().id;
-
-                              Color rankColor = Colors.white70;
-                              if (entry.rank == 1) rankColor = const Color(0xFFFFD700); // Gold
-                              if (entry.rank == 2) rankColor = const Color(0xFFC0C0C0); // Silver
-                              if (entry.rank == 3) rankColor = const Color(0xFFCD7F32); // Bronze
-
-                              return Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                decoration: BoxDecoration(
-                                  color: isCurrent ? AppColors.accent.withValues(alpha: 0.12) : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 32,
-                                      child: Text(
-                                        '#${entry.rank}',
-                                        style: TextStyle(
-                                          color: rankColor,
-                                          fontWeight: FontWeight.w900,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Text(
-                                                entry.username,
-                                                style: TextStyle(
-                                                  color: isCurrent ? AppColors.accent : Colors.white,
-                                                  fontWeight: FontWeight.w800,
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                              if (isCurrent) ...[
-                                                const SizedBox(width: 6),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors.accent,
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: const Text('YOU', style: TextStyle(color: Colors.black, fontSize: 9, fontWeight: FontWeight.w900)),
-                                                ),
-                                              ],
-                                            ],
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${entry.faction} • Lvl ${entry.level} • ${entry.totalRuns} runs',
-                                            style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      children: [
-                                        Text(
-                                          entry.totalAreaSqm >= 1000000
-                                              ? '${(entry.totalAreaSqm / 1000000).toStringAsFixed(2)} km²'
-                                              : '${entry.totalAreaSqm.toStringAsFixed(0)} m²',
-                                          style: const TextStyle(
-                                            color: AppColors.accent,
-                                            fontWeight: FontWeight.w900,
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                        const Text(
-                                          'CLAIMED',
-                                          style: TextStyle(color: AppColors.textMuted, fontSize: 9, fontWeight: FontWeight.bold),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        ),
+                        ],
+                      ),
                     ],
                   ),
-                );
-              },
-            );
-          },
-        );
-      },
+                  const SizedBox(height: 14),
+
+                  // Sub-header Mode Pill Tabs
+                  ModeTabs(
+                    selectedIndex: _selectedModeTab,
+                    onTabSelected: (index) {
+                      setState(() => _selectedModeTab = index);
+                      if (index == 2) {
+                        LeaderboardSheet.show(
+                          context: context,
+                          apiClient: _apiClient,
+                          currentUserId: _territoryService.getProfile().id,
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // 3. Floating "You own X.X km² here" Pill Overlay on Map
+            Positioned(
+              right: 20,
+              bottom: pad.bottom + 175,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.surface.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('You own', style: AppText.label),
+                    Text(
+                      totalAreaSqKm > 0 ? '${totalAreaSqKm.toStringAsFixed(2)} km²' : '0.00 km²',
+                      style: AppText.statSmall.copyWith(color: AppColors.accent),
+                    ),
+                    const Text('here', style: AppText.label),
+                  ],
+                ),
+              ),
+            ),
+
+            // 4. Floating Control Buttons Stack
+            Positioned(
+              left: 20,
+              bottom: pad.bottom + 230,
+              child: Column(
+                children: [
+                  _buildFloatingCircleButton(
+                    icon: Icons.speed_rounded,
+                    color: _locationService.pacerMode != VirtualPacerMode.none ? AppColors.secondary : Colors.white70,
+                    onTap: () {
+                      VirtualPacerSheet.show(
+                        context: context,
+                        locationService: _locationService,
+                        onSimulateLoop: _runAutomatedLoopDemo,
+                        onSimulateRivalCut: _runRivalConflictDemo,
+                        onSimulateAnomaly: _simulateSpeedAnomaly,
+                        onSimulateCoachDebrief: () {
+                          SummarySheet.show(
+                            context: context,
+                            distanceKm: 3.52,
+                            durationSeconds: 1140,
+                            territoriesClaimed: 3,
+                            profile: _territoryService.getProfile(),
+                            coachService: _coachService,
+                          );
+                        },
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFloatingCircleButton(
+                    icon: _isCameraFollowLocked ? Icons.gps_fixed_rounded : Icons.pan_tool_rounded,
+                    color: _isCameraFollowLocked ? AppColors.accent : Colors.white70,
+                    onTap: () {
+                      setState(() {
+                        _isCameraFollowLocked = !_isCameraFollowLocked;
+                      });
+                      HapticFeedback.selectionClick();
+                      if (_isCameraFollowLocked) _recenter();
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFloatingCircleButton(
+                    icon: Icons.layers_rounded,
+                    onTap: _suggestAiRoute,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFloatingCircleButton(
+                    icon: Icons.my_location_rounded,
+                    onTap: _recenter,
+                  ),
+                ],
+              ),
+            ),
+
+            // 5. Strava-Grade Live Telemetry HUD Obsidian Glass Card
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: pad.bottom + 12,
+              child: RunHud(
+                isRunActive: _isRunActive,
+                isAutoPaused: _isAutoPaused,
+                distanceKm: _runDistanceKm,
+                elapsedSeconds: _elapsedDurationSeconds,
+                movingSeconds: _movingDurationSeconds,
+                splitPace: _computeCurrentSplitPace(),
+                currentSpeedKmh: _currentSpeedKmh,
+                satelliteAccuracyMeters: _satelliteAccuracyMeters,
+                territoriesClaimed: _territoriesClaimedThisRun,
+                onToggleRun: _toggleRun,
+                onSealShape: _sealCurrentShape,
+                onFinishRun: () {
+                  if (_isRunActive) {
+                    _toggleRun();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Tap the center play button to begin tracking')),
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -2169,111 +1017,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         ),
         child: Icon(icon, color: color, size: 20),
       ),
-    );
-  }
-}
-
-class _SummaryTile extends StatelessWidget {
-  final String title;
-  final String value;
-  const _SummaryTile({required this.title, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(title, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900)),
-      ],
-    );
-  }
-}
-
-class _SyncStatusBadge extends StatelessWidget {
-  const _SyncStatusBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final syncQueue = SyncQueueService();
-    return ValueListenableBuilder<SyncStatus>(
-      valueListenable: syncQueue.statusNotifier,
-      builder: (context, status, _) {
-        return ValueListenableBuilder<int>(
-          valueListenable: syncQueue.unsettledCountNotifier,
-          builder: (context, count, _) {
-            Color color;
-            IconData icon;
-            String text;
-
-            switch (status) {
-              case SyncStatus.synced:
-                color = const Color(0xFF00E676);
-                icon = Icons.cloud_done_rounded;
-                text = 'SYNCED';
-                break;
-              case SyncStatus.syncing:
-                color = const Color(0xFF29B6F6);
-                icon = Icons.sync_rounded;
-                text = 'SYNCING';
-                break;
-              case SyncStatus.pending:
-                color = const Color(0xFFFFB300);
-                icon = Icons.cloud_upload_rounded;
-                text = count > 0 ? 'PENDING ($count)' : 'PENDING';
-                break;
-              case SyncStatus.offline:
-                color = const Color(0xFFFF5252);
-                icon = Icons.cloud_off_rounded;
-                text = count > 0 ? 'OFFLINE ($count)' : 'OFFLINE';
-                break;
-            }
-
-            return GestureDetector(
-              onTap: () {
-                syncQueue.syncPendingRuns();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: AppColors.surface,
-                    duration: const Duration(seconds: 2),
-                    content: Text(
-                      status == SyncStatus.synced
-                          ? 'All runs synced with server authority.'
-                          : 'Triggering background cloud sync...',
-                      style: TextStyle(color: color, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                );
-              },
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: color.withValues(alpha: 0.8), width: 1.2),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 13, color: color),
-                    const SizedBox(width: 5),
-                    Text(
-                      text,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }
