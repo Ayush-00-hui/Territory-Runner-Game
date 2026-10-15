@@ -9,6 +9,7 @@ import 'widgets/offline_sync_banner.dart';
 import 'widgets/quick_launch_hero.dart';
 import 'widgets/recent_activity_feed.dart';
 import 'widgets/weekly_summary_card.dart';
+import '../history/run_history_screen.dart';
 
 /// Athlete Home Screen - Performance First Conquest Dashboard
 class HomeScreen extends StatelessWidget {
@@ -69,8 +70,16 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.s24),
 
                     // Recent Activity Header
-                    const SectionHeader(
+                    SectionHeader(
                       title: 'RECENT CONQUESTS',
+                      actionLabel: 'VIEW ALL',
+                      onAction: () {
+                        AppMotion.lightTick();
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const RunHistoryScreen()),
+                        );
+                      },
                     ),
                     const SizedBox(height: AppSpacing.s12),
 

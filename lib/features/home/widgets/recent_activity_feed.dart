@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import '../../../models/territory.dart';
 import '../../../ui/ui.dart';
+import '../../gameplay/territory_service.dart';
+import '../../history/widgets/run_share_card_modal.dart';
 
 class RecentActivityFeed extends StatelessWidget {
   final List<Territory> territories;
@@ -113,9 +115,52 @@ class RecentActivityFeed extends StatelessWidget {
               ),
 
               const SizedBox(height: AppSpacing.s20),
-              PrimaryButton(
-                label: 'DISMISS',
-                onPressed: () => Navigator.pop(ctx),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.accent,
+                        side: const BorderSide(color: AppColors.accent, width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
+                      ),
+                      icon: const Icon(Icons.share_rounded, size: 18),
+                      label: const Text('SHARE CARD', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        final profile = TerritoryService().getProfile();
+                        const distance = Distance();
+                        double meters = 0.0;
+                        for (int i = 0; i < territory.polygon.length - 1; i++) {
+                          meters += distance(territory.polygon[i], territory.polygon[i + 1]);
+                        }
+                        if (territory.polygon.length > 2) {
+                          meters += distance(territory.polygon.last, territory.polygon.first);
+                        }
+                        final km = meters / 1000.0;
+
+                        RunShareCardModal.show(
+                          context: context,
+                          distanceKm: km,
+                          durationSeconds: (km * 330).round(),
+                          areaSqMeters: territory.areaSqMeters,
+                          points: territory.polygon,
+                          callsign: profile.username,
+                          faction: profile.faction,
+                          capturedAt: territory.capturedAt,
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.s12),
+                  Expanded(
+                    child: PrimaryButton(
+                      label: 'DISMISS',
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -518,6 +518,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         territoriesClaimed: finalTerritories,
         profile: _territoryService.getProfile(),
         coachService: _coachService,
+        routePoints: List<LatLng>.from(_runCoordinates),
       );
     }
   }
