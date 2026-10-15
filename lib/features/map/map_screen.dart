@@ -64,6 +64,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   // AI Route Suggestion State
   SuggestedRoute? _activeSuggestedRoute;
 
+  // Real-time Client Preview Accumulation across all loops in run
+  double _accumulatedRunPreviewArea = 0.0;
+  int _accumulatedRunPreviewXp = 0;
+
   // Strava-grade Telemetry Engine & Auto-Pause State
   final List<Position> _recentPositions = [];
   final List<LatLng> _runCoordinates = [];
@@ -85,6 +89,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   @override
   void initState() {
     super.initState();
+
+    // Listen to sync queue reconciliation delta toasts and authoritative rejections
+    SyncQueueService().reconciliationToastNotifier.addListener(_onReconciliationToast);
+    SyncQueueService().lastRejectionNotifier.addListener(_onRunRejected);
     
     // Listen for new territory captures
     _territorySub = _territoryService.territoryStream.listen((event) {
@@ -169,6 +177,83 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPermissionsAndInitLocation();
     });
+  }
+
+  @override
+  void dispose() {
+    SyncQueueService().reconciliationToastNotifier.removeListener(_onReconciliationToast);
+    SyncQueueService().lastRejectionNotifier.removeListener(_onRunRejected);
+    _runTimer?.cancel();
+    _rivalPollingTimer?.cancel();
+    _positionSub?.cancel();
+    _territorySub?.cancel();
+    _wsPresenceSub?.cancel();
+    _wsRunnerLeftSub?.cancel();
+    _wsAlertSub?.cancel();
+    _wsBroadcastSub?.cancel();
+    _wsService.disconnect();
+    _locationService.stopTracking();
+    _keyboardFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onReconciliationToast() {
+    final msg = SyncQueueService().reconciliationToastNotifier.value;
+    if (msg != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppColors.accent, width: 1.2),
+          ),
+          content: Text(
+            msg,
+            style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 12.5),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _onRunRejected() {
+    final rejection = SyncQueueService().lastRejectionNotifier.value;
+    if (rejection != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF1E212B),
+          duration: const Duration(seconds: 8),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFFF5252), width: 1.2),
+          ),
+          content: Text(
+            '❌ ${rejection.humanReason}',
+            style: const TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold, fontSize: 12.5),
+          ),
+          action: SnackBarAction(
+            label: 'VIEW RUN',
+            textColor: AppColors.accent,
+            onPressed: () {
+              SummarySheet.show(
+                context: context,
+                distanceKm: rejection.run.distanceMeters / 1000.0,
+                durationSeconds: rejection.run.durationSeconds,
+                territoriesClaimed: 0,
+                profile: _territoryService.getProfile(),
+                coachService: _coachService,
+                routePoints: rejection.run.points,
+                areaSqMeters: rejection.run.clientPreviewArea,
+                rejectionReason: rejection.humanReason,
+              );
+            },
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _checkPermissionsAndInitLocation() async {
@@ -419,6 +504,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       return;
     }
 
+    _accumulatedRunPreviewArea += claimed;
+    _accumulatedRunPreviewXp += xp;
+
     setState(() {
       _territoriesClaimedThisRun++;
     });
@@ -471,6 +559,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       setState(() {
         _isRunActive = true;
         _territoriesClaimedThisRun = 0;
+        _accumulatedRunPreviewArea = 0.0;
+        _accumulatedRunPreviewXp = 0;
         _runDistanceKm = 0.0;
         _elapsedDurationSeconds = 0;
         _movingDurationSeconds = 0;
@@ -524,8 +614,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           points: List<LatLng>.from(_runCoordinates),
           durationSeconds: finalSeconds,
           distanceMeters: finalDistance * 1000.0,
-          clientPreviewArea: 0.0,
-          clientPreviewXp: finalTerritories * 100,
+          clientPreviewArea: _accumulatedRunPreviewArea,
+          clientPreviewXp: _accumulatedRunPreviewXp,
         );
       }
 
@@ -537,6 +627,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         profile: _territoryService.getProfile(),
         coachService: _coachService,
         routePoints: List<LatLng>.from(_runCoordinates),
+        areaSqMeters: _accumulatedRunPreviewArea > 0 ? _accumulatedRunPreviewArea : null,
       );
     }
   }
@@ -569,20 +660,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
-  @override
-  void dispose() {
-    _positionSub?.cancel();
-    _territorySub?.cancel();
-    _runTimer?.cancel();
-    _rivalPollingTimer?.cancel();
-    _wsPresenceSub?.cancel();
-    _wsRunnerLeftSub?.cancel();
-    _wsAlertSub?.cancel();
-    _wsBroadcastSub?.cancel();
-    _wsService.disconnect();
-    _locationService.stopTracking();
-    super.dispose();
-  }
 
   Future<void> _fetchVisibleRivals() async {
     if (!mounted || _currentLocation == null) return;

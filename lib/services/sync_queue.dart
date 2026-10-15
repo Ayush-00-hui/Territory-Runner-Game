@@ -84,6 +84,72 @@ class QueuedRun {
   }
 }
 
+/// A run rejected by the authoritative backend with human-friendly reason
+class RejectedRun {
+  final QueuedRun run;
+  final String code;
+  final String rawMessage;
+  final String humanReason;
+  final DateTime rejectedAt;
+
+  RejectedRun({
+    required this.run,
+    required this.code,
+    required this.rawMessage,
+    required this.humanReason,
+    required this.rejectedAt,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'run': run.toJson(),
+    'code': code,
+    'rawMessage': rawMessage,
+    'humanReason': humanReason,
+    'rejectedAt': rejectedAt.toIso8601String(),
+  };
+
+  factory RejectedRun.fromJson(Map<String, dynamic> json) {
+    return RejectedRun(
+      run: QueuedRun.fromJson(json['run'] as Map<String, dynamic>),
+      code: json['code'] as String? ?? 'REJECTED',
+      rawMessage: json['rawMessage'] as String? ?? '',
+      humanReason: json['humanReason'] as String? ?? 'Run rejected by server',
+      rejectedAt: json['rejectedAt'] != null
+          ? DateTime.parse(json['rejectedAt'] as String)
+          : DateTime.now(),
+    );
+  }
+}
+
+/// Formats backend API rejection codes into clear, empathetic runner-facing messages
+String formatRejectionReason(String code, String detail) {
+  final lower = detail.toLowerCase();
+  if (code == 'ANOMALY_REJECTED' ||
+      lower.contains('anomaly') ||
+      lower.contains('speed') ||
+      lower.contains('teleport') ||
+      lower.contains('spoof')) {
+    return 'GPS anomaly detected — run rejected due to unrealistic speed or position jumps.';
+  }
+  if (code == 'INVALID_LOOP' || lower.contains('loop')) {
+    if (lower.contains('too large') ||
+        lower.contains('5000000') ||
+        lower.contains('maximum')) {
+      return 'Loop too large — exceeds maximum single-run limit (5 km²).';
+    }
+    if (lower.contains('crossed itself') || lower.contains('self-intersect')) {
+      return 'Loop crossed itself — sovereign territory cannot self-intersect.';
+    }
+    if (lower.contains('perimeter') ||
+        lower.contains('threshold') ||
+        lower.contains('40')) {
+      return 'Loop perimeter too small — minimum 40m required.';
+    }
+    return 'Invalid loop geometry — could not enclose valid sovereign territory.';
+  }
+  return detail.isNotEmpty ? detail : 'Run rejected by server rules.';
+}
+
 /// Offline-first synchronization queue backed by Hive
 class SyncQueueService {
   static final SyncQueueService _instance = SyncQueueService._internal();
@@ -94,21 +160,41 @@ class SyncQueueService {
 
   final ValueNotifier<SyncStatus> statusNotifier = ValueNotifier<SyncStatus>(SyncStatus.synced);
   final ValueNotifier<int> unsettledCountNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<RejectedRun?> lastRejectionNotifier = ValueNotifier<RejectedRun?>(null);
+  final ValueNotifier<String?> reconciliationToastNotifier = ValueNotifier<String?>(null);
 
   static const String _boxName = 'unsynced_runs_v2';
+  static const String _rejectedBoxName = 'rejected_runs_v1';
   Box<String>? _box;
+  Box<String>? _rejectedBox;
   bool _isSyncing = false;
+
+  /// Returns true for permanent 4xx failures that should not be retried.
+  /// 408 (Timeout) and 429 (Rate Limit) are transient and eligible for retry.
+  static bool isPermanentFailure(dynamic error) {
+    if (error is ApiException) {
+      if (error.statusCode >= 400 && error.statusCode < 500) {
+        if (error.statusCode == 408 || error.statusCode == 429) {
+          return false;
+        }
+        return true;
+      }
+    }
+    return false;
+  }
 
   factory SyncQueueService({
     ApiClient? apiClient,
     TerritoryService? territoryService,
     Box<String>? overrideBox,
+    Box<String>? overrideRejectedBox,
   }) {
-    if (apiClient != null || territoryService != null || overrideBox != null) {
+    if (apiClient != null || territoryService != null || overrideBox != null || overrideRejectedBox != null) {
       return SyncQueueService.custom(
         apiClient: apiClient,
         territoryService: territoryService,
         overrideBox: overrideBox,
+        overrideRejectedBox: overrideRejectedBox,
       );
     }
     return _instance;
@@ -118,9 +204,11 @@ class SyncQueueService {
     ApiClient? apiClient,
     TerritoryService? territoryService,
     Box<String>? overrideBox,
+    Box<String>? overrideRejectedBox,
   })  : _apiClient = apiClient ?? ApiClient(),
         _territoryService = territoryService ?? TerritoryService(),
-        _box = overrideBox {
+        _box = overrideBox,
+        _rejectedBox = overrideRejectedBox {
     _initBox();
   }
 
@@ -234,18 +322,38 @@ class SyncQueueService {
 
         // Authoritative Server Reconciliation:
         // Replace optimistic local Clipper2 territory with authoritative PostGIS MultiPolygon
-        await _reconcileServerResponse(serverResponse);
+        await _reconcileServerResponse(serverResponse, run);
 
         // Remove confirmed run from persistent queue
         await box.delete(run.idempotencyKey);
       } catch (e) {
-        debugPrint('[SyncQueueService] Sync failed for ${run.idempotencyKey}: $e');
-        allSucceeded = false;
+        if (isPermanentFailure(e)) {
+          final apiErr = e as ApiException;
+          final humanMsg = formatRejectionReason(apiErr.code, apiErr.message);
+          debugPrint('[SyncQueueService] Run ${run.idempotencyKey} permanently rejected (${apiErr.code}): $humanMsg');
 
-        // Increment retry count
-        final updatedRun = run.copyWith(retryCount: run.retryCount + 1);
-        await box.put(run.idempotencyKey, jsonEncode(updatedRun.toJson()));
-        break; // Stop sequential FIFO upload if backend is unreachable
+          final rejectedRun = RejectedRun(
+            run: run,
+            code: apiErr.code,
+            rawMessage: apiErr.message,
+            humanReason: humanMsg,
+            rejectedAt: DateTime.now(),
+          );
+
+          // Archive rejected run and remove from pending queue to prevent infinite retry loops
+          await box.delete(run.idempotencyKey);
+          await _saveRejectedRun(rejectedRun);
+          lastRejectionNotifier.value = rejectedRun;
+          // Continue processing subsequent runs in queue
+        } else {
+          debugPrint('[SyncQueueService] Transient sync failure for ${run.idempotencyKey}: $e');
+          allSucceeded = false;
+
+          // Increment retry count
+          final updatedRun = run.copyWith(retryCount: run.retryCount + 1);
+          await box.put(run.idempotencyKey, jsonEncode(updatedRun.toJson()));
+          break; // Stop sequential FIFO upload if backend is unreachable
+        }
       }
     }
 
@@ -261,9 +369,25 @@ class SyncQueueService {
     }
   }
 
-  /// Updates local state with authoritative server calculations
-  Future<void> _reconcileServerResponse(Map<String, dynamic> response) async {
+  /// Updates local state with authoritative server calculations and notifies on area discrepancies
+  Future<void> _reconcileServerResponse(Map<String, dynamic> response, QueuedRun run) async {
     try {
+      final double? serverClaimedArea = (response['area_claimed_sqm'] as num?)?.toDouble();
+      final double clientPreview = run.clientPreviewArea;
+
+      if (serverClaimedArea != null && clientPreview > 0) {
+        final double delta = serverClaimedArea - clientPreview;
+        if (delta.abs() >= 1.0) {
+          if (delta > 0) {
+            reconciliationToastNotifier.value =
+                'Server verified +${delta.toStringAsFixed(1)} m² bonus (rival territory overtaken)';
+          } else {
+            reconciliationToastNotifier.value =
+                'Server adjusted ${delta.toStringAsFixed(1)} m² (overlap with existing domain deducted)';
+          }
+        }
+      }
+
       final double? serverTotalArea = (response['player_total_area_sqm'] as num?)?.toDouble();
       final String? geoJsonStr = response['territory_geojson'] as String?;
 
@@ -311,11 +435,49 @@ class SyncQueueService {
     }
   }
 
+  Future<Box<String>> _getRejectedBox() async {
+    if (_rejectedBox != null && _rejectedBox!.isOpen) return _rejectedBox!;
+    if (Hive.isBoxOpen(_rejectedBoxName)) {
+      _rejectedBox = Hive.box<String>(_rejectedBoxName);
+      return _rejectedBox!;
+    }
+    _rejectedBox = await Hive.openBox<String>(_rejectedBoxName);
+    return _rejectedBox!;
+  }
+
+  Future<void> _saveRejectedRun(RejectedRun rejected) async {
+    try {
+      final box = await _getRejectedBox();
+      await box.put(rejected.run.idempotencyKey, jsonEncode(rejected.toJson()));
+    } catch (e) {
+      debugPrint('[SyncQueueService] Could not persist rejected run: $e');
+    }
+  }
+
+  /// Returns all permanently rejected runs for user inspection
+  Future<List<RejectedRun>> getRejectedRuns() async {
+    try {
+      final box = await _getRejectedBox();
+      return box.values
+          .map((v) => RejectedRun.fromJson(jsonDecode(v) as Map<String, dynamic>))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   /// Clears the queue (useful for testing)
   Future<void> clearQueue() async {
     final box = await _getBox();
     await box.clear();
     _updateUnsettledCount();
     statusNotifier.value = SyncStatus.synced;
+  }
+
+  /// Clears the rejected runs archive
+  Future<void> clearRejectedRuns() async {
+    final box = await _getRejectedBox();
+    await box.clear();
+    lastRejectionNotifier.value = null;
   }
 }
