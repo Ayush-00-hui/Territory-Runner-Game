@@ -166,12 +166,14 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 			geojson = fmt.Sprintf(`{"type":"MultiPolygon","coordinates":[[[[%f,%f]]]]}`, loops[0].Polygon[0].Longitude, loops[0].Polygon[0].Latitude)
 		}
 		m.territories[tID] = &Territory{
-			ID:        tID,
-			OwnerID:   run.UserID,
-			Username:  user.Username,
-			GeoJSON:   geojson,
-			AreaSqm:   playerTotalArea,
-			UpdatedAt: time.Now().UTC(),
+			ID:             tID,
+			OwnerID:        run.UserID,
+			Username:       user.Username,
+			GeoJSON:        geojson,
+			AreaSqm:        playerTotalArea,
+			Strength:       100.0,
+			LastDefendedAt: time.Now().UTC(),
+			UpdatedAt:      time.Now().UTC(),
 		}
 	} else {
 		user.TotalRuns++

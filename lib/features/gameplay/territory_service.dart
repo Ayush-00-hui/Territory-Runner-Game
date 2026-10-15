@@ -200,6 +200,8 @@ class TerritoryService {
       polygons: mergedMultiPolys,
       areaSqMeters: totalUnifiedAreaSqM > 0 ? totalUnifiedAreaSqM : areaSqMeters,
       capturedAt: DateTime.now(),
+      lastDefendedAt: DateTime.now(),
+      strength: Territory.defaultInitialStrength,
       color: activeColor,
       isPendingReview: isPendingReview,
     );
@@ -239,17 +241,37 @@ class TerritoryService {
           final List<List<LatLng>> clippedMultiPolys = clippedRivalPaths.map(path64ToLatLngs).toList();
           final double remainingArea = _netAreaOf(clippedMultiPolys);
           final double lostByRival = rival.areaSqMeters - remainingArea;
-          if (lostByRival > 0) stolenAreaSqM += lostByRival;
 
-          final updatedRival = rival.copyWith(
-            polygon: clippedMultiPolys.first,
-            polygons: clippedMultiPolys,
-            areaSqMeters: remainingArea,
-          );
-          if (box != null) {
-            await box.put(rival.id, updatedRival);
+          // Weak Territory Vulnerability Rule:
+          // If rival territory is decayed (isWeak()), its defensive fortifications have collapsed.
+          // Slicing it inflicts direct structural damage and awards the attacker a 1.5x bonus.
+          // Furthermore, if the remaining decayed fragment drops below 50 m², it collapses entirely.
+          final bool rivalIsWeak = rival.isWeak();
+          if (lostByRival > 0) {
+            stolenAreaSqM += rivalIsWeak ? (lostByRival * 1.5) : lostByRival;
           }
-          debugPrint('[TerritoryService] Rival territory ${rival.id} clipped to ${remainingArea.toStringAsFixed(1)} m²');
+
+          if (rivalIsWeak && remainingArea < 50.0) {
+            // Decayed fragment collapses completely into the conqueror's domain
+            stolenAreaSqM += remainingArea;
+            if (box != null) {
+              await box.delete(rival.id);
+            }
+            debugPrint('[TerritoryService] Weak rival territory ${rival.id} completely collapsed (<50m²)');
+          } else {
+            final double currentRivalStrength = rival.computeCurrentStrength();
+            final updatedRival = rival.copyWith(
+              polygon: clippedMultiPolys.first,
+              polygons: clippedMultiPolys,
+              areaSqMeters: remainingArea,
+              strength: (currentRivalStrength - 25.0).clamp(0.0, 100.0),
+              lastDefendedAt: rival.lastDefendedAt,
+            );
+            if (box != null) {
+              await box.put(rival.id, updatedRival);
+            }
+            debugPrint('[TerritoryService] Rival territory ${rival.id} clipped to ${remainingArea.toStringAsFixed(1)} m² (strength: ${updatedRival.strength.toStringAsFixed(0)}%)');
+          }
         }
       }
     }
@@ -330,6 +352,45 @@ class TerritoryService {
   /// Wipe all territories (e.g. for testing)
   Future<void> resetTerritories() async {
     await _territoryBox?.clear();
+  }
+
+  /// Refreshes and fortifies the runner's territory defense back to 100% strength
+  Future<Territory?> defendTerritory(String ownerId) async {
+    final box = _territoryBox;
+    if (box == null) return null;
+    final territoryId = 'poly_${ownerId}_territory';
+    final existing = box.get(territoryId);
+    if (existing != null) {
+      final defended = existing.copyWith(
+        strength: Territory.defaultInitialStrength,
+        lastDefendedAt: DateTime.now(),
+      );
+      await box.put(territoryId, defended);
+      _captureEventController.add(defended);
+      unawaited(_firebaseService.syncTerritoryToCloud(defended));
+      debugPrint('[TerritoryService] Territory $territoryId fortified to 100% defense!');
+      return defended;
+    }
+    return null;
+  }
+
+  /// Manually degrades territory strength for testing and Viva demonstrations
+  Future<Territory?> simulateDecay(String ownerId, {double targetStrength = 20.0, int daysAgo = 5}) async {
+    final box = _territoryBox;
+    if (box == null) return null;
+    final territoryId = 'poly_${ownerId}_territory';
+    final existing = box.get(territoryId);
+    if (existing != null) {
+      final decayed = existing.copyWith(
+        strength: targetStrength,
+        lastDefendedAt: DateTime.now().subtract(Duration(days: daysAgo)),
+      );
+      await box.put(territoryId, decayed);
+      _captureEventController.add(decayed);
+      debugPrint('[TerritoryService] Territory $territoryId simulated decay: $targetStrength% (defended $daysAgo days ago)');
+      return decayed;
+    }
+    return null;
   }
 
   /// Listen to changes in territories to update UI in real-time

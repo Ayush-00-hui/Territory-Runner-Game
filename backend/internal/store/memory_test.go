@@ -137,3 +137,41 @@ func TestLeaderboardOrdering(t *testing.T) {
 	assert.Equal(t, "Runner1", lb[2].Username)
 	assert.Equal(t, 3, lb[2].Rank)
 }
+
+func TestCaptureSetsTerritoryStrengthAndLastDefendedAt(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	run := &store.Run{
+		ID:              "run_strength_1",
+		UserID:          "usr_fortified",
+		IdempotencyKey:  "idem_strength_1",
+		DurationSeconds: 120,
+		DistanceMeters:  200.0,
+		Status:          "accepted",
+	}
+
+	loop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.5, Longitude: -0.12},
+			{Latitude: 51.501, Longitude: -0.12},
+			{Latitude: 51.501, Longitude: -0.121},
+			{Latitude: 51.5, Longitude: -0.121},
+			{Latitude: 51.5, Longitude: -0.12},
+		},
+		AreaSqMeters: 5000.0,
+	}
+
+	before := time.Now().UTC().Add(-1 * time.Second)
+	_, err := memStore.CaptureRunAndMutateTerritories(ctx, run, []geo.EnclosedLoop{loop}, nil)
+	require.NoError(t, err)
+
+	territories, err := memStore.GetTerritoriesInBBox(ctx, -1.0, 50.0, 1.0, 52.0)
+	require.NoError(t, err)
+	require.Len(t, territories, 1)
+
+	assert.Equal(t, "poly_usr_fortified_territory", territories[0].ID)
+	assert.Equal(t, 100.0, territories[0].Strength)
+	assert.True(t, territories[0].LastDefendedAt.After(before) || territories[0].LastDefendedAt.Equal(before))
+}
+

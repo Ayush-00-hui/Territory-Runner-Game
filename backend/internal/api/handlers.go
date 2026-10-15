@@ -288,11 +288,13 @@ func (a *API) HandleGetTerritories(w http.ResponseWriter, r *http.Request) {
 			"type": "Feature",
 			"id":   t.ID,
 			"properties": map[string]interface{}{
-				"owner_id":   t.OwnerID,
-				"username":   t.Username,
-				"is_self":    t.OwnerID == currentUID,
-				"area_sqm":   t.AreaSqm,
-				"updated_at": t.UpdatedAt,
+				"owner_id":         t.OwnerID,
+				"username":         t.Username,
+				"is_self":          t.OwnerID == currentUID,
+				"area_sqm":         t.AreaSqm,
+				"strength":         t.Strength,
+				"last_defended_at": t.LastDefendedAt,
+				"updated_at":       t.UpdatedAt,
 			},
 			"geometry": geomObj,
 		}

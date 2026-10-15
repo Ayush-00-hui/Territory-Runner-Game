@@ -105,6 +105,7 @@ class WebSocketService {
           break;
 
         case 'territory_alert':
+        case 'territory_under_attack':
           final alert = TerritoryAlertEvent.fromJson(json);
           _alertController.add(alert);
           break;

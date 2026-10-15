@@ -34,18 +34,37 @@ class MapLayers {
   }
 
   /// Sovereign & Rival Territory Multi-Polygons Layer
-  static PolygonLayer buildPolygonLayer(List<Territory> territories) {
+  static PolygonLayer buildPolygonLayer(
+    List<Territory> territories, {
+    String? highlightedTerritoryId,
+  }) {
     final List<Polygon> polygons = [];
 
     for (final territory in territories) {
+      final double currentStrength = territory.computeCurrentStrength();
+      // Strength shown as outline opacity (from 0.25 at 0% strength to 1.0 at 100%)
+      final double outlineAlpha = (0.25 + 0.75 * (currentStrength / 100.0)).clamp(0.20, 1.0);
+      final bool isHighlighted = territory.id == highlightedTerritoryId;
+
+      final Color borderColor = isHighlighted
+          ? AppColors.gold
+          : territory.color.withValues(alpha: outlineAlpha);
+      final double strokeWidth = isHighlighted
+          ? 4.0
+          : (territory.isWeak() ? 1.5 : 2.5);
+
+      final Color fillColor = isHighlighted
+          ? AppColors.gold.withValues(alpha: 0.35)
+          : territory.color.withValues(alpha: (0.25 * (currentStrength / 100.0)).clamp(0.12, 0.30));
+
       for (final poly in territory.polygons) {
         if (poly.length >= 3) {
           polygons.add(
             Polygon(
               points: poly,
-              color: territory.color.withValues(alpha: 0.25),
-              borderColor: territory.color,
-              borderStrokeWidth: 2.5,
+              color: fillColor,
+              borderColor: borderColor,
+              borderStrokeWidth: strokeWidth,
             ),
           );
         }
@@ -53,6 +72,78 @@ class MapLayers {
     }
 
     return PolygonLayer(polygons: polygons);
+  }
+
+  /// Small athletic strength badges positioned at territory centroids
+  static MarkerLayer buildTerritoryBadgesLayer(List<Territory> territories) {
+    final List<Marker> badges = [];
+
+    for (final territory in territories) {
+      if (territory.polygon.length < 3) continue;
+      final centroid = computeCentroid(territory.polygon);
+      final currentStrength = territory.computeCurrentStrength();
+      final isWeak = territory.isWeak();
+
+      final Color badgeColor = isWeak
+          ? AppColors.rival
+          : (currentStrength >= 70 ? AppColors.mine : AppColors.warning);
+
+      badges.add(
+        Marker(
+          point: centroid,
+          width: 68,
+          height: 26,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceGlass,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: badgeColor.withValues(alpha: 0.8), width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: badgeColor.withValues(alpha: 0.25),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isWeak ? Icons.warning_amber_rounded : Icons.shield_rounded,
+                  size: 11,
+                  color: badgeColor,
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  '${currentStrength.round()}%',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return MarkerLayer(markers: badges);
+  }
+
+  static LatLng computeCentroid(List<LatLng> pts) {
+    if (pts.isEmpty) return const LatLng(0, 0);
+    double lat = 0;
+    double lng = 0;
+    for (final p in pts) {
+      lat += p.latitude;
+      lng += p.longitude;
+    }
+    return LatLng(lat / pts.length, lng / pts.length);
   }
 
   /// Active breadcrumbs, in-progress enclosure path, and AI route polyline layer

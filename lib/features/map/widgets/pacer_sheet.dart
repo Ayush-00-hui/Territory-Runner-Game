@@ -13,6 +13,7 @@ class VirtualPacerSheet extends StatelessWidget {
   final VoidCallback onSimulateRivalCut;
   final VoidCallback onSimulateAnomaly;
   final VoidCallback onSimulateCoachDebrief;
+  final VoidCallback onSimulateDecayAndAttack;
 
   const VirtualPacerSheet({
     super.key,
@@ -21,6 +22,7 @@ class VirtualPacerSheet extends StatelessWidget {
     required this.onSimulateRivalCut,
     required this.onSimulateAnomaly,
     required this.onSimulateCoachDebrief,
+    required this.onSimulateDecayAndAttack,
   });
 
   static Future<void> show({
@@ -30,6 +32,7 @@ class VirtualPacerSheet extends StatelessWidget {
     required VoidCallback onSimulateRivalCut,
     required VoidCallback onSimulateAnomaly,
     required VoidCallback onSimulateCoachDebrief,
+    required VoidCallback onSimulateDecayAndAttack,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -44,6 +47,7 @@ class VirtualPacerSheet extends StatelessWidget {
         onSimulateRivalCut: onSimulateRivalCut,
         onSimulateAnomaly: onSimulateAnomaly,
         onSimulateCoachDebrief: onSimulateCoachDebrief,
+        onSimulateDecayAndAttack: onSimulateDecayAndAttack,
       ),
     );
   }
@@ -129,6 +133,7 @@ class VirtualPacerSheet extends StatelessWidget {
                 onSimulateRivalCut: onSimulateRivalCut,
                 onSimulateAnomaly: onSimulateAnomaly,
                 onSimulateCoachDebrief: onSimulateCoachDebrief,
+                onSimulateDecayAndAttack: onSimulateDecayAndAttack,
               ),
             ],
           ),

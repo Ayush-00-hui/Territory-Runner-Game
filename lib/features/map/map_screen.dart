@@ -18,6 +18,8 @@ import '../../services/api_client.dart';
 import '../../services/websocket_service.dart';
 import '../../models/ws_events.dart';
 import '../../main.dart'; // For showRunStartAnimation
+import '../../models/territory.dart';
+import '../../services/firebase_service.dart';
 import 'widgets/mode_tabs.dart';
 import 'widgets/run_hud.dart';
 import 'widgets/map_layers.dart';
@@ -44,6 +46,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
   final ApiClient _apiClient = ApiClient();
   final WebSocketService _wsService = WebSocketService();
+  final FirebaseService _firebaseService = FirebaseService();
   Timer? _rivalPollingTimer;
 
   // Real-time WebSocket presence and alert state
@@ -67,6 +70,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   // Real-time Client Preview Accumulation across all loops in run
   double _accumulatedRunPreviewArea = 0.0;
   int _accumulatedRunPreviewXp = 0;
+
+  // Territory Defense & Fortification State
+  String? _highlightedTerritoryId;
 
   // Strava-grade Telemetry Engine & Auto-Pause State
   final List<Position> _recentPositions = [];
@@ -144,7 +150,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'TERRITORY INTRUSION DETECTED',
+                      'TERRITORY UNDER ATTACK!',
                       style: TextStyle(
                         color: Color(0xFFFF3366),
                         fontWeight: FontWeight.w900,
@@ -162,7 +168,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               ),
             ],
           ),
-          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'DEFEND',
+            textColor: const Color(0xFFFF3366),
+            onPressed: _defendWeakestTerritory,
+          ),
+          duration: const Duration(seconds: 8),
         ),
       );
       _fetchVisibleRivals();
@@ -601,9 +612,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       final double finalDistance = _runDistanceKm;
       final int finalTerritories = _territoriesClaimedThisRun;
 
+      _territoryService.defendTerritory(_firebaseService.currentUserId);
       setState(() {
         _isRunActive = false;
         _isAutoPaused = false;
+        _highlightedTerritoryId = null;
       });
 
       _voiceCoach.announceRunComplete(finalDistance, finalTerritories);
@@ -900,7 +913,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       ),
                       children: [
                         MapLayers.buildTileLayer(),
-                        MapLayers.buildPolygonLayer(territories),
+                        MapLayers.buildPolygonLayer(
+                          territories,
+                          highlightedTerritoryId: _highlightedTerritoryId,
+                        ),
+                        MapLayers.buildTerritoryBadgesLayer(territories),
                         MapLayers.buildPolylineLayer(
                           isRunActive: _isRunActive,
                           runCoordinates: _runCoordinates,
@@ -1010,6 +1027,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         coachService: _coachService,
                       );
                     },
+                    onSimulateDecayAndAttack: _simulateDecayAndAttack,
                   );
                 },
                 child: Container(
@@ -1105,6 +1123,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             coachService: _coachService,
                           );
                         },
+                        onSimulateDecayAndAttack: _simulateDecayAndAttack,
                       );
                     },
                   ),
@@ -1133,6 +1152,49 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 ],
               ),
             ),
+
+            // Floating Defend CTA for Weak Territories
+            if (!_isRunActive &&
+                territories.any((t) =>
+                    t.ownerId == _firebaseService.currentUserId && t.isWeak()))
+              Positioned(
+                bottom: pad.bottom + 175,
+                right: 20,
+                child: GestureDetector(
+                  onTap: _defendWeakestTerritory,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.95),
+                      borderRadius: AppSpacing.br16,
+                      border: Border.all(color: AppColors.rival, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.rival.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.shield_outlined, color: AppColors.rival, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'DEFEND',
+                          style: TextStyle(
+                            color: AppColors.rival,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             // 5. Strava-Grade Live Telemetry HUD Obsidian Glass Card
             Positioned(
@@ -1198,5 +1260,110 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         child: Icon(icon, color: color, size: 20),
       ),
     );
+  }
+
+  void _defendWeakestTerritory() {
+    final myId = _firebaseService.currentUserId;
+    final box = Hive.isBoxOpen('territories_v3') ? Hive.box<Territory>('territories_v3') : null;
+    final all = box?.values.whereType<Territory>().toList() ?? [];
+    final myTerritories = all.where((t) => t.ownerId == myId).toList();
+
+    Territory? weakest;
+    double minStrength = 101.0;
+    for (final t in myTerritories) {
+      final s = t.computeCurrentStrength();
+      if (s < minStrength) {
+        minStrength = s;
+        weakest = t;
+      }
+    }
+
+    if (weakest != null) {
+      setState(() {
+        _highlightedTerritoryId = weakest!.id;
+      });
+
+      if (weakest.polygon.isNotEmpty) {
+        final centroid = MapLayers.computeCentroid(weakest.polygon);
+        _mapController.move(centroid, 17.0);
+      }
+
+      if (!_isRunActive) {
+        _toggleRun();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          content: Text(
+            '🛡️ DEFENSE ENGAGED: Run through your territory to restore 100% strength (${minStrength.round()}% active)',
+            style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _simulateDecayAndAttack() async {
+    final myId = _firebaseService.currentUserId;
+    final decayed = await _territoryService.simulateDecay(myId, targetStrength: 20.0, daysAgo: 5);
+    if (decayed != null && mounted) {
+      setState(() {
+        _highlightedTerritoryId = decayed.id;
+      });
+      if (decayed.polygon.isNotEmpty) {
+        final centroid = MapLayers.computeCentroid(decayed.polygon);
+        _mapController.move(centroid, 17.0);
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF1E1015),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFFF3366), width: 1.5),
+          ),
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 28),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'TERRITORY UNDER ATTACK!',
+                      style: TextStyle(
+                        color: Color(0xFFFF3366),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      '⚠️ Rival ShadowRunner captured 3,500 m²! Defenses compromised (20% strength).',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'DEFEND',
+            textColor: const Color(0xFFFF3366),
+            onPressed: _defendWeakestTerritory,
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    }
   }
 }

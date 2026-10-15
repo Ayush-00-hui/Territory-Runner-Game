@@ -10,6 +10,7 @@ class DemoControlsLab extends StatelessWidget {
   final VoidCallback onSimulateRivalCut;
   final VoidCallback onSimulateAnomaly;
   final VoidCallback onSimulateCoachDebrief;
+  final VoidCallback onSimulateDecayAndAttack;
 
   const DemoControlsLab({
     super.key,
@@ -17,6 +18,7 @@ class DemoControlsLab extends StatelessWidget {
     required this.onSimulateRivalCut,
     required this.onSimulateAnomaly,
     required this.onSimulateCoachDebrief,
+    required this.onSimulateDecayAndAttack,
   });
 
   @override
@@ -66,6 +68,14 @@ class DemoControlsLab extends StatelessWidget {
           icon: Icons.psychology_rounded,
           color: const Color(0xFF9C27B0),
           onTap: onSimulateCoachDebrief,
+        ),
+        _buildDemoActionTile(
+          context: context,
+          title: '🛡️ Simulate Decay & Under Attack Alert',
+          subtitle: 'Degrades territory to 20% strength & dispatches targeted attack alert',
+          icon: Icons.security_update_warning_rounded,
+          color: const Color(0xFFFF5252),
+          onTap: onSimulateDecayAndAttack,
         ),
       ],
     );
