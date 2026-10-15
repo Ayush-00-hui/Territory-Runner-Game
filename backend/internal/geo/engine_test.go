@@ -178,3 +178,86 @@ func TestGoldenHugeLoopRejected(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, geo.ErrLoopAreaTooLarge)
 }
+
+func TestGoldenLassoLoop(t *testing.T) {
+	fixture := loadFixture(t, "golden_lasso_loop.json")
+	require.True(t, fixture.IsValid)
+
+	engine := geo.NewEngine()
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, loops, 1)
+
+	expected := fixture.ExpectedAreaSqM
+	delta := math.Abs(loops[0].AreaSqMeters - expected)
+	diffPercent := (delta / expected) * 100.0
+	assert.LessOrEqual(t, diffPercent, fixture.AreaTolerancePercent,
+		"Lasso area (%.2f m²) must match expected (%.2f m²) within %.2f%% tolerance (actual diff: %.3f%%)",
+		loops[0].AreaSqMeters, expected, fixture.AreaTolerancePercent, diffPercent)
+}
+
+func TestGoldenLoopWithCrossing(t *testing.T) {
+	fixture := loadFixture(t, "golden_loop_with_crossing.json")
+	require.True(t, fixture.IsValid)
+
+	engine := geo.NewEngine()
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, loops, 1, "Must retain 1 valid loop despite crossing")
+
+	expected := fixture.ExpectedAreaSqM
+	delta := math.Abs(loops[0].AreaSqMeters - expected)
+	diffPercent := (delta / expected) * 100.0
+	assert.LessOrEqual(t, diffPercent, fixture.AreaTolerancePercent,
+		"Loop area (%.2f m²) must match expected (%.2f m²) within %.2f%% tolerance",
+		loops[0].AreaSqMeters, expected, fixture.AreaTolerancePercent)
+}
+
+func TestGoldenTwoLoops(t *testing.T) {
+	fixture := loadFixture(t, "golden_two_loops.json")
+	require.True(t, fixture.IsValid)
+
+	engine := geo.NewEngine()
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, loops, 2, "Must detect both valid loops in track sequence")
+
+	totalArea := 0.0
+	for _, l := range loops {
+		totalArea += l.AreaSqMeters
+	}
+
+	expected := fixture.ExpectedAreaSqM
+	delta := math.Abs(totalArea - expected)
+	diffPercent := (delta / expected) * 100.0
+	assert.LessOrEqual(t, diffPercent, fixture.AreaTolerancePercent,
+		"Total 2-loop area (%.2f m²) must match expected (%.2f m²) within %.2f%% tolerance",
+		totalArea, expected, fixture.AreaTolerancePercent)
+}
