@@ -146,58 +146,169 @@ class PolygonEnclosureEngine {
     final currentIndex = _path.length - 1;
     final currentPos = _path[currentIndex];
 
-    // Check backwards from the earliest points to find closure
+    // --- 1. LASSO CLOSURE CHECK ---
+    // If newest path segment properly crosses an earlier segment (not adjacent),
+    // close the loop at the intersection point:
+    // polygon = [intersection point, path vertices after crossed segment ... current vertex, intersection point]
+    if (_path.length >= 4) {
+      final pLast1 = _path[currentIndex - 1];
+      final pLast2 = currentPos;
+
+      EnclosedLoopEvent? bestLassoEvent;
+      int? bestLassoJ;
+      LatLng? bestLassoIntersection;
+      double maxLassoArea = -1.0;
+
+      for (int j = 0; j <= currentIndex - 3; j++) {
+        final pEarly1 = _path[j];
+        final pEarly2 = _path[j + 1];
+
+        if (doSegmentsIntersect(pEarly1, pEarly2, pLast1, pLast2)) {
+          final intersection = computeIntersectionPoint(pEarly1, pEarly2, pLast1, pLast2);
+          if (intersection != null) {
+            final lassoPoints = <LatLng>[intersection];
+            for (int k = j + 1; k < currentIndex; k++) {
+              lassoPoints.add(_path[k]);
+            }
+            lassoPoints.add(intersection);
+
+            final loopLength = _calculatePathDistance(lassoPoints);
+            if (loopLength >= minLoopDistanceMeters && !hasSelfIntersection(lassoPoints)) {
+              final areaSqM = computeGeodesicShoelaceArea(lassoPoints);
+              if (areaSqM <= maxLoopAreaSqMeters && areaSqM > maxLassoArea) {
+                maxLassoArea = areaSqM;
+                bestLassoJ = j;
+                bestLassoIntersection = intersection;
+                bestLassoEvent = EnclosedLoopEvent(
+                  polygon: lassoPoints,
+                  areaSqMeters: areaSqM,
+                  areaSqKm: areaSqM / 1000000.0,
+                  loopDistanceMeters: loopLength,
+                  closedAt: now,
+                );
+              }
+            }
+          }
+        }
+      }
+
+      if (bestLassoEvent != null && bestLassoJ != null && bestLassoIntersection != null) {
+        debugPrint(
+          '[PolygonEnclosureEngine] 🪢 Lasso loop closed at intersection! Points: ${bestLassoEvent.polygon.length}, Perimeter: ${bestLassoEvent.loopDistanceMeters.toStringAsFixed(1)}m, Area: ${bestLassoEvent.areaSqMeters.toStringAsFixed(1)}m²',
+        );
+
+        // Keep the tail before the crossing as the remaining path
+        final newPath = <LatLng>[];
+        final newTimestamps = <DateTime>[];
+        for (int k = 0; k <= bestLassoJ; k++) {
+          newPath.add(_path[k]);
+          newTimestamps.add(_timestamps[k]);
+        }
+        newPath.add(bestLassoIntersection);
+        final dTotal = haversineDistanceMeters(_path[bestLassoJ], _path[bestLassoJ + 1]);
+        final dPart = haversineDistanceMeters(_path[bestLassoJ], bestLassoIntersection);
+        final fraction = dTotal > 1e-6 ? (dPart / dTotal).clamp(0.0, 1.0) : 0.0;
+        final tEarly1 = _timestamps[bestLassoJ];
+        final tEarly2 = _timestamps[bestLassoJ + 1];
+        final intMillis = tEarly1.millisecondsSinceEpoch +
+            ((tEarly2.millisecondsSinceEpoch - tEarly1.millisecondsSinceEpoch) * fraction).round();
+        newTimestamps.add(DateTime.fromMillisecondsSinceEpoch(intMillis));
+
+        _path.clear();
+        _timestamps.clear();
+        _path.addAll(newPath);
+        _timestamps.addAll(newTimestamps);
+
+        return bestLassoEvent;
+      }
+    }
+
+    // --- 2. PROXIMITY CLOSURE CHECK ---
+    // Try ALL candidate start indices, accept the best valid loop
+    EnclosedLoopEvent? bestProximityEvent;
+    double maxProximityArea = -1.0;
+    String? candidateFailureReason;
+
     for (int i = 0; i <= currentIndex - minPointsRequired; i++) {
       final candidatePoint = _path[i];
       final distance = haversineDistanceMeters(currentPos, candidatePoint);
 
       if (distance <= minClosureDistanceMeters) {
-        // Calculate the sub-path forming this loop
-        final loopPoints = _path.sublist(i, currentIndex + 1);
+        final loopPoints = List<LatLng>.from(_path.sublist(i, currentIndex + 1));
         final loopLength = _calculatePathDistance(loopPoints);
 
-        if (loopLength >= minLoopDistanceMeters) {
-          // Self-intersection validation: check if loop crossed itself
-          if (hasSelfIntersection(loopPoints)) {
-            _lastInvalidReason = 'Loop crossed itself — try again';
-            debugPrint('[PolygonEnclosureEngine] ❌ Loop enclosure rejected: $_lastInvalidReason');
-            return null;
-          }
+        if (loopLength < minLoopDistanceMeters) {
+          candidateFailureReason ??= 'Loop perimeter below minimum threshold (40.0m)';
+          continue;
+        }
 
-          final areaSqM = computeGeodesicShoelaceArea(loopPoints);
-          final areaSqKm = areaSqM / 1000000.0;
+        if (hasSelfIntersection(loopPoints)) {
+          candidateFailureReason = 'Loop crossed itself — try again';
+          continue;
+        }
 
-          // Reject impossible single-loop areas (GPS glitch / spoofing), same as the Go server.
-          if (areaSqM > maxLoopAreaSqMeters) {
-            _lastInvalidReason = loopTooLargeReason;
-            debugPrint('[PolygonEnclosureEngine] ❌ Loop enclosure rejected: $_lastInvalidReason');
-            continue;
-          }
+        final areaSqM = computeGeodesicShoelaceArea(loopPoints);
+        if (areaSqM > maxLoopAreaSqMeters) {
+          candidateFailureReason = loopTooLargeReason;
+          continue;
+        }
 
-          // Valid enclosed loop detected
-          final event = EnclosedLoopEvent(
-            polygon: List<LatLng>.from(loopPoints),
+        if (areaSqM > maxProximityArea) {
+          maxProximityArea = areaSqM;
+          bestProximityEvent = EnclosedLoopEvent(
+            polygon: loopPoints,
             areaSqMeters: areaSqM,
-            areaSqKm: areaSqKm,
+            areaSqKm: areaSqM / 1000000.0,
             loopDistanceMeters: loopLength,
             closedAt: now,
           );
-
-          debugPrint(
-            '[PolygonEnclosureEngine] 🏁 Closed loop detected! Points: ${loopPoints.length}, Perimeter: ${loopLength.toStringAsFixed(1)}m, Area: ${areaSqM.toStringAsFixed(1)}m² (${areaSqKm.toStringAsFixed(4)} km²)',
-          );
-
-          // Retain current position as origin for next loop
-          _path.clear();
-          _timestamps.clear();
-          _path.add(position);
-          _timestamps.add(now);
-
-          return event;
         }
       }
     }
 
+    if (bestProximityEvent != null) {
+      debugPrint(
+        '[PolygonEnclosureEngine] 🏁 Closed loop detected! Points: ${bestProximityEvent.polygon.length}, Perimeter: ${bestProximityEvent.loopDistanceMeters.toStringAsFixed(1)}m, Area: ${bestProximityEvent.areaSqMeters.toStringAsFixed(1)}m²',
+      );
+
+      _path.clear();
+      _timestamps.clear();
+      _path.add(position);
+      _timestamps.add(now);
+
+      return bestProximityEvent;
+    }
+
+    if (candidateFailureReason != null) {
+      _lastInvalidReason = candidateFailureReason;
+    }
+
+    return null;
+  }
+
+  /// Computes the exact 2D planar intersection point of segments (p1->p2) and (p3->p4).
+  /// Returns null if the segments are parallel or do not properly intersect.
+  static LatLng? computeIntersectionPoint(LatLng p1, LatLng p2, LatLng p3, LatLng p4) {
+    final x1 = p1.longitude;
+    final y1 = p1.latitude;
+    final x2 = p2.longitude;
+    final y2 = p2.latitude;
+    final x3 = p3.longitude;
+    final y3 = p3.latitude;
+    final x4 = p4.longitude;
+    final y4 = p4.latitude;
+
+    final denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    if (denom.abs() < 1e-12) return null;
+
+    final t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom;
+    final u = ((x1 - x3) * (y1 - y2) - (y1 - y3) * (x1 - x2)) / denom;
+
+    if (t > 1e-9 && t < 1.0 - 1e-9 && u > 1e-9 && u < 1.0 - 1e-9) {
+      final intLng = x1 + t * (x2 - x1);
+      final intLat = y1 + t * (y2 - y1);
+      return LatLng(intLat, intLng);
+    }
     return null;
   }
 
