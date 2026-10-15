@@ -162,7 +162,7 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	ctx context.Context,
 	run *Run,
-	loop *geo.EnclosedLoop,
+	loops []geo.EnclosedLoop,
 	rawTrack []geo.TrackPoint,
 ) (*CaptureResult, error) {
 	tx, err := s.pool.Begin(ctx)
@@ -220,8 +220,11 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	var xpAwarded int
 	var rivalsAffected []string
 
-	// 3. Process spatial loop capture if loop was closed
-	if loop != nil && len(loop.Polygon) >= 3 {
+	// 3. Process spatial loop capture for all closed loops
+	for _, loop := range loops {
+		if len(loop.Polygon) < 3 {
+			continue
+		}
 		polyWKT := polygonToWKT(loop.Polygon)
 		territoryID := fmt.Sprintf("poly_%s_territory", run.UserID)
 
@@ -263,6 +266,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		}
 		rows.Close()
 
+		areaClaimed += loop.AreaSqMeters
+	}
+
+	if len(loops) > 0 {
 		// Clean up overtaken rival territories
 		cleanupQuery := `
 			DELETE FROM territories
@@ -273,7 +280,6 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 			return nil, fmt.Errorf("failed to clean empty rival territories: %w", err)
 		}
 
-		areaClaimed = loop.AreaSqMeters
 		xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
 	}
 
@@ -319,7 +325,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		Status:             run.Status,
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,
-		LoopDetected:       loop != nil,
+		LoopDetected:       len(loops) > 0,
 		AreaClaimedSqm:     areaClaimed,
 		XpAwarded:          xpAwarded,
 		PlayerTotalAreaSqm: playerTotalArea,

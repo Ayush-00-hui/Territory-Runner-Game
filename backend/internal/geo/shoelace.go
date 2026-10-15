@@ -7,10 +7,10 @@ type point2D struct {
 	y float64
 }
 
-// ComputeGeodesicShoelaceArea calculates the exact surface area of an arbitrary geographic polygon
+// ComputeSignedGeodesicShoelaceArea calculates the signed surface area of an arbitrary geographic polygon
 // in square meters using the Geodesic Shoelace Formula on a local equirectangular tangent plane.
-// This reproduces the exact mathematical behavior of Dart's PolygonEnclosureEngine.computeGeodesicShoelaceArea.
-func ComputeGeodesicShoelaceArea(polygon []LatLng) float64 {
+// Retains orientation sign to correctly subtract holes in union results.
+func ComputeSignedGeodesicShoelaceArea(polygon []LatLng) float64 {
 	n := len(polygon)
 	if n < 3 {
 		return 0.0
@@ -44,5 +44,10 @@ func ComputeGeodesicShoelaceArea(polygon []LatLng) float64 {
 		area -= (metricPoints[j].x * metricPoints[i].y)
 	}
 
-	return math.Abs(area) / 2.0
+	return area / 2.0
+}
+
+// ComputeGeodesicShoelaceArea calculates the absolute surface area in square meters.
+func ComputeGeodesicShoelaceArea(polygon []LatLng) float64 {
+	return math.Abs(ComputeSignedGeodesicShoelaceArea(polygon))
 }

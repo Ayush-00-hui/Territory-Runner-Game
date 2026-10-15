@@ -186,11 +186,6 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		a.logger.Warn("loop extraction warning", "error", err)
 	}
 
-	var primaryLoop *geo.EnclosedLoop
-	if len(loops) > 0 {
-		primaryLoop = &loops[0]
-	}
-
 	runID := "run_" + uuid.New().String()
 	runRecord := &store.Run{
 		ID:              runID,
@@ -206,7 +201,7 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		runRecord.Status = "flagged_review"
 	}
 
-	result, err := a.store.CaptureRunAndMutateTerritories(r.Context(), runRecord, primaryLoop, req.Points)
+	result, err := a.store.CaptureRunAndMutateTerritories(r.Context(), runRecord, loops, req.Points)
 	if err != nil {
 		a.logger.Error("failed to capture run and mutate territories", "error", err)
 		writeError(w, http.StatusInternalServerError, "TRANSACTION_FAILED", "Failed to persist territory capture")

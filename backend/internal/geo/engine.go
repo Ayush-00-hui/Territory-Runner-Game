@@ -42,9 +42,10 @@ func DefaultConfig() Config {
 
 // Engine implements server-side GPS breadcrumb tracking and sovereign loop enclosure.
 type Engine struct {
-	cfg        Config
-	path       []LatLng
-	timestamps []time.Time
+	cfg            Config
+	path           []LatLng
+	timestamps     []time.Time
+	lastInvalidErr error
 }
 
 // NewEngine creates an enclosure engine with the provided or default configuration.
@@ -64,6 +65,12 @@ func NewEngine(cfg ...Config) *Engine {
 func (e *Engine) Clear() {
 	e.path = e.path[:0]
 	e.timestamps = e.timestamps[:0]
+	e.lastInvalidErr = nil
+}
+
+// LastInvalidError returns the most recent rejection error.
+func (e *Engine) LastInvalidError() error {
+	return e.lastInvalidErr
 }
 
 // AddPoint ingests a new breadcrumb, performs noise/jitter filtering, and checks for loop closure.
@@ -105,7 +112,77 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 	currentIndex := len(e.path) - 1
 	currentPos := e.path[currentIndex]
 
-	// Scan backwards from the earliest points to find closure
+	// --- 1. LASSO CLOSURE CHECK ---
+	// If the newest segment properly crosses an earlier segment (not adjacent),
+	// close the loop at the intersection point:
+	// polygon = [intersection point, path vertices after crossed segment ... current vertex, intersection point]
+	if len(e.path) >= 4 {
+		pLast1 := e.path[currentIndex-1]
+		pLast2 := currentPos
+
+		var bestLassoLoop *EnclosedLoop
+		var bestLassoJ int
+		var bestLassoIntersection *LatLng
+		maxLassoArea := -1.0
+
+		for j := 0; j <= currentIndex-3; j++ {
+			pEarly1 := e.path[j]
+			pEarly2 := e.path[j+1]
+
+			if DoSegmentsIntersect(pEarly1, pEarly2, pLast1, pLast2) {
+				intersection, _, ok := ComputeIntersectionPoint(pEarly1, pEarly2, pLast1, pLast2)
+				if ok && intersection != nil {
+					lassoPoints := make([]LatLng, 0, (currentIndex-j)+1)
+					lassoPoints = append(lassoPoints, *intersection)
+					lassoPoints = append(lassoPoints, e.path[j+1:currentIndex]...)
+					lassoPoints = append(lassoPoints, *intersection)
+
+					loop, err := e.ValidateLoop(lassoPoints, now)
+					if err == nil && loop != nil {
+						if loop.AreaSqMeters > maxLassoArea {
+							maxLassoArea = loop.AreaSqMeters
+							bestLassoLoop = loop
+							bestLassoJ = j
+							bestLassoIntersection = intersection
+						}
+					}
+				}
+			}
+		}
+
+		if bestLassoLoop != nil && bestLassoIntersection != nil {
+			// Keep the tail before the crossing as the remaining path
+			newPath := make([]LatLng, 0, bestLassoJ+2)
+			newTimestamps := make([]time.Time, 0, bestLassoJ+2)
+			for k := 0; k <= bestLassoJ; k++ {
+				newPath = append(newPath, e.path[k])
+				newTimestamps = append(newTimestamps, e.timestamps[k])
+			}
+			newPath = append(newPath, *bestLassoIntersection)
+
+			tEarly1 := e.timestamps[bestLassoJ]
+			tEarly2 := e.timestamps[bestLassoJ+1]
+			dTotal := HaversineDistanceMeters(e.path[bestLassoJ], e.path[bestLassoJ+1])
+			dPart := HaversineDistanceMeters(e.path[bestLassoJ], *bestLassoIntersection)
+			fraction := 0.0
+			if dTotal > 1e-6 {
+				fraction = math.Max(0.0, math.Min(1.0, dPart/dTotal))
+			}
+			durNano := float64(tEarly2.Sub(tEarly1).Nanoseconds()) * fraction
+			newTimestamps = append(newTimestamps, tEarly1.Add(time.Duration(durNano)))
+
+			e.path = newPath
+			e.timestamps = newTimestamps
+			return bestLassoLoop, nil
+		}
+	}
+
+	// --- 2. PROXIMITY CLOSURE CHECK ---
+	// Scan backwards from earliest points, test ALL candidates, accept best valid loop
+	var bestProximityLoop *EnclosedLoop
+	maxProximityArea := -1.0
+	var candidateErr error
+
 	for i := 0; i <= currentIndex-e.cfg.MinPointsRequired; i++ {
 		candidatePoint := e.path[i]
 		dist := HaversineDistanceMeters(currentPos, candidatePoint)
@@ -114,17 +191,28 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 			loopPoints := append([]LatLng(nil), e.path[i:currentIndex+1]...)
 			loop, err := e.ValidateLoop(loopPoints, now)
 			if err != nil {
-				if errors.Is(err, ErrLoopSelfIntersecting) {
-					return nil, err
-				}
+				candidateErr = err
 				continue
 			}
 
-			// Retain current position as origin for next loop
-			e.path = []LatLng{pos}
-			e.timestamps = []time.Time{now}
+			if loop.AreaSqMeters > maxProximityArea {
+				maxProximityArea = loop.AreaSqMeters
+				bestProximityLoop = loop
+			}
+		}
+	}
 
-			return loop, nil
+	if bestProximityLoop != nil {
+		// Retain current position as origin for next loop
+		e.path = []LatLng{pos}
+		e.timestamps = []time.Time{now}
+		return bestProximityLoop, nil
+	}
+
+	if candidateErr != nil {
+		e.lastInvalidErr = candidateErr
+		if errors.Is(candidateErr, ErrLoopSelfIntersecting) || errors.Is(candidateErr, ErrLoopAreaTooLarge) {
+			return nil, candidateErr
 		}
 	}
 
@@ -132,6 +220,7 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 }
 
 // ProcessTrack processes an entire GPS sequence and extracts all valid enclosed loops.
+// It does NOT abort on a self-intersection; a run is rejected only if it contains zero valid loops.
 func (e *Engine) ProcessTrack(points []TrackPoint) ([]EnclosedLoop, error) {
 	e.Clear()
 	var loops []EnclosedLoop
@@ -139,11 +228,15 @@ func (e *Engine) ProcessTrack(points []TrackPoint) ([]EnclosedLoop, error) {
 	for _, pt := range points {
 		loop, err := e.AddPoint(pt)
 		if err != nil {
-			return nil, err
+			e.lastInvalidErr = err
 		}
 		if loop != nil {
 			loops = append(loops, *loop)
 		}
+	}
+
+	if len(loops) == 0 && e.lastInvalidErr != nil {
+		return nil, e.lastInvalidErr
 	}
 
 	return loops, nil
