@@ -397,17 +397,39 @@ class SyncQueueService {
 
         if (coordinates != null && coordinates.isNotEmpty) {
           final List<List<LatLng>> multiPolys = [];
-          for (final poly in coordinates) {
-            if (poly is List && poly.isNotEmpty) {
-              final ring = poly.first as List<dynamic>;
-              final ringPoints = <LatLng>[];
-              for (final pt in ring) {
-                if (pt is List && pt.length >= 2) {
-                  ringPoints.add(LatLng((pt[1] as num).toDouble(), (pt[0] as num).toDouble()));
+          final geomType = geom['type'] as String?;
+
+          if (geomType == 'MultiPolygon') {
+            for (final poly in coordinates) {
+              if (poly is List) {
+                for (final ring in poly) {
+                  if (ring is List) {
+                    final ringPoints = <LatLng>[];
+                    for (final pt in ring) {
+                      if (pt is List && pt.length >= 2) {
+                        ringPoints.add(LatLng((pt[1] as num).toDouble(), (pt[0] as num).toDouble()));
+                      }
+                    }
+                    if (ringPoints.isNotEmpty) {
+                      multiPolys.add(ringPoints);
+                    }
+                  }
                 }
               }
-              if (ringPoints.isNotEmpty) {
-                multiPolys.add(ringPoints);
+            }
+          } else {
+            // Standard Polygon with coordinates as list of linear rings (outer + holes)
+            for (final ring in coordinates) {
+              if (ring is List) {
+                final ringPoints = <LatLng>[];
+                for (final pt in ring) {
+                  if (pt is List && pt.length >= 2) {
+                    ringPoints.add(LatLng((pt[1] as num).toDouble(), (pt[0] as num).toDouble()));
+                  }
+                }
+                if (ringPoints.isNotEmpty) {
+                  multiPolys.add(ringPoints);
+                }
               }
             }
           }

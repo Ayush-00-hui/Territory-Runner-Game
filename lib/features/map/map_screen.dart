@@ -27,6 +27,7 @@ import 'widgets/pacer_sheet.dart';
 import 'widgets/summary_sheet.dart';
 import 'widgets/leaderboard_sheet.dart';
 import 'widgets/loop_celebration_overlay.dart';
+import 'widgets/claim_planner_sheet.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -617,6 +618,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _isRunActive = false;
         _isAutoPaused = false;
         _highlightedTerritoryId = null;
+        _activeSuggestedRoute = null;
       });
 
       _voiceCoach.announceRunComplete(finalDistance, finalTerritories);
@@ -645,6 +647,73 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
+  void _openClaimPlanner() {
+    final location = _currentLocation ?? const LatLng(37.7749, -122.4194);
+    ClaimPlannerSheet.show(
+      context: context,
+      currentLocation: location,
+      routeService: _routeService,
+      initialTargetAreaSqM: 5000.0,
+      onRouteGenerated: (route) {
+        setState(() {
+          _activeSuggestedRoute = route;
+        });
+        if (route.polyline.length >= 2) {
+          try {
+            _mapController.fitCamera(
+              CameraFit.coordinates(
+                coordinates: route.polyline,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+              ),
+            );
+          } catch (_) {}
+        }
+      },
+      onStartRun: (route) {
+        _startRunWithSuggestedRoute(route);
+      },
+    );
+  }
+
+  void _startRunWithSuggestedRoute(SuggestedRoute route) {
+    setState(() {
+      _activeSuggestedRoute = route;
+      _selectedModeTab = 0; // Switch to Run mode tab
+    });
+
+    if (!_isRunActive) {
+      _toggleRun();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surface,
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppColors.secondary, width: 1.2),
+        ),
+        content: Row(
+          children: [
+            const Icon(Icons.navigation_rounded, color: AppColors.secondary, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Active Guidance: Follow the Solar Orange path (${route.totalDistanceKm.toStringAsFixed(2)} km, ~${route.estimatedNewTerritoryAreaSqM.toStringAsFixed(0)} m² new land)',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _suggestAiRoute() async {
     if (_currentLocation == null) return;
 
@@ -659,6 +728,17 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     setState(() {
       _activeSuggestedRoute = route;
     });
+
+    if (route.polyline.length >= 2) {
+      try {
+        _mapController.fitCamera(
+          CameraFit.coordinates(
+            coordinates: route.polyline,
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+          ),
+        );
+      } catch (_) {}
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -991,7 +1071,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     selectedIndex: _selectedModeTab,
                     onTabSelected: (index) {
                       setState(() => _selectedModeTab = index);
-                      if (index == 2) {
+                      if (index == 1) {
+                        _openClaimPlanner();
+                      } else if (index == 2) {
                         LeaderboardSheet.show(
                           context: context,
                           apiClient: _apiClient,

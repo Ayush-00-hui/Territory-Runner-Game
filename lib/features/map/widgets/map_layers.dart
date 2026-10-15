@@ -6,6 +6,7 @@ import '../../../core/utils/constants.dart';
 import '../../../models/territory.dart';
 import '../../../models/ws_events.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../../gameplay/polygon_enclosure_engine.dart';
 
 /// Performance-optimized Map Layers component wrapped in a RepaintBoundary.
 class MapLayers {
@@ -57,21 +58,122 @@ class MapLayers {
           ? AppColors.gold.withValues(alpha: 0.35)
           : territory.color.withValues(alpha: (0.25 * (currentStrength / 100.0)).clamp(0.12, 0.30));
 
-      for (final poly in territory.polygons) {
-        if (poly.length >= 3) {
-          polygons.add(
-            Polygon(
-              points: poly,
-              color: fillColor,
-              borderColor: borderColor,
-              borderStrokeWidth: strokeWidth,
-            ),
-          );
-        }
+      final shells = classifyRings(territory.polygons);
+      for (final shell in shells) {
+        polygons.add(
+          Polygon(
+            points: shell.outer,
+            holePointsList: shell.holes.isNotEmpty ? shell.holes : null,
+            color: fillColor,
+            borderColor: borderColor,
+            borderStrokeWidth: strokeWidth,
+          ),
+        );
       }
     }
 
     return PolygonLayer(polygons: polygons);
+  }
+
+  /// Ray-casting point-in-polygon containment test.
+  /// Determines if [point] lies strictly inside [polygon].
+  static bool isPointInPolygon(LatLng point, List<LatLng> polygon) {
+    if (polygon.length < 3) return false;
+    bool inside = false;
+    final double x = point.longitude;
+    final double y = point.latitude;
+    final int n = polygon.length;
+    for (int i = 0, j = n - 1; i < n; j = i++) {
+      final double xi = polygon[i].longitude;
+      final double yi = polygon[i].latitude;
+      final double xj = polygon[j].longitude;
+      final double yj = polygon[j].latitude;
+
+      final bool intersect = ((yi > y) != (yj > y)) &&
+          (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  /// Classifies a set of rings into outer boundaries (shells) and inner holes.
+  /// An inner hole is placed inside the smallest enclosing outer shell.
+  /// If a ring is contained inside an odd number of other rings, it is a hole.
+  /// If contained by an even number (0, 2, ...), it is an exterior boundary (shell).
+  static List<PolygonShell> classifyRings(List<List<LatLng>> rawRings) {
+    final validRings = rawRings.where((r) => r.length >= 3).toList();
+    if (validRings.isEmpty) return const [];
+    if (validRings.length == 1) {
+      return [PolygonShell(validRings.first)];
+    }
+
+    // Pre-calculate geodesic area for each ring
+    final areas = validRings
+        .map((r) => PolygonEnclosureEngine.computeGeodesicShoelaceArea(r))
+        .toList();
+
+    // Check if inner ring is enclosed by outer ring
+    bool ringIsEnclosedBy(int innerIdx, int outerIdx) {
+      if (areas[outerIdx] <= areas[innerIdx]) return false;
+      final innerRing = validRings[innerIdx];
+      final outerRing = validRings[outerIdx];
+      int insideCount = 0;
+      int testedCount = 0;
+      final int step = math.max(1, innerRing.length ~/ 4);
+      for (int i = 0; i < innerRing.length && testedCount < 4; i += step) {
+        testedCount++;
+        if (isPointInPolygon(innerRing[i], outerRing)) {
+          insideCount++;
+        }
+      }
+      return insideCount > (testedCount ~/ 2);
+    }
+
+    // For each ring, count how many other rings strictly enclose it
+    final List<int> enclosureCounts = List.filled(validRings.length, 0);
+    final List<List<int>> enclosingRings = List.generate(validRings.length, (_) => []);
+
+    for (int i = 0; i < validRings.length; i++) {
+      for (int j = 0; j < validRings.length; j++) {
+        if (i != j && ringIsEnclosedBy(i, j)) {
+          enclosureCounts[i]++;
+          enclosingRings[i].add(j);
+        }
+      }
+    }
+
+    // Even count = outer shell, Odd count = hole
+    final shells = <int, PolygonShell>{};
+    final holeIndices = <int>[];
+
+    for (int i = 0; i < validRings.length; i++) {
+      if (enclosureCounts[i] % 2 == 0) {
+        shells[i] = PolygonShell(validRings[i]);
+      } else {
+        holeIndices.add(i);
+      }
+    }
+
+    // Assign each hole to the smallest enclosing outer shell
+    for (final hIdx in holeIndices) {
+      int? bestShellIdx;
+      double smallestShellArea = double.infinity;
+
+      for (final sIdx in enclosingRings[hIdx]) {
+        if (shells.containsKey(sIdx) && areas[sIdx] < smallestShellArea) {
+          smallestShellArea = areas[sIdx];
+          bestShellIdx = sIdx;
+        }
+      }
+
+      if (bestShellIdx != null) {
+        shells[bestShellIdx]!.holes.add(validRings[hIdx]);
+      } else {
+        shells[hIdx] = PolygonShell(validRings[hIdx]);
+      }
+    }
+
+    return shells.values.toList();
   }
 
   /// Small athletic strength badges positioned at territory centroids
@@ -167,12 +269,20 @@ class MapLayers {
             color: AppColors.info,
             strokeWidth: 2.5,
           ),
-        if (suggestedRouteCoordinates != null && suggestedRouteCoordinates.length >= 2)
+        if (suggestedRouteCoordinates != null && suggestedRouteCoordinates.length >= 2) ...[
+          // Outer Luminous Solar Orange Glow
           Polyline(
             points: suggestedRouteCoordinates,
-            color: AppColors.secondary,
-            strokeWidth: 4.0,
+            color: const Color(0xFFFF6D00).withValues(alpha: 0.35),
+            strokeWidth: 8.5,
           ),
+          // Inner Crisp Athletic Solar Orange Core
+          Polyline(
+            points: suggestedRouteCoordinates,
+            color: const Color(0xFFFF6D00),
+            strokeWidth: 3.5,
+          ),
+        ],
       ],
     );
   }
@@ -267,4 +377,10 @@ class MapLayers {
 
     return MarkerLayer(markers: markers);
   }
+}
+
+class PolygonShell {
+  final List<LatLng> outer;
+  final List<List<LatLng>> holes = [];
+  PolygonShell(this.outer);
 }
