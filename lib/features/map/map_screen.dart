@@ -24,6 +24,7 @@ import 'widgets/map_layers.dart';
 import 'widgets/pacer_sheet.dart';
 import 'widgets/summary_sheet.dart';
 import 'widgets/leaderboard_sheet.dart';
+import 'widgets/loop_celebration_overlay.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -77,6 +78,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   double _currentSpeedKmh = 0.0;
   double _satelliteAccuracyMeters = 3.5;
   bool _isCameraFollowLocked = true;
+  double? _distanceToClosureMeters;
+  double? _proximityToClosure;
   final FocusNode _keyboardFocusNode = FocusNode();
 
   @override
@@ -294,9 +297,27 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (_isRunActive) {
         _runCoordinates.add(_currentLocation!);
         
+        // Loop Proximity Meter calculation
+        if (_polygonEngine.currentPath.length >= 3) {
+          final start = _polygonEngine.currentPath.first;
+          final dist = Geolocator.distanceBetween(
+            _currentLocation!.latitude,
+            _currentLocation!.longitude,
+            start.latitude,
+            start.longitude,
+          );
+          _distanceToClosureMeters = dist;
+          _proximityToClosure = (1.0 - ((dist - 35.0) / (120.0 - 35.0))).clamp(0.0, 1.0);
+        } else {
+          _distanceToClosureMeters = null;
+          _proximityToClosure = null;
+        }
+
         // 1. Arbitrary Polygon Enclosure Tracking (Automatic)
         final loopEvent = _polygonEngine.addPosition(_currentLocation!);
         if (loopEvent != null) {
+          _distanceToClosureMeters = null;
+          _proximityToClosure = null;
           _territoryService.capturePolygonTerritory(
             polygon: loopEvent.polygon,
             areaSqMeters: loopEvent.areaSqMeters,
@@ -305,18 +326,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               setState(() {
                 _territoriesClaimedThisRun++;
               });
-              HapticFeedback.heavyImpact();
-              _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: AppColors.surface,
-                  duration: const Duration(seconds: 3),
-                  content: Text(
-                    '⚡ Arbitrary Loop Enclosed! +${(loopEvent.areaSqMeters / 20).round()} XP (${loopEvent.areaSqMeters.toStringAsFixed(0)} m²)',
-                    style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
-                  ),
-                ),
+              AppMotion.heavyBurst();
+              LoopCelebrationOverlay.show(
+                context,
+                areaSqMeters: loopEvent.areaSqMeters,
+                xpAwarded: math.max(100, (loopEvent.areaSqMeters / 20).round()),
               );
+              _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
             }
           });
         } else if (_polygonEngine.lastInvalidReason != null) {
@@ -407,19 +423,16 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         if (mounted) {
           setState(() {
             _territoriesClaimedThisRun++;
+            _distanceToClosureMeters = null;
+            _proximityToClosure = null;
           });
-          HapticFeedback.heavyImpact();
-          _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: AppColors.surface,
-              duration: const Duration(seconds: 4),
-              content: Text(
-                '⚡ DOMAIN SEALED! +${math.max(100, (loopEvent.areaSqMeters / 20.0).round())} XP (${loopEvent.areaSqMeters.toStringAsFixed(0)} m²)',
-                style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
-              ),
-            ),
+          AppMotion.heavyBurst();
+          LoopCelebrationOverlay.show(
+            context,
+            areaSqMeters: loopEvent.areaSqMeters,
+            xpAwarded: math.max(100, (loopEvent.areaSqMeters / 20.0).round()),
           );
+          _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
         }
       });
     } else {
@@ -878,7 +891,74 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               ),
             ),
 
-            // 3. Floating "You own X.X km² here" Pill Overlay on Map
+            // 3. Floating Overlays: Pacer Pill (left) & Territory Claimed Pill (right)
+            Positioned(
+              left: 20,
+              bottom: pad.bottom + 175,
+              child: GestureDetector(
+                onTap: () {
+                  AppMotion.lightTick();
+                  VirtualPacerSheet.show(
+                    context: context,
+                    locationService: _locationService,
+                    onSimulateLoop: _runAutomatedLoopDemo,
+                    onSimulateRivalCut: _runRivalConflictDemo,
+                    onSimulateAnomaly: _simulateSpeedAnomaly,
+                    onSimulateCoachDebrief: () {
+                      SummarySheet.show(
+                        context: context,
+                        distanceKm: 3.52,
+                        durationSeconds: 1140,
+                        territoriesClaimed: 3,
+                        profile: _territoryService.getProfile(),
+                        coachService: _coachService,
+                      );
+                    },
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface.withValues(alpha: 0.92),
+                    borderRadius: AppSpacing.br16,
+                    border: Border.all(
+                      color: _locationService.pacerMode != VirtualPacerMode.none
+                          ? AppColors.info
+                          : AppColors.border,
+                    ),
+                    boxShadow: _locationService.pacerMode != VirtualPacerMode.none
+                        ? AppSpacing.neonGlow(AppColors.info, blur: 8)
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.directions_run_rounded,
+                        size: 16,
+                        color: _locationService.pacerMode != VirtualPacerMode.none
+                            ? AppColors.info
+                            : AppColors.textMuted,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _locationService.pacerMode != VirtualPacerMode.none
+                            ? 'PACER ${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+                            : 'PACER OFF',
+                        style: AppText.label.copyWith(
+                          color: _locationService.pacerMode != VirtualPacerMode.none
+                              ? AppColors.info
+                              : AppColors.textMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             Positioned(
               right: 20,
               bottom: pad.bottom + 175,
@@ -973,6 +1053,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 currentSpeedKmh: _currentSpeedKmh,
                 satelliteAccuracyMeters: _satelliteAccuracyMeters,
                 territoriesClaimed: _territoriesClaimedThisRun,
+                distanceToClosureMeters: _distanceToClosureMeters,
+                proximityToClosure: _proximityToClosure,
+                targetPace: _locationService.pacerMode != VirtualPacerMode.none
+                    ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+                    : null,
                 onToggleRun: _toggleRun,
                 onSealShape: _sealCurrentShape,
                 onFinishRun: () {

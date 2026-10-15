@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../ui/theme/app_colors.dart';
-import '../../../ui/theme/app_spacing.dart';
-import '../../../ui/theme/app_text.dart';
-import '../../../ui/motion/motion.dart';
+import '../../../ui/ui.dart';
+import 'hold_to_finish_button.dart';
 
 /// Strava / Nike Run Club Grade Live Telemetry HUD Obsidian Glass Card.
 /// Wrapped in a [RepaintBoundary] to isolate metric updates from map redraws.
@@ -16,6 +14,9 @@ class RunHud extends StatelessWidget {
   final double currentSpeedKmh;
   final double satelliteAccuracyMeters;
   final int territoriesClaimed;
+  final double? distanceToClosureMeters;
+  final double? proximityToClosure;
+  final String? targetPace;
   final VoidCallback onToggleRun;
   final VoidCallback onSealShape;
   final VoidCallback onFinishRun;
@@ -31,6 +32,9 @@ class RunHud extends StatelessWidget {
     required this.currentSpeedKmh,
     required this.satelliteAccuracyMeters,
     required this.territoriesClaimed,
+    this.distanceToClosureMeters,
+    this.proximityToClosure,
+    this.targetPace,
     required this.onToggleRun,
     required this.onSealShape,
     required this.onFinishRun,
@@ -48,6 +52,10 @@ class RunHud extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final double proximity = (proximityToClosure ?? 0.0).clamp(0.0, 1.0);
+    final double? closureDist = distanceToClosureMeters;
+    final bool isNearClosure = proximity >= 0.75;
+
     return RepaintBoundary(
       child: Container(
         padding: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s14, AppSpacing.s16, AppSpacing.s14),
@@ -55,10 +63,14 @@ class RunHud extends StatelessWidget {
           color: AppColors.surfaceGlass,
           borderRadius: AppSpacing.br28,
           border: Border.all(
-            color: isAutoPaused ? AppColors.warning.withValues(alpha: 0.6) : AppColors.border,
-            width: 1.2,
+            color: isAutoPaused
+                ? AppColors.warning.withValues(alpha: 0.6)
+                : (isNearClosure ? AppColors.accent : AppColors.border),
+            width: isNearClosure ? 1.6 : 1.2,
           ),
-          boxShadow: AppSpacing.hudShadow,
+          boxShadow: isNearClosure
+              ? AppSpacing.neonGlow(AppColors.accent, blur: 24, spread: 1)
+              : AppSpacing.hudShadow,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -85,6 +97,74 @@ class RunHud extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                         fontSize: 10,
                         letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Enclosure Proximity Meter (appears when actively recording a loop)
+            if (isRunActive && closureDist != null && closureDist > 0) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s6),
+                decoration: BoxDecoration(
+                  color: (isNearClosure ? AppColors.accent : AppColors.surface2).withValues(alpha: 0.18),
+                  borderRadius: AppSpacing.br12,
+                  border: Border.all(
+                    color: isNearClosure ? AppColors.accent : AppColors.border,
+                    width: 1.0,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.all_inclusive_rounded,
+                      color: isNearClosure ? AppColors.accent : AppColors.info,
+                      size: 16,
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                isNearClosure
+                                    ? 'READY TO ENCLOSE!'
+                                    : 'LOOP PROXIMITY',
+                                style: AppText.label.copyWith(
+                                  color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              Text(
+                                '${closureDist.round()}M TO ORIGIN',
+                                style: AppText.label.copyWith(
+                                  color: isNearClosure ? AppColors.accent : Colors.white70,
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          ClipRRect(
+                            borderRadius: AppSpacing.br8,
+                            child: LinearProgressIndicator(
+                              value: proximity,
+                              minHeight: 5,
+                              backgroundColor: AppColors.surface2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                isNearClosure ? AppColors.accent : AppColors.info,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -150,11 +230,33 @@ class RunHud extends StatelessWidget {
                   ],
                 ),
 
-                // Instantaneous Split Pace (Tabular Oswald)
+                // Split Pace (Tabular Oswald)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text('AVG PACE', style: AppText.label),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('AVG PACE', style: AppText.label),
+                        if (targetPace != null) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface2,
+                              borderRadius: AppSpacing.br8,
+                            ),
+                            child: Text(
+                              'P: $targetPace',
+                              style: AppText.label.copyWith(
+                                color: AppColors.info,
+                                fontSize: 8.5,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       isRunActive ? splitPace : "--'--\"",
@@ -190,7 +292,7 @@ class RunHud extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.local_fire_department_rounded, color: AppColors.secondary, size: 14),
+                      const Icon(Icons.local_fire_department_rounded, color: AppColors.rival, size: 14),
                       const SizedBox(width: AppSpacing.s4),
                       Text(
                         '+${(distanceKm * 65.0).round()} kcal',
@@ -210,7 +312,7 @@ class RunHud extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.shield_outlined, color: AppColors.accentSecondary, size: 14),
+                      const Icon(Icons.shield_outlined, color: AppColors.accent, size: 14),
                       const SizedBox(width: AppSpacing.s4),
                       Text(
                         '$territoriesClaimed territories',
@@ -224,7 +326,7 @@ class RunHud extends StatelessWidget {
 
             const SizedBox(height: AppSpacing.s14),
 
-            // Bottom Action Controls: Seal Shape | Giant Action Play/Pause | Finish
+            // Bottom Action Controls: Seal Shape | Giant Action Play/Pause | Accidental-Tap Protected Hold-To-Finish
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -242,7 +344,9 @@ class RunHud extends StatelessWidget {
                         color: const Color(0xFF8A2BE2).withValues(alpha: 0.22),
                         borderRadius: AppSpacing.br16,
                         border: Border.all(color: const Color(0xFF8A2BE2), width: 1.5),
-                        boxShadow: AppSpacing.neonGlow(const Color(0xFF8A2BE2), blur: 8),
+                        boxShadow: isNearClosure
+                            ? AppSpacing.neonGlow(const Color(0xFF8A2BE2), blur: 14)
+                            : AppSpacing.neonGlow(const Color(0xFF8A2BE2), blur: 8),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
@@ -297,48 +401,11 @@ class RunHud extends StatelessWidget {
 
                 const SizedBox(width: AppSpacing.s8),
 
-                // Right Finish Button
+                // Right Accidental-Tap Protected Hold-To-Finish Button
                 Flexible(
-                  child: GestureDetector(
-                    onTap: () {
-                      AppMotion.lightTick();
-                      onFinishRun();
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s12),
-                      decoration: BoxDecoration(
-                        color: isRunActive ? AppColors.rival.withValues(alpha: 0.2) : AppColors.surface2,
-                        borderRadius: AppSpacing.br16,
-                        border: Border.all(
-                          color: isRunActive ? AppColors.rival : AppColors.border,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            isRunActive ? Icons.stop_rounded : Icons.lock_outline_rounded,
-                            color: isRunActive ? AppColors.rival : Colors.white70,
-                            size: 16,
-                          ),
-                          const SizedBox(width: AppSpacing.s4),
-                          Flexible(
-                            child: Text(
-                              isRunActive ? 'FINISH' : 'LOCKED',
-                              style: TextStyle(
-                                color: isRunActive ? AppColors.rival : Colors.white70,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 10,
-                                letterSpacing: 0.6,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: HoldToFinishButton(
+                    isRunActive: isRunActive,
+                    onFinish: onFinishRun,
                   ),
                 ),
               ],
