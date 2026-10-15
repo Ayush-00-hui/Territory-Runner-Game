@@ -323,16 +323,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             areaSqMeters: loopEvent.areaSqMeters,
           ).then((_) {
             if (mounted) {
-              setState(() {
-                _territoriesClaimedThisRun++;
-              });
-              AppMotion.heavyBurst();
-              LoopCelebrationOverlay.show(
-                context,
-                areaSqMeters: loopEvent.areaSqMeters,
-                xpAwarded: math.max(100, (loopEvent.areaSqMeters / 20).round()),
-              );
-              _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
+              _showCaptureOutcome();
             }
           });
         } else if (_polygonEngine.lastInvalidReason != null) {
@@ -406,6 +397,40 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     return "$paceMin'${paceSec.toString().padLeft(2, '0')}\"";
   }
 
+  /// Shows the real result of the last capture: new land + land taken from rivals.
+  /// A loop that only covers land you already own earns nothing (no XP farming).
+  void _showCaptureOutcome() {
+    final double netGained = _territoryService.lastCaptureNetAreaSqM;
+    final double stolen = _territoryService.lastCaptureStolenAreaSqM;
+    final int xp = _territoryService.lastCaptureXp;
+    final double claimed = netGained + stolen;
+
+    if (claimed < TerritoryService.minClaimAreaSqMeters) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Color(0xFF1E212B),
+          duration: Duration(seconds: 3),
+          content: Text(
+            'Already your territory — loop around new ground to claim more land.',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _territoriesClaimedThisRun++;
+    });
+    AppMotion.heavyBurst();
+    LoopCelebrationOverlay.show(
+      context,
+      areaSqMeters: claimed,
+      xpAwarded: xp,
+    );
+    _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
+  }
+
   void _sealCurrentShape() {
     if (!_isRunActive) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -422,17 +447,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       ).then((_) {
         if (mounted) {
           setState(() {
-            _territoriesClaimedThisRun++;
             _distanceToClosureMeters = null;
             _proximityToClosure = null;
           });
-          AppMotion.heavyBurst();
-          LoopCelebrationOverlay.show(
-            context,
-            areaSqMeters: loopEvent.areaSqMeters,
-            xpAwarded: math.max(100, (loopEvent.areaSqMeters / 20.0).round()),
-          );
-          _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
+          _showCaptureOutcome();
         }
       });
     } else {

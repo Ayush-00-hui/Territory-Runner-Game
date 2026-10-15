@@ -32,11 +32,18 @@ class PolygonEnclosureEngine {
   final double minClosureDistanceMeters; // Proximity threshold to trigger closed loop
   final int minPointsRequired; // Minimum path nodes for a valid loop
   final double minLoopDistanceMeters; // Minimum loop perimeter
+  final double maxLoopAreaSqMeters; // Maximum single-loop area (matches Go server: 5,000,000 m²)
+
+  /// Rejection message used when a loop exceeds [maxLoopAreaSqMeters].
+  /// Kept identical to the Go backend's ErrLoopAreaTooLarge text.
+  static const String loopTooLargeReason =
+      'Loop area exceeds maximum allowable single run threshold (5000000 m²)';
 
   PolygonEnclosureEngine({
     this.minClosureDistanceMeters = 35.0,
     this.minPointsRequired = 4,
     this.minLoopDistanceMeters = 40.0,
+    this.maxLoopAreaSqMeters = 5000000.0,
   });
 
   List<LatLng> get currentPath => List.unmodifiable(_path);
@@ -72,6 +79,12 @@ class PolygonEnclosureEngine {
     final loopLength = _calculatePathDistance(closedPoints);
     final areaSqM = computeGeodesicShoelaceArea(closedPoints);
     final areaSqKm = areaSqM / 1000000.0;
+
+    if (areaSqM > maxLoopAreaSqMeters) {
+      _lastInvalidReason = loopTooLargeReason;
+      debugPrint('[PolygonEnclosureEngine] ❌ Manual seal rejected: $_lastInvalidReason');
+      return null;
+    }
 
     final event = EnclosedLoopEvent(
       polygon: closedPoints,
@@ -153,6 +166,13 @@ class PolygonEnclosureEngine {
 
           final areaSqM = computeGeodesicShoelaceArea(loopPoints);
           final areaSqKm = areaSqM / 1000000.0;
+
+          // Reject impossible single-loop areas (GPS glitch / spoofing), same as the Go server.
+          if (areaSqM > maxLoopAreaSqMeters) {
+            _lastInvalidReason = loopTooLargeReason;
+            debugPrint('[PolygonEnclosureEngine] ❌ Loop enclosure rejected: $_lastInvalidReason');
+            continue;
+          }
 
           // Valid enclosed loop detected
           final event = EnclosedLoopEvent(
@@ -245,6 +265,14 @@ class PolygonEnclosureEngine {
   /// Calculates exact surface area of an arbitrary polygon in square meters
   /// using the Geodesic Shoelace Formula on a local tangent plane projection.
   static double computeGeodesicShoelaceArea(List<LatLng> polygon) {
+    return computeSignedGeodesicShoelaceArea(polygon).abs();
+  }
+
+  /// Same projection as [computeGeodesicShoelaceArea] but keeps the sign
+  /// (orientation). Used to sum union results that contain holes: Clipper2
+  /// returns holes with the opposite orientation of outer rings, so the signed
+  /// sum correctly subtracts hole area instead of adding it.
+  static double computeSignedGeodesicShoelaceArea(List<LatLng> polygon) {
     if (polygon.length < 3) return 0.0;
 
     // Earth equatorial radius in meters
@@ -281,6 +309,6 @@ class PolygonEnclosureEngine {
       area -= (metricPoints[j].x * metricPoints[i].y);
     }
 
-    return (area.abs() / 2.0);
+    return area / 2.0;
   }
 }

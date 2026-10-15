@@ -21,6 +21,25 @@ class TerritoryService {
 
   static const double _coordScale = 10000000.0; // 1e7 for high-precision GPS integer clipping
 
+  /// Smallest amount of genuinely new area (m²) that counts as a claim.
+  /// Prevents farming XP by re-running loops inside land you already own.
+  static const double minClaimAreaSqMeters = 25.0;
+
+  /// Result of the most recent [capturePolygonTerritory] call, read by the UI
+  /// so the celebration shows what was really gained (not the raw loop area).
+  int lastCaptureXp = 0;
+  double lastCaptureNetAreaSqM = 0.0;
+  double lastCaptureStolenAreaSqM = 0.0;
+
+  /// Total area of polygon rings. Holes (opposite orientation) are subtracted.
+  static double _netAreaOf(List<List<LatLng>> polys) {
+    double signed = 0.0;
+    for (final poly in polys) {
+      signed += PolygonEnclosureEngine.computeSignedGeodesicShoelaceArea(poly);
+    }
+    return signed.abs();
+  }
+
   TerritoryService._internal() {
     _cleanLegacyHexes();
     _initProfileIfNeeded();
@@ -33,7 +52,13 @@ class TerritoryService {
     for (final key in box.keys) {
       final t = box.get(key);
       if (t != null) {
-        if (t.id.startsWith('hex_') || t.id.startsWith('8') || t.polygon.length == 6) {
+        // Only remove genuine legacy hex-grid records. Polygon territories use the
+        // 'poly_' prefix and may legitimately have any vertex count (including 6),
+        // so they must never be deleted here.
+        final bool isPolygonTerritory = t.id.startsWith('poly_');
+        final bool isLegacyHex = t.id.startsWith('hex_') ||
+            RegExp(r'^8[0-9a-f]{14}$').hasMatch(t.id);
+        if (!isPolygonTerritory && isLegacyHex) {
           keysToDelete.add(key);
         }
       }
@@ -153,10 +178,12 @@ class TerritoryService {
         : [newPath64];
 
     final List<List<LatLng>> mergedMultiPolys = mergedPaths.map(path64ToLatLngs).toList();
-    final double totalUnifiedAreaSqM = mergedMultiPolys.fold(
+    final double previousTotalAreaSqM = playerExistingTerritories.fold(
       0.0,
-      (acc, poly) => acc + PolygonEnclosureEngine.computeGeodesicShoelaceArea(poly),
+      (acc, t) => acc + t.areaSqMeters,
     );
+    final double totalUnifiedAreaSqM = _netAreaOf(mergedMultiPolys);
+    double stolenAreaSqM = 0.0;
 
     // Remove previous fragmented territories for this player to store the unified MultiPolygon
     if (box != null) {
@@ -203,16 +230,16 @@ class TerritoryService {
 
         if (clippedRivalPaths.isEmpty) {
           // Rival territory completely overtaken
+          stolenAreaSqM += rival.areaSqMeters;
           if (box != null) {
             await box.delete(rival.id);
           }
           debugPrint('[TerritoryService] Rival territory ${rival.id} completely conquered by $activeOwner');
         } else {
           final List<List<LatLng>> clippedMultiPolys = clippedRivalPaths.map(path64ToLatLngs).toList();
-          final double remainingArea = clippedMultiPolys.fold(
-            0.0,
-            (acc, poly) => acc + PolygonEnclosureEngine.computeGeodesicShoelaceArea(poly),
-          );
+          final double remainingArea = _netAreaOf(clippedMultiPolys);
+          final double lostByRival = rival.areaSqMeters - remainingArea;
+          if (lostByRival > 0) stolenAreaSqM += lostByRival;
 
           final updatedRival = rival.copyWith(
             polygon: clippedMultiPolys.first,
@@ -227,10 +254,20 @@ class TerritoryService {
       }
     }
 
-    // 3. Award XP in RunnerProfile
-    final profile = getProfile();
-    final int gainedXp = profile.claimPolygonArea(areaSqMeters);
-    await saveProfile(profile);
+    // 3. Award XP only for land that is genuinely NEW (net gain over your existing
+    //    territory + area taken from rivals). Looping inside your own land earns nothing.
+    final double rawNetGain = totalUnifiedAreaSqM - previousTotalAreaSqM;
+    final double netGainedSqM = rawNetGain > 0 ? rawNetGain : 0.0;
+    final double claimableSqM = netGainedSqM + stolenAreaSqM;
+    int gainedXp = 0;
+    if (claimableSqM >= minClaimAreaSqMeters) {
+      final profile = getProfile();
+      gainedXp = profile.claimPolygonArea(claimableSqM);
+      await saveProfile(profile);
+    }
+    lastCaptureXp = gainedXp;
+    lastCaptureNetAreaSqM = netGainedSqM;
+    lastCaptureStolenAreaSqM = stolenAreaSqM;
 
     debugPrint(
       '[TerritoryService] Polygon claimed! Player total territory area: ${totalUnifiedAreaSqM.toStringAsFixed(1)}m², XP: +$gainedXp',
