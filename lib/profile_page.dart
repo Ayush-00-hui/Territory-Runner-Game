@@ -1,31 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'features/gameplay/territory_service.dart';
-import 'features/profile/widgets/achievements_list.dart';
 import 'features/profile/widgets/auth_modal.dart';
+import 'features/profile/widgets/challenges_shelf.dart';
+import 'features/profile/widgets/faction_leaderboard.dart';
 import 'features/profile/widgets/profile_dialogs.dart';
 import 'features/profile/widgets/profile_hero.dart';
 import 'features/profile/widgets/settings_list.dart';
 import 'features/profile/widgets/stat_grid.dart';
 import 'models/runner_profile.dart';
+import 'models/territory.dart';
 import 'services/firebase_service.dart';
 import 'ui/ui.dart';
 
+enum ProfileTab { athlete, turfWar }
+
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final RunnerProfile? initialProfile;
+  final List<Territory>? initialTerritories;
+
+  const ProfilePage({
+    super.key,
+    this.initialProfile,
+    this.initialTerritories,
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage>
-    with TickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   late final AnimationController _pageController;
   late final Animation<double> _fadeAnimation;
-  late final Animation<Offset> _topSlideAnimation;
-  late final Animation<Offset> _statsSlideAnimation;
-  late final Animation<Offset> _achievementsSlideAnimation;
-  late final Animation<Offset> _settingsSlideAnimation;
+  ProfileTab _activeTab = ProfileTab.athlete;
 
   final TerritoryService _territoryService = TerritoryService();
   final FirebaseService _firebaseService = FirebaseService();
@@ -33,57 +40,14 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void initState() {
     super.initState();
-
     _pageController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
+      duration: const Duration(milliseconds: 600),
     );
-
     _fadeAnimation = CurvedAnimation(
       parent: _pageController,
       curve: Curves.easeOut,
     );
-
-    _topSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.08),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _pageController,
-        curve: const Interval(0.00, 0.35, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _statsSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.10),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _pageController,
-        curve: const Interval(0.20, 0.55, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _achievementsSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.10),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _pageController,
-        curve: const Interval(0.40, 0.75, curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _settingsSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.10),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _pageController,
-        curve: const Interval(0.60, 1.00, curve: Curves.easeOutCubic),
-      ),
-    );
-
     _pageController.forward();
   }
 
@@ -111,10 +75,10 @@ class _ProfilePageState extends State<ProfilePage>
         elevation: 0,
         title: Text(
           'ATHLETE HUB',
-          style: AppText.headlineMedium.copyWith(
+          style: AppText.headingSmall.copyWith(
             color: Colors.white,
             fontWeight: FontWeight.w900,
-            fontSize: 17,
+            fontSize: 16,
             letterSpacing: 1.5,
           ),
         ),
@@ -127,120 +91,202 @@ class _ProfilePageState extends State<ProfilePage>
           ),
         ],
       ),
-      body: ValueListenableBuilder(
-        valueListenable: Hive.box<RunnerProfile>('profile').listenable(),
-        builder: (context, Box<RunnerProfile> profileBox, _) {
-          final profile = _territoryService.getProfile();
-          final territoriesCount = _territoryService.getCapturedTerritories().length;
+      body: widget.initialProfile != null
+          ? _buildProfileContent(
+              widget.initialProfile!,
+              widget.initialTerritories ?? [],
+            )
+          : ValueListenableBuilder(
+              valueListenable: Hive.box<RunnerProfile>('profile').listenable(),
+              builder: (context, Box<RunnerProfile> profileBox, _) {
+                final profile = _territoryService.getProfile();
 
-          return FadeTransition(
-            opacity: _fadeAnimation,
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.s16,
-                AppSpacing.s8,
-                AppSpacing.s16,
-                AppSpacing.s32,
+                return ValueListenableBuilder(
+                  valueListenable: Hive.box<Territory>('territories_v3').listenable(),
+                  builder: (context, Box<Territory> territoryBox, _) {
+                    final territories = _territoryService.getCapturedTerritoryObjects();
+                    return _buildProfileContent(profile, territories);
+                  },
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildProfileContent(RunnerProfile profile, List<Territory> territories) {
+    final double totalAreaM2 = territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s16,
+          AppSpacing.s8,
+          AppSpacing.s16,
+          AppSpacing.s32,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- TOP SEGMENTED TAB SELECTOR ---
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppSpacing.brFull,
+                border: Border.all(color: AppColors.border),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              child: Row(
                 children: [
-                  // --- HERO ATHLETE CARD ---
-                  SlideTransition(
-                    position: _topSlideAnimation,
-                    child: ProfileHeroCard(
-                      profile: profile,
-                      onEditCallsign: () {
-                        showEditCallsignDialog(
-                          context,
-                          profile,
-                          _territoryService,
-                          () => setState(() {}),
-                        );
-                      },
-                      onSelectFaction: () {
-                        showFactionSelectionDialog(
-                          context,
-                          profile,
-                          _territoryService,
-                          () => setState(() {}),
-                        );
-                      },
+                  Expanded(
+                    child: _buildSegmentButton(
+                      tab: ProfileTab.athlete,
+                      label: 'ATHLETE PROFILE',
+                      icon: Icons.person_rounded,
                     ),
                   ),
-
-                  const SizedBox(height: AppSpacing.s24),
-
-                  // --- METRIC OVERVIEW GRID ---
-                  Text(
-                    'PERFORMANCE TELEMETRY',
-                    style: AppText.labelSmall.copyWith(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s12),
-
-                  SlideTransition(
-                    position: _statsSlideAnimation,
-                    child: ProfileStatGrid(
-                      profile: profile,
-                      territoryService: _territoryService,
-                    ),
-                  ),
-
-                  const SizedBox(height: AppSpacing.s24),
-
-                  // --- TROPHY CASE & ACHIEVEMENTS ---
-                  Text(
-                    'TROPHY CASE & BADGES',
-                    style: AppText.labelSmall.copyWith(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s12),
-
-                  SlideTransition(
-                    position: _achievementsSlideAnimation,
-                    child: ProfileAchievementsList(
-                      profile: profile,
-                      territoriesCount: territoriesCount,
-                    ),
-                  ),
-
-                  const SizedBox(height: AppSpacing.s24),
-
-                  // --- SETTINGS & DATA SYNC ---
-                  Text(
-                    'DATA & PLATFORM',
-                    style: AppText.labelSmall.copyWith(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s12),
-
-                  SlideTransition(
-                    position: _settingsSlideAnimation,
-                    child: ProfileSettingsList(
-                      firebaseService: _firebaseService,
-                      territoryService: _territoryService,
-                      onOpenAuth: _openAuthDialog,
+                  Expanded(
+                    child: _buildSegmentButton(
+                      tab: ProfileTab.turfWar,
+                      label: 'FACTION TURF WAR',
+                      icon: Icons.shield_rounded,
                     ),
                   ),
                 ],
               ),
             ),
-          );
-        },
+
+            const SizedBox(height: AppSpacing.s20),
+
+            if (_activeTab == ProfileTab.athlete) ...[
+              // --- HERO ATHLETE CARD ---
+              ProfileHeroCard(
+                profile: profile,
+                onEditCallsign: () {
+                  showEditCallsignDialog(
+                    context,
+                    profile,
+                    _territoryService,
+                    () => setState(() {}),
+                  );
+                },
+                onSelectFaction: () {
+                  showFactionSelectionDialog(
+                    context,
+                    profile,
+                    _territoryService,
+                    () => setState(() {}),
+                  );
+                },
+              ),
+
+              const SizedBox(height: AppSpacing.s24),
+
+              // --- METRIC OVERVIEW GRID ---
+              Text(
+                'PERFORMANCE TELEMETRY',
+                style: AppText.label.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s12),
+
+              ProfileStatGrid(
+                profile: profile,
+                territoryService: _territoryService,
+              ),
+
+              const SizedBox(height: AppSpacing.s24),
+
+              // --- CHALLENGES & BADGES SHELF ---
+              ChallengesShelf(
+                profile: profile,
+                territoriesCount: territories.length,
+                totalAreaSqMeters: totalAreaM2,
+              ),
+
+              const SizedBox(height: AppSpacing.s24),
+
+              // --- SETTINGS & CONTROLS ---
+              Text(
+                'SETTINGS & PLATFORM',
+                style: AppText.label.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s12),
+
+              ProfileSettingsList(
+                firebaseService: _firebaseService,
+                territoryService: _territoryService,
+                onOpenAuth: _openAuthDialog,
+              ),
+            ] else ...[
+              // --- FACTION LEADERBOARD & TURF WAR DOMINANCE ---
+              FactionLeaderboard(
+                profile: profile,
+                territories: territories,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSegmentButton({
+    required ProfileTab tab,
+    required String label,
+    required IconData icon,
+  }) {
+    final isSelected = _activeTab == tab;
+
+    return GestureDetector(
+      onTap: () {
+        if (_activeTab != tab) {
+          AppMotion.lightTick();
+          setState(() => _activeTab = tab);
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accent.withValues(alpha: 0.18) : Colors.transparent,
+          borderRadius: AppSpacing.brFull,
+          border: Border.all(
+            color: isSelected ? AppColors.accent : Colors.transparent,
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 15,
+              color: isSelected ? AppColors.accent : AppColors.textMuted,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: AppText.label.copyWith(
+                color: isSelected ? AppColors.accent : AppColors.textMuted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

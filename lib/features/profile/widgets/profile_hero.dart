@@ -38,28 +38,34 @@ class ProfileHeroCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Avatar Badge
-              Container(
-                height: 68,
-                width: 68,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.accent,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accent.withValues(alpha: 0.3),
-                      blurRadius: 18,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    profile.username.isNotEmpty ? profile.username[0].toUpperCase() : 'R',
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
+              // Avatar with live circular XP Progress Ring
+              ProgressRing(
+                progress: xpProgress,
+                size: 72,
+                strokeWidth: 3.5,
+                progressColor: AppColors.accent,
+                trackColor: AppColors.surface2,
+                center: Container(
+                  height: 56,
+                  width: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.accent,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.accent.withValues(alpha: 0.35),
+                        blurRadius: 14,
+                      ),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      profile.username.isNotEmpty ? profile.username[0].toUpperCase() : 'R',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                 ),
