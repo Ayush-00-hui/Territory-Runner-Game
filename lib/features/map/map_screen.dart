@@ -52,6 +52,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   // Real-time WebSocket presence and alert state
   final Map<String, RunnerPresenceEvent> _activeRivalRunners = {};
+  final Map<String, List<LatLng>> _rivalBreadcrumbs = {};
+  Timer? _rivalSimulationTimer;
+  bool _isRivalSimulating = false;
+  double _rivalSimAngle = 0.0;
   StreamSubscription<RunnerPresenceEvent>? _wsPresenceSub;
   StreamSubscription<String>? _wsRunnerLeftSub;
   StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
@@ -111,6 +115,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     // Poll rival territories every 20 seconds while map screen is open
     _rivalPollingTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       _fetchVisibleRivals();
+      // Prune inactive rivals older than 60s
+      final now = DateTime.now();
+      _activeRivalRunners.removeWhere((id, runner) {
+        final isStale = now.difference(runner.updatedAt).inSeconds > 60;
+        if (isStale) {
+          _rivalBreadcrumbs.remove(id);
+        }
+        return isStale;
+      });
     });
 
     // Real-time WebSocket: Connect and listen for live rival runners and territory alerts
@@ -119,6 +132,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (mounted) {
         setState(() {
           _activeRivalRunners[presence.userId] = presence;
+          final trail = _rivalBreadcrumbs.putIfAbsent(presence.userId, () => []);
+          trail.add(presence.position);
+          if (trail.length > 40) {
+            trail.removeAt(0);
+          }
         });
       }
     });
@@ -127,6 +145,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (mounted) {
         setState(() {
           _activeRivalRunners.remove(userId);
+          _rivalBreadcrumbs.remove(userId);
         });
       }
     });
@@ -193,6 +212,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   @override
   void dispose() {
+    _rivalSimulationTimer?.cancel();
     SyncQueueService().reconciliationToastNotifier.removeListener(_onReconciliationToast);
     SyncQueueService().lastRejectionNotifier.removeListener(_onRunRejected);
     _runTimer?.cancel();
@@ -1003,6 +1023,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           runCoordinates: _runCoordinates,
                           currentEnclosurePath: _polygonEngine.currentPath,
                           suggestedRouteCoordinates: _activeSuggestedRoute?.polyline,
+                          rivalBreadcrumbs: _rivalBreadcrumbs,
+                          activeRivalRunners: _activeRivalRunners,
                         ),
                         MapLayers.buildMarkerLayer(
                           currentLocation: _currentLocation,
@@ -1082,6 +1104,57 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       }
                     },
                   ),
+
+                  // Live Rival Sector Radar Pill
+                  if (_activeRivalRunners.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: _panToNearestRival,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceGlass,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.rival.withValues(alpha: 0.8),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.rival.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.rival,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${_activeRivalRunners.length} RIVAL${_activeRivalRunners.length > 1 ? 'S' : ''} IN SECTOR',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.gps_fixed_rounded, color: AppColors.rival, size: 13),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1110,6 +1183,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       );
                     },
                     onSimulateDecayAndAttack: _simulateDecayAndAttack,
+                    isRivalSimulating: _isRivalSimulating,
+                    onToggleRivalSimulation: _toggleRivalSimulation,
                   );
                 },
                 child: Container(
@@ -1206,6 +1281,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           );
                         },
                         onSimulateDecayAndAttack: _simulateDecayAndAttack,
+                        isRivalSimulating: _isRivalSimulating,
+                        onToggleRivalSimulation: _toggleRivalSimulation,
                       );
                     },
                   ),
@@ -1447,5 +1524,128 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         ),
       );
     }
+  }
+
+  void _panToNearestRival() {
+    if (_activeRivalRunners.isEmpty) return;
+
+    RunnerPresenceEvent? nearest;
+    double minDistance = double.infinity;
+    const distanceCalc = Distance();
+    final myLoc = _currentLocation ?? const LatLng(51.5074, -0.1278);
+
+    for (final rival in _activeRivalRunners.values) {
+      final dist = distanceCalc.as(LengthUnit.Meter, myLoc, rival.position);
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearest = rival;
+      }
+    }
+
+    if (nearest != null) {
+      AppMotion.lightTick();
+      try {
+        _mapController.move(nearest.position, 17.5);
+      } catch (_) {}
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          duration: const Duration(seconds: 2),
+          content: Text(
+            '🎯 Tracking ${nearest.username} (${minDistance.round()}m away)',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _toggleRivalSimulation() {
+    if (_isRivalSimulating) {
+      _rivalSimulationTimer?.cancel();
+      _rivalSimulationTimer = null;
+      setState(() {
+        _isRivalSimulating = false;
+        _activeRivalRunners.remove('sim_rival_phantom');
+        _rivalBreadcrumbs.remove('sim_rival_phantom');
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.surface,
+          content: Text('⏹️ Live Rival Simulation stopped.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final center = _currentLocation ?? const LatLng(51.5074, -0.1278);
+    _isRivalSimulating = true;
+    _rivalSimAngle = 0.0;
+    const double radiusMeters = 180.0;
+    const double earthRadius = 6378137.0;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surface,
+        content: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.rival,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text('🔴 Live Rival active: ⚡ Phantom_Vanguard is running near you!'),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    _rivalSimulationTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) {
+      if (!mounted || !_isRivalSimulating) {
+        timer.cancel();
+        return;
+      }
+
+      _rivalSimAngle += 0.12;
+      if (_rivalSimAngle > 2 * math.pi) {
+        _rivalSimAngle -= 2 * math.pi;
+      }
+
+      // Circular displacement around player's center
+      final dLat = (radiusMeters * math.cos(_rivalSimAngle)) / earthRadius * (180.0 / math.pi);
+      final dLng = (radiusMeters * math.sin(_rivalSimAngle)) /
+          (earthRadius * math.cos(center.latitude * (math.pi / 180.0))) *
+          (180.0 / math.pi);
+      final rivalPos = LatLng(center.latitude + dLat, center.longitude + dLng);
+      final headingDeg = ((_rivalSimAngle + math.pi / 2) * (180.0 / math.pi)) % 360.0;
+
+      final event = RunnerPresenceEvent(
+        userId: 'sim_rival_phantom',
+        username: 'Phantom_Vanguard',
+        faction: 'Neon Syndicate',
+        position: rivalPos,
+        speed: 3.2, // ~11.5 km/h
+        heading: headingDeg,
+        updatedAt: DateTime.now(),
+      );
+
+      setState(() {
+        _activeRivalRunners['sim_rival_phantom'] = event;
+        final trail = _rivalBreadcrumbs.putIfAbsent('sim_rival_phantom', () => []);
+        trail.add(rivalPos);
+        if (trail.length > 40) {
+          trail.removeAt(0);
+        }
+      });
+    });
   }
 }

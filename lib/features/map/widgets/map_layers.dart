@@ -248,27 +248,49 @@ class MapLayers {
     return LatLng(lat / pts.length, lng / pts.length);
   }
 
-  /// Active breadcrumbs, in-progress enclosure path, and AI route polyline layer
+  /// Active breadcrumbs, in-progress enclosure path, suggested route, and rival breadcrumbs
   static PolylineLayer buildPolylineLayer({
     required bool isRunActive,
     required List<LatLng> runCoordinates,
     required List<LatLng> currentEnclosurePath,
     List<LatLng>? suggestedRouteCoordinates,
+    Map<String, List<LatLng>>? rivalBreadcrumbs,
+    Map<String, RunnerPresenceEvent>? activeRivalRunners,
   }) {
     return PolylineLayer(
       polylines: [
+        // Live Rival Moving Breadcrumb Trails
+        if (rivalBreadcrumbs != null)
+          for (final entry in rivalBreadcrumbs.entries)
+            if (entry.value.length >= 2) ...[
+              // Outer luminous rival wake
+              Polyline(
+                points: entry.value,
+                color: _resolveRivalColor(entry.key, activeRivalRunners).withValues(alpha: 0.35),
+                strokeWidth: 6.0,
+              ),
+              // Inner sharp rival trail
+              Polyline(
+                points: entry.value,
+                color: _resolveRivalColor(entry.key, activeRivalRunners),
+                strokeWidth: 2.5,
+              ),
+            ],
+        // Local Runner Sovereign Trail
         if (isRunActive && runCoordinates.length >= 2)
           Polyline(
             points: runCoordinates,
             color: AppColors.mine,
             strokeWidth: 4.0,
           ),
+        // Enclosure Proximity Path
         if (currentEnclosurePath.length >= 2)
           Polyline(
             points: currentEnclosurePath,
             color: AppColors.info,
             strokeWidth: 2.5,
           ),
+        // AI Suggested Route
         if (suggestedRouteCoordinates != null && suggestedRouteCoordinates.length >= 2) ...[
           // Outer Luminous Solar Orange Glow
           Polyline(
@@ -336,38 +358,96 @@ class MapLayers {
 
     // Active Rival Runners broadcast over real-time WebSocket
     for (final rival in activeRivalRunners.values) {
+      final rivalColor = getFactionColor(rival.faction);
+      final speedKmh = rival.speed * 3.6;
+
       markers.add(
         Marker(
           point: rival.position,
-          width: 90,
-          height: 52,
+          width: 110,
+          height: 62,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Tactical Callsign & Speed Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.85),
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: AppColors.rival, width: 1.2),
+                  color: AppColors.surfaceGlass,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: rivalColor.withValues(alpha: 0.8), width: 1.2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: rivalColor.withValues(alpha: 0.3),
+                      blurRadius: 6,
+                    ),
+                  ],
                 ),
-                child: Text(
-                  rival.username,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: rivalColor,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        rival.username,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (speedKmh > 0.5) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        '⚡${speedKmh.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          color: rivalColor,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              Transform.rotate(
-                angle: rival.heading * (math.pi / 180.0),
-                child: const Icon(
-                  Icons.navigation_rounded,
-                  color: AppColors.rival,
-                  size: 22,
-                ),
+              const SizedBox(height: 2),
+              // Radar Halo + Directional Heading Arrow
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: rivalColor.withValues(alpha: 0.22),
+                    ),
+                  ),
+                  Transform.rotate(
+                    angle: rival.heading * (math.pi / 180.0),
+                    child: Icon(
+                      Icons.navigation_rounded,
+                      color: rivalColor,
+                      size: 22,
+                      shadows: [
+                        Shadow(
+                          color: rivalColor.withValues(alpha: 0.8),
+                          blurRadius: 8,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -376,6 +456,28 @@ class MapLayers {
     }
 
     return MarkerLayer(markers: markers);
+  }
+
+  /// Maps faction name to dedicated cyber aesthetic accent color
+  static Color getFactionColor(String faction) {
+    final lower = faction.toLowerCase();
+    if (lower.contains('vanguard') || lower.contains('cyan') || lower.contains('cyber')) {
+      return AppColors.info;
+    }
+    if (lower.contains('iron') || lower.contains('legion') || lower.contains('solar')) {
+      return AppColors.secondary;
+    }
+    return AppColors.rival;
+  }
+
+  static Color _resolveRivalColor(
+    String userId,
+    Map<String, RunnerPresenceEvent>? rivals,
+  ) {
+    if (rivals != null && rivals.containsKey(userId)) {
+      return getFactionColor(rivals[userId]!.faction);
+    }
+    return AppColors.rival;
   }
 }
 

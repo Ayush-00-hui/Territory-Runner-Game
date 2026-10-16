@@ -8,7 +8,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16_PostGIS-4169E1.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgis.net/)
 [![Docker](https://img.shields.io/badge/Docker-Multi--Stage_Build-2496ED.svg?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Clipper2](https://img.shields.io/badge/Polygon_Clipping-Clipper2-22c55e.svg?style=for-the-badge)](https://pub.dev/packages/clipper2)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-94%2F94_Passing-brightgreen.svg?style=for-the-badge)](test/)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-100%2F100_Passing-brightgreen.svg?style=for-the-badge)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Backend_Tests-6%2F6_Passing-brightgreen.svg?style=for-the-badge)](backend/)
 [![Golden Fixtures](https://img.shields.io/badge/Golden_Fixtures-7%2F7_Parity-success.svg?style=for-the-badge)](test_fixtures/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
@@ -141,6 +141,7 @@ graph TD
 - 📦 **Multi-Loop Runs:** Complete multiple closed loops in a single continuous session; the backend unions and awards XP for all valid loops in one atomic transaction.
 - 🛡️ **Territory Retention & Decay:** Captured sectors start at $100\%$ strength and decay by $15\text{ pts/day}$ without defense. Running through your land defends it; weak land ($<30\%$) grants rivals $1.5\times$ XP bonus and collapses if $<50\text{ m}^2$.
 - 🚨 **Real-Time Attack Alerts:** WebSockets broadcast targeted `territory_under_attack` alerts to victims the moment a rival carves away their sovereign land.
+- 🔴 **Live Moving Rival GPS & Glowing Breadcrumbs:** Streams nearby rival runners in real-time over WebSockets with directional heading pointers, tactical callsign pills, speed badges, and dual-stroke glowing breadcrumb wakes. Tap the live radar pill to auto-center and track rival movements.
 - 🎯 **Explore Claim Planner:** Preset targets ($2\text{k}, 5\text{k}, 10\text{k}, 25\text{k}\text{ m}^2$) and slider ($1\text{k}-50\text{k}\text{ m}^2$) synthesize real OSRM road routes, calculate net-new area via Clipper2 subtraction, and project luminous solar orange path guidance.
 - 🍩 **Multi-Ring Donut Hole Rendering:** Ray-casting containment depth classification populates FlutterMap `holePointsList`, rendering true transparent cutouts rather than solid fills.
 - 🍞 **Reconciliation Toast & Honest Errors:** Notifies runners when server-calculated area differs from optimistic preview ($+$ or $-$), and halts retries immediately on permanent $4\text{xx}$ errors (`INVALID_LOOP`, `ANOMALY_REJECTED`).
@@ -393,7 +394,7 @@ go test -v ./...
 ```
 
 ### Measured Test Verification Metrics (Real Output):
-- **Flutter Test Suite:** **94 passed** across 20 test files (0 failures, 0 skipped).
+- **Flutter Test Suite:** **100 passed** across 21 test files (0 failures, 0 skipped).
 - **Flutter Analyzer:** **0 issues found** (clean static analysis).
 - **Go Test Suite:** **6 Go packages passed** (`anticheat`, `api`, `coach`, `geo`, `store`, `ws`).
 - **Shared Golden Parity:** **7/7 Golden fixtures** verified in both Dart and Go, agreeing within $<0.5\%$ area tolerance.
