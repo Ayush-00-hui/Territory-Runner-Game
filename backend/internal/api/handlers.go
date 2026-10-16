@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -21,13 +22,17 @@ import (
 
 // API encapsulates HTTP handlers and service dependencies.
 type API struct {
-	store         store.Store
-	geoEng        *geo.Engine
-	detector      *anticheat.Detector
-	coachSvc      *coach.Service
-	wsHub         *ws.Hub
-	authenticator *auth.Authenticator
-	logger        *slog.Logger
+	store             store.Store
+	geoEng            *geo.Engine
+	detector          *anticheat.Detector
+	coachSvc          *coach.Service
+	wsHub             *ws.Hub
+	authenticator     *auth.Authenticator
+	logger            *slog.Logger
+	maxPointsPerRun   int
+	maxRunDurationSec int
+	runsLimiter       *RateLimiter
+	coachLimiter      *RateLimiter
 }
 
 // Option configures API dependencies.
@@ -56,17 +61,57 @@ func WithAuthenticator(auth *auth.Authenticator) Option {
 	}
 }
 
+// WithLimits configures maximum points per run and maximum duration.
+func WithLimits(maxPoints, maxDurationSec int) Option {
+	return func(a *API) {
+		if maxPoints > 0 {
+			a.maxPointsPerRun = maxPoints
+		}
+		if maxDurationSec > 0 {
+			a.maxRunDurationSec = maxDurationSec
+		}
+	}
+}
+
+// WithRateLimiters injects custom rate limiters for runs and coach endpoints.
+func WithRateLimiters(runsLimiter, coachLimiter *RateLimiter) Option {
+	return func(a *API) {
+		if runsLimiter != nil {
+			a.runsLimiter = runsLimiter
+		}
+		if coachLimiter != nil {
+			a.coachLimiter = coachLimiter
+		}
+	}
+}
+
+// RunsLimiter returns the runs endpoint rate limiter.
+func (a *API) RunsLimiter() *RateLimiter {
+	return a.runsLimiter
+}
+
+// CoachLimiter returns the coach endpoint rate limiter.
+func (a *API) CoachLimiter() *RateLimiter {
+	return a.coachLimiter
+}
+
 // NewAPI creates an API handler instance.
 func NewAPI(s store.Store, logger *slog.Logger, opts ...Option) *API {
 	if logger == nil {
 		logger = slog.Default()
 	}
 	a := &API{
-		store:    s,
-		geoEng:   geo.NewEngine(),
-		detector: anticheat.NewDetector(),
-		coachSvc: coach.NewService("", coach.WithLogger(logger)),
-		logger:   logger,
+		store:             s,
+		geoEng:            geo.NewEngine(),
+		detector:          anticheat.NewDetector(),
+		coachSvc:          coach.NewService("", coach.WithLogger(logger)),
+		logger:            logger,
+		maxPointsPerRun:   20000,
+		maxRunDurationSec: 86400,
+		// Default rate limit: 10 burst, refill 0.5/sec (1 token per 2 sec)
+		runsLimiter: NewRateLimiter(0.5, 10),
+		// Coach rate limit: 5 burst, refill 0.2/sec (1 token per 5 sec)
+		coachLimiter: NewRateLimiter(0.2, 5),
 	}
 	for _, opt := range opts {
 		opt(a)
@@ -145,8 +190,16 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 1. Enforce 2 MB maximum payload size to prevent memory exhaustion
+	r.Body = http.MaxBytesReader(w, r.Body, 2<<20)
+
 	var req SubmitRunRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) || strings.Contains(err.Error(), "request body too large") {
+			writeError(w, http.StatusRequestEntityTooLarge, "PAYLOAD_TOO_LARGE", "Request body exceeds maximum permitted size of 2 MB")
+			return
+		}
 		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed JSON request body")
 		return
 	}
@@ -156,7 +209,41 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Fast-path: Check for idempotent replay
+	// 2. Validate point counts against configured limits
+	if len(req.Points) < 3 {
+		writeError(w, http.StatusBadRequest, "INSUFFICIENT_POINTS", "A minimum of 3 track points is required to form a run")
+		return
+	}
+	maxPts := a.maxPointsPerRun
+	if maxPts <= 0 {
+		maxPts = 20000
+	}
+	if len(req.Points) > maxPts {
+		writeError(w, http.StatusBadRequest, "TOO_MANY_POINTS", fmt.Sprintf("Run exceeds maximum allowed track points (%d)", maxPts))
+		return
+	}
+
+	// 3. Validate run duration limits
+	maxDur := a.maxRunDurationSec
+	if maxDur <= 0 {
+		maxDur = 86400
+	}
+	if req.DurationSeconds < 0 || req.DurationSeconds > maxDur {
+		writeError(w, http.StatusBadRequest, "INVALID_DURATION", fmt.Sprintf("Run duration must be between 0 and %d seconds", maxDur))
+		return
+	}
+
+	// 4. Reject non-monotonic timestamps
+	for i := 1; i < len(req.Points); i++ {
+		if !req.Points[i].Timestamp.IsZero() && !req.Points[i-1].Timestamp.IsZero() {
+			if req.Points[i].Timestamp.Before(req.Points[i-1].Timestamp) {
+				writeError(w, http.StatusBadRequest, "NON_MONOTONIC_TIMESTAMPS", "Track points must have monotonically non-decreasing timestamps")
+				return
+			}
+		}
+	}
+
+	// 5. Fast-path: Check for idempotent replay
 	if existing, err := a.store.GetRunByIdempotencyKey(r.Context(), req.IdempotencyKey); err == nil && existing != nil {
 		a.logger.Info("idempotent replay served", "key", req.IdempotencyKey, "run_id", existing.ID)
 		res, _ := a.store.CaptureRunAndMutateTerritories(r.Context(), existing, nil, nil)
@@ -368,7 +455,8 @@ func (a *API) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if uid == "" {
-		uid = "dev_runner_local"
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing authentication credentials for WebSocket")
+		return
 	}
 
 	username := "Runner_" + uid[:min(6, len(uid))]

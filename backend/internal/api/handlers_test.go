@@ -3,6 +3,7 @@ package api_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -337,3 +338,292 @@ func TestWebSocketEndpoint(t *testing.T) {
 	assert.Equal(t, "ws_tester", presence.UserID)
 	assert.Equal(t, 51.502, presence.Latitude)
 }
+
+func TestSubmitRun_NonMonotonicTimestampsRejected(t *testing.T) {
+	router, _ := setupTestServer()
+	now := time.Now().UTC()
+
+	// Point 3 timestamp is before point 2 timestamp
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_non_monotonic_001",
+		DurationSeconds: 300,
+		DistanceMeters:  400.0,
+		Points: []geo.TrackPoint{
+			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(2 * time.Minute)},
+			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(1 * time.Minute)}, // non-monotonic!
+			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
+			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute)},
+		},
+	}
+
+	body, _ := json.Marshal(runPayload)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "runner_chrono")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var errResp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "NON_MONOTONIC_TIMESTAMPS", errResp["error"])
+	assert.Contains(t, errResp["detail"], "monotonically")
+}
+
+func TestSubmitRun_ExceedsMaxPointsCap(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+	// Cap max points to 4
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithAuthenticator(authenticator),
+		api.WithLimits(4, 86400),
+	)
+	router := api.SetupRouter(apiHandler, authenticator)
+
+	now := time.Now().UTC()
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_too_many_points",
+		DurationSeconds: 300,
+		DistanceMeters:  400.0,
+		Points: []geo.TrackPoint{
+			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
+			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute)},
+			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
+			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute)}, // 5th point exceeds limit of 4
+		},
+	}
+
+	body, _ := json.Marshal(runPayload)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "runner_overflow")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var errResp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "TOO_MANY_POINTS", errResp["error"])
+	assert.Contains(t, errResp["detail"], "exceeds maximum allowed track points")
+}
+
+func TestSubmitRun_ExceedsMaxDuration(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+	// Max duration 1800 seconds (30 minutes)
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithAuthenticator(authenticator),
+		api.WithLimits(20000, 1800),
+	)
+	router := api.SetupRouter(apiHandler, authenticator)
+
+	now := time.Now().UTC()
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_duration_exceeded",
+		DurationSeconds: 3600, // 60 minutes exceeds 30 min limit
+		DistanceMeters:  400.0,
+		Points: []geo.TrackPoint{
+			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
+			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute)},
+			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
+		},
+	}
+
+	body, _ := json.Marshal(runPayload)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "runner_duration")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var errResp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "INVALID_DURATION", errResp["error"])
+}
+
+func TestSubmitRun_InsufficientPoints(t *testing.T) {
+	router, _ := setupTestServer()
+	now := time.Now().UTC()
+
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_insufficient_pts",
+		DurationSeconds: 100,
+		DistanceMeters:  100.0,
+		Points: []geo.TrackPoint{
+			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
+		}, // Only 2 points
+	}
+
+	body, _ := json.Marshal(runPayload)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "runner_two_pts")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var errResp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "INSUFFICIENT_POINTS", errResp["error"])
+}
+
+func TestSubmitRun_PayloadTooLarge(t *testing.T) {
+	router, _ := setupTestServer()
+
+	// Construct payload larger than 2 MB
+	hugePadding := strings.Repeat("A", 2*1024*1024+100)
+	rawJSON := fmt.Sprintf(`{"idempotency_key":"idem_huge","padding":"%s"}`, hugePadding)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", strings.NewReader(rawJSON))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "runner_huge")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
+	var errResp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "PAYLOAD_TOO_LARGE", errResp["error"])
+}
+
+func TestRunsEndpoint_RateLimiting(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+
+	// Rate limiter with capacity 1 and very slow refill (0.01 tokens/sec)
+	strictLimiter := api.NewRateLimiter(0.01, 1)
+	defer strictLimiter.Close()
+
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithAuthenticator(authenticator),
+		api.WithRateLimiters(strictLimiter, nil),
+	)
+	router := api.SetupRouter(apiHandler, authenticator)
+
+	now := time.Now().UTC()
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_ratelimit_1",
+		DurationSeconds: 300,
+		DistanceMeters:  400.0,
+		Points: []geo.TrackPoint{
+			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
+			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute)},
+			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
+			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute)},
+		},
+	}
+	body, _ := json.Marshal(runPayload)
+
+	// Request 1: within capacity -> 201 Created
+	req1 := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req1.Header.Set("Content-Type", "application/json")
+	req1.Header.Set("X-Dev-User", "ratelimited_runner")
+	rec1 := httptest.NewRecorder()
+	router.ServeHTTP(rec1, req1)
+	assert.Equal(t, http.StatusCreated, rec1.Code)
+
+	// Request 2: exceeded capacity -> 429 Too Many Requests
+	runPayload.IdempotencyKey = "idem_ratelimit_2"
+	body2, _ := json.Marshal(runPayload)
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("X-Dev-User", "ratelimited_runner")
+	rec2 := httptest.NewRecorder()
+	router.ServeHTTP(rec2, req2)
+
+	assert.Equal(t, http.StatusTooManyRequests, rec2.Code)
+	assert.NotEmpty(t, rec2.Header().Get("Retry-After"))
+	var errResp map[string]interface{}
+	_ = json.Unmarshal(rec2.Body.Bytes(), &errResp)
+	assert.Equal(t, "RATE_LIMIT_EXCEEDED", errResp["error"])
+	assert.NotNil(t, errResp["retry_after"])
+}
+
+func TestCoachEndpoint_RateLimiting(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+
+	strictCoachLimiter := api.NewRateLimiter(0.01, 1)
+	defer strictCoachLimiter.Close()
+
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithAuthenticator(authenticator),
+		api.WithRateLimiters(nil, strictCoachLimiter),
+	)
+	router := api.SetupRouter(apiHandler, authenticator)
+
+	req1 := httptest.NewRequest(http.MethodPost, "/v1/runs/run_coach_limit/coach", strings.NewReader(`{}`))
+	req1.Header.Set("Content-Type", "application/json")
+	req1.Header.Set("X-Dev-User", "coach_limit_user")
+	rec1 := httptest.NewRecorder()
+	router.ServeHTTP(rec1, req1)
+	assert.Equal(t, http.StatusOK, rec1.Code)
+
+	// Second request immediately exceeds capacity of 1
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/runs/run_coach_limit/coach", strings.NewReader(`{}`))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("X-Dev-User", "coach_limit_user")
+	rec2 := httptest.NewRecorder()
+	router.ServeHTTP(rec2, req2)
+
+	assert.Equal(t, http.StatusTooManyRequests, rec2.Code)
+	assert.NotEmpty(t, rec2.Header().Get("Retry-After"))
+}
+
+func TestWebSocketOriginValidation(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+
+	// Hub restricted to https://app.territoryrunner.com
+	wsHub := ws.NewHub(nil, ws.WithAllowedOrigins([]string{"https://app.territoryrunner.com"}))
+	go wsHub.Run()
+	defer wsHub.Stop()
+
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithWebSocketHub(wsHub),
+		api.WithAuthenticator(authenticator),
+	)
+	router := api.SetupRouter(apiHandler, authenticator, "https://app.territoryrunner.com")
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/v1/ws?dev_user=origin_tester"
+
+	// 1. Mobile client without Origin header must connect successfully
+	conn1, resp1, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	require.NoError(t, err)
+	conn1.Close()
+	assert.Equal(t, http.StatusSwitchingProtocols, resp1.StatusCode)
+
+	// 2. Whitelisted origin connects successfully
+	headersAllowed := http.Header{"Origin": []string{"https://app.territoryrunner.com"}}
+	conn2, resp2, err := websocket.DefaultDialer.Dial(wsURL, headersAllowed)
+	require.NoError(t, err)
+	conn2.Close()
+	assert.Equal(t, http.StatusSwitchingProtocols, resp2.StatusCode)
+
+	// 3. Rogue origin is rejected
+	headersBlocked := http.Header{"Origin": []string{"https://evil-unauthorized-site.com"}}
+	_, resp3, err := websocket.DefaultDialer.Dial(wsURL, headersBlocked)
+	assert.Error(t, err)
+	if resp3 != nil {
+		assert.Equal(t, http.StatusForbidden, resp3.StatusCode)
+	}
+}
+

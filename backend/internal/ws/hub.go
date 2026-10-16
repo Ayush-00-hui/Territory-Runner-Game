@@ -11,13 +11,27 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		// Permissive CORS for mobile clients & emulators
-		return true
-	},
+// Option configures Hub parameters.
+type Option func(*Hub)
+
+// WithAllowedOrigins configures origin validation for WebSocket handshakes.
+// Mobile clients without an Origin header are always permitted.
+func WithAllowedOrigins(allowedOrigins []string) Option {
+	return func(h *Hub) {
+		h.upgrader.CheckOrigin = func(r *http.Request) bool {
+			origin := r.Header.Get("Origin")
+			// Native mobile clients without an Origin header must still work
+			if origin == "" {
+				return true
+			}
+			for _, allowed := range allowedOrigins {
+				if allowed == "*" || allowed == origin {
+					return true
+				}
+			}
+			return false
+		}
+	}
 }
 
 // Hub manages active WebSocket runner connections and fans out live broadcasts.
@@ -30,14 +44,15 @@ type Hub struct {
 	mu          sync.RWMutex
 	logger      *slog.Logger
 	stop        chan struct{}
+	upgrader    websocket.Upgrader
 }
 
 // NewHub initializes a new real-time WebSocket hub.
-func NewHub(logger *slog.Logger) *Hub {
+func NewHub(logger *slog.Logger, opts ...Option) *Hub {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Hub{
+	h := &Hub{
 		clients:     make(map[*Client]bool),
 		userClients: make(map[string]map[*Client]bool),
 		broadcast:   make(chan []byte, 256),
@@ -45,7 +60,19 @@ func NewHub(logger *slog.Logger) *Hub {
 		unregister:  make(chan *Client),
 		logger:      logger,
 		stop:        make(chan struct{}),
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				// Permissive fallback: mobile clients without Origin header always allowed
+				return true
+			},
+		},
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // Run executes the central event coordination loop.
@@ -204,7 +231,7 @@ func (h *Hub) Stop() {
 
 // ServeWS upgrades the HTTP connection to a full-duplex WebSocket session.
 func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request, userID, username, faction string) {
-	conn, err := upgrader.Upgrade(w, r, nil)
+	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.logger.Error("failed to upgrade websocket connection", "error", err)
 		return

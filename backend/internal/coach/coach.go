@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -35,6 +34,7 @@ type RunContext struct {
 // Service manages post-run coaching insights via Gemini LLM or resilient heuristic fallback.
 type Service struct {
 	apiKey     string
+	model      string
 	baseURL    string // default https://generativelanguage.googleapis.com
 	httpClient *http.Client
 	logger     *slog.Logger
@@ -42,6 +42,15 @@ type Service struct {
 
 // Option configures Service parameters.
 type Option func(*Service)
+
+// WithModel sets the Gemini model name.
+func WithModel(model string) Option {
+	return func(s *Service) {
+		if model != "" {
+			s.model = model
+		}
+	}
+}
 
 // WithHTTPClient overrides the HTTP client for testing.
 func WithHTTPClient(client *http.Client) Option {
@@ -68,6 +77,7 @@ func WithLogger(l *slog.Logger) Option {
 func NewService(apiKey string, opts ...Option) *Service {
 	s := &Service{
 		apiKey:  apiKey,
+		model:   "gemini-2.5-flash",
 		baseURL: "https://generativelanguage.googleapis.com",
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
@@ -178,7 +188,7 @@ Analyze this completed run session data:
 Provide a motivational coaching response in STRICT JSON matching this schema:
 {
   "summary": "1-2 sentences highlighting performance, distance, and territory expansion achievements.",
-  "tip": "1 tactical, athletic advice for recovery or pacing on their next hexagonal route.",
+  "tip": "1 tactical, athletic advice for recovery or pacing on their next route.",
   "moodTag": "celebratory" | "encouraging" | "analytical"
 }
 Do NOT include markdown wrapping or extra text. Output raw JSON only.`,
@@ -207,14 +217,17 @@ Do NOT include markdown wrapping or extra text. Output raw JSON only.`,
 		return CoachInsight{}, fmt.Errorf("failed to marshal Gemini request: %w", err)
 	}
 
-	endpoint := fmt.Sprintf("%s/v1beta/models/gemini-1.5-flash:generateContent?key=%s",
-		s.baseURL, url.QueryEscape(s.apiKey))
+	endpoint := fmt.Sprintf("%s/v1beta/models/%s:generateContent", s.baseURL, s.model)
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	callCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	httpReq, err := http.NewRequestWithContext(callCtx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
 	if err != nil {
 		return CoachInsight{}, fmt.Errorf("failed to create http request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-goog-api-key", s.apiKey)
 
 	resp, err := s.httpClient.Do(httpReq)
 	if err != nil {

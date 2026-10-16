@@ -61,8 +61,8 @@ func main() {
 	defer dataStore.Close()
 
 	authenticator := auth.NewAuthenticator(cfg)
-	coachSvc := coach.NewService(cfg.GeminiAPIKey, coach.WithLogger(logger))
-	wsHub := ws.NewHub(logger)
+	coachSvc := coach.NewService(cfg.GeminiAPIKey, coach.WithModel(cfg.GeminiModel), coach.WithLogger(logger))
+	wsHub := ws.NewHub(logger, ws.WithAllowedOrigins(cfg.AllowedOrigins))
 	go wsHub.Run()
 	defer wsHub.Stop()
 
@@ -70,8 +70,9 @@ func main() {
 		api.WithCoachService(coachSvc),
 		api.WithWebSocketHub(wsHub),
 		api.WithAuthenticator(authenticator),
+		api.WithLimits(cfg.MaxPointsPerRun, cfg.MaxRunDurationSec),
 	)
-	router := api.SetupRouter(apiHandler, authenticator)
+	router := api.SetupRouter(apiHandler, authenticator, cfg.AllowedOrigins...)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,

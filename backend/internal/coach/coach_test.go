@@ -46,7 +46,10 @@ func TestCoachFallbackCelebratoryMood(t *testing.T) {
 func TestCoachGeminiSuccess(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
-		assert.Contains(t, r.URL.RawQuery, "key=test-gemini-key")
+		// API key must be sent via x-goog-api-key header, NOT URL query!
+		assert.Equal(t, "test-gemini-key", r.Header.Get("x-goog-api-key"))
+		assert.NotContains(t, r.URL.RawQuery, "key=")
+		assert.Contains(t, r.URL.Path, "/v1beta/models/gemini-2.5-flash:generateContent")
 
 		resp := map[string]interface{}{
 			"candidates": []map[string]interface{}{
@@ -115,3 +118,39 @@ func TestCoachGeminiResilientFallbackOnError(t *testing.T) {
 	assert.Contains(t, insight.Summary, "2.50 km")
 	assert.NotEmpty(t, insight.Tip)
 }
+
+func TestCoachCustomModel(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.URL.Path, "/v1beta/models/gemini-custom-flash:generateContent")
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"candidates": []map[string]interface{}{
+				{
+					"content": map[string]interface{}{
+						"parts": []map[string]interface{}{
+							{
+								"text": `{"summary":"Great job!","tip":"Pace well.","moodTag":"analytical"}`,
+							},
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer mockServer.Close()
+
+	svc := coach.NewService(
+		"test-key",
+		coach.WithBaseURL(mockServer.URL),
+		coach.WithHTTPClient(mockServer.Client()),
+		coach.WithModel("gemini-custom-flash"),
+	)
+
+	insight := svc.GenerateInsight(context.Background(), coach.RunContext{
+		DistanceKm:      5.0,
+		DurationSeconds: 1500,
+	})
+	assert.Equal(t, "Great job!", insight.Summary)
+	assert.Equal(t, "analytical", insight.MoodTag)
+}
+

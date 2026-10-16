@@ -10,7 +10,7 @@ import (
 )
 
 // SetupRouter initializes the Chi router with middlewares, routes, and authentication.
-func SetupRouter(api *API, authenticator *auth.Authenticator) http.Handler {
+func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...string) http.Handler {
 	r := chi.NewRouter()
 
 	// Standard production middlewares
@@ -19,13 +19,27 @@ func SetupRouter(api *API, authenticator *auth.Authenticator) http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	// Permissive CORS for local flutter dev and web clients
+	origins := allowedOrigins
+	if len(origins) == 0 {
+		origins = []string{"*"}
+	}
+
+	allowCredentials := true
+	for _, o := range origins {
+		if o == "*" {
+			// Per CORS specification, wildcard '*' cannot be used with AllowCredentials: true
+			allowCredentials = false
+			break
+		}
+	}
+
+	// CORS configuration based on allowed origins
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   origins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Dev-User", "Idempotency-Key"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
+		ExposedHeaders:   []string{"Link", "Retry-After"},
+		AllowCredentials: allowCredentials,
 		MaxAge:           300,
 	}))
 
@@ -40,9 +54,23 @@ func SetupRouter(api *API, authenticator *auth.Authenticator) http.Handler {
 		v1.Use(authenticator.Middleware)
 
 		v1.Get("/me", api.HandleGetMe)
-		v1.Post("/runs", api.HandleSubmitRun)
+
+		// Per-user and per-IP rate-limited runs submission
+		if api.runsLimiter != nil {
+			v1.With(RateLimitMiddleware(api.runsLimiter)).Post("/runs", api.HandleSubmitRun)
+		} else {
+			v1.Post("/runs", api.HandleSubmitRun)
+		}
+
 		v1.Get("/runs", api.HandleGetRuns)
-		v1.Post("/runs/{id}/coach", api.HandleRunCoach)
+
+		// Per-user and per-IP rate-limited coach generation
+		if api.coachLimiter != nil {
+			v1.With(RateLimitMiddleware(api.coachLimiter)).Post("/runs/{id}/coach", api.HandleRunCoach)
+		} else {
+			v1.Post("/runs/{id}/coach", api.HandleRunCoach)
+		}
+
 		v1.Get("/territories", api.HandleGetTerritories)
 		v1.Get("/leaderboard", api.HandleGetLeaderboard)
 	})
