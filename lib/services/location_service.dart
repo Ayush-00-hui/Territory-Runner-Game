@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -139,7 +140,40 @@ class LocationService {
     return true;
   }
 
-  void startTracking({bool isZeroG = false}) async {
+  /// Creates platform-optimized location settings with foreground service notifications.
+  LocationSettings createLocationSettings({
+    String notificationTitle = "Territory Runner",
+    String notificationText = "Tracking your running route in the background...",
+  }) {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      return AndroidSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 5,
+        intervalDuration: const Duration(seconds: 1),
+        foregroundNotificationConfig: ForegroundNotificationConfig(
+          notificationTitle: notificationTitle,
+          notificationText: notificationText,
+          enableWakeLock: true,
+        ),
+      );
+    } else if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)) {
+      return AppleSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 5,
+        activityType: ActivityType.fitness,
+        pauseLocationUpdatesAutomatically: false,
+        showBackgroundLocationIndicator: true,
+        allowBackgroundLocationUpdates: true,
+      );
+    } else {
+      return const LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 5,
+      );
+    }
+  }
+
+  void startTracking({bool isZeroG = false, String? liveStatusText}) async {
     if (_pacerMode != VirtualPacerMode.none) {
       _startSimulation();
       return;
@@ -154,12 +188,12 @@ class LocationService {
     }
 
     try {
-      // 5m distance filter for battery-friendly, high-accuracy GPS streams
-      const LocationSettings locationSettings = LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 5,
+      final locationSettings = createLocationSettings(
+        notificationTitle: "Territory Runner",
+        notificationText: liveStatusText ?? "Tracking your running route in the background...",
       );
 
+      _positionStreamSubscription?.cancel();
       _positionStreamSubscription = Geolocator.getPositionStream(
         locationSettings: locationSettings,
       ).listen((Position position) {

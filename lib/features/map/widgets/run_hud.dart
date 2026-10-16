@@ -302,11 +302,24 @@ class RunHud extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.satellite_alt_rounded, color: AppColors.accent, size: 14),
+                      Icon(
+                        Icons.satellite_alt_rounded,
+                        color: satelliteAccuracyMeters <= 10.0
+                            ? AppColors.accent
+                            : (satelliteAccuracyMeters <= 30.0 ? AppColors.warning : AppColors.rival),
+                        size: 14,
+                      ),
                       const SizedBox(width: AppSpacing.s4),
                       Text(
-                        '±${satelliteAccuracyMeters.toStringAsFixed(0)}m',
-                        style: AppText.bodySmall.copyWith(fontSize: 11),
+                        satelliteAccuracyMeters > 50.0
+                            ? 'GPS LOST'
+                            : '±${satelliteAccuracyMeters.toStringAsFixed(0)}m',
+                        style: AppText.bodySmall.copyWith(
+                          fontSize: 11,
+                          color: satelliteAccuracyMeters <= 10.0
+                              ? AppColors.textSecondary
+                              : (satelliteAccuracyMeters <= 30.0 ? AppColors.warning : AppColors.rival),
+                        ),
                       ),
                     ],
                   ),

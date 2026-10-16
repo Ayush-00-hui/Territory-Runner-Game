@@ -6,7 +6,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../services/location_service.dart';
+import '../../services/run_recovery_service.dart';
+import '../../services/gps_quality_service.dart';
 import '../gameplay/territory_service.dart';
 import '../routing/route_service.dart';
 import '../coach/pace_prediction_service.dart';
@@ -96,6 +99,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   double? _distanceToClosureMeters;
   double? _proximityToClosure;
   final FocusNode _keyboardFocusNode = FocusNode();
+
+  // Crash/Kill recovery & GPS signal health state
+  final RunRecoveryService _runRecoveryService = RunRecoveryService();
+  GpsQuality _gpsQuality = GpsQuality.optimal;
+  DateTime? _lastGpsFixTime;
+  Timer? _gpsLivenessTimer;
+  final bool _isScreenAwakeEnabled = true;
 
   @override
   void initState() {
@@ -205,13 +215,35 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
     });
 
+    _runRecoveryService.init();
+
+    _gpsLivenessTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted && _lastGpsFixTime != null) {
+        final quality = GpsQualityService.evaluateQuality(
+          accuracyMeters: _satelliteAccuracyMeters,
+          lastFixTimestamp: _lastGpsFixTime!,
+        );
+        if (quality != _gpsQuality) {
+          setState(() {
+            _gpsQuality = quality;
+            if (quality == GpsQuality.lost) {
+              _satelliteAccuracyMeters = 99.0;
+            }
+          });
+        }
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPermissionsAndInitLocation();
+      _checkRecoverableRun();
     });
   }
 
   @override
   void dispose() {
+    _gpsLivenessTimer?.cancel();
+    WakelockPlus.disable();
     _rivalSimulationTimer?.cancel();
     SyncQueueService().reconciliationToastNotifier.removeListener(_onReconciliationToast);
     SyncQueueService().lastRejectionNotifier.removeListener(_onRunRejected);
@@ -359,6 +391,112 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _initLocation();
   }
 
+  void _checkRecoverableRun() {
+    if (_runRecoveryService.hasRecoverableRun()) {
+      final snapshot = _runRecoveryService.getRecoverableRun();
+      if (snapshot != null && mounted) {
+        _showResumeRunDialog(snapshot);
+      }
+    }
+  }
+
+  void _showResumeRunDialog(ActiveRunSnapshot snapshot) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.accent, width: 1.2),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.history_toggle_off_rounded, color: AppColors.accent, size: 22),
+            SizedBox(width: 8),
+            Text(
+              'RESUME RUN?',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.0),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'An interrupted run with ${snapshot.distanceKm.toStringAsFixed(2)} km recorded was recovered from local cache.',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Distance: ${snapshot.distanceKm.toStringAsFixed(2)} km', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text('${snapshot.coordinates.length} GPS Points', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _runRecoveryService.clearRecovery();
+            },
+            child: const Text('DISCARD', style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _resumeRun(snapshot);
+            },
+            child: const Text('RESUME RUN', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _resumeRun(ActiveRunSnapshot snapshot) {
+    setState(() {
+      _isRunActive = true;
+      _runCoordinates.clear();
+      _runCoordinates.addAll(snapshot.coordinates);
+      _recentPositions.clear();
+      _recentPositions.addAll(snapshot.positions);
+      _runDistanceKm = snapshot.distanceKm;
+      _elapsedDurationSeconds = snapshot.elapsedDurationSeconds;
+      _movingDurationSeconds = snapshot.movingDurationSeconds;
+      _territoriesClaimedThisRun = snapshot.territoriesClaimed;
+      _accumulatedRunPreviewArea = snapshot.accumulatedPreviewArea;
+      _accumulatedRunPreviewXp = snapshot.accumulatedPreviewXp;
+
+      _polygonEngine.clear();
+      for (final pt in snapshot.coordinates) {
+        _polygonEngine.addPosition(pt);
+      }
+    });
+
+    _startRunTimer();
+    if (_isScreenAwakeEnabled) {
+      WakelockPlus.enable();
+    }
+  }
+
   void _initLocation() async {
     final pos = await _locationService.getCurrentLocation();
     if (pos != null) {
@@ -400,6 +538,26 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _updatePosition(Position pos) {
     if (_currentLocation != null) {
+      // Check for signal gaps & suppress unrealistic jumps across tunnels/indoor areas
+      final now = pos.timestamp;
+      if (_lastGpsFixTime != null && GpsQualityService.isSignalGap(_lastGpsFixTime!, now)) {
+        if (_runCoordinates.isNotEmpty) {
+          final lastCoord = _runCoordinates.last;
+          final newCoord = LatLng(pos.latitude, pos.longitude);
+          final deltaSec = (now.difference(_lastGpsFixTime!).inMilliseconds / 1000.0).abs();
+          if (GpsQualityService.isUnrealisticJump(lastCoord, newCoord, deltaSec)) {
+            debugPrint('[GPS] Suppressed unrealistic gap jump across signal loss');
+            _lastGpsFixTime = now;
+            return;
+          }
+        }
+      }
+      _lastGpsFixTime = now;
+      _gpsQuality = GpsQualityService.evaluateQuality(
+        accuracyMeters: pos.accuracy,
+        lastFixTimestamp: _lastGpsFixTime!,
+      );
+
       // Track positions for anti-cheat & telemetry
       _recentPositions.add(pos);
       if (_recentPositions.length > 20) {
@@ -408,7 +566,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       // Rolling window for instantaneous split pace calculation
       _rollingPaceWindow.add(pos);
-      final now = pos.timestamp;
       _rollingPaceWindow.removeWhere((p) => now.difference(p.timestamp).inSeconds > 15);
 
       if (_isRunActive) {
@@ -584,6 +741,44 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
+  void _startRunTimer() {
+    _runTimer?.cancel();
+    _runTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted && _isRunActive) {
+        setState(() {
+          _elapsedDurationSeconds++;
+
+          // Strava Auto-Pause Check using GpsQualityService stationary threshold
+          if (GpsQualityService.isStationary(_currentSpeedKmh)) {
+            _lowSpeedDurationSeconds++;
+            if (_lowSpeedDurationSeconds >= 3) {
+              _isAutoPaused = true;
+            }
+          } else {
+            _lowSpeedDurationSeconds = 0;
+            _isAutoPaused = false;
+            _movingDurationSeconds++;
+          }
+        });
+
+        // Persist active run to Hive every 5 seconds for crash/kill recovery
+        if (_elapsedDurationSeconds % 5 == 0 && _runCoordinates.length >= 2) {
+          _runRecoveryService.saveActiveRun(
+            positions: List<Position>.from(_recentPositions),
+            coordinates: List<LatLng>.from(_runCoordinates),
+            startTime: DateTime.now().subtract(Duration(seconds: _elapsedDurationSeconds)),
+            elapsedDurationSeconds: _elapsedDurationSeconds,
+            movingDurationSeconds: _movingDurationSeconds,
+            distanceKm: _runDistanceKm,
+            territoriesClaimed: _territoriesClaimedThisRun,
+            accumulatedPreviewArea: _accumulatedRunPreviewArea,
+            accumulatedPreviewXp: _accumulatedRunPreviewXp,
+          );
+        }
+      }
+    });
+  }
+
   void _toggleRun() {
     if (!_isRunActive) {
       // START RUN
@@ -603,32 +798,18 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _rollingPaceWindow.clear();
       });
 
-      _runTimer?.cancel();
-      _runTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (mounted && _isRunActive) {
-          setState(() {
-            _elapsedDurationSeconds++;
-
-            // Strava Auto-Pause Check: speed < 1.5 km/h for > 3 consecutive seconds
-            if (_currentSpeedKmh < 1.5) {
-              _lowSpeedDurationSeconds++;
-              if (_lowSpeedDurationSeconds >= 3) {
-                _isAutoPaused = true;
-              }
-            } else {
-              _lowSpeedDurationSeconds = 0;
-              _isAutoPaused = false;
-              _movingDurationSeconds++;
-            }
-          });
-        }
-      });
+      _startRunTimer();
+      if (_isScreenAwakeEnabled) {
+        WakelockPlus.enable();
+      }
 
       showRunStartAnimation(context);
       _voiceCoach.announceRunStart();
     } else {
       // STOP RUN & TRIGGER SUMMARY
       _runTimer?.cancel();
+      WakelockPlus.disable();
+      _runRecoveryService.clearRecovery();
       final int finalSeconds = _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds;
       final double finalDistance = _runDistanceKm;
       final int finalTerritories = _territoriesClaimedThisRun;

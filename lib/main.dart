@@ -19,6 +19,7 @@ void main() async {
   Hive.registerAdapter(RunnerProfileAdapter());
   await Hive.openBox<Territory>('territories_v3');
   await Hive.openBox<RunnerProfile>('profile');
+  await Hive.openBox<String>('active_run_recovery');
   await FirebaseService().initialize();
   runApp(const TerritoryApp());
 }

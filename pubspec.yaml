@@ -53,6 +53,7 @@ dependencies:
   google_sign_in: ^6.2.2
   http: ^1.6.0
   web_socket_channel: ^3.0.3
+  wakelock_plus: ^1.8.0
 
 dev_dependencies:
   flutter_test:
