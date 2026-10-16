@@ -232,10 +232,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		// ST_Union operates on geometry, cast to ::geography for geodesic area
 		unionQuery := `
 			INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, updated_at)
-			VALUES ($1, $2, ST_Multi(ST_GeomFromText($3, 4326)), ST_Area(ST_GeomFromText($3, 4326)::geography), 100.0, NOW(), NOW())
+			VALUES ($1, $2, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_PolygonFromText($3, 4326)), 3)), ST_Area(ST_MakeValid(ST_PolygonFromText($3, 4326))::geography), 100.0, NOW(), NOW())
 			ON CONFLICT (id) DO UPDATE SET
-				geom = ST_Multi(ST_CollectionExtract(ST_Union(territories.geom, ST_GeomFromText($3, 4326)), 3)),
-				area_sqm = ST_Area(ST_Union(territories.geom, ST_GeomFromText($3, 4326))::geography),
+				geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_PolygonFromText($3, 4326)))), 3)),
+				area_sqm = ST_Area(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_PolygonFromText($3, 4326))))::geography),
 				strength = 100.0,
 				last_defended_at = NOW(),
 				updated_at = NOW()
@@ -249,11 +249,11 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		diffQuery := `
 			UPDATE territories
 			SET
-				geom = ST_Multi(ST_CollectionExtract(ST_Difference(geom, ST_GeomFromText($1, 4326)), 3)),
-				area_sqm = ST_Area(ST_Difference(geom, ST_GeomFromText($1, 4326))::geography),
+				geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Difference(geom, ST_MakeValid(ST_PolygonFromText($1, 4326)))), 3)),
+				area_sqm = ST_Area(ST_MakeValid(ST_Difference(geom, ST_MakeValid(ST_PolygonFromText($1, 4326))))::geography),
 				updated_at = NOW()
 			WHERE owner_id != $2
-			  AND ST_Intersects(geom, ST_GeomFromText($1, 4326))
+			  AND ST_Intersects(geom, ST_MakeValid(ST_PolygonFromText($1, 4326)))
 			RETURNING owner_id;
 		`
 		rows, err := tx.Query(ctx, diffQuery, polyWKT, run.UserID)
@@ -310,9 +310,18 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		INSERT INTO runs (id, user_id, idempotency_key, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, path, status, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $9::text IS NOT NULL THEN ST_GeomFromText($9, 4326) ELSE NULL END, $10, NOW());
 	`
+	anomalyReasons := run.AnomalyReasons
+	if anomalyReasons == nil {
+		anomalyReasons = []string{}
+	}
+	status := run.Status
+	if status == "" {
+		status = "accepted"
+	}
+
 	if _, err := tx.Exec(ctx, insertRunQuery,
 		run.ID, run.UserID, run.IdempotencyKey, run.DurationSeconds, run.DistanceMeters,
-		areaClaimed, run.AnomalyScore, run.AnomalyReasons, pathWKT, run.Status,
+		areaClaimed, run.AnomalyScore, anomalyReasons, pathWKT, status,
 	); err != nil {
 		return nil, fmt.Errorf("failed to insert run: %w", err)
 	}
@@ -365,6 +374,70 @@ func (s *PostgresStore) GetLeaderboard(ctx context.Context, limit int) ([]Leader
 		rank++
 	}
 	return entries, nil
+}
+
+// ApplyTerritoryDecay updates all territories by decaying strength based on elapsed days since last_defended_at.
+func (s *PostgresStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay float64) error {
+	if decayPerDay <= 0 {
+		decayPerDay = 15.0
+	}
+	query := `
+		UPDATE territories
+		SET
+			strength = GREATEST(0.0, LEAST(100.0, strength - (EXTRACT(EPOCH FROM (NOW() - last_defended_at)) / 86400.0 * $1))),
+			updated_at = NOW();
+	`
+	_, err := s.pool.Exec(ctx, query, decayPerDay)
+	if err != nil {
+		return fmt.Errorf("failed to apply territory decay: %w", err)
+	}
+	return nil
+}
+
+// UpdateTerritoryDefense updates a territory's strength and marks it defended as of now.
+func (s *PostgresStore) UpdateTerritoryDefense(ctx context.Context, territoryID string, newStrength float64) error {
+	if newStrength < 0 {
+		newStrength = 0
+	} else if newStrength > 100 {
+		newStrength = 100
+	}
+	query := `
+		UPDATE territories
+		SET
+			strength = $1,
+			last_defended_at = NOW(),
+			updated_at = NOW()
+		WHERE id = $2;
+	`
+	tag, err := s.pool.Exec(ctx, query, newStrength, territoryID)
+	if err != nil {
+		return fmt.Errorf("failed to update territory defense: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("territory %s not found", territoryID)
+	}
+	return nil
+}
+
+// GetTerritoryByID retrieves a territory by its unique ID.
+func (s *PostgresStore) GetTerritoryByID(ctx context.Context, id string) (*Territory, error) {
+	query := `
+		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), t.updated_at
+		FROM territories t
+		JOIN users u ON t.owner_id = u.id
+		WHERE t.id = $1;
+	`
+	var t Territory
+	err := s.pool.QueryRow(ctx, query, id).Scan(
+		&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.UpdatedAt,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("error querying territory by id: %w", err)
+	}
+	return &t, nil
 }
 
 func polygonToWKT(ring []geo.LatLng) string {

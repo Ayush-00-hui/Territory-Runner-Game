@@ -11,6 +11,9 @@ run:
 test:
 	go test -v -race ./...
 
+test-integration:
+	go test -v -count=1 -tags=integration ./internal/store/...
+
 docker-up:
 	docker compose up -d
 
@@ -19,3 +22,4 @@ docker-down:
 
 clean:
 	rm -rf bin/
+

@@ -243,3 +243,57 @@ func (m *MemoryStore) GetLeaderboard(ctx context.Context, limit int) ([]Leaderbo
 	}
 	return res, nil
 }
+
+// ApplyTerritoryDecay updates in-memory territories by decaying strength based on elapsed days since last defense.
+func (m *MemoryStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if decayPerDay <= 0 {
+		decayPerDay = 15.0
+	}
+	now := time.Now().UTC()
+	for _, t := range m.territories {
+		days := now.Sub(t.LastDefendedAt).Seconds() / 86400.0
+		decayed := t.Strength - (days * decayPerDay)
+		if decayed < 0.0 {
+			decayed = 0.0
+		} else if decayed > 100.0 {
+			decayed = 100.0
+		}
+		t.Strength = decayed
+		t.UpdatedAt = now
+	}
+	return nil
+}
+
+// UpdateTerritoryDefense updates a territory's strength and marks it defended as of now.
+func (m *MemoryStore) UpdateTerritoryDefense(ctx context.Context, territoryID string, newStrength float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if newStrength < 0 {
+		newStrength = 0
+	} else if newStrength > 100 {
+		newStrength = 100
+	}
+	t, exists := m.territories[territoryID]
+	if !exists {
+		return fmt.Errorf("territory %s not found", territoryID)
+	}
+	t.Strength = newStrength
+	t.LastDefendedAt = time.Now().UTC()
+	t.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// GetTerritoryByID retrieves a territory by its unique ID.
+func (m *MemoryStore) GetTerritoryByID(ctx context.Context, id string) (*Territory, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	t, ok := m.territories[id]
+	if !ok {
+		return nil, nil
+	}
+	copy := *t
+	return &copy, nil
+}
+

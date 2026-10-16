@@ -1,0 +1,747 @@
+//go:build integration
+
+package store_test
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func getTestConnStr() string {
+	if u := os.Getenv("TEST_DATABASE_URL"); u != "" {
+		return u
+	}
+	if u := os.Getenv("DATABASE_URL"); u != "" {
+		return u
+	}
+	return "postgres://runner:runnerpass@localhost:5432/territory_runner?sslmode=disable"
+}
+
+func readMigration(filename string) (string, error) {
+	candidates := []string{
+		filepath.Join("..", "..", "migrations", filename),
+		filepath.Join("migrations", filename),
+		filepath.Join("backend", "migrations", filename),
+	}
+	for _, p := range candidates {
+		data, err := os.ReadFile(p)
+		if err == nil {
+			return string(data), nil
+		}
+	}
+	return "", fmt.Errorf("migration file %s not found", filename)
+}
+
+func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
+	down2, _ := readMigration("000002_add_territory_strength.down.sql")
+	down1, _ := readMigration("000001_init_schema.down.sql")
+	up1, err := readMigration("000001_init_schema.up.sql")
+	if err != nil {
+		return err
+	}
+	up2, err := readMigration("000002_add_territory_strength.up.sql")
+	if err != nil {
+		return err
+	}
+
+	if down2 != "" {
+		_, _ = pool.Exec(ctx, down2)
+	}
+	if down1 != "" {
+		_, _ = pool.Exec(ctx, down1)
+	}
+	if _, err := pool.Exec(ctx, up1); err != nil {
+		return fmt.Errorf("failed executing 000001 up: %w", err)
+	}
+	if _, err := pool.Exec(ctx, up2); err != nil {
+		return fmt.Errorf("failed executing 000002 up: %w", err)
+	}
+	return nil
+}
+
+func setupTestStore(t *testing.T) (*store.PostgresStore, *pgxpool.Pool) {
+	connStr := getTestConnStr()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cfg, err := pgxpool.ParseConfig(connStr)
+	if err != nil {
+		t.Skipf("Skipping integration test: invalid connection string %q: %v", connStr, err)
+	}
+
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
+		t.Skipf("Skipping integration test: cannot connect to Postgres at %s: %v", connStr, err)
+	}
+
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		t.Skipf("Skipping integration test: ping failed at %s: %v", connStr, err)
+	}
+
+	if err := resetSchema(ctx, pool); err != nil {
+		pool.Close()
+		t.Fatalf("failed to reset test schema: %v", err)
+	}
+
+	st, err := store.NewPostgresStore(ctx, connStr)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		st.Close()
+		pool.Close()
+	})
+
+	return st, pool
+}
+
+// 1. Migrations up and down on empty database
+func TestMigrations_UpAndDown(t *testing.T) {
+	connStr := getTestConnStr()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, connStr)
+	if err != nil {
+		t.Skipf("Skipping: cannot connect: %v", err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		t.Skipf("Skipping: ping failed: %v", err)
+	}
+
+	up1, err := readMigration("000001_init_schema.up.sql")
+	require.NoError(t, err)
+	down1, err := readMigration("000001_init_schema.down.sql")
+	require.NoError(t, err)
+	up2, err := readMigration("000002_add_territory_strength.up.sql")
+	require.NoError(t, err)
+	down2, err := readMigration("000002_add_territory_strength.down.sql")
+	require.NoError(t, err)
+
+	// Clean slate
+	_, _ = pool.Exec(ctx, down2)
+	_, _ = pool.Exec(ctx, down1)
+
+	// Apply Up 1
+	_, err = pool.Exec(ctx, up1)
+	require.NoError(t, err, "000001_init_schema.up should apply cleanly")
+
+	// Verify tables created
+	var tableCount int
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.tables 
+		WHERE table_schema = 'public' AND table_name IN ('users', 'territories', 'runs');
+	`).Scan(&tableCount)
+	require.NoError(t, err)
+	assert.Equal(t, 3, tableCount, "all 3 tables must exist after 000001 up")
+
+	// Apply Up 2
+	_, err = pool.Exec(ctx, up2)
+	require.NoError(t, err, "000002_add_territory_strength.up should apply cleanly")
+
+	// Verify strength and last_defended_at columns exist
+	var colCount int
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'territories' AND column_name IN ('strength', 'last_defended_at');
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 2, colCount, "strength and last_defended_at columns must exist after 000002 up")
+
+	// Revert Down 2
+	_, err = pool.Exec(ctx, down2)
+	require.NoError(t, err, "000002 down should apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'territories' AND column_name IN ('strength', 'last_defended_at');
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, colCount, "columns must be removed after 000002 down")
+
+	// Revert Down 1
+	_, err = pool.Exec(ctx, down1)
+	require.NoError(t, err, "000001 down should apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.tables 
+		WHERE table_schema = 'public' AND table_name IN ('users', 'territories', 'runs');
+	`).Scan(&tableCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, tableCount, "tables must be dropped after 000001 down")
+}
+
+// 2. Migration 000002 applies cleanly on a database with existing rows
+func TestMigration_000002_OnExistingRows(t *testing.T) {
+	connStr := getTestConnStr()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, connStr)
+	if err != nil {
+		t.Skipf("Skipping: cannot connect: %v", err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		t.Skipf("Skipping: ping failed: %v", err)
+	}
+
+	up1, err := readMigration("000001_init_schema.up.sql")
+	require.NoError(t, err)
+	down1, err := readMigration("000001_init_schema.down.sql")
+	require.NoError(t, err)
+	up2, err := readMigration("000002_add_territory_strength.up.sql")
+	require.NoError(t, err)
+	down2, err := readMigration("000002_add_territory_strength.down.sql")
+	require.NoError(t, err)
+
+	// Clean slate and apply 000001 only
+	_, _ = pool.Exec(ctx, down2)
+	_, _ = pool.Exec(ctx, down1)
+	_, err = pool.Exec(ctx, up1)
+	require.NoError(t, err)
+
+	// Insert existing rows under 000001 schema (no strength / last_defended_at columns)
+	_, err = pool.Exec(ctx, `
+		INSERT INTO users (id, username, faction, total_area_sqm, xp, level, total_runs)
+		VALUES ('existing_user_1', 'LegacyRunner', 'Cyber Vanguard', 5000.0, 250, 2, 3);
+	`)
+	require.NoError(t, err)
+
+	_, err = pool.Exec(ctx, `
+		INSERT INTO territories (id, owner_id, geom, area_sqm, updated_at)
+		VALUES (
+			'poly_existing_user_1_territory',
+			'existing_user_1',
+			ST_Multi(ST_GeomFromText('POLYGON((-0.12 51.50, -0.12 51.51, -0.11 51.51, -0.11 51.50, -0.12 51.50))', 4326)),
+			5000.0,
+			NOW() - INTERVAL '3 days'
+		);
+	`)
+	require.NoError(t, err)
+
+	// Now apply migration 000002 up on database with existing rows
+	_, err = pool.Exec(ctx, up2)
+	require.NoError(t, err, "migration 000002 must apply cleanly on existing data without error")
+
+	// Verify existing row received DEFAULT values
+	var strength float64
+	var lastDefendedAt time.Time
+	var ownerID string
+	var areaSqm float64
+	err = pool.QueryRow(ctx, `
+		SELECT owner_id, area_sqm, strength, last_defended_at
+		FROM territories
+		WHERE id = 'poly_existing_user_1_territory';
+	`).Scan(&ownerID, &areaSqm, &strength, &lastDefendedAt)
+	require.NoError(t, err)
+
+	assert.Equal(t, "existing_user_1", ownerID)
+	assert.InDelta(t, 5000.0, areaSqm, 0.1)
+	assert.Equal(t, 100.0, strength, "existing territory must default to 100.0 strength")
+	assert.False(t, lastDefendedAt.IsZero(), "last_defended_at must be populated with default timestamp")
+	assert.WithinDuration(t, time.Now().UTC(), lastDefendedAt, 10*time.Second)
+
+	// Revert 000002 down and clean up
+	_, err = pool.Exec(ctx, down2)
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx, down1)
+	require.NoError(t, err)
+}
+
+// 3. Loop capture with PostGIS ST_PolygonFromText / ST_MakeValid
+func TestPostgres_LoopCapture_ST_PolygonFromText_MakeValid(t *testing.T) {
+	st, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	u := &store.User{
+		ID:           "pg_runner_loop",
+		Username:     "LoopRunner",
+		Faction:      "Neon Wardens",
+		TotalAreaSqm: 0,
+		XP:           0,
+		Level:        1,
+		TotalRuns:    0,
+	}
+	require.NoError(t, st.UpsertUser(ctx, u))
+
+	// Closed polygon around London Hyde Park
+	ring := []geo.LatLng{
+		{Latitude: 51.5000, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1170},
+		{Latitude: 51.5000, Longitude: -0.1170},
+		{Latitude: 51.5000, Longitude: -0.1200},
+	}
+	loopArea := geo.ComputeGeodesicShoelaceArea(ring)
+	require.Greater(t, loopArea, 1000.0)
+
+	loops := []geo.EnclosedLoop{
+		{
+			Polygon:      ring,
+			AreaSqMeters: loopArea,
+		},
+	}
+	run := &store.Run{
+		ID:              "run_pg_loop_1",
+		UserID:          u.ID,
+		IdempotencyKey:  "idem_pg_loop_1",
+		DurationSeconds: 600,
+		DistanceMeters:  1200.0,
+		Status:          "accepted",
+	}
+
+	result, err := st.CaptureRunAndMutateTerritories(ctx, run, loops, nil)
+	require.NoError(t, err)
+	require.NotNil(t, result)
+
+	assert.Equal(t, run.ID, result.RunID)
+	assert.True(t, result.LoopDetected)
+	assert.InDelta(t, loopArea, result.AreaClaimedSqm, 1.0)
+	assert.Greater(t, result.XpAwarded, 0)
+	assert.Contains(t, result.TerritoryGeoJSON, "MultiPolygon")
+
+	// Verify in Postgres directly
+	var territoryCount int
+	var storedArea float64
+	var storedStrength float64
+	err = pool.QueryRow(ctx, `
+		SELECT count(*), COALESCE(MAX(area_sqm), 0), COALESCE(MAX(strength), 0)
+		FROM territories
+		WHERE owner_id = $1;
+	`, u.ID).Scan(&territoryCount, &storedArea, &storedStrength)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, territoryCount)
+	assert.InDelta(t, loopArea, storedArea, 100.0) // PostGIS geodesic area vs Haversine
+	assert.Equal(t, 100.0, storedStrength)
+
+	// Verify user stats updated
+	updatedUser, err := st.GetUser(ctx, u.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 1, updatedUser.TotalRuns)
+	assert.InDelta(t, storedArea, updatedUser.TotalAreaSqm, 1.0)
+	assert.Equal(t, int64(result.XpAwarded), updatedUser.XP)
+}
+
+// 4. Self-union with own territory (ST_Union)
+func TestPostgres_SelfUnionWithOwnTerritory(t *testing.T) {
+	st, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	u := &store.User{
+		ID:           "pg_runner_union",
+		Username:     "UnionRunner",
+		Faction:      "Cyber Vanguard",
+		TotalAreaSqm: 0,
+		XP:           0,
+		Level:        1,
+	}
+	require.NoError(t, st.UpsertUser(ctx, u))
+
+	// Loop A: [0.000, 51.500] to [0.002, 51.502]
+	ringA := []geo.LatLng{
+		{Latitude: 51.5000, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1180},
+		{Latitude: 51.5000, Longitude: -0.1180},
+		{Latitude: 51.5000, Longitude: -0.1200},
+	}
+	areaA := geo.ComputeGeodesicShoelaceArea(ringA)
+
+	runA := &store.Run{
+		ID:              "run_union_a",
+		UserID:          u.ID,
+		IdempotencyKey:  "idem_union_a",
+		DurationSeconds: 400,
+		DistanceMeters:  800.0,
+		Status:          "accepted",
+	}
+	resA, err := st.CaptureRunAndMutateTerritories(ctx, runA, []geo.EnclosedLoop{{Polygon: ringA, AreaSqMeters: areaA}}, nil)
+	require.NoError(t, err)
+	initialArea := resA.PlayerTotalAreaSqm
+
+	// Loop B: Overlaps 50% with Loop A: [0.001, 51.500] to [0.003, 51.502]
+	ringB := []geo.LatLng{
+		{Latitude: 51.5000, Longitude: -0.1190},
+		{Latitude: 51.5020, Longitude: -0.1190},
+		{Latitude: 51.5020, Longitude: -0.1170},
+		{Latitude: 51.5000, Longitude: -0.1170},
+		{Latitude: 51.5000, Longitude: -0.1190},
+	}
+	areaB := geo.ComputeGeodesicShoelaceArea(ringB)
+
+	runB := &store.Run{
+		ID:              "run_union_b",
+		UserID:          u.ID,
+		IdempotencyKey:  "idem_union_b",
+		DurationSeconds: 420,
+		DistanceMeters:  820.0,
+		Status:          "accepted",
+	}
+	resB, err := st.CaptureRunAndMutateTerritories(ctx, runB, []geo.EnclosedLoop{{Polygon: ringB, AreaSqMeters: areaB}}, nil)
+	require.NoError(t, err)
+
+	// Due to overlap, union area MUST be strictly less than areaA + areaB
+	assert.Less(t, resB.PlayerTotalAreaSqm, initialArea+areaB, "union area must eliminate overlapping duplicate area")
+	assert.Greater(t, resB.PlayerTotalAreaSqm, initialArea, "union area must grow beyond initial area")
+
+	// Verify only 1 territory record exists in DB for this user (MultiPolygon union)
+	var count int
+	err = pool.QueryRow(ctx, "SELECT count(*) FROM territories WHERE owner_id = $1;", u.ID).Scan(&count)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count, "runner should have exactly one fused MultiPolygon territory")
+}
+
+// 5. ST_Difference with rival territory (carving and complete overtake)
+func TestPostgres_DifferenceWithRivalTerritory(t *testing.T) {
+	st, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	alice := &store.User{ID: "rival_alice", Username: "Alice", Faction: "Shadow Syndicate"}
+	bob := &store.User{ID: "conqueror_bob", Username: "Bob", Faction: "Neon Wardens"}
+	require.NoError(t, st.UpsertUser(ctx, alice))
+	require.NoError(t, st.UpsertUser(ctx, bob))
+
+	// Alice claims large territory
+	aliceRing := []geo.LatLng{
+		{Latitude: 51.5000, Longitude: -0.1200},
+		{Latitude: 51.5040, Longitude: -0.1200},
+		{Latitude: 51.5040, Longitude: -0.1160},
+		{Latitude: 51.5000, Longitude: -0.1160},
+		{Latitude: 51.5000, Longitude: -0.1200},
+	}
+	aliceArea := geo.ComputeGeodesicShoelaceArea(aliceRing)
+	runAlice := &store.Run{
+		ID:              "run_alice_initial",
+		UserID:          alice.ID,
+		IdempotencyKey:  "idem_alice_initial",
+		DurationSeconds: 900,
+		DistanceMeters:  2000.0,
+		Status:          "accepted",
+	}
+	resAlice, err := st.CaptureRunAndMutateTerritories(ctx, runAlice, []geo.EnclosedLoop{{Polygon: aliceRing, AreaSqMeters: aliceArea}}, nil)
+	require.NoError(t, err)
+	aliceInitialArea := resAlice.PlayerTotalAreaSqm
+
+	// Bob invades and captures a central chunk of Alice's territory
+	bobRing := []geo.LatLng{
+		{Latitude: 51.5010, Longitude: -0.1190},
+		{Latitude: 51.5030, Longitude: -0.1190},
+		{Latitude: 51.5030, Longitude: -0.1170},
+		{Latitude: 51.5010, Longitude: -0.1170},
+		{Latitude: 51.5010, Longitude: -0.1190},
+	}
+	bobArea := geo.ComputeGeodesicShoelaceArea(bobRing)
+	runBob := &store.Run{
+		ID:              "run_bob_invasion",
+		UserID:          bob.ID,
+		IdempotencyKey:  "idem_bob_invasion",
+		DurationSeconds: 500,
+		DistanceMeters:  1000.0,
+		Status:          "accepted",
+	}
+	resBob, err := st.CaptureRunAndMutateTerritories(ctx, runBob, []geo.EnclosedLoop{{Polygon: bobRing, AreaSqMeters: bobArea}}, nil)
+	require.NoError(t, err)
+
+	// Bob's capture result should list Alice as an affected rival
+	assert.Contains(t, resBob.RivalsAffected, alice.ID)
+
+	// Query Alice's territory in Postgres: it should be carved and its area reduced
+	var aliceNewArea float64
+	err = pool.QueryRow(ctx, "SELECT area_sqm FROM territories WHERE owner_id = $1;", alice.ID).Scan(&aliceNewArea)
+	require.NoError(t, err)
+	assert.Less(t, aliceNewArea, aliceInitialArea, "Alice's area must decrease after being carved by Bob")
+
+	// Test Complete Overtake: Charlie owns a tiny territory that Bob completely encloses
+	charlie := &store.User{ID: "victim_charlie", Username: "Charlie", Faction: "Cyber Vanguard"}
+	require.NoError(t, st.UpsertUser(ctx, charlie))
+
+	charlieRing := []geo.LatLng{
+		{Latitude: 51.5205, Longitude: -0.1305},
+		{Latitude: 51.5210, Longitude: -0.1305},
+		{Latitude: 51.5210, Longitude: -0.1300},
+		{Latitude: 51.5205, Longitude: -0.1300},
+		{Latitude: 51.5205, Longitude: -0.1305},
+	}
+	charlieArea := geo.ComputeGeodesicShoelaceArea(charlieRing)
+	runCharlie := &store.Run{
+		ID:              "run_charlie",
+		UserID:          charlie.ID,
+		IdempotencyKey:  "idem_charlie",
+		DurationSeconds: 300,
+		DistanceMeters:  500.0,
+		Status:          "accepted",
+	}
+	_, err = st.CaptureRunAndMutateTerritories(ctx, runCharlie, []geo.EnclosedLoop{{Polygon: charlieRing, AreaSqMeters: charlieArea}}, nil)
+	require.NoError(t, err)
+
+	// Bob captures a giant loop strictly enclosing Charlie's entire territory
+	bobGiantRing := []geo.LatLng{
+		{Latitude: 51.5200, Longitude: -0.1310},
+		{Latitude: 51.5220, Longitude: -0.1310},
+		{Latitude: 51.5220, Longitude: -0.1290},
+		{Latitude: 51.5200, Longitude: -0.1290},
+		{Latitude: 51.5200, Longitude: -0.1310},
+	}
+	bobGiantArea := geo.ComputeGeodesicShoelaceArea(bobGiantRing)
+	runBobSwallow := &store.Run{
+		ID:              "run_bob_swallow",
+		UserID:          bob.ID,
+		IdempotencyKey:  "idem_bob_swallow",
+		DurationSeconds: 800,
+		DistanceMeters:  1800.0,
+		Status:          "accepted",
+	}
+	resBobSwallow, err := st.CaptureRunAndMutateTerritories(ctx, runBobSwallow, []geo.EnclosedLoop{{Polygon: bobGiantRing, AreaSqMeters: bobGiantArea}}, nil)
+	require.NoError(t, err)
+	assert.Contains(t, resBobSwallow.RivalsAffected, charlie.ID)
+
+	// Charlie's territory should be completely deleted from the database
+	var charlieTerritoryCount int
+	err = pool.QueryRow(ctx, "SELECT count(*) FROM territories WHERE owner_id = $1;", charlie.ID).Scan(&charlieTerritoryCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, charlieTerritoryCount, "completely overtaken territory must be deleted from territories table")
+}
+
+// 6. Multi-loop run capture and summed XP
+func TestPostgres_MultiLoopRunCapture_SummedXP(t *testing.T) {
+	st, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	u := &store.User{ID: "pg_multi_runner", Username: "MultiRunner", Faction: "Neon Wardens"}
+	require.NoError(t, st.UpsertUser(ctx, u))
+
+	// Loop 1
+	ring1 := []geo.LatLng{
+		{Latitude: 51.5000, Longitude: -0.1200},
+		{Latitude: 51.5010, Longitude: -0.1200},
+		{Latitude: 51.5010, Longitude: -0.1190},
+		{Latitude: 51.5000, Longitude: -0.1190},
+		{Latitude: 51.5000, Longitude: -0.1200},
+	}
+	area1 := geo.ComputeGeodesicShoelaceArea(ring1)
+
+	// Loop 2 (disjoint)
+	ring2 := []geo.LatLng{
+		{Latitude: 51.5050, Longitude: -0.1250},
+		{Latitude: 51.5060, Longitude: -0.1250},
+		{Latitude: 51.5060, Longitude: -0.1240},
+		{Latitude: 51.5050, Longitude: -0.1240},
+		{Latitude: 51.5050, Longitude: -0.1250},
+	}
+	area2 := geo.ComputeGeodesicShoelaceArea(ring2)
+
+	multiLoops := []geo.EnclosedLoop{
+		{Polygon: ring1, AreaSqMeters: area1},
+		{Polygon: ring2, AreaSqMeters: area2},
+	}
+	run := &store.Run{
+		ID:              "run_multi_loops_pg",
+		UserID:          u.ID,
+		IdempotencyKey:  "idem_multi_pg",
+		DurationSeconds: 1200,
+		DistanceMeters:  2500.0,
+		Status:          "accepted",
+	}
+
+	result, err := st.CaptureRunAndMutateTerritories(ctx, run, multiLoops, nil)
+	require.NoError(t, err)
+
+	expectedSummedArea := area1 + area2
+	expectedXP := int(math.Max(100, math.Round(expectedSummedArea/20.0)))
+
+	assert.True(t, result.LoopDetected)
+	assert.InDelta(t, expectedSummedArea, result.AreaClaimedSqm, 1.0)
+	assert.Equal(t, expectedXP, result.XpAwarded)
+
+	// Verify user stats in Postgres
+	userAfter, err := st.GetUser(ctx, u.ID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(expectedXP), userAfter.XP)
+	assert.Equal(t, 1, userAfter.TotalRuns)
+
+	// Verify multi-polygon in DB contains 2 polygons
+	var polyCount int
+	err = pool.QueryRow(ctx, "SELECT ST_NumGeometries(geom) FROM territories WHERE owner_id = $1;", u.ID).Scan(&polyCount)
+	require.NoError(t, err)
+	assert.Equal(t, 2, polyCount, "MultiPolygon must contain both disjoint loop polygons")
+}
+
+// 7. Idempotency key replay test on real Postgres
+func TestPostgres_IdempotencyKeyReplay(t *testing.T) {
+	st, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	u := &store.User{ID: "pg_idem_runner", Username: "IdemRunner", Faction: "Cyber Vanguard"}
+	require.NoError(t, st.UpsertUser(ctx, u))
+
+	ring := []geo.LatLng{
+		{Latitude: 51.5000, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1180},
+		{Latitude: 51.5000, Longitude: -0.1180},
+		{Latitude: 51.5000, Longitude: -0.1200},
+	}
+	area := geo.ComputeGeodesicShoelaceArea(ring)
+
+	run := &store.Run{
+		ID:              "run_pg_idem_first",
+		UserID:          u.ID,
+		IdempotencyKey:  "idem_pg_exact_key_123",
+		DurationSeconds: 500,
+		DistanceMeters:  1000.0,
+		Status:          "accepted",
+	}
+
+	// 1st Submission
+	res1, err := st.CaptureRunAndMutateTerritories(ctx, run, []geo.EnclosedLoop{{Polygon: ring, AreaSqMeters: area}}, nil)
+	require.NoError(t, err)
+
+	userAfter1, err := st.GetUser(ctx, u.ID)
+	require.NoError(t, err)
+	xp1 := userAfter1.XP
+	runs1 := userAfter1.TotalRuns
+	area1 := userAfter1.TotalAreaSqm
+
+	// 2nd Submission (Exact Replay with same IdempotencyKey)
+	res2, err := st.CaptureRunAndMutateTerritories(ctx, run, []geo.EnclosedLoop{{Polygon: ring, AreaSqMeters: area}}, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, res1.RunID, res2.RunID)
+	assert.Equal(t, res1.AreaClaimedSqm, res2.AreaClaimedSqm)
+	assert.Equal(t, res1.XpAwarded, res2.XpAwarded)
+	assert.Equal(t, "accepted", res2.Status)
+
+	// User stats MUST NOT be double credited
+	userAfter2, err := st.GetUser(ctx, u.ID)
+	require.NoError(t, err)
+	assert.Equal(t, xp1, userAfter2.XP, "XP must not increase on idempotent replay")
+	assert.Equal(t, runs1, userAfter2.TotalRuns, "Total runs must not increase on idempotent replay")
+	assert.Equal(t, area1, userAfter2.TotalAreaSqm, "Total area must not change on idempotent replay")
+
+	// Runs table must have exactly 1 record with this idempotency key
+	var runCount int
+	err = pool.QueryRow(ctx, "SELECT count(*) FROM runs WHERE idempotency_key = $1;", run.IdempotencyKey).Scan(&runCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, runCount, "runs table must contain exactly 1 entry for idempotency key")
+}
+
+// 8. Strength decay and defense update
+func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
+	st, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	u := &store.User{ID: "pg_defense_runner", Username: "DefenseRunner", Faction: "Cyber Vanguard"}
+	require.NoError(t, st.UpsertUser(ctx, u))
+
+	ring := []geo.LatLng{
+		{Latitude: 51.5000, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1180},
+		{Latitude: 51.5000, Longitude: -0.1180},
+		{Latitude: 51.5000, Longitude: -0.1200},
+	}
+	area := geo.ComputeGeodesicShoelaceArea(ring)
+
+	run := &store.Run{
+		ID:              "run_defense_1",
+		UserID:          u.ID,
+		IdempotencyKey:  "idem_defense_1",
+		DurationSeconds: 400,
+		DistanceMeters:  800.0,
+		Status:          "accepted",
+	}
+
+	// Capture initial territory
+	_, err := st.CaptureRunAndMutateTerritories(ctx, run, []geo.EnclosedLoop{{Polygon: ring, AreaSqMeters: area}}, nil)
+	require.NoError(t, err)
+
+	territoryID := fmt.Sprintf("poly_%s_territory", u.ID)
+	tInitial, err := st.GetTerritoryByID(ctx, territoryID)
+	require.NoError(t, err)
+	require.NotNil(t, tInitial)
+	assert.Equal(t, 100.0, tInitial.Strength, "initial strength must be 100.0")
+
+	// Artificially simulate 2 days of inactivity
+	_, err = pool.Exec(ctx, `
+		UPDATE territories
+		SET last_defended_at = NOW() - INTERVAL '2 days'
+		WHERE id = $1;
+	`, territoryID)
+	require.NoError(t, err)
+
+	// Apply decay at 15.0 pts/day (2 days * 15 = 30 pts decay -> expect 70.0)
+	err = st.ApplyTerritoryDecay(ctx, 15.0)
+	require.NoError(t, err)
+
+	tDecayed, err := st.GetTerritoryByID(ctx, territoryID)
+	require.NoError(t, err)
+	require.NotNil(t, tDecayed)
+	assert.InDelta(t, 70.0, tDecayed.Strength, 0.5, "after 2 days of inactivity at 15 pts/day, strength should decay to ~70.0")
+
+	// Perform defense update (restore fortifications)
+	err = st.UpdateTerritoryDefense(ctx, territoryID, 100.0)
+	require.NoError(t, err)
+
+	tDefended, err := st.GetTerritoryByID(ctx, territoryID)
+	require.NoError(t, err)
+	require.NotNil(t, tDefended)
+	assert.Equal(t, 100.0, tDefended.Strength, "strength must be restored to 100.0")
+	assert.WithinDuration(t, time.Now().UTC(), tDefended.LastDefendedAt, 5*time.Second, "last_defended_at must be refreshed to now")
+}
+
+// 9. Leaderboard ordering on Postgres
+func TestPostgres_LeaderboardOrdering(t *testing.T) {
+	st, _ := setupTestStore(t)
+	ctx := context.Background()
+
+	users := []*store.User{
+		{ID: "usr_lead_a", Username: "RunnerAlpha", Faction: "Cyber Vanguard", TotalAreaSqm: 50000.0, Level: 3, TotalRuns: 5},
+		{ID: "usr_lead_b", Username: "RunnerBravo", Faction: "Neon Wardens", TotalAreaSqm: 120000.0, Level: 7, TotalRuns: 15},
+		{ID: "usr_lead_c", Username: "RunnerCharlie", Faction: "Shadow Syndicate", TotalAreaSqm: 85000.0, Level: 5, TotalRuns: 10},
+		{ID: "usr_lead_d", Username: "RunnerDelta", Faction: "Cyber Vanguard", TotalAreaSqm: 0.0, Level: 1, TotalRuns: 0},
+	}
+
+	for _, u := range users {
+		require.NoError(t, st.UpsertUser(ctx, u))
+	}
+
+	leaderboard, err := st.GetLeaderboard(ctx, 10)
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(leaderboard), 4)
+
+	// Filter down to our test users
+	testRanks := make(map[string]store.LeaderboardEntry)
+	for _, entry := range leaderboard {
+		testRanks[entry.UserID] = entry
+	}
+
+	assert.Contains(t, testRanks, "usr_lead_b")
+	assert.Contains(t, testRanks, "usr_lead_c")
+	assert.Contains(t, testRanks, "usr_lead_a")
+	assert.Contains(t, testRanks, "usr_lead_d")
+
+	// Strictly descending order: Bravo (120k) > Charlie (85k) > Alpha (50k) > Delta (0k)
+	assert.Greater(t, testRanks["usr_lead_b"].TotalAreaSqm, testRanks["usr_lead_c"].TotalAreaSqm)
+	assert.Greater(t, testRanks["usr_lead_c"].TotalAreaSqm, testRanks["usr_lead_a"].TotalAreaSqm)
+	assert.Greater(t, testRanks["usr_lead_a"].TotalAreaSqm, testRanks["usr_lead_d"].TotalAreaSqm)
+
+	// Verify ranks in the top list are sequential starting at 1
+	for i := 0; i < len(leaderboard)-1; i++ {
+		assert.Equal(t, i+1, leaderboard[i].Rank)
+		assert.GreaterOrEqual(t, leaderboard[i].TotalAreaSqm, leaderboard[i+1].TotalAreaSqm)
+	}
+}

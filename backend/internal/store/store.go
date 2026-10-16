@@ -31,6 +31,15 @@ type Store interface {
 	// 5. Inserts the run record with unique idempotency key.
 	CaptureRunAndMutateTerritories(ctx context.Context, run *Run, loops []geo.EnclosedLoop, rawTrack []geo.TrackPoint) (*CaptureResult, error)
 
+	// ApplyTerritoryDecay decays all territory strength based on time elapsed since last defense.
+	ApplyTerritoryDecay(ctx context.Context, decayPerDay float64) error
+
+	// UpdateTerritoryDefense updates a territory's strength and marks it defended as of now.
+	UpdateTerritoryDefense(ctx context.Context, territoryID string, newStrength float64) error
+
+	// GetTerritoryByID retrieves a territory by its unique ID.
+	GetTerritoryByID(ctx context.Context, id string) (*Territory, error)
+
 	// GetLeaderboard returns runners ordered descending by total claimed sovereign area.
 	GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error)
 
