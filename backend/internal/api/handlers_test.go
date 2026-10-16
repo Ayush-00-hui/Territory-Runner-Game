@@ -132,13 +132,13 @@ func TestDuplicateIdempotencyKeyDoesNotDoubleCount(t *testing.T) {
 	assert.Equal(t, res1.PlayerTotalAreaSqm, res2.PlayerTotalAreaSqm, "Player area must not double count on replay")
 }
 
-func TestSubmitRunFigure8Rejected(t *testing.T) {
+func TestSubmitRunLassoCrossingKeepsValidLoop(t *testing.T) {
 	router, _ := setupTestServer()
 
 	now := time.Now().UTC()
-	// Figure 8 intersecting in the center
+	// Run containing 1 valid lasso loop plus a path crossing: must keep the valid loop!
 	runPayload := api.SubmitRunRequest{
-		IdempotencyKey:  "idem_fig8_001",
+		IdempotencyKey:  "idem_lasso_cross_001",
 		DurationSeconds: 300,
 		DistanceMeters:  400.0,
 		Points: []geo.TrackPoint{
@@ -147,6 +147,40 @@ func TestSubmitRunFigure8Rejected(t *testing.T) {
 			{Latitude: 51.5010, Longitude: -0.1200, Timestamp: now.Add(2 * time.Minute)},
 			{Latitude: 51.5000, Longitude: -0.1210, Timestamp: now.Add(3 * time.Minute)},
 			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(4 * time.Minute)},
+		},
+	}
+
+	body, _ := json.Marshal(runPayload)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "ayush_runner_lasso")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code, "Run with valid loop plus path crossing must keep valid loop")
+	var res store.CaptureResult
+	_ = json.Unmarshal(rec.Body.Bytes(), &res)
+	assert.True(t, res.LoopDetected)
+	assert.Greater(t, res.AreaClaimedSqm, 0.0)
+	assert.Greater(t, res.XpAwarded, 0)
+}
+
+func TestSubmitRunPureFigure8Rejected(t *testing.T) {
+	router, _ := setupTestServer()
+
+	now := time.Now().UTC()
+	// Pure figure-8 that self-intersects and forms NO valid loop (perimeters < 40m)
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_fig8_pure_001",
+		DurationSeconds: 120,
+		DistanceMeters:  64.0,
+		Points: []geo.TrackPoint{
+			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now},
+			{Latitude: 51.50016, Longitude: -0.12016, Timestamp: now.Add(1 * time.Minute)},
+			{Latitude: 51.50016, Longitude: -0.12000, Timestamp: now.Add(2 * time.Minute)},
+			{Latitude: 51.50000, Longitude: -0.12016, Timestamp: now.Add(3 * time.Minute)},
+			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now.Add(4 * time.Minute)},
 		},
 	}
 
@@ -163,6 +197,47 @@ func TestSubmitRunFigure8Rejected(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
 	assert.Equal(t, "INVALID_LOOP", errResp["error"])
 	assert.Contains(t, errResp["detail"], "Loop crossed itself — try again")
+}
+
+func TestSubmitRunTwoLoopsAwardXPForBoth(t *testing.T) {
+	router, _ := setupTestServer()
+
+	now := time.Now().UTC()
+	// Single run sequence with 2 valid enclosed loops: awards XP for BOTH and unions BOTH
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_twoloops_001",
+		DurationSeconds: 600,
+		DistanceMeters:  700.0,
+		Points: []geo.TrackPoint{
+			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now},
+			{Latitude: 51.50080, Longitude: -0.12000, Timestamp: now.Add(1 * time.Minute)},
+			{Latitude: 51.50080, Longitude: -0.12120, Timestamp: now.Add(2 * time.Minute)},
+			{Latitude: 51.50000, Longitude: -0.12120, Timestamp: now.Add(3 * time.Minute)},
+			{Latitude: 51.50001, Longitude: -0.12001, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.50000, Longitude: -0.11900, Timestamp: now.Add(5 * time.Minute)},
+			{Latitude: 51.50080, Longitude: -0.11900, Timestamp: now.Add(6 * time.Minute)},
+			{Latitude: 51.50080, Longitude: -0.11780, Timestamp: now.Add(7 * time.Minute)},
+			{Latitude: 51.50000, Longitude: -0.11780, Timestamp: now.Add(8 * time.Minute)},
+			{Latitude: 51.50001, Longitude: -0.11899, Timestamp: now.Add(9 * time.Minute)},
+		},
+	}
+
+	body, _ := json.Marshal(runPayload)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "ayush_runner_two_loops")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
+	var res store.CaptureResult
+	_ = json.Unmarshal(rec.Body.Bytes(), &res)
+	assert.True(t, res.LoopDetected)
+	assert.InDelta(t, 14718.6, res.AreaClaimedSqm, 100.0)
+	// XP for both loops: max(100, round(14718.6/20.0)) = 736
+	assert.Equal(t, 736, res.XpAwarded)
+	assert.Equal(t, res.AreaClaimedSqm, res.PlayerTotalAreaSqm)
 }
 
 func TestGetTerritoriesGeoJSON(t *testing.T) {

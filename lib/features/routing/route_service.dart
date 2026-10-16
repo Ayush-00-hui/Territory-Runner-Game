@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:clipper2/clipper2.dart';
 import '../gameplay/territory_service.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
 
@@ -13,13 +14,23 @@ class SuggestedRoute {
   final double estimatedNewTerritoryAreaSqM;
   final double totalDistanceKm;
   final double targetDistanceKm;
+  final double targetAreaSqM;
+  final bool isOffline;
+  final int? _estimatedDurationMinutes;
 
   const SuggestedRoute({
     required this.polyline,
     this.estimatedNewTerritoryAreaSqM = 0.0,
     required this.totalDistanceKm,
     required this.targetDistanceKm,
-  });
+    this.targetAreaSqM = 0.0,
+    this.isOffline = false,
+    int? estimatedDurationMinutes,
+  }) : _estimatedDurationMinutes = estimatedDurationMinutes; // ignore: prefer_initializing_formals
+
+  int get estimatedDurationMinutes =>
+      _estimatedDurationMinutes ??
+      (totalDistanceKm <= 0 ? 1 : (totalDistanceKm * 6.0).round().clamp(1, 180));
 
   /// Approximate territory claim count for UI backwards compatibility
   int get estimatedNewTerritoryCount => math.max(1, (estimatedNewTerritoryAreaSqM / 20.0).round());
@@ -29,27 +40,123 @@ class SuggestedRoute {
 ///
 /// Features:
 /// 1. Real-road pedestrian graph routing via OSRM (Open Source Routing Machine).
-///    NOTE: The public endpoint (https://router.project-osrm.org) is utilized for
-///    development and demonstrations. Production deployments require a self-hosted
-///    OSRM instance to adhere to public server rate limits.
 /// 2. Biased towards uncaptured territory (actively steers loop away from owned polygons).
 /// 3. Resilient offline fallback: seamlessly generates a haversine-based closed loop
 ///    if network is unavailable.
+/// 4. Claim Planner: converts target area to walking distance and computes net new
+///    territory gain via Clipper2 polygon subtraction.
 class RouteService {
   static final RouteService _instance = RouteService._internal();
   factory RouteService() => _instance;
 
+  /// Test hook or runtime flag to force offline synthetic loop routing
+  static bool forceOffline = false;
+
   final TerritoryService _territoryService = TerritoryService();
 
   RouteService._internal();
+
+  /// Converts a target claim area (in m²) to an approximate walking loop perimeter (in km).
+  /// For street grids / pedestrian paths, the walking factor is ~3.8 * sqrt(area).
+  static double targetAreaToDistanceKm(double targetAreaSqM) {
+    final double side = math.sqrt(math.max(100.0, targetAreaSqM));
+    final double perimeterMeters = side * 3.8;
+    return (perimeterMeters / 1000.0).clamp(0.12, 25.0);
+  }
+
+  /// Proposes a closed running loop matching [targetAreaSqM] from [currentLocation].
+  /// Uses OSRM pedestrian routing if online, or synthetic geodesic loop if offline.
+  /// Computes net new area by subtracting existing sovereign land via Clipper2.
+  Future<SuggestedRoute> suggestRouteForTargetArea({
+    required LatLng currentLocation,
+    required double targetAreaSqM,
+    Duration timeout = const Duration(milliseconds: 2500),
+  }) async {
+    final double targetDistanceKm = targetAreaToDistanceKm(targetAreaSqM);
+    return suggestRouteAsync(
+      currentLocation: currentLocation,
+      targetDistanceKm: targetDistanceKm,
+      targetAreaSqM: targetAreaSqM,
+      timeout: timeout,
+    );
+  }
+
+  /// Computes the net new area in m² by subtracting the runner's already-owned
+  /// territories using Clipper2 difference.
+  double computeNetNewArea(List<LatLng> loopPolyline, [List<List<LatLng>>? existingOwnedPolygons]) {
+    if (loopPolyline.length < 3) return 0.0;
+    final double rawArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(loopPolyline);
+    if (rawArea <= 0) return 0.0;
+
+    final Paths64 playerExistingPaths = [];
+    if (existingOwnedPolygons != null) {
+      for (final poly in existingOwnedPolygons) {
+        if (poly.length >= 3) {
+          playerExistingPaths.add(TerritoryService.latLngsToPath64(poly));
+        }
+      }
+    } else {
+      final profile = _territoryService.getProfile();
+      final ownedTerritories = _territoryService
+          .getCapturedTerritoryObjects()
+          .where((t) => t.ownerId == profile.id)
+          .toList();
+
+      for (final t in ownedTerritories) {
+        for (final poly in t.polygons) {
+          if (poly.length >= 3) {
+            playerExistingPaths.add(TerritoryService.latLngsToPath64(poly));
+          }
+        }
+      }
+    }
+
+    if (playerExistingPaths.isEmpty) {
+      return rawArea;
+    }
+
+    try {
+      final loopPath = TerritoryService.latLngsToPath64(loopPolyline);
+      final Paths64 diff = Clipper.difference(
+        subject: [loopPath],
+        clip: playerExistingPaths,
+        fillRule: FillRule.nonZero,
+      );
+
+      if (diff.isEmpty) return 0.0;
+
+      double netArea = 0.0;
+      for (final path in diff) {
+        final ring = TerritoryService.path64ToLatLngs(path);
+        netArea += PolygonEnclosureEngine.computeSignedGeodesicShoelaceArea(ring);
+      }
+      return math.max(0.0, netArea.abs());
+    } catch (e) {
+      debugPrint('[RouteService] Net area clipping error: $e');
+      return rawArea;
+    }
+  }
 
   /// Suggests a closed loop route matching [targetDistanceKm] (within ~15%),
   /// biased towards uncaptured ground.
   Future<SuggestedRoute> suggestRouteAsync({
     required LatLng currentLocation,
     required double targetDistanceKm,
+    double? targetAreaSqM,
     Duration timeout = const Duration(milliseconds: 2500),
   }) async {
+    final effectiveTargetArea = targetAreaSqM ??
+        (math.pow(targetDistanceKm * 1000.0 / 3.8, 2.0).toDouble());
+
+    if (forceOffline) {
+      return suggestRoute(
+        currentLocation: currentLocation,
+        targetDistanceKm: targetDistanceKm,
+        targetAreaSqM: effectiveTargetArea,
+        isOffline: true,
+      );
+    }
+
     final ownedTerritories = _territoryService.getCapturedTerritoryObjects();
     
     // 1. Attempt Real-Road OSRM pedestrian loop generation
@@ -57,6 +164,7 @@ class RouteService {
       final osrmRoute = await _fetchOsrmLoop(
         currentLocation: currentLocation,
         targetDistanceKm: targetDistanceKm,
+        targetAreaSqM: effectiveTargetArea,
         ownedTerritories: ownedTerritories,
         timeout: timeout,
       );
@@ -71,6 +179,8 @@ class RouteService {
     return suggestRoute(
       currentLocation: currentLocation,
       targetDistanceKm: targetDistanceKm,
+      targetAreaSqM: effectiveTargetArea,
+      isOffline: true,
     );
   }
 
@@ -78,7 +188,11 @@ class RouteService {
   SuggestedRoute suggestRoute({
     required LatLng currentLocation,
     required double targetDistanceKm,
+    double? targetAreaSqM,
+    bool isOffline = true,
   }) {
+    final effectiveTargetArea = targetAreaSqM ??
+        (math.pow(targetDistanceKm * 1000.0 / 3.8, 2.0).toDouble());
     final ownedTerritories = _territoryService.getCapturedTerritoryObjects();
     final polyline = _generateBiasedWaypoints(
       currentLocation: currentLocation,
@@ -88,13 +202,15 @@ class RouteService {
     );
 
     final double totalDist = _computeTotalRouteDistanceKm(polyline);
-    final double areaSqM = PolygonEnclosureEngine.computeGeodesicShoelaceArea(polyline);
+    final double netAreaSqM = computeNetNewArea(polyline);
 
     return SuggestedRoute(
       polyline: polyline,
-      estimatedNewTerritoryAreaSqM: areaSqM,
+      estimatedNewTerritoryAreaSqM: netAreaSqM,
       totalDistanceKm: totalDist,
       targetDistanceKm: targetDistanceKm,
+      targetAreaSqM: effectiveTargetArea,
+      isOffline: isOffline,
     );
   }
 
@@ -102,6 +218,7 @@ class RouteService {
   Future<SuggestedRoute?> _fetchOsrmLoop({
     required LatLng currentLocation,
     required double targetDistanceKm,
+    required double targetAreaSqM,
     required List<dynamic> ownedTerritories,
     required Duration timeout,
   }) async {
@@ -140,21 +257,23 @@ class RouteService {
             return LatLng((coord[1] as num).toDouble(), (coord[0] as num).toDouble());
           }).toList();
 
-          final double areaSqM = PolygonEnclosureEngine.computeGeodesicShoelaceArea(osrmPolyline);
+          final double netAreaSqM = computeNetNewArea(osrmPolyline);
           final double totalKm = distanceMeters / 1000.0;
 
           debugPrint('[RouteService] OSRM street route synthesized: ${totalKm.toStringAsFixed(2)}km with ${osrmPolyline.length} street vertices');
 
           return SuggestedRoute(
             polyline: osrmPolyline,
-            estimatedNewTerritoryAreaSqM: areaSqM,
+            estimatedNewTerritoryAreaSqM: netAreaSqM,
             totalDistanceKm: totalKm,
             targetDistanceKm: targetDistanceKm,
+            targetAreaSqM: targetAreaSqM,
+            isOffline: false,
           );
         }
       }
     } finally {
-      client.close();
+      client.close(force: true);
     }
     return null;
   }
@@ -167,7 +286,7 @@ class RouteService {
     required int nodeCount,
   }) {
     // Radius of the circumscribed loop circle
-    final double radiusKm = (targetDistanceKm / (2.0 * math.pi)).clamp(0.2, 10.0);
+    final double radiusKm = (targetDistanceKm / (2.0 * math.pi)).clamp(0.02, 10.0);
     final double radiusDegLat = radiusKm / 111.32;
     final double radiusDegLng = radiusKm / (111.32 * math.cos(currentLocation.latitude * math.pi / 180.0));
 

@@ -10,6 +10,9 @@ class DemoControlsLab extends StatelessWidget {
   final VoidCallback onSimulateRivalCut;
   final VoidCallback onSimulateAnomaly;
   final VoidCallback onSimulateCoachDebrief;
+  final VoidCallback onSimulateDecayAndAttack;
+  final bool isRivalSimulating;
+  final VoidCallback? onToggleRivalSimulation;
 
   const DemoControlsLab({
     super.key,
@@ -17,6 +20,9 @@ class DemoControlsLab extends StatelessWidget {
     required this.onSimulateRivalCut,
     required this.onSimulateAnomaly,
     required this.onSimulateCoachDebrief,
+    required this.onSimulateDecayAndAttack,
+    this.isRivalSimulating = false,
+    this.onToggleRivalSimulation,
   });
 
   @override
@@ -67,6 +73,27 @@ class DemoControlsLab extends StatelessWidget {
           color: const Color(0xFF9C27B0),
           onTap: onSimulateCoachDebrief,
         ),
+        _buildDemoActionTile(
+          context: context,
+          title: '🛡️ Simulate Decay & Under Attack Alert',
+          subtitle: 'Degrades territory to 20% strength & dispatches targeted attack alert',
+          icon: Icons.security_update_warning_rounded,
+          color: const Color(0xFFFF5252),
+          onTap: onSimulateDecayAndAttack,
+        ),
+        if (onToggleRivalSimulation != null)
+          _buildDemoActionTile(
+            context: context,
+            title: isRivalSimulating
+                ? '⏹️ Stop Live Rival Simulation'
+                : '🔴 Simulate Live Rival Runner (GPS Stream)',
+            subtitle: isRivalSimulating
+                ? 'Halt simulated rival movement and breadcrumbs'
+                : 'Streams real-time moving rival marker with glowing breadcrumbs',
+            icon: isRivalSimulating ? Icons.stop_circle_rounded : Icons.radar_rounded,
+            color: isRivalSimulating ? const Color(0xFFFFB300) : AppColors.rival,
+            onTap: onToggleRivalSimulation!,
+          ),
       ],
     );
   }

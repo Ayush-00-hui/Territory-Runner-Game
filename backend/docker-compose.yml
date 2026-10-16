@@ -12,6 +12,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./migrations/000001_init_schema.up.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - ./migrations/000002_add_territory_strength.up.sql:/docker-entrypoint-initdb.d/02_strength.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U runner -d territory_runner"]
       interval: 5s

@@ -17,6 +17,7 @@ class SummarySheet extends StatelessWidget {
   final LLMCoachService coachService;
   final List<LatLng>? routePoints;
   final double? areaSqMeters;
+  final String? rejectionReason;
 
   const SummarySheet({
     super.key,
@@ -27,6 +28,7 @@ class SummarySheet extends StatelessWidget {
     required this.coachService,
     this.routePoints,
     this.areaSqMeters,
+    this.rejectionReason,
   });
 
   static Future<void> show({
@@ -38,6 +40,7 @@ class SummarySheet extends StatelessWidget {
     required LLMCoachService coachService,
     List<LatLng>? routePoints,
     double? areaSqMeters,
+    String? rejectionReason,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -54,6 +57,7 @@ class SummarySheet extends StatelessWidget {
         coachService: coachService,
         routePoints: routePoints,
         areaSqMeters: areaSqMeters,
+        rejectionReason: rejectionReason,
       ),
     );
   }
@@ -119,7 +123,7 @@ class SummarySheet extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.s16),
 
-          // Header row with Victory Badge
+          // Header row with Victory or Rejection Badge
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -128,22 +132,27 @@ class SummarySheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.15),
+                      color: (rejectionReason != null ? AppColors.rival : AppColors.accent).withValues(alpha: 0.15),
                       borderRadius: AppSpacing.br12,
-                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+                      border: Border.all(color: (rejectionReason != null ? AppColors.rival : AppColors.accent).withValues(alpha: 0.35)),
                     ),
-                    child: const Icon(Icons.emoji_events_rounded, color: AppColors.accent, size: 20),
+                    child: Icon(
+                      rejectionReason != null ? Icons.cancel_outlined : Icons.emoji_events_rounded,
+                      color: rejectionReason != null ? AppColors.rival : AppColors.accent,
+                      size: 20,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.s12),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'CONQUEST COMPLETE',
+                        rejectionReason != null ? 'RUN REJECTED' : 'CONQUEST COMPLETE',
                         style: AppText.headingSmall.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.2,
+                          color: rejectionReason != null ? AppColors.rival : Colors.white,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -161,6 +170,50 @@ class SummarySheet extends StatelessWidget {
               ),
             ],
           ),
+
+          if (rejectionReason != null) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: AppColors.rival.withValues(alpha: 0.12),
+                borderRadius: AppSpacing.br12,
+                border: Border.all(color: AppColors.rival.withValues(alpha: 0.5)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: AppColors.rival, size: 20),
+                  const SizedBox(width: AppSpacing.s10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'SERVER REJECTION REASON',
+                          style: AppText.label.copyWith(
+                            color: AppColors.rival,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          rejectionReason!,
+                          style: AppText.bodySmall.copyWith(
+                            color: Colors.white,
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: AppSpacing.s16),
 

@@ -165,13 +165,13 @@ func (h *Hub) BroadcastConquest(attackerID, attackerName string, areaClaimed flo
 			continue
 		}
 		alert := TerritoryAlertMessage{
-			Type:           TypeTerritoryAlert,
-			Event:          "territory_carved",
+			Type:           TypeTerritoryUnderAttack,
+			Event:          "territory_under_attack",
 			AttackerID:     attackerID,
 			AttackerName:   attackerName,
 			AreaClaimedSqm: areaClaimed,
 			VictimUserID:   victimID,
-			Message:        fmt.Sprintf("⚠️ Rival %s carved %.0f m² from your territory!", attackerName, areaClaimed),
+			Message:        fmt.Sprintf("⚠️ ALERT: Territory under attack! Rival %s captured %.0f m²!", attackerName, areaClaimed),
 			Timestamp:      nowStr,
 		}
 		h.SendToUser(victimID, alert)

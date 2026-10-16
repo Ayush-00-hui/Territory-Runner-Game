@@ -1,0 +1,24 @@
+{
+  "name": "golden_two_loops",
+  "description": "Single continuous run sequence that cleanly completes 2 distinct valid enclosed loops",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 40.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": true,
+  "expected_area_sqm": 14718.6,
+  "expected_loop_count": 2,
+  "area_tolerance_percent": 0.5,
+  "points": [
+    { "latitude": 51.50000, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.50080, "longitude": -0.12000, "timestamp": "2026-10-13T10:01:00Z" },
+    { "latitude": 51.50080, "longitude": -0.12120, "timestamp": "2026-10-13T10:02:00Z" },
+    { "latitude": 51.50000, "longitude": -0.12120, "timestamp": "2026-10-13T10:03:00Z" },
+    { "latitude": 51.50001, "longitude": -0.12001, "timestamp": "2026-10-13T10:04:00Z" },
+    { "latitude": 51.50000, "longitude": -0.11900, "timestamp": "2026-10-13T10:05:00Z" },
+    { "latitude": 51.50080, "longitude": -0.11900, "timestamp": "2026-10-13T10:06:00Z" },
+    { "latitude": 51.50080, "longitude": -0.11780, "timestamp": "2026-10-13T10:07:00Z" },
+    { "latitude": 51.50000, "longitude": -0.11780, "timestamp": "2026-10-13T10:08:00Z" },
+    { "latitude": 51.50001, "longitude": -0.11899, "timestamp": "2026-10-13T10:09:00Z" }
+  ]
+}

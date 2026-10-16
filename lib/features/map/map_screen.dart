@@ -18,6 +18,8 @@ import '../../services/api_client.dart';
 import '../../services/websocket_service.dart';
 import '../../models/ws_events.dart';
 import '../../main.dart'; // For showRunStartAnimation
+import '../../models/territory.dart';
+import '../../services/firebase_service.dart';
 import 'widgets/mode_tabs.dart';
 import 'widgets/run_hud.dart';
 import 'widgets/map_layers.dart';
@@ -25,6 +27,7 @@ import 'widgets/pacer_sheet.dart';
 import 'widgets/summary_sheet.dart';
 import 'widgets/leaderboard_sheet.dart';
 import 'widgets/loop_celebration_overlay.dart';
+import 'widgets/claim_planner_sheet.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -44,10 +47,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
   final ApiClient _apiClient = ApiClient();
   final WebSocketService _wsService = WebSocketService();
+  final FirebaseService _firebaseService = FirebaseService();
   Timer? _rivalPollingTimer;
 
   // Real-time WebSocket presence and alert state
   final Map<String, RunnerPresenceEvent> _activeRivalRunners = {};
+  final Map<String, List<LatLng>> _rivalBreadcrumbs = {};
+  Timer? _rivalSimulationTimer;
+  bool _isRivalSimulating = false;
+  double _rivalSimAngle = 0.0;
   StreamSubscription<RunnerPresenceEvent>? _wsPresenceSub;
   StreamSubscription<String>? _wsRunnerLeftSub;
   StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
@@ -63,6 +71,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   // AI Route Suggestion State
   SuggestedRoute? _activeSuggestedRoute;
+
+  // Real-time Client Preview Accumulation across all loops in run
+  double _accumulatedRunPreviewArea = 0.0;
+  int _accumulatedRunPreviewXp = 0;
+
+  // Territory Defense & Fortification State
+  String? _highlightedTerritoryId;
 
   // Strava-grade Telemetry Engine & Auto-Pause State
   final List<Position> _recentPositions = [];
@@ -85,6 +100,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   @override
   void initState() {
     super.initState();
+
+    // Listen to sync queue reconciliation delta toasts and authoritative rejections
+    SyncQueueService().reconciliationToastNotifier.addListener(_onReconciliationToast);
+    SyncQueueService().lastRejectionNotifier.addListener(_onRunRejected);
     
     // Listen for new territory captures
     _territorySub = _territoryService.territoryStream.listen((event) {
@@ -96,6 +115,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     // Poll rival territories every 20 seconds while map screen is open
     _rivalPollingTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       _fetchVisibleRivals();
+      // Prune inactive rivals older than 60s
+      final now = DateTime.now();
+      _activeRivalRunners.removeWhere((id, runner) {
+        final isStale = now.difference(runner.updatedAt).inSeconds > 60;
+        if (isStale) {
+          _rivalBreadcrumbs.remove(id);
+        }
+        return isStale;
+      });
     });
 
     // Real-time WebSocket: Connect and listen for live rival runners and territory alerts
@@ -104,6 +132,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (mounted) {
         setState(() {
           _activeRivalRunners[presence.userId] = presence;
+          final trail = _rivalBreadcrumbs.putIfAbsent(presence.userId, () => []);
+          trail.add(presence.position);
+          if (trail.length > 40) {
+            trail.removeAt(0);
+          }
         });
       }
     });
@@ -112,6 +145,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (mounted) {
         setState(() {
           _activeRivalRunners.remove(userId);
+          _rivalBreadcrumbs.remove(userId);
         });
       }
     });
@@ -136,7 +170,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'TERRITORY INTRUSION DETECTED',
+                      'TERRITORY UNDER ATTACK!',
                       style: TextStyle(
                         color: Color(0xFFFF3366),
                         fontWeight: FontWeight.w900,
@@ -154,7 +188,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               ),
             ],
           ),
-          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'DEFEND',
+            textColor: const Color(0xFFFF3366),
+            onPressed: _defendWeakestTerritory,
+          ),
+          duration: const Duration(seconds: 8),
         ),
       );
       _fetchVisibleRivals();
@@ -169,6 +208,84 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkPermissionsAndInitLocation();
     });
+  }
+
+  @override
+  void dispose() {
+    _rivalSimulationTimer?.cancel();
+    SyncQueueService().reconciliationToastNotifier.removeListener(_onReconciliationToast);
+    SyncQueueService().lastRejectionNotifier.removeListener(_onRunRejected);
+    _runTimer?.cancel();
+    _rivalPollingTimer?.cancel();
+    _positionSub?.cancel();
+    _territorySub?.cancel();
+    _wsPresenceSub?.cancel();
+    _wsRunnerLeftSub?.cancel();
+    _wsAlertSub?.cancel();
+    _wsBroadcastSub?.cancel();
+    _wsService.disconnect();
+    _locationService.stopTracking();
+    _keyboardFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onReconciliationToast() {
+    final msg = SyncQueueService().reconciliationToastNotifier.value;
+    if (msg != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppColors.accent, width: 1.2),
+          ),
+          content: Text(
+            msg,
+            style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 12.5),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _onRunRejected() {
+    final rejection = SyncQueueService().lastRejectionNotifier.value;
+    if (rejection != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF1E212B),
+          duration: const Duration(seconds: 8),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: Color(0xFFFF5252), width: 1.2),
+          ),
+          content: Text(
+            '❌ ${rejection.humanReason}',
+            style: const TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold, fontSize: 12.5),
+          ),
+          action: SnackBarAction(
+            label: 'VIEW RUN',
+            textColor: AppColors.accent,
+            onPressed: () {
+              SummarySheet.show(
+                context: context,
+                distanceKm: rejection.run.distanceMeters / 1000.0,
+                durationSeconds: rejection.run.durationSeconds,
+                territoriesClaimed: 0,
+                profile: _territoryService.getProfile(),
+                coachService: _coachService,
+                routePoints: rejection.run.points,
+                areaSqMeters: rejection.run.clientPreviewArea,
+                rejectionReason: rejection.humanReason,
+              );
+            },
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _checkPermissionsAndInitLocation() async {
@@ -419,6 +536,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       return;
     }
 
+    _accumulatedRunPreviewArea += claimed;
+    _accumulatedRunPreviewXp += xp;
+
     setState(() {
       _territoriesClaimedThisRun++;
     });
@@ -471,6 +591,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       setState(() {
         _isRunActive = true;
         _territoriesClaimedThisRun = 0;
+        _accumulatedRunPreviewArea = 0.0;
+        _accumulatedRunPreviewXp = 0;
         _runDistanceKm = 0.0;
         _elapsedDurationSeconds = 0;
         _movingDurationSeconds = 0;
@@ -511,9 +633,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       final double finalDistance = _runDistanceKm;
       final int finalTerritories = _territoriesClaimedThisRun;
 
+      _territoryService.defendTerritory(_firebaseService.currentUserId);
       setState(() {
         _isRunActive = false;
         _isAutoPaused = false;
+        _highlightedTerritoryId = null;
+        _activeSuggestedRoute = null;
       });
 
       _voiceCoach.announceRunComplete(finalDistance, finalTerritories);
@@ -524,8 +649,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           points: List<LatLng>.from(_runCoordinates),
           durationSeconds: finalSeconds,
           distanceMeters: finalDistance * 1000.0,
-          clientPreviewArea: 0.0,
-          clientPreviewXp: finalTerritories * 100,
+          clientPreviewArea: _accumulatedRunPreviewArea,
+          clientPreviewXp: _accumulatedRunPreviewXp,
         );
       }
 
@@ -537,8 +662,76 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         profile: _territoryService.getProfile(),
         coachService: _coachService,
         routePoints: List<LatLng>.from(_runCoordinates),
+        areaSqMeters: _accumulatedRunPreviewArea > 0 ? _accumulatedRunPreviewArea : null,
       );
     }
+  }
+
+  void _openClaimPlanner() {
+    final location = _currentLocation ?? const LatLng(37.7749, -122.4194);
+    ClaimPlannerSheet.show(
+      context: context,
+      currentLocation: location,
+      routeService: _routeService,
+      initialTargetAreaSqM: 5000.0,
+      onRouteGenerated: (route) {
+        setState(() {
+          _activeSuggestedRoute = route;
+        });
+        if (route.polyline.length >= 2) {
+          try {
+            _mapController.fitCamera(
+              CameraFit.coordinates(
+                coordinates: route.polyline,
+                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+              ),
+            );
+          } catch (_) {}
+        }
+      },
+      onStartRun: (route) {
+        _startRunWithSuggestedRoute(route);
+      },
+    );
+  }
+
+  void _startRunWithSuggestedRoute(SuggestedRoute route) {
+    setState(() {
+      _activeSuggestedRoute = route;
+      _selectedModeTab = 0; // Switch to Run mode tab
+    });
+
+    if (!_isRunActive) {
+      _toggleRun();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surface,
+        duration: const Duration(seconds: 5),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppColors.secondary, width: 1.2),
+        ),
+        content: Row(
+          children: [
+            const Icon(Icons.navigation_rounded, color: AppColors.secondary, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Active Guidance: Follow the Solar Orange path (${route.totalDistanceKm.toStringAsFixed(2)} km, ~${route.estimatedNewTerritoryAreaSqM.toStringAsFixed(0)} m² new land)',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _suggestAiRoute() async {
@@ -556,6 +749,17 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _activeSuggestedRoute = route;
     });
 
+    if (route.polyline.length >= 2) {
+      try {
+        _mapController.fitCamera(
+          CameraFit.coordinates(
+            coordinates: route.polyline,
+            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+          ),
+        );
+      } catch (_) {}
+    }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -569,20 +773,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
-  @override
-  void dispose() {
-    _positionSub?.cancel();
-    _territorySub?.cancel();
-    _runTimer?.cancel();
-    _rivalPollingTimer?.cancel();
-    _wsPresenceSub?.cancel();
-    _wsRunnerLeftSub?.cancel();
-    _wsAlertSub?.cancel();
-    _wsBroadcastSub?.cancel();
-    _wsService.disconnect();
-    _locationService.stopTracking();
-    super.dispose();
-  }
 
   Future<void> _fetchVisibleRivals() async {
     if (!mounted || _currentLocation == null) return;
@@ -823,12 +1013,18 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       ),
                       children: [
                         MapLayers.buildTileLayer(),
-                        MapLayers.buildPolygonLayer(territories),
+                        MapLayers.buildPolygonLayer(
+                          territories,
+                          highlightedTerritoryId: _highlightedTerritoryId,
+                        ),
+                        MapLayers.buildTerritoryBadgesLayer(territories),
                         MapLayers.buildPolylineLayer(
                           isRunActive: _isRunActive,
                           runCoordinates: _runCoordinates,
                           currentEnclosurePath: _polygonEngine.currentPath,
                           suggestedRouteCoordinates: _activeSuggestedRoute?.polyline,
+                          rivalBreadcrumbs: _rivalBreadcrumbs,
+                          activeRivalRunners: _activeRivalRunners,
                         ),
                         MapLayers.buildMarkerLayer(
                           currentLocation: _currentLocation,
@@ -897,7 +1093,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     selectedIndex: _selectedModeTab,
                     onTabSelected: (index) {
                       setState(() => _selectedModeTab = index);
-                      if (index == 2) {
+                      if (index == 1) {
+                        _openClaimPlanner();
+                      } else if (index == 2) {
                         LeaderboardSheet.show(
                           context: context,
                           apiClient: _apiClient,
@@ -906,6 +1104,57 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       }
                     },
                   ),
+
+                  // Live Rival Sector Radar Pill
+                  if (_activeRivalRunners.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: _panToNearestRival,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceGlass,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppColors.rival.withValues(alpha: 0.8),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.rival.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.rival,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${_activeRivalRunners.length} RIVAL${_activeRivalRunners.length > 1 ? 'S' : ''} IN SECTOR',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 11,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.gps_fixed_rounded, color: AppColors.rival, size: 13),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -933,6 +1182,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         coachService: _coachService,
                       );
                     },
+                    onSimulateDecayAndAttack: _simulateDecayAndAttack,
+                    isRivalSimulating: _isRivalSimulating,
+                    onToggleRivalSimulation: _toggleRivalSimulation,
                   );
                 },
                 child: Container(
@@ -1028,6 +1280,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             coachService: _coachService,
                           );
                         },
+                        onSimulateDecayAndAttack: _simulateDecayAndAttack,
+                        isRivalSimulating: _isRivalSimulating,
+                        onToggleRivalSimulation: _toggleRivalSimulation,
                       );
                     },
                   ),
@@ -1056,6 +1311,49 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 ],
               ),
             ),
+
+            // Floating Defend CTA for Weak Territories
+            if (!_isRunActive &&
+                territories.any((t) =>
+                    t.ownerId == _firebaseService.currentUserId && t.isWeak()))
+              Positioned(
+                bottom: pad.bottom + 175,
+                right: 20,
+                child: GestureDetector(
+                  onTap: _defendWeakestTerritory,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface.withValues(alpha: 0.95),
+                      borderRadius: AppSpacing.br16,
+                      border: Border.all(color: AppColors.rival, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.rival.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.shield_outlined, color: AppColors.rival, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          'DEFEND',
+                          style: TextStyle(
+                            color: AppColors.rival,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
 
             // 5. Strava-Grade Live Telemetry HUD Obsidian Glass Card
             Positioned(
@@ -1121,5 +1419,233 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         child: Icon(icon, color: color, size: 20),
       ),
     );
+  }
+
+  void _defendWeakestTerritory() {
+    final myId = _firebaseService.currentUserId;
+    final box = Hive.isBoxOpen('territories_v3') ? Hive.box<Territory>('territories_v3') : null;
+    final all = box?.values.whereType<Territory>().toList() ?? [];
+    final myTerritories = all.where((t) => t.ownerId == myId).toList();
+
+    Territory? weakest;
+    double minStrength = 101.0;
+    for (final t in myTerritories) {
+      final s = t.computeCurrentStrength();
+      if (s < minStrength) {
+        minStrength = s;
+        weakest = t;
+      }
+    }
+
+    if (weakest != null) {
+      setState(() {
+        _highlightedTerritoryId = weakest!.id;
+      });
+
+      if (weakest.polygon.isNotEmpty) {
+        final centroid = MapLayers.computeCentroid(weakest.polygon);
+        _mapController.move(centroid, 17.0);
+      }
+
+      if (!_isRunActive) {
+        _toggleRun();
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          content: Text(
+            '🛡️ DEFENSE ENGAGED: Run through your territory to restore 100% strength (${minStrength.round()}% active)',
+            style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _simulateDecayAndAttack() async {
+    final myId = _firebaseService.currentUserId;
+    final decayed = await _territoryService.simulateDecay(myId, targetStrength: 20.0, daysAgo: 5);
+    if (decayed != null && mounted) {
+      setState(() {
+        _highlightedTerritoryId = decayed.id;
+      });
+      if (decayed.polygon.isNotEmpty) {
+        final centroid = MapLayers.computeCentroid(decayed.polygon);
+        _mapController.move(centroid, 17.0);
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF1E1015),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: const BorderSide(color: Color(0xFFFF3366), width: 1.5),
+          ),
+          content: const Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 28),
+              SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'TERRITORY UNDER ATTACK!',
+                      style: TextStyle(
+                        color: Color(0xFFFF3366),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      '⚠️ Rival ShadowRunner captured 3,500 m²! Defenses compromised (20% strength).',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          action: SnackBarAction(
+            label: 'DEFEND',
+            textColor: const Color(0xFFFF3366),
+            onPressed: _defendWeakestTerritory,
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    }
+  }
+
+  void _panToNearestRival() {
+    if (_activeRivalRunners.isEmpty) return;
+
+    RunnerPresenceEvent? nearest;
+    double minDistance = double.infinity;
+    const distanceCalc = Distance();
+    final myLoc = _currentLocation ?? const LatLng(51.5074, -0.1278);
+
+    for (final rival in _activeRivalRunners.values) {
+      final dist = distanceCalc.as(LengthUnit.Meter, myLoc, rival.position);
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearest = rival;
+      }
+    }
+
+    if (nearest != null) {
+      AppMotion.lightTick();
+      try {
+        _mapController.move(nearest.position, 17.5);
+      } catch (_) {}
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          duration: const Duration(seconds: 2),
+          content: Text(
+            '🎯 Tracking ${nearest.username} (${minDistance.round()}m away)',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _toggleRivalSimulation() {
+    if (_isRivalSimulating) {
+      _rivalSimulationTimer?.cancel();
+      _rivalSimulationTimer = null;
+      setState(() {
+        _isRivalSimulating = false;
+        _activeRivalRunners.remove('sim_rival_phantom');
+        _rivalBreadcrumbs.remove('sim_rival_phantom');
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: AppColors.surface,
+          content: Text('⏹️ Live Rival Simulation stopped.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    final center = _currentLocation ?? const LatLng(51.5074, -0.1278);
+    _isRivalSimulating = true;
+    _rivalSimAngle = 0.0;
+    const double radiusMeters = 180.0;
+    const double earthRadius = 6378137.0;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surface,
+        content: Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.rival,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text('🔴 Live Rival active: ⚡ Phantom_Vanguard is running near you!'),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+
+    _rivalSimulationTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) {
+      if (!mounted || !_isRivalSimulating) {
+        timer.cancel();
+        return;
+      }
+
+      _rivalSimAngle += 0.12;
+      if (_rivalSimAngle > 2 * math.pi) {
+        _rivalSimAngle -= 2 * math.pi;
+      }
+
+      // Circular displacement around player's center
+      final dLat = (radiusMeters * math.cos(_rivalSimAngle)) / earthRadius * (180.0 / math.pi);
+      final dLng = (radiusMeters * math.sin(_rivalSimAngle)) /
+          (earthRadius * math.cos(center.latitude * (math.pi / 180.0))) *
+          (180.0 / math.pi);
+      final rivalPos = LatLng(center.latitude + dLat, center.longitude + dLng);
+      final headingDeg = ((_rivalSimAngle + math.pi / 2) * (180.0 / math.pi)) % 360.0;
+
+      final event = RunnerPresenceEvent(
+        userId: 'sim_rival_phantom',
+        username: 'Phantom_Vanguard',
+        faction: 'Neon Syndicate',
+        position: rivalPos,
+        speed: 3.2, // ~11.5 km/h
+        heading: headingDeg,
+        updatedAt: DateTime.now(),
+      );
+
+      setState(() {
+        _activeRivalRunners['sim_rival_phantom'] = event;
+        final trail = _rivalBreadcrumbs.putIfAbsent('sim_rival_phantom', () => []);
+        trail.add(rivalPos);
+        if (trail.length > 40) {
+          trail.removeAt(0);
+        }
+      });
+    });
   }
 }

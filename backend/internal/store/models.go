@@ -17,12 +17,14 @@ type User struct {
 
 // Territory represents sovereign claimed territory stored as a PostGIS MultiPolygon.
 type Territory struct {
-	ID        string    `json:"id"`
-	OwnerID   string    `json:"owner_id"`
-	Username  string    `json:"username,omitempty"`
-	GeoJSON   string    `json:"geojson"`
-	AreaSqm   float64   `json:"area_sqm"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	OwnerID        string    `json:"owner_id"`
+	Username       string    `json:"username,omitempty"`
+	GeoJSON        string    `json:"geojson"`
+	AreaSqm        float64   `json:"area_sqm"`
+	Strength       float64   `json:"strength"`
+	LastDefendedAt time.Time `json:"last_defended_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // Run records a runner's GPS session and capture result.

@@ -103,7 +103,7 @@ func (m *MemoryStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat, 
 func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	ctx context.Context,
 	run *Run,
-	loop *geo.EnclosedLoop,
+	loops []geo.EnclosedLoop,
 	rawTrack []geo.TrackPoint,
 ) (*CaptureResult, error) {
 	m.mu.Lock()
@@ -150,8 +150,10 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		m.users[run.UserID] = user
 	}
 
-	if loop != nil {
-		areaClaimed = loop.AreaSqMeters
+	if len(loops) > 0 {
+		for _, loop := range loops {
+			areaClaimed += loop.AreaSqMeters
+		}
 		xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
 		user.TotalAreaSqm += areaClaimed
 		user.XP += int64(xpAwarded)
@@ -160,15 +162,23 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		playerTotalArea = user.TotalAreaSqm
 
 		tID := fmt.Sprintf("poly_%s_territory", run.UserID)
-		geojson = fmt.Sprintf(`{"type":"MultiPolygon","coordinates":[[[[%f,%f]]]]}`, loop.Polygon[0].Longitude, loop.Polygon[0].Latitude)
-		m.territories[tID] = &Territory{
-			ID:        tID,
-			OwnerID:   run.UserID,
-			Username:  user.Username,
-			GeoJSON:   geojson,
-			AreaSqm:   playerTotalArea,
-			UpdatedAt: time.Now().UTC(),
+		if len(loops[0].Polygon) > 0 {
+			geojson = fmt.Sprintf(`{"type":"MultiPolygon","coordinates":[[[[%f,%f]]]]}`, loops[0].Polygon[0].Longitude, loops[0].Polygon[0].Latitude)
 		}
+		m.territories[tID] = &Territory{
+			ID:             tID,
+			OwnerID:        run.UserID,
+			Username:       user.Username,
+			GeoJSON:        geojson,
+			AreaSqm:        playerTotalArea,
+			Strength:       100.0,
+			LastDefendedAt: time.Now().UTC(),
+			UpdatedAt:      time.Now().UTC(),
+		}
+	} else {
+		user.TotalRuns++
+		user.UpdatedAt = time.Now().UTC()
+		playerTotalArea = user.TotalAreaSqm
 	}
 
 	runCopy := *run
@@ -178,7 +188,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	m.runsByOrder = append(m.runsByOrder, run.IdempotencyKey)
 
 	var rivalsAffected []string
-	if loop != nil {
+	if len(loops) > 0 {
 		for _, t := range m.territories {
 			if t.OwnerID != run.UserID {
 				rivalsAffected = append(rivalsAffected, t.OwnerID)
@@ -192,7 +202,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		Status:             run.Status,
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,
-		LoopDetected:       loop != nil,
+		LoopDetected:       len(loops) > 0,
 		AreaClaimedSqm:     areaClaimed,
 		XpAwarded:          xpAwarded,
 		PlayerTotalAreaSqm: playerTotalArea,

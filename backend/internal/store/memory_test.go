@@ -38,7 +38,7 @@ func TestIdempotencyDoesNotDoubleCount(t *testing.T) {
 	}
 
 	// First submission
-	res1, err := memStore.CaptureRunAndMutateTerritories(ctx, run, loop, nil)
+	res1, err := memStore.CaptureRunAndMutateTerritories(ctx, run, []geo.EnclosedLoop{*loop}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 9180.0, res1.AreaClaimedSqm)
 	assert.Equal(t, 9180.0, res1.PlayerTotalAreaSqm)
@@ -50,7 +50,7 @@ func TestIdempotencyDoesNotDoubleCount(t *testing.T) {
 	assert.Equal(t, 1, userAfterFirst.TotalRuns)
 
 	// Duplicate submission with identical idempotency key
-	res2, err := memStore.CaptureRunAndMutateTerritories(ctx, run, loop, nil)
+	res2, err := memStore.CaptureRunAndMutateTerritories(ctx, run, []geo.EnclosedLoop{*loop}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, res1.RunID, res2.RunID)
 	assert.Equal(t, res1.AreaClaimedSqm, res2.AreaClaimedSqm)
@@ -60,6 +60,59 @@ func TestIdempotencyDoesNotDoubleCount(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 9180.0, userAfterDuplicate.TotalAreaSqm, "Duplicate idempotency key must not double count area")
 	assert.Equal(t, 1, userAfterDuplicate.TotalRuns, "Duplicate idempotency key must not increment run count")
+}
+
+func TestCaptureMultiLoopSummedAreaAndXP(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	run := &store.Run{
+		ID:              "run_multi_loop",
+		UserID:          "usr_multi",
+		IdempotencyKey:  "idem_multi_001",
+		DurationSeconds: 600,
+		DistanceMeters:  1200.0,
+		Status:          "accepted",
+	}
+
+	loops := []geo.EnclosedLoop{
+		{
+			Polygon: []geo.LatLng{
+				{Latitude: 51.5000, Longitude: -0.1200},
+				{Latitude: 51.5008, Longitude: -0.1200},
+				{Latitude: 51.5008, Longitude: -0.1212},
+				{Latitude: 51.5000, Longitude: -0.1212},
+				{Latitude: 51.5000, Longitude: -0.1200},
+			},
+			AreaSqMeters:       7350.0,
+			LoopDistanceMeters: 340.0,
+			ClosedAt:           time.Now().UTC(),
+		},
+		{
+			Polygon: []geo.LatLng{
+				{Latitude: 51.5000, Longitude: -0.1190},
+				{Latitude: 51.5008, Longitude: -0.1190},
+				{Latitude: 51.5008, Longitude: -0.1178},
+				{Latitude: 51.5000, Longitude: -0.1178},
+				{Latitude: 51.5000, Longitude: -0.1190},
+			},
+			AreaSqMeters:       7350.0,
+			LoopDistanceMeters: 340.0,
+			ClosedAt:           time.Now().UTC(),
+		},
+	}
+
+	res, err := memStore.CaptureRunAndMutateTerritories(ctx, run, loops, nil)
+	require.NoError(t, err)
+	assert.True(t, res.LoopDetected)
+	assert.Equal(t, 14700.0, res.AreaClaimedSqm, "Total area claimed must sum all loops")
+	// XP: max(100, round(14700 / 20.0)) = 735
+	assert.Equal(t, 735, res.XpAwarded)
+
+	user, err := memStore.GetUser(ctx, "usr_multi")
+	require.NoError(t, err)
+	assert.Equal(t, 14700.0, user.TotalAreaSqm)
+	assert.Equal(t, int64(735), user.XP)
 }
 
 func TestLeaderboardOrdering(t *testing.T) {
@@ -84,3 +137,41 @@ func TestLeaderboardOrdering(t *testing.T) {
 	assert.Equal(t, "Runner1", lb[2].Username)
 	assert.Equal(t, 3, lb[2].Rank)
 }
+
+func TestCaptureSetsTerritoryStrengthAndLastDefendedAt(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	run := &store.Run{
+		ID:              "run_strength_1",
+		UserID:          "usr_fortified",
+		IdempotencyKey:  "idem_strength_1",
+		DurationSeconds: 120,
+		DistanceMeters:  200.0,
+		Status:          "accepted",
+	}
+
+	loop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.5, Longitude: -0.12},
+			{Latitude: 51.501, Longitude: -0.12},
+			{Latitude: 51.501, Longitude: -0.121},
+			{Latitude: 51.5, Longitude: -0.121},
+			{Latitude: 51.5, Longitude: -0.12},
+		},
+		AreaSqMeters: 5000.0,
+	}
+
+	before := time.Now().UTC().Add(-1 * time.Second)
+	_, err := memStore.CaptureRunAndMutateTerritories(ctx, run, []geo.EnclosedLoop{loop}, nil)
+	require.NoError(t, err)
+
+	territories, err := memStore.GetTerritoriesInBBox(ctx, -1.0, 50.0, 1.0, 52.0)
+	require.NoError(t, err)
+	require.Len(t, territories, 1)
+
+	assert.Equal(t, "poly_usr_fortified_territory", territories[0].ID)
+	assert.Equal(t, 100.0, territories[0].Strength)
+	assert.True(t, territories[0].LastDefendedAt.After(before) || territories[0].LastDefendedAt.Equal(before))
+}
+

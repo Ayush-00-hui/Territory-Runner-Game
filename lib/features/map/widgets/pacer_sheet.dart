@@ -13,6 +13,9 @@ class VirtualPacerSheet extends StatelessWidget {
   final VoidCallback onSimulateRivalCut;
   final VoidCallback onSimulateAnomaly;
   final VoidCallback onSimulateCoachDebrief;
+  final VoidCallback onSimulateDecayAndAttack;
+  final bool isRivalSimulating;
+  final VoidCallback? onToggleRivalSimulation;
 
   const VirtualPacerSheet({
     super.key,
@@ -21,6 +24,9 @@ class VirtualPacerSheet extends StatelessWidget {
     required this.onSimulateRivalCut,
     required this.onSimulateAnomaly,
     required this.onSimulateCoachDebrief,
+    required this.onSimulateDecayAndAttack,
+    this.isRivalSimulating = false,
+    this.onToggleRivalSimulation,
   });
 
   static Future<void> show({
@@ -30,6 +36,9 @@ class VirtualPacerSheet extends StatelessWidget {
     required VoidCallback onSimulateRivalCut,
     required VoidCallback onSimulateAnomaly,
     required VoidCallback onSimulateCoachDebrief,
+    required VoidCallback onSimulateDecayAndAttack,
+    bool isRivalSimulating = false,
+    VoidCallback? onToggleRivalSimulation,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -44,6 +53,9 @@ class VirtualPacerSheet extends StatelessWidget {
         onSimulateRivalCut: onSimulateRivalCut,
         onSimulateAnomaly: onSimulateAnomaly,
         onSimulateCoachDebrief: onSimulateCoachDebrief,
+        onSimulateDecayAndAttack: onSimulateDecayAndAttack,
+        isRivalSimulating: isRivalSimulating,
+        onToggleRivalSimulation: onToggleRivalSimulation,
       ),
     );
   }
@@ -129,6 +141,9 @@ class VirtualPacerSheet extends StatelessWidget {
                 onSimulateRivalCut: onSimulateRivalCut,
                 onSimulateAnomaly: onSimulateAnomaly,
                 onSimulateCoachDebrief: onSimulateCoachDebrief,
+                onSimulateDecayAndAttack: onSimulateDecayAndAttack,
+                isRivalSimulating: isRivalSimulating,
+                onToggleRivalSimulation: onToggleRivalSimulation,
               ),
             ],
           ),

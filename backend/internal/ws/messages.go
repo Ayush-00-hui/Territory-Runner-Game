@@ -9,10 +9,11 @@ const (
 	TypeHeartbeat      MessageType = "heartbeat"
 
 	// Server -> Client
-	TypeRunnerPresence   MessageType = "runner_presence"
-	TypeRunnerLeft       MessageType = "runner_left"
-	TypeTerritoryAlert   MessageType = "territory_alert"
-	TypeConquestBroadcast MessageType = "conquest_broadcast"
+	TypeRunnerPresence       MessageType = "runner_presence"
+	TypeRunnerLeft           MessageType = "runner_left"
+	TypeTerritoryAlert       MessageType = "territory_alert"
+	TypeTerritoryUnderAttack MessageType = "territory_under_attack"
+	TypeConquestBroadcast    MessageType = "conquest_broadcast"
 )
 
 // InboundMessage represents a client packet sent over WebSocket.

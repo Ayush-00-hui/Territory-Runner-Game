@@ -186,11 +186,6 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		a.logger.Warn("loop extraction warning", "error", err)
 	}
 
-	var primaryLoop *geo.EnclosedLoop
-	if len(loops) > 0 {
-		primaryLoop = &loops[0]
-	}
-
 	runID := "run_" + uuid.New().String()
 	runRecord := &store.Run{
 		ID:              runID,
@@ -206,7 +201,7 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		runRecord.Status = "flagged_review"
 	}
 
-	result, err := a.store.CaptureRunAndMutateTerritories(r.Context(), runRecord, primaryLoop, req.Points)
+	result, err := a.store.CaptureRunAndMutateTerritories(r.Context(), runRecord, loops, req.Points)
 	if err != nil {
 		a.logger.Error("failed to capture run and mutate territories", "error", err)
 		writeError(w, http.StatusInternalServerError, "TRANSACTION_FAILED", "Failed to persist territory capture")
@@ -293,11 +288,13 @@ func (a *API) HandleGetTerritories(w http.ResponseWriter, r *http.Request) {
 			"type": "Feature",
 			"id":   t.ID,
 			"properties": map[string]interface{}{
-				"owner_id":   t.OwnerID,
-				"username":   t.Username,
-				"is_self":    t.OwnerID == currentUID,
-				"area_sqm":   t.AreaSqm,
-				"updated_at": t.UpdatedAt,
+				"owner_id":         t.OwnerID,
+				"username":         t.Username,
+				"is_self":          t.OwnerID == currentUID,
+				"area_sqm":         t.AreaSqm,
+				"strength":         t.Strength,
+				"last_defended_at": t.LastDefendedAt,
+				"updated_at":       t.UpdatedAt,
 			},
 			"geometry": geomObj,
 		}

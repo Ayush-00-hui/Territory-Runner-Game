@@ -1,10 +1,10 @@
 name: CI
- 
+
 on:
   push:
-    branches: [ main, feature/go-backend ]
+    branches: [ main, feature/go-backend, feature/mechanics-v2 ]
   pull_request:
-    branches: [ main, feature/go-backend ]
+    branches: [ main, feature/go-backend, feature/mechanics-v2 ]
 
 jobs:
   flutter_test:
@@ -49,7 +49,25 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Run Static Code Analysis (go vet)
+        working-directory: backend
+        run: go vet ./...
+
       - name: Run Go Unit Tests & Benchmarks
         working-directory: backend
         run: go test -v -race ./...
+
+  docker_build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Go Backend Container
+        run: docker build -t territory-runner-backend:latest ./backend
 

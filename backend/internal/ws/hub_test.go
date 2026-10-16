@@ -96,9 +96,10 @@ func TestWebSocketTargetedTerritoryCarvedAlert(t *testing.T) {
 	err = json.Unmarshal(msgBytes, &alert)
 	require.NoError(t, err)
 
-	assert.Equal(t, ws.TypeTerritoryAlert, alert.Type)
-	assert.Equal(t, "territory_carved", alert.Event)
+	assert.Equal(t, ws.TypeTerritoryUnderAttack, alert.Type)
+	assert.Equal(t, "territory_under_attack", alert.Event)
 	assert.Equal(t, "attacker_02", alert.AttackerID)
 	assert.Equal(t, 3500.0, alert.AreaClaimedSqm)
-	assert.Contains(t, alert.Message, "ShadowRunner carved 3500 m²")
+	assert.Contains(t, alert.Message, "ShadowRunner")
+	assert.Contains(t, alert.Message, "3500 m²")
 }

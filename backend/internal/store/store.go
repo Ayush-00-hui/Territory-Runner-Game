@@ -29,7 +29,7 @@ type Store interface {
 	// 3. Performs ST_Difference against intersecting rival territories (deleting overtaken shapes).
 	// 4. Calculates exact geodesic area with ::geography and updates runner total area + XP.
 	// 5. Inserts the run record with unique idempotency key.
-	CaptureRunAndMutateTerritories(ctx context.Context, run *Run, loop *geo.EnclosedLoop, rawTrack []geo.TrackPoint) (*CaptureResult, error)
+	CaptureRunAndMutateTerritories(ctx context.Context, run *Run, loops []geo.EnclosedLoop, rawTrack []geo.TrackPoint) (*CaptureResult, error)
 
 	// GetLeaderboard returns runners ordered descending by total claimed sovereign area.
 	GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error)

@@ -136,7 +136,7 @@ func (s *PostgresStore) GetRunByIdempotencyKey(ctx context.Context, key string) 
 // GetTerritoriesInBBox returns GeoJSON representations of territories intersecting the bounding box.
 func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat, maxLng, maxLat float64) ([]Territory, error) {
 	query := `
-		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, t.updated_at
+		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), t.updated_at
 		FROM territories t
 		JOIN users u ON t.owner_id = u.id
 		WHERE ST_Intersects(t.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326));
@@ -150,7 +150,7 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 	var list []Territory
 	for rows.Next() {
 		var t Territory
-		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		list = append(list, t)
@@ -162,7 +162,7 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	ctx context.Context,
 	run *Run,
-	loop *geo.EnclosedLoop,
+	loops []geo.EnclosedLoop,
 	rawTrack []geo.TrackPoint,
 ) (*CaptureResult, error) {
 	tx, err := s.pool.Begin(ctx)
@@ -220,19 +220,24 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	var xpAwarded int
 	var rivalsAffected []string
 
-	// 3. Process spatial loop capture if loop was closed
-	if loop != nil && len(loop.Polygon) >= 3 {
+	// 3. Process spatial loop capture for all closed loops
+	for _, loop := range loops {
+		if len(loop.Polygon) < 3 {
+			continue
+		}
 		polyWKT := polygonToWKT(loop.Polygon)
 		territoryID := fmt.Sprintf("poly_%s_territory", run.UserID)
 
 		// A. Union into player's territory:
 		// ST_Union operates on geometry, cast to ::geography for geodesic area
 		unionQuery := `
-			INSERT INTO territories (id, owner_id, geom, area_sqm, updated_at)
-			VALUES ($1, $2, ST_Multi(ST_GeomFromText($3, 4326)), ST_Area(ST_GeomFromText($3, 4326)::geography), NOW())
+			INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, updated_at)
+			VALUES ($1, $2, ST_Multi(ST_GeomFromText($3, 4326)), ST_Area(ST_GeomFromText($3, 4326)::geography), 100.0, NOW(), NOW())
 			ON CONFLICT (id) DO UPDATE SET
 				geom = ST_Multi(ST_CollectionExtract(ST_Union(territories.geom, ST_GeomFromText($3, 4326)), 3)),
 				area_sqm = ST_Area(ST_Union(territories.geom, ST_GeomFromText($3, 4326))::geography),
+				strength = 100.0,
+				last_defended_at = NOW(),
 				updated_at = NOW()
 			RETURNING ST_AsGeoJSON(geom), area_sqm;
 		`
@@ -263,6 +268,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		}
 		rows.Close()
 
+		areaClaimed += loop.AreaSqMeters
+	}
+
+	if len(loops) > 0 {
 		// Clean up overtaken rival territories
 		cleanupQuery := `
 			DELETE FROM territories
@@ -273,7 +282,6 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 			return nil, fmt.Errorf("failed to clean empty rival territories: %w", err)
 		}
 
-		areaClaimed = loop.AreaSqMeters
 		xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
 	}
 
@@ -319,7 +327,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		Status:             run.Status,
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,
-		LoopDetected:       loop != nil,
+		LoopDetected:       len(loops) > 0,
 		AreaClaimedSqm:     areaClaimed,
 		XpAwarded:          xpAwarded,
 		PlayerTotalAreaSqm: playerTotalArea,
