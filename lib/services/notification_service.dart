@@ -90,7 +90,7 @@ class NotificationService {
           settings.authorizationStatus == AuthorizationStatus.provisional) {
         final token = await FirebaseMessaging.instance.getToken();
         if (token != null) {
-          await _registerToken(token);
+          unawaited(_registerToken(token));
         }
       }
 

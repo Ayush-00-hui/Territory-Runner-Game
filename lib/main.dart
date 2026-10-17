@@ -19,14 +19,34 @@ export 'ui/ui.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  Hive.registerAdapter(TerritoryAdapter());
-  Hive.registerAdapter(RunnerProfileAdapter());
+  if (!Hive.isAdapterRegistered(0)) {
+    Hive.registerAdapter(TerritoryAdapter());
+  }
+  if (!Hive.isAdapterRegistered(1)) {
+    Hive.registerAdapter(RunnerProfileAdapter());
+  }
   await Hive.openBox<Territory>('territories_v3');
   await Hive.openBox<RunnerProfile>('profile');
   await Hive.openBox<String>('active_run_recovery');
-  await FirebaseService().initialize();
-  await NotificationService().initialize();
+
+  // Immediately render UI — zero splash screen blocking!
   runApp(const TerritoryApp());
+
+  // Initialize Firebase and push notifications asynchronously in background
+  _initServicesAsync();
+}
+
+void _initServicesAsync() async {
+  try {
+    await FirebaseService().initialize().timeout(const Duration(seconds: 3));
+  } catch (e) {
+    debugPrint('[main] Firebase init skipped/timed out: $e');
+  }
+  try {
+    await NotificationService().initialize().timeout(const Duration(seconds: 3));
+  } catch (e) {
+    debugPrint('[main] NotificationService init skipped/timed out: $e');
+  }
 }
 
 Path _runPreviewPath(Size size) {
