@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../coach/voice_coach_service.dart';
 import '../../gameplay/territory_service.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/battery_saver_service.dart';
@@ -30,7 +29,6 @@ class ProfileSettingsList extends StatefulWidget {
 }
 
 class _ProfileSettingsListState extends State<ProfileSettingsList> {
-  final VoiceCoachService _voiceCoach = VoiceCoachService();
   final AppPreferences _appPrefs = AppPreferences();
 
   @override
@@ -38,62 +36,9 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. AUDIO & HAPTICS (Switch 1: Voice Coach, Switch 2: Tactical Haptic Bursts)
-        _buildSectionTitle('Audio & Haptics'),
+        // 1. TACTICAL HAPTICS
+        _buildSectionTitle('Tactical Haptics'),
         _buildSettingsGroup([
-          SwitchListTile(
-            secondary: const Icon(Icons.record_voice_over_rounded, color: AppColors.accent, size: 20),
-            title: Text(
-              'Voice Coach Audio Cues',
-              style: AppText.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-            subtitle: Text(
-              'Milestone distance and pace telemetry announcements',
-              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
-            ),
-            activeThumbColor: AppColors.accent,
-            activeTrackColor: AppColors.accentContainer,
-            value: _voiceCoach.isAudioEnabled,
-            onChanged: (val) {
-              AppMotion.selectionTick();
-              setState(() {
-                _voiceCoach.toggleAudio(val);
-              });
-            },
-          ),
-          if (_voiceCoach.isAudioEnabled) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: 4),
-              child: Row(
-                children: [
-                  const Icon(Icons.volume_up_rounded, color: AppColors.textMuted, size: 18),
-                  const SizedBox(width: 8),
-                  Text('Volume', style: AppText.bodySmall.copyWith(color: AppColors.textMuted)),
-                  Expanded(
-                    child: Slider(
-                      value: _voiceCoach.volume,
-                      activeColor: AppColors.accent,
-                      inactiveColor: AppColors.surface2,
-                      onChanged: (v) {
-                        setState(() {
-                          _voiceCoach.setVolume(v);
-                        });
-                      },
-                    ),
-                  ),
-                  Text(
-                    '${(_voiceCoach.volume * 100).round()}%',
-                    style: AppText.labelSmall.copyWith(color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          const Divider(height: 1, color: AppColors.border),
           SwitchListTile(
             secondary: const Icon(Icons.vibration_rounded, color: AppColors.accent, size: 20),
             title: Text(
