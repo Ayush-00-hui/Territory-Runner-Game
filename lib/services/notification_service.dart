@@ -3,9 +3,9 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../features/coach/voice_coach_service.dart';
 import '../ui/ui.dart';
 import 'api_client.dart';
+import 'app_preferences.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -58,7 +58,12 @@ class NotificationService {
         final type = message.data['type'];
         if (type == 'territory_carved') {
           final rival = message.data['rival_name'] as String? ?? 'Rival';
-          VoiceCoachService().announceTerritoryUnderAttack(rival);
+          AppPreferences().triggerAttackHaptic();
+          AppToast.showGlobal(
+            '⚠️ Territory under attack by $rival!',
+            icon: Icons.warning_amber_rounded,
+            type: AppToastType.error,
+          );
         }
       });
 

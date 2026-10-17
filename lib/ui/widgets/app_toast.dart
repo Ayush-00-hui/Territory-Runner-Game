@@ -29,6 +29,42 @@ class AppToast extends StatelessWidget {
     this.actionLabel,
   });
 
+  /// Root scaffold messenger key for showing toasts without a BuildContext
+  static final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
+
+  /// Displays the toast globally via the root ScaffoldMessenger key
+  static void showGlobal(
+    String message, {
+    IconData? icon,
+    AppToastType type = AppToastType.info,
+    Duration duration = const Duration(seconds: 3),
+    VoidCallback? onAction,
+    String? actionLabel,
+  }) {
+    AppMotion.selectionTick();
+    final messenger = messengerKey.currentState;
+    if (messenger == null) return;
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+        padding: EdgeInsets.zero,
+        duration: duration,
+        content: AppToast(
+          message: message,
+          icon: icon,
+          type: type,
+          onAction: onAction,
+          actionLabel: actionLabel,
+        ),
+      ),
+    );
+  }
+
   /// Displays the toast across the screen via ScaffoldMessenger
   static void show(
     BuildContext context,

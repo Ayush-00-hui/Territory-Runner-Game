@@ -327,6 +327,7 @@ class _TerritoryAppState extends State<TerritoryApp> {
     }
 
     return MaterialApp(
+      scaffoldMessengerKey: AppToast.messengerKey,
       title: 'Territory Runner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,

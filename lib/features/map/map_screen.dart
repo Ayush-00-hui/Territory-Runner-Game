@@ -14,7 +14,7 @@ import '../gameplay/territory_service.dart';
 import '../routing/route_service.dart';
 import '../coach/pace_prediction_service.dart';
 import '../coach/llm_coach_service.dart';
-import '../coach/voice_coach_service.dart';
+import '../../services/app_preferences.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
 import '../../services/sync_queue.dart';
 import '../../services/api_client.dart';
@@ -53,7 +53,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final RouteService _routeService = RouteService();
   final PacePredictionService _paceService = PacePredictionService();
   final LLMCoachService _coachService = LLMCoachService();
-  final VoiceCoachService _voiceCoach = VoiceCoachService();
+  final AppPreferences _appPrefs = AppPreferences();
   final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
   final ApiClient _apiClient = ApiClient();
   final WebSocketService _wsService = WebSocketService();
@@ -178,7 +178,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
     _wsAlertSub = _wsService.alertStream.listen((alert) {
       if (!mounted) return;
-      _voiceCoach.announceTerritoryUnderAttack(alert.attackerName);
+      _appPrefs.triggerAttackHaptic();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppColors.bgElevated,
@@ -628,7 +628,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           if (currentKmFloor > _lastAnnouncedKm && currentKmFloor >= 1) {
             _lastAnnouncedKm = currentKmFloor;
             HapticFeedback.heavyImpact();
-            _voiceCoach.announceDistanceMilestone(currentKmFloor, _computeCurrentSplitPace());
+            _appPrefs.triggerMilestoneHaptic();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 backgroundColor: AppColors.surface,
@@ -704,7 +704,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       areaSqMeters: claimed,
       xpAwarded: xp,
     );
-    _voiceCoach.announceLoopClosed(claimed);
+    _appPrefs.triggerLoopClosedHaptic();
   }
 
   void _sealCurrentShape() {
@@ -776,7 +776,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       );
       if (progress >= 1.0) {
         _goalCompletedAnnounced = true;
-        _voiceCoach.announceGoalAchieved(_activeGoal.title);
+        _appPrefs.triggerGoalAchievedHaptic();
         HapticFeedback.heavyImpact();
         AppMotion.heavyBurst();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -817,11 +817,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           final transition = _autoPauseEngine.tick(_currentSpeedKmh);
           if (transition == AutoPauseTransition.paused) {
             _isAutoPaused = true;
-            _voiceCoach.announceAutoPaused();
+            _appPrefs.triggerAutoPauseHaptic();
             HapticFeedback.mediumImpact();
           } else if (transition == AutoPauseTransition.resumed) {
             _isAutoPaused = false;
-            _voiceCoach.announceAutoResumed();
+            _appPrefs.triggerAutoResumeHaptic();
             HapticFeedback.lightImpact();
           }
 
@@ -876,7 +876,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
 
       showRunStartAnimation(context);
-      _voiceCoach.announceRunStart();
+      _appPrefs.triggerRunStartHaptic();
     } else {
       // STOP RUN & TRIGGER SUMMARY
       _runTimer?.cancel();
@@ -895,7 +895,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _activeSuggestedRoute = null;
       });
 
-      _voiceCoach.announceRunComplete(finalDistance, finalTerritories);
+      _appPrefs.triggerRunCompleteHaptic();
       _territoryService.addRunDistance(finalDistance);
 
       if (_runCoordinates.length >= 3) {
