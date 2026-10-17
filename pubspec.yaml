@@ -54,6 +54,10 @@ dependencies:
   http: ^1.6.0
   web_socket_channel: ^3.0.3
   wakelock_plus: ^1.8.0
+  share_plus: ^13.3.1
+  path_provider: ^2.1.6
+  flutter_tts: ^4.2.5
+  firebase_messaging: ^16.7.0
 
 dev_dependencies:
   flutter_test:
@@ -81,6 +85,7 @@ flutter:
     - assets/models/
     - assets/icons/
     - assets/fonts/
+    - assets/audio/
 
   fonts:
     - family: Oswald

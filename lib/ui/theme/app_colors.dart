@@ -24,6 +24,7 @@ class AppColors {
   static const Color rival = Color(0xFFE05353);         // Contested / Rival Territory (Muted Crimson)
   static const Color warning = Color(0xFFE5A93C);       // Telemetry / Anomaly Alert (Amber)
   static const Color info = Color(0xFF5C85FF);          // Guidance / Pacer (Slate Blue)
+  static const Color error = Color(0xFFE05353);         // Error / Rejection Alert
 
   // Legacy Aliases
   static const Color accentGlow = Color(0x1A3DDC97);

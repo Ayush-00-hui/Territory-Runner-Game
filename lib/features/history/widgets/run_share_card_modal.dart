@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../ui/ui.dart';
 
 enum ShareCardTheme {
@@ -70,6 +73,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
   ShareCardTheme _selectedTheme = ShareCardTheme.athleticDark;
   bool _isExporting = false;
   String? _exportSuccessMessage;
+  String? _exportErrorMessage;
 
   String _formatPace() {
     if (widget.distanceKm <= 0) return "--'--\"";
@@ -94,40 +98,269 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     return '${dt.day} ${months[dt.month - 1]} ${dt.year} • $hour:$minute';
   }
 
+  /// Renders a true 1080x1080 PNG image of the share card
+  Future<Uint8List> _renderTrue1080pCard() async {
+    const double targetSize = 1080.0;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, targetSize, targetSize));
+
+    Color cardBg;
+    Color accentColor;
+    bool hasGridOverlay;
+
+    switch (_selectedTheme) {
+      case ShareCardTheme.athleticDark:
+        cardBg = const Color(0xFF0B0C10);
+        accentColor = AppColors.accent;
+        hasGridOverlay = false;
+        break;
+      case ShareCardTheme.cyberVanguard:
+        cardBg = const Color(0xFF080D14);
+        accentColor = const Color(0xFF00E5FF);
+        hasGridOverlay = true;
+        break;
+      case ShareCardTheme.stealth:
+        cardBg = const Color(0xFF141519);
+        accentColor = Colors.white;
+        hasGridOverlay = false;
+        break;
+    }
+
+    // 1. Background fill
+    final bgPaint = Paint()..color = cardBg;
+    canvas.drawRect(const Rect.fromLTWH(0, 0, targetSize, targetSize), bgPaint);
+
+    // 2. Subtle Cyber Grid if theme demands it
+    if (hasGridOverlay) {
+      final gridPainter = _CyberGridPainter(gridColor: accentColor.withValues(alpha: 0.08));
+      gridPainter.paint(canvas, const Size(targetSize, targetSize));
+    }
+
+    // 3. Draw outer card border
+    final borderPaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(const Rect.fromLTWH(24, 24, targetSize - 48, targetSize - 48), const Radius.circular(48)),
+      borderPaint,
+    );
+
+    // 4. Header Bar: Logo, App Title, and Sovereign Run Badge
+    _drawText(
+      canvas,
+      'TERRITORY RUNNER',
+      const Offset(64, 64),
+      TextStyle(
+        color: Colors.white,
+        fontSize: 28,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 2.0,
+        fontFamily: 'Inter',
+      ),
+    );
+
+    // Sovereign Run Pill
+    final pillRect = const Rect.fromLTWH(targetSize - 280, 56, 216, 44);
+    final pillPaint = Paint()..color = accentColor.withValues(alpha: 0.18);
+    canvas.drawRRect(RRect.fromRectAndRadius(pillRect, const Radius.circular(22)), pillPaint);
+    final pillBorder = Paint()
+      ..color = accentColor.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(RRect.fromRectAndRadius(pillRect, const Radius.circular(22)), pillBorder);
+
+    _drawText(
+      canvas,
+      'SOVEREIGN RUN',
+      const Offset(targetSize - 250, 68),
+      TextStyle(
+        color: accentColor,
+        fontSize: 16,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1.2,
+        fontFamily: 'Inter',
+      ),
+    );
+
+    // 5. Territory Map / Route Canvas (Center area: 900 x 520)
+    canvas.save();
+    canvas.translate(80, 150);
+    final mapPainter = _ShareCardMapPainter(
+      points: widget.points,
+      accentColor: accentColor,
+    );
+    mapPainter.paint(canvas, const Size(920, 500));
+    canvas.restore();
+
+    // 6. Callsign & Date Section
+    _drawText(
+      canvas,
+      widget.callsign.toUpperCase(),
+      const Offset(64, 680),
+      TextStyle(
+        color: Colors.white,
+        fontSize: 44,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1.5,
+        fontFamily: 'Inter',
+      ),
+    );
+
+    _drawText(
+      canvas,
+      _formatDate(),
+      const Offset(64, 735),
+      TextStyle(
+        color: Colors.white54,
+        fontSize: 20,
+        fontWeight: FontWeight.w600,
+        fontFamily: 'Inter',
+      ),
+    );
+
+    // 7. Stats Panel (Bottom Container: 952 x 180)
+    final statsRect = const Rect.fromLTWH(64, 780, targetSize - 128, 170);
+    final statsBg = Paint()..color = Colors.black.withValues(alpha: 0.7);
+    canvas.drawRRect(RRect.fromRectAndRadius(statsRect, const Radius.circular(28)), statsBg);
+    final statsBorder = Paint()
+      ..color = Colors.white12
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(RRect.fromRectAndRadius(statsRect, const Radius.circular(28)), statsBorder);
+
+    // Three Stat Columns
+    final double colWidth = (targetSize - 128) / 3.0;
+
+    // Col 1: Distance
+    _drawText(canvas, 'DISTANCE', Offset(64 + colWidth * 0.5 - 45, 808), const TextStyle(color: Colors.white54, fontSize: 18, fontWeight: FontWeight.w700));
+    _drawText(canvas, '${widget.distanceKm.toStringAsFixed(2)} KM', Offset(64 + colWidth * 0.5 - 65, 846), const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900));
+
+    // Divider 1
+    canvas.drawLine(Offset(64 + colWidth, 805), Offset(64 + colWidth, 925), Paint()..color = Colors.white12..strokeWidth = 2.0);
+
+    // Col 2: Pace
+    _drawText(canvas, 'PACE', Offset(64 + colWidth * 1.5 - 28, 808), const TextStyle(color: Colors.white54, fontSize: 18, fontWeight: FontWeight.w700));
+    _drawText(canvas, '${_formatPace()} /KM', Offset(64 + colWidth * 1.5 - 60, 846), const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900));
+
+    // Divider 2
+    canvas.drawLine(Offset(64 + colWidth * 2, 805), Offset(64 + colWidth * 2, 925), Paint()..color = Colors.white12..strokeWidth = 2.0);
+
+    // Col 3: Claimed Area
+    _drawText(canvas, 'CLAIMED', Offset(64 + colWidth * 2.5 - 42, 808), const TextStyle(color: Colors.white54, fontSize: 18, fontWeight: FontWeight.w700));
+    _drawText(canvas, _formatArea(), Offset(64 + colWidth * 2.5 - 65, 846), TextStyle(color: accentColor, fontSize: 32, fontWeight: FontWeight.w900));
+
+    // 8. Watermark Footer
+    _drawText(
+      canvas,
+      'SERVER-AUTHORITATIVE TERRITORY CONQUEST • POSTGIS SPATIAL PARITY',
+      const Offset(240, 990),
+      TextStyle(
+        color: Colors.white30,
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 1.0,
+        fontFamily: 'Inter',
+      ),
+    );
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(1080, 1080);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+
+    if (byteData == null) {
+      throw Exception('Failed to encode image to PNG byte data');
+    }
+    return byteData.buffer.asUint8List();
+  }
+
+  void _drawText(Canvas canvas, String text, Offset offset, TextStyle style) {
+    final span = TextSpan(text: text, style: style);
+    final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
+    tp.layout();
+    tp.paint(canvas, offset);
+  }
+
+  /// Exports the card: renders true 1080x1080 PNG, writes to file, and opens system share sheet
   Future<void> _exportCard() async {
     setState(() {
       _isExporting = true;
       _exportSuccessMessage = null;
+      _exportErrorMessage = null;
     });
 
     AppMotion.heavyBurst();
 
     try {
-      final boundary = _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-      if (boundary != null) {
-        final ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-        image.dispose();
-        if (byteData != null) {
-          // Export completed
-          if (mounted) {
-            setState(() {
-              _isExporting = false;
-              _exportSuccessMessage = 'Share Card ready! 1080x1080 PNG rendered (${(byteData.lengthInBytes / 1024).toStringAsFixed(0)} KB)';
-            });
-          }
-          return;
-        }
-      }
-    } catch (_) {
-      // Graceful fallback for test environments without real GPU rendering
-    }
+      final Uint8List pngBytes = await _renderTrue1080pCard();
+      final tempDir = await getTemporaryDirectory();
+      final String filePath = '${tempDir.path}/territory_conquest_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File(filePath);
+      await file.writeAsBytes(pngBytes, flush: true);
 
-    if (mounted) {
-      setState(() {
-        _isExporting = false;
-        _exportSuccessMessage = 'Share Card ready! 1080x1080 PNG rendered';
-      });
+      // Verify file was genuinely created on disk
+      if (!await file.exists() || await file.length() == 0) {
+        throw Exception('File was not written to storage');
+      }
+
+      // Open system share sheet
+      final xFile = XFile(filePath, mimeType: 'image/png');
+      await Share.shareXFiles(
+        [xFile],
+        text: 'Claimed ${widget.callsign}\'s territory on Territory Runner! #TerritoryRunner',
+      );
+
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _exportSuccessMessage = 'Share Card ready! 1080x1080 PNG rendered (${(pngBytes.lengthInBytes / 1024).toStringAsFixed(0)} KB)';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _exportErrorMessage = 'Failed to generate share card: $e';
+        });
+      }
+    }
+  }
+
+  /// Saves the true 1080x1080 PNG to the device documents storage
+  Future<void> _saveCardToDevice() async {
+    setState(() {
+      _isExporting = true;
+      _exportSuccessMessage = null;
+      _exportErrorMessage = null;
+    });
+
+    AppMotion.mediumTick();
+
+    try {
+      final Uint8List pngBytes = await _renderTrue1080pCard();
+      final docDir = await getApplicationDocumentsDirectory();
+      final String filePath = '${docDir.path}/territory_card_${DateTime.now().millisecondsSinceEpoch}.png';
+      final file = File(filePath);
+      await file.writeAsBytes(pngBytes, flush: true);
+
+      if (!await file.exists() || await file.length() == 0) {
+        throw Exception('File write verification failed');
+      }
+
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _exportSuccessMessage = 'Saved 1080x1080 PNG to storage: ${file.path.split(Platform.pathSeparator).last} (${(pngBytes.lengthInBytes / 1024).toStringAsFixed(0)} KB)';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isExporting = false;
+          _exportErrorMessage = 'Failed to save card: $e';
+        });
+      }
     }
   }
 
@@ -174,7 +407,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Export Strava-ready victory artwork',
+                    'Export Strava-ready 1080x1080 victory artwork',
                     style: AppText.bodySmall.copyWith(color: AppColors.textMuted),
                   ),
                 ],
@@ -204,7 +437,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
 
           const SizedBox(height: AppSpacing.s16),
 
-          // The Captured Share Card Container
+          // The Captured Share Card Container Preview
           Center(
             child: RepaintBoundary(
               key: _cardKey,
@@ -242,11 +475,70 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
             const SizedBox(height: AppSpacing.s12),
           ],
 
-          // Export button
-          PrimaryButton(
-            label: _isExporting ? 'GENERATING 1080P IMAGE...' : 'GENERATE & EXPORT CARD',
-            icon: Icons.share_rounded,
-            onPressed: _isExporting ? null : _exportCard,
+          // Error notification banner if failure occurs
+          if (_exportErrorMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.15),
+                borderRadius: AppSpacing.br12,
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded, color: AppColors.error, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _exportErrorMessage!,
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s12),
+          ],
+
+          // Export and Save Action Buttons
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: PrimaryButton(
+                  label: _isExporting ? 'GENERATING 1080P...' : 'GENERATE & EXPORT CARD',
+                  icon: Icons.share_rounded,
+                  onPressed: _isExporting ? null : _exportCard,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 2,
+                child: SizedBox(
+                  height: 48,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
+                    ),
+                    icon: const Icon(Icons.download_rounded, size: 18, color: AppColors.accent),
+                    label: Text(
+                      'SAVE PNG',
+                      style: AppText.label.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                      ),
+                    ),
+                    onPressed: _isExporting ? null : _saveCardToDevice,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -512,7 +804,6 @@ class _ShareCardMapPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (points.isEmpty) {
-      // Fallback geometric loop if no GPS points recorded yet
       _drawDemoLoop(canvas, size);
       return;
     }

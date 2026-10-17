@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../coach/voice_coach_service.dart';
 import '../../gameplay/territory_service.dart';
@@ -97,23 +98,24 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             subtitle: 'Secure profile & route cloud backups',
             onTap: widget.onOpenAuth,
           ),
-          const Divider(height: 1, color: AppColors.border),
-
-          // Reset Dev Mode
-          ProfileOptionTile(
-            icon: Icons.refresh_rounded,
-            title: 'Reset Local Territories (Dev Mode)',
-            subtitle: 'Clears offline polygons to initial state',
-            onTap: () async {
-              AppMotion.mediumTick();
-              await widget.territoryService.resetTerritories();
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Territories reset to initial grid.')),
-                );
-              }
-            },
-          ),
+          // Reset Dev Mode (Only visible in debug builds)
+          if (kDebugMode) ...[
+            const Divider(height: 1, color: AppColors.border),
+            ProfileOptionTile(
+              icon: Icons.refresh_rounded,
+              title: 'Reset Local Territories (Dev Mode)',
+              subtitle: 'Clears offline polygons to initial state',
+              onTap: () async {
+                AppMotion.mediumTick();
+                await widget.territoryService.resetTerritories();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Territories reset to initial grid.')),
+                  );
+                }
+              },
+            ),
+          ],
         ],
       ),
     ),
