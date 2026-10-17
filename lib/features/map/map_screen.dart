@@ -22,10 +22,13 @@ import '../../services/websocket_service.dart';
 import '../../models/ws_events.dart';
 import '../../main.dart'; // For showRunStartAnimation
 import '../../models/territory.dart';
+import '../../models/run_goal.dart';
+import '../../services/auto_pause_engine.dart';
 import '../../services/firebase_service.dart';
 import '../../services/notification_service.dart';
 import 'widgets/mode_tabs.dart';
 import 'widgets/run_hud.dart';
+import 'widgets/run_goal_sheet.dart';
 import 'widgets/map_layers.dart';
 import 'widgets/pacer_sheet.dart';
 import 'widgets/summary_sheet.dart';
@@ -94,8 +97,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   Timer? _runTimer;
   int _elapsedDurationSeconds = 0;
   int _movingDurationSeconds = 0;
-  int _lowSpeedDurationSeconds = 0;
   bool _isAutoPaused = false;
+  final AutoPauseEngine _autoPauseEngine = AutoPauseEngine();
+  RunGoal _activeGoal = RunGoal.none;
+  bool _goalCompletedAnnounced = false;
   double _currentSpeedKmh = 0.0;
   double _satelliteAccuracyMeters = 3.5;
   bool _isCameraFollowLocked = true;
@@ -630,6 +635,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           final double segmentMeters = Geolocator.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
           
           _runDistanceKm += (segmentMeters / 1000.0);
+          _checkGoalCompletion();
           
           final int currentKmFloor = _runDistanceKm.floor();
           if (currentKmFloor > _lastAnnouncedKm && currentKmFloor >= 1) {
@@ -705,6 +711,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
     _accumulatedRunPreviewArea += claimed;
     _accumulatedRunPreviewXp += xp;
+    _checkGoalCompletion();
 
     setState(() {
       _territoriesClaimedThisRun++;
@@ -751,6 +758,71 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
   }
 
+  Future<void> _openGoalSelector() async {
+    AppMotion.lightTick();
+    final goal = await RunGoalSheet.show(context, currentGoal: _activeGoal);
+    if (goal != null && mounted) {
+      setState(() {
+        _activeGoal = goal;
+        _goalCompletedAnnounced = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppColors.gold, width: 1.2),
+          ),
+          content: Text(
+            goal.isActive ? '🎯 Target set: ${goal.title}' : 'Exploration mode: Open run',
+            style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _checkGoalCompletion() {
+    if (_isRunActive && _activeGoal.isActive && !_goalCompletedAnnounced) {
+      final currentMoving = _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds;
+      final progress = _activeGoal.computeProgress(
+        currentDistanceKm: _runDistanceKm,
+        currentDurationSeconds: currentMoving,
+        currentAreaSqm: _accumulatedRunPreviewArea,
+      );
+      if (progress >= 1.0) {
+        _goalCompletedAnnounced = true;
+        _voiceCoach.announceGoalAchieved(_activeGoal.title);
+        HapticFeedback.heavyImpact();
+        AppMotion.heavyBurst();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: AppColors.surface,
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: const BorderSide(color: AppColors.gold, width: 1.5),
+            ),
+            content: Row(
+              children: [
+                const Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    '🎯 TARGET ACCOMPLISHED!\n${_activeGoal.title} completed.',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   void _startRunTimer() {
     _runTimer?.cancel();
     _runTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -758,18 +830,24 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         setState(() {
           _elapsedDurationSeconds++;
 
-          // Strava Auto-Pause Check using GpsQualityService stationary threshold
-          if (GpsQualityService.isStationary(_currentSpeedKmh)) {
-            _lowSpeedDurationSeconds++;
-            if (_lowSpeedDurationSeconds >= 3) {
-              _isAutoPaused = true;
-            }
-          } else {
-            _lowSpeedDurationSeconds = 0;
+          // Smart Auto-Pause with Hysteresis (< 1.8 km/h for 3s to pause, >= 3.0 km/h to resume)
+          final transition = _autoPauseEngine.tick(_currentSpeedKmh);
+          if (transition == AutoPauseTransition.paused) {
+            _isAutoPaused = true;
+            _voiceCoach.announceAutoPaused();
+            HapticFeedback.mediumImpact();
+          } else if (transition == AutoPauseTransition.resumed) {
             _isAutoPaused = false;
+            _voiceCoach.announceAutoResumed();
+            HapticFeedback.lightImpact();
+          }
+
+          if (!_autoPauseEngine.isAutoPaused) {
             _movingDurationSeconds++;
           }
         });
+
+        _checkGoalCompletion();
 
         // Persist active run to Hive every 5 seconds for crash/kill recovery
         if (_elapsedDurationSeconds % 5 == 0 && _runCoordinates.length >= 2) {
@@ -801,8 +879,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _runDistanceKm = 0.0;
         _elapsedDurationSeconds = 0;
         _movingDurationSeconds = 0;
-        _lowSpeedDurationSeconds = 0;
         _isAutoPaused = false;
+        _goalCompletedAnnounced = false;
+        _autoPauseEngine.reset();
         _lastAnnouncedKm = 0;
         _runCoordinates.clear();
         _rollingPaceWindow.clear();
@@ -820,6 +899,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _runTimer?.cancel();
       WakelockPlus.disable();
       _runRecoveryService.clearRecovery();
+      _autoPauseEngine.reset();
       final int finalSeconds = _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds;
       final double finalDistance = _runDistanceKm;
       final int finalTerritories = _territoriesClaimedThisRun;
@@ -1496,6 +1576,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   ),
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
+                    icon: Icons.flag_rounded,
+                    color: _activeGoal.isActive ? AppColors.gold : Colors.white70,
+                    onTap: _openGoalSelector,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFloatingCircleButton(
                     icon: Icons.emergency_rounded,
                     color: Colors.redAccent,
                     onTap: () {
@@ -1575,6 +1661,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 targetPace: _locationService.pacerMode != VirtualPacerMode.none
                     ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
                     : null,
+                runGoal: _activeGoal,
+                currentAreaSqm: _accumulatedRunPreviewArea,
+                onOpenGoalSelector: _openGoalSelector,
                 onToggleRun: _toggleRun,
                 onSealShape: _sealCurrentShape,
                 onFinishRun: () {

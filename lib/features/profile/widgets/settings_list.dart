@@ -6,6 +6,7 @@ import '../../../services/firebase_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../ui/ui.dart';
 import 'emergency_contact_dialog.dart';
+import 'offline_maps_sheet.dart';
 import 'privacy_zones_sheet.dart';
 
 class ProfileSettingsList extends StatefulWidget {
@@ -197,6 +198,18 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             onTap: () {
               AppMotion.lightTick();
               showEmergencyContactDialog(context);
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+
+          // Offline Map Storage & Pre-caching
+          ProfileOptionTile(
+            icon: Icons.download_for_offline_rounded,
+            title: 'Offline Map Storage & Pre-caching',
+            subtitle: 'Pre-download sector tiles for zero-signal offline running',
+            onTap: () {
+              AppMotion.lightTick();
+              showOfflineMapsSheet(context);
             },
           ),
           // Reset Dev Mode (Only visible in debug builds)

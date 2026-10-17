@@ -196,6 +196,46 @@ class VoiceCoachService {
     );
   }
 
+  /// Announces run goal achievement milestone
+  Future<void> announceGoalAchieved(String goalTitle) async {
+    await _triggerCue(
+      cueType: VoiceCoachCueType.distanceMilestone,
+      audioAsset: 'assets/audio/loop_capture.wav',
+      spokenText: 'Target accomplished! $goalTitle completed.',
+      hapticPattern: [0, 150, 80, 150, 80, 250],
+    );
+  }
+
+  /// Announces auto-pause activation
+  Future<void> announceAutoPaused() async {
+    await _triggerCue(
+      cueType: VoiceCoachCueType.runStarted,
+      audioAsset: null,
+      spokenText: 'Run auto-paused.',
+      hapticPattern: [0, 100, 100, 100],
+    );
+  }
+
+  /// Announces auto-pause resume
+  Future<void> announceAutoResumed() async {
+    await _triggerCue(
+      cueType: VoiceCoachCueType.runStarted,
+      audioAsset: null,
+      spokenText: 'Run resumed.',
+      hapticPattern: [0, 80],
+    );
+  }
+
+  /// Spoken general tactical announcement
+  Future<void> announceEvent(String message) async {
+    await _triggerCue(
+      cueType: VoiceCoachCueType.runStarted,
+      audioAsset: null,
+      spokenText: message,
+      hapticPattern: [0, 100],
+    );
+  }
+
   Future<void> _triggerCue({
     required VoiceCoachCueType cueType,
     required String? audioAsset,

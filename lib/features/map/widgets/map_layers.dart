@@ -6,13 +6,14 @@ import '../../../core/utils/constants.dart';
 import '../../../models/territory.dart';
 import '../../../models/ws_events.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../../../services/tile_cache_service.dart';
 import '../../gameplay/polygon_enclosure_engine.dart';
 
 /// Performance-optimized Map Layers component wrapped in a RepaintBoundary.
 class MapLayers {
   MapLayers._();
 
-  /// Dark-mode global map tile layer
+  /// Dark-mode global map tile layer with offline disk caching
   static TileLayer buildTileLayer() {
     return TileLayer(
       urlTemplate: AppConstants.mapApiKey.isNotEmpty
@@ -20,6 +21,7 @@ class MapLayers {
           : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       maxZoom: 19,
       userAgentPackageName: 'com.example.territory_runner',
+      tileProvider: OfflineFirstTileProvider(),
       tileBuilder: (context, tileWidget, tile) {
         return ColorFiltered(
           colorFilter: const ColorFilter.matrix(<double>[

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../ui/ui.dart';
 import 'hold_to_finish_button.dart';
 
+import '../../../models/run_goal.dart';
+
 /// Strava / Nike Run Club Grade Live Telemetry HUD Obsidian Glass Card.
 /// Wrapped in a [RepaintBoundary] to isolate metric updates from map redraws.
 class RunHud extends StatelessWidget {
@@ -17,6 +19,9 @@ class RunHud extends StatelessWidget {
   final double? distanceToClosureMeters;
   final double? proximityToClosure;
   final String? targetPace;
+  final RunGoal? runGoal;
+  final double currentAreaSqm;
+  final VoidCallback? onOpenGoalSelector;
   final VoidCallback onToggleRun;
   final VoidCallback onSealShape;
   final VoidCallback onFinishRun;
@@ -35,6 +40,9 @@ class RunHud extends StatelessWidget {
     this.distanceToClosureMeters,
     this.proximityToClosure,
     this.targetPace,
+    this.runGoal,
+    this.currentAreaSqm = 0.0,
+    this.onOpenGoalSelector,
     required this.onToggleRun,
     required this.onSealShape,
     required this.onFinishRun,
@@ -89,7 +97,7 @@ class RunHud extends StatelessWidget {
                     Icon(Icons.pause_circle_filled_rounded, color: AppColors.warning, size: 14),
                     SizedBox(width: AppSpacing.s6),
                     Text(
-                      'AUTO-PAUSED • MOVING SPEED < 1.5 KM/H',
+                      'AUTO-PAUSED • MOVING SPEED < 1.8 KM/H',
                       style: TextStyle(
                         color: AppColors.warning,
                         fontWeight: FontWeight.w900,
@@ -98,6 +106,77 @@ class RunHud extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ],
+
+            // Active Campaign Goal Progress Banner
+            if (runGoal != null && runGoal!.isActive) ...[
+              GestureDetector(
+                onTap: onOpenGoalSelector,
+                behavior: HitTestBehavior.opaque,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s6),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.12),
+                    borderRadius: AppSpacing.br12,
+                    border: Border.all(
+                      color: AppColors.gold.withValues(alpha: 0.8),
+                      width: 1.0,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.flag_rounded, color: AppColors.gold, size: 13),
+                              const SizedBox(width: 5),
+                              Text(
+                                runGoal!.title,
+                                style: const TextStyle(
+                                  color: AppColors.gold,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 10,
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            runGoal!.formatRemaining(
+                              currentDistanceKm: distanceKm,
+                              currentDurationSeconds: movingSeconds > 0 ? movingSeconds : elapsedSeconds,
+                              currentAreaSqm: currentAreaSqm,
+                            ),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 9.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      ClipRRect(
+                        borderRadius: AppSpacing.br8,
+                        child: LinearProgressIndicator(
+                          value: runGoal!.computeProgress(
+                            currentDistanceKm: distanceKm,
+                            currentDurationSeconds: movingSeconds > 0 ? movingSeconds : elapsedSeconds,
+                            currentAreaSqm: currentAreaSqm,
+                          ).clamp(0.0, 1.0),
+                          minHeight: 4,
+                          backgroundColor: AppColors.surface2,
+                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
