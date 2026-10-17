@@ -157,7 +157,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Dominance meter headers
-      expect(find.text('TURF WAR DOMINANCE'), findsOneWidget);
+      expect(find.text('Team Standings'), findsOneWidget);
       expect(find.text('CONTESTED'), findsOneWidget);
       expect(find.text('VANGUARD'), findsWidgets);
       expect(find.text('SYNDICATE'), findsWidgets);
@@ -173,7 +173,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Check leaderboard rankings
-      expect(find.text('CONQUEROR RANKINGS'), findsOneWidget);
+      expect(find.text('Leaderboard'), findsOneWidget);
       expect(find.text('ACE_RUNNER'), findsOneWidget);
       expect(find.text('GRID_PHANTOM'), findsOneWidget);
     });
@@ -202,10 +202,10 @@ void main() {
       expect(find.text('Voice Coach Audio Cues'), findsNothing);
       expect(find.text('Audio & Haptics'), findsNothing);
 
-      // Tactical haptics & battery saver should be present
-      expect(find.text('Tactical Haptics'), findsOneWidget);
-      expect(find.text('Tactical Haptic Bursts'), findsOneWidget);
-      expect(find.text('Endurance Battery Saver'), findsOneWidget);
+      // Haptics & battery saver should be present
+      expect(find.text('Haptics'), findsOneWidget);
+      expect(find.text('Haptic feedback'), findsOneWidget);
+      expect(find.text('Battery saver'), findsOneWidget);
 
       // Tap haptic switch
       final switchTiles = find.byType(Switch);
@@ -232,31 +232,31 @@ void main() {
       await tester.pumpAndSettle();
 
       // All segment tab buttons exist
-      expect(find.text('ATHLETE'), findsOneWidget);
-      expect(find.text('TURF WAR'), findsOneWidget);
-      expect(find.text('LEAGUE'), findsOneWidget);
-      expect(find.text('SQUAD'), findsOneWidget);
+      expect(find.text('Profile'), findsNWidgets(2));
+      expect(find.text('Teams'), findsOneWidget);
+      expect(find.text('League'), findsOneWidget);
+      expect(find.text('Friends'), findsOneWidget);
 
       // In athlete tab, Hero and Settings are visible
       expect(find.text('KAI_VALKYRIE'), findsOneWidget);
-      expect(find.text('SETTINGS & PLATFORM'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
 
       // Tap Faction Turf War tab
-      await tester.tap(find.text('TURF WAR'));
+      await tester.tap(find.text('Teams'));
       await tester.pumpAndSettle();
 
       // In Turf War tab, Dominance Meter is visible
-      expect(find.text('TURF WAR DOMINANCE'), findsOneWidget);
-      expect(find.text('CONQUEROR RANKINGS'), findsOneWidget);
+      expect(find.text('Team Standings'), findsOneWidget);
+      expect(find.text('Leaderboard'), findsOneWidget);
 
       // Tap League tab
-      await tester.tap(find.text('LEAGUE'));
+      await tester.tap(find.text('League'));
       await tester.pumpAndSettle();
 
       // Tap back to Athlete Profile
-      await tester.tap(find.text('ATHLETE'));
+      await tester.tap(find.text('Profile').first);
       await tester.pumpAndSettle();
-      expect(find.text('SETTINGS & PLATFORM'), findsOneWidget);
+      expect(find.text('Settings'), findsOneWidget);
     });
   });
 }

@@ -36,13 +36,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. TACTICAL HAPTICS
-        _buildSectionTitle('Tactical Haptics'),
+        // 1. HAPTICS
+        _buildSectionTitle('Haptics'),
         _buildSettingsGroup([
           SwitchListTile(
             secondary: const Icon(Icons.vibration_rounded, color: AppColors.accent, size: 20),
             title: Text(
-              'Tactical Haptic Bursts',
+              'Haptic feedback',
               style: AppText.bodyMedium.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -50,7 +50,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               ),
             ),
             subtitle: Text(
-              'Physical vibration pulses upon loop closure and territory claims',
+              'Vibration on loop closure and territory claimed',
               style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
             ),
             activeThumbColor: AppColors.accent,
@@ -67,13 +67,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
 
         const SizedBox(height: AppSpacing.s16),
 
-        // 2. RUN EXPERIENCE (Switch 3: Battery Saver)
+        // 2. RUN EXPERIENCE (Switch: Battery Saver)
         _buildSectionTitle('Run Experience'),
         _buildSettingsGroup([
           SwitchListTile(
             secondary: const Icon(Icons.battery_saver_rounded, color: AppColors.accent, size: 20),
             title: Text(
-              'Endurance Battery Saver',
+              'Battery saver',
               style: AppText.bodyMedium.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -81,7 +81,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               ),
             ),
             subtitle: Text(
-              'AMOLED dark HUD, reduced map animations & optimized GPS polling',
+              'AMOLED black HUD, reduced animations, optimized GPS',
               style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
             ),
             activeThumbColor: AppColors.accent,
@@ -97,8 +97,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
             icon: Icons.notifications_active_rounded,
-            title: 'Tactical Radar Alerts',
-            subtitle: 'Real-time alerts when rival runners contest your territory',
+            title: 'Rival alerts',
+            subtitle: 'Alerts when nearby runners enter or contest your territory',
             onTap: () {
               AppMotion.selectionTick();
               NotificationService().showPermissionPrimerIfNeeded(context, force: true);
@@ -107,8 +107,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
             icon: Icons.gps_fixed_rounded,
-            title: 'GPS & Telemetry Primer',
-            subtitle: 'Review satellite precision & background location permissions',
+            title: 'Location & GPS',
+            subtitle: 'Review GPS accuracy and background location access',
             onTap: () {
               AppMotion.selectionTick();
               PermissionPrimerSheet.show(context, type: PermissionPrimerType.location);
@@ -124,11 +124,11 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           ProfileOptionTile(
             icon: Icons.cloud_done_rounded,
             title: widget.firebaseService.isInitialized
-                ? 'Cloud Connected (${widget.firebaseService.currentUsername})'
-                : 'Offline Local Storage',
+                ? 'Connected (${widget.firebaseService.currentUsername})'
+                : 'Local storage',
             subtitle: widget.firebaseService.isInitialized
-                ? 'Telemetry synced to cloud'
-                : 'Tap to connect account & sync runs',
+                ? 'Runs synced to cloud'
+                : 'Connect account to sync runs across devices',
             trailing: widget.firebaseService.isInitialized
                 ? const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16)
                 : const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 14),
@@ -184,8 +184,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         _buildSettingsGroup([
           ProfileOptionTile(
             icon: Icons.shield_rounded,
-            title: 'Privacy Zones & Geo-Masking',
-            subtitle: 'Exclude home & workplace tracks from public exports',
+            title: 'Privacy zones',
+            subtitle: 'Exclude home or work areas from public maps and exports',
             onTap: () {
               AppMotion.selectionTick();
               showPrivacyZonesSheet(context);
@@ -194,8 +194,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
             icon: Icons.emergency_rounded,
-            title: 'Emergency Contact & SOS Beacon',
-            subtitle: 'Configure distress SMS recipient and safety credentials',
+            title: 'Emergency contact & SOS',
+            subtitle: 'Configure emergency contact and distress SMS',
             onTap: () {
               AppMotion.selectionTick();
               showEmergencyContactDialog(context);
@@ -210,8 +210,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         _buildSettingsGroup([
           ProfileOptionTile(
             icon: Icons.download_for_offline_rounded,
-            title: 'Offline Map Storage',
-            subtitle: 'Pre-download sector tiles for zero-signal running',
+            title: 'Offline maps',
+            subtitle: 'Download map tiles for running without cellular signal',
             onTap: () {
               AppMotion.selectionTick();
               showOfflineMapsSheet(context);
@@ -227,9 +227,9 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           ProfileOptionTile(
             icon: Icons.info_outline_rounded,
             title: 'Territory Runner',
-            subtitle: 'v2.4.0 • GPS Territory Conquest',
+            subtitle: '${AppVersion.display} • Territory running',
             trailing: const Text(
-              'v2.4.0',
+              AppVersion.display,
               style: TextStyle(color: AppColors.textMuted, fontSize: 12),
             ),
             onTap: null,
@@ -244,7 +244,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               showLicensePage(
                 context: context,
                 applicationName: 'Territory Runner',
-                applicationVersion: '2.4.0',
+                applicationVersion: AppVersion.version,
                 applicationLegalese: 'Crafted with athletic precision.',
               );
             },
@@ -252,8 +252,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
             icon: Icons.explore_rounded,
-            title: 'Replay Onboarding Guide',
-            subtitle: '3-slide introduction to loop claiming and attack radar',
+            title: 'Replay intro',
+            subtitle: 'Introduction to territory running and closed loops',
             onTap: () {
               AppMotion.selectionTick();
               Navigator.of(context).push(
@@ -271,7 +271,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             ProfileOptionTile(
               icon: Icons.palette_rounded,
               title: 'Design System Gallery (Dev)',
-              subtitle: 'Inspect Charcoal + Ember tokens and UI components',
+              subtitle: 'Inspect Ink + Pacer Blue tokens and UI components',
               onTap: () {
                 AppMotion.selectionTick();
                 Navigator.of(context).push(
@@ -303,10 +303,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
       padding: const EdgeInsets.only(left: AppSpacing.s4, bottom: AppSpacing.s8),
       child: Text(
         title,
-        style: AppText.labelSmall.copyWith(
+        style: AppText.label.copyWith(
           color: AppColors.textMuted,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
         ),
       ),
     );

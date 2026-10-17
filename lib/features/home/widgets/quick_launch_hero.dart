@@ -112,7 +112,7 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('TODAY\'S TARGET', style: AppText.labelSmall),
+                    Text('Daily goal', style: AppText.labelSmall),
                     const SizedBox(height: AppSpacing.s2),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -120,7 +120,7 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                       children: [
                         Text('$currentDayKm', style: AppText.displaySmall),
                         const SizedBox(width: AppSpacing.s4),
-                        Text('/ $goalTargetKm KM', style: AppText.statUnit),
+                        Text('/ ${goalTargetKm.toStringAsFixed(1)} km', style: AppText.statUnit),
                       ],
                     ),
                   ],
@@ -154,7 +154,7 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                       _gpsStatus,
                       style: AppText.labelSmall.copyWith(
                         color: _isGpsReady ? AppColors.success : AppColors.warning,
-                        fontSize: 9.5,
+                        fontSize: 10,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -168,7 +168,7 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
 
           // Primary CTA Button
           PrimaryButton(
-            label: 'START CONQUEST RUN',
+            label: 'Start run',
             icon: Icons.play_arrow_rounded,
             onPressed: () {
               AppMotion.heavyBurst();
@@ -179,7 +179,7 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
 
           // Subtle motivation subtext
           Text(
-            'Enclose territory loops to claim sovereign ground on foot.',
+            'Run closed loops to claim territory on foot.',
             textAlign: TextAlign.center,
             style: AppText.bodySmall,
           ),

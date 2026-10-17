@@ -60,7 +60,7 @@ class WeeklySummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'WEEKLY PERFORMANCE',
+                'Weekly summary',
                 style: AppText.labelSmall,
               ),
               Container(
@@ -71,7 +71,7 @@ class WeeklySummaryCard extends StatelessWidget {
                   border: Border.all(color: AppColors.borderSubtle, width: 1.0),
                 ),
                 child: Text(
-                  'LAST 7 DAYS',
+                  '7 days',
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.accent,
                     fontSize: 9.5,
@@ -87,25 +87,25 @@ class WeeklySummaryCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildMetricItem(
-                  label: 'DISTANCE',
+                  label: 'Distance',
                   value: weeklyDistanceKm > 0 ? weeklyDistanceKm.toStringAsFixed(1) : '0.0',
-                  unit: 'KM',
+                  unit: 'km',
                 ),
               ),
               Container(width: 1, height: 38, color: AppColors.border),
               Expanded(
                 child: _buildMetricItem(
-                  label: 'TERRITORY',
+                  label: 'Territory',
                   value: territoryDisplay.split(' ').first,
-                  unit: territoryDisplay.split(' ').length > 1 ? territoryDisplay.split(' ').last : 'M²',
+                  unit: territoryDisplay.split(' ').length > 1 ? territoryDisplay.split(' ').last.toLowerCase() : 'm²',
                 ),
               ),
               Container(width: 1, height: 38, color: AppColors.border),
               Expanded(
                 child: _buildMetricItem(
-                  label: 'RUNS',
+                  label: 'Runs',
                   value: '$runsCount',
-                  unit: 'LOGGED',
+                  unit: 'total',
                 ),
               ),
             ],

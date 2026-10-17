@@ -39,7 +39,7 @@ class RecentActivityFeed extends StatelessWidget {
     AppSheet.show(
       context: context,
       builder: (ctx) => AppSheet(
-        title: 'Conquest Summary',
+        title: 'Run summary',
         subtitle: _formatDate(territory.capturedAt),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -73,11 +73,11 @@ class RecentActivityFeed extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  _metricRow('CLAIMED AREA', areaDisplay),
+                  _metricRow('Claimed area', areaDisplay),
                   const Divider(color: AppColors.borderSubtle, height: 16),
-                  _metricRow('POLYGON SECTORS', '${territory.polygons.length} Contiguous'),
+                  _metricRow('Loop segments', '${territory.polygons.length} connected'),
                   const Divider(color: AppColors.borderSubtle, height: 16),
-                  _metricRow('SECURITY STATUS', territory.isPendingReview ? 'Pending Review' : 'Verified Sovereign ✓'),
+                  _metricRow('Status', territory.isPendingReview ? 'Pending review' : 'Verified territory'),
                 ],
               ),
             ),
@@ -147,8 +147,8 @@ class RecentActivityFeed extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.s24),
         child: EmptyState(
           icon: Icons.directions_run_rounded,
-          title: 'No Conquests Yet',
-          message: 'Lace up your shoes and run a closed loop to claim sovereign territory.',
+          title: 'No runs yet',
+          message: 'Lace up your shoes and run a closed loop to claim territory.',
           actionLabel: 'Start Run',
           onAction: onStartRun,
         ),
@@ -200,7 +200,7 @@ class RecentActivityFeed extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Sovereign Loop',
+                            'Closed loop',
                             style: AppText.titleSmall,
                           ),
                           Text(
@@ -306,7 +306,7 @@ class _MiniPolygonPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fillPaint);
 
-    // Stroke with solid ember
+    // Stroke with solid accent border
     final strokePaint = Paint()
       ..color = AppColors.territoryMineBorder
       ..style = PaintingStyle.stroke

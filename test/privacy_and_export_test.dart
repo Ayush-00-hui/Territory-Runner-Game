@@ -204,19 +204,19 @@ void main() {
       await tester.tap(find.text('OPEN ZONES'));
       await tester.pumpAndSettle();
 
-      expect(find.text('PRIVACY ZONES'), findsOneWidget);
-      expect(find.text('GEO-MASKING EXCLUSION RADAR'), findsOneWidget);
-      expect(find.text('NO PRIVACY ZONES DEFINED'), findsOneWidget);
+      expect(find.text('Privacy zones'), findsOneWidget);
+      expect(find.text('Privacy exclusion radius'), findsOneWidget);
+      expect(find.text('No privacy zones yet'), findsOneWidget);
 
       // Tap add icon
       await tester.tap(find.byIcon(Icons.add_circle_rounded));
       await tester.pumpAndSettle();
 
-      expect(find.text('NEW PRIVACY ZONE'), findsOneWidget);
-      expect(find.text('SAVE ZONE'), findsOneWidget);
+      expect(find.text('New privacy zone'), findsOneWidget);
+      expect(find.text('Save zone'), findsOneWidget);
 
       // Save zone
-      await tester.tap(find.text('SAVE ZONE'));
+      await tester.tap(find.text('Save zone'));
       await tester.pumpAndSettle();
 
       expect(find.text('Home Base'), findsOneWidget);

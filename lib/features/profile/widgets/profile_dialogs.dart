@@ -24,7 +24,7 @@ void showEditCallsignDialog(
           const Icon(Icons.badge_rounded, color: AppColors.accent, size: 20),
           const SizedBox(width: AppSpacing.s8),
           Text(
-            'Edit Callsign',
+            'Edit Runner Name',
             style: AppText.headingSmall.copyWith(
               color: AppColors.textPrimary,
               fontSize: 16,
@@ -38,7 +38,7 @@ void showEditCallsignDialog(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Choose your athlete callsign broadcasted to runner syndicates on the territorial grid:',
+            'Choose your runner name displayed on leaderboards and team standings:',
             style: AppText.bodySmall.copyWith(
               color: AppColors.textSecondary,
               fontSize: 13,
@@ -54,7 +54,7 @@ void showEditCallsignDialog(
             ),
             maxLength: 20,
             decoration: InputDecoration(
-              labelText: 'Callsign / Nickname',
+              labelText: 'Runner name',
               labelStyle: const TextStyle(color: AppColors.textMuted),
               filled: true,
               fillColor: AppColors.surface2,
@@ -80,7 +80,7 @@ void showEditCallsignDialog(
           onPressed: () => Navigator.pop(ctx),
         ),
         PrimaryButton(
-          label: 'Save Callsign',
+          label: 'Save Name',
           onPressed: () async {
             final newName = controller.text.trim();
             if (newName.isNotEmpty) {
@@ -91,7 +91,7 @@ void showEditCallsignDialog(
               }
               onUpdated();
               if (context.mounted) {
-                AppToast.show(context, 'Callsign updated to "$newName"');
+                AppToast.show(context, 'Runner name updated to "$newName"');
               }
             }
           },
@@ -110,31 +110,31 @@ void showFactionSelectionDialog(
   final factions = [
     {
       'name': 'Cyber Vanguard',
-      'tag': 'SYSTEM GUARDIANS',
+      'tag': 'Vanguard',
       'color': AppColors.accent,
       'icon': Icons.security_rounded,
-      'perk': 'Precision spatial radar & fast polygon enclosure recognition (+10% base claim speed)',
+      'perk': 'Fast loop closure recognition & precision spatial tracking (+10% base claim speed)',
     },
     {
       'name': 'Iron Syndicate',
-      'tag': 'KINETIC CONQUERORS',
+      'tag': 'Syndicate',
       'color': AppColors.warning,
       'icon': Icons.wb_sunny_rounded,
-      'perk': 'Kinetic endurance surge & stamina battery efficiency (+15% cadence recharge boost)',
+      'perk': 'Steady cadence endurance & stamina battery optimization (+15% cadence boost)',
     },
     {
       'name': 'Neon Nomads',
-      'tag': 'ANTI-GRAVITY DRIFTERS',
+      'tag': 'Nomads',
       'color': AppColors.info,
       'icon': Icons.bolt_rounded,
-      'perk': 'Zero-G sub-orbital glide thrust & +40% sprint momentum conversion multiplier',
+      'perk': 'Pace acceleration & dynamic sprint momentum (+40% sprint momentum conversion)',
     },
   ];
 
   AppSheet.show(
     context: context,
     builder: (ctx) => AppSheet(
-      title: 'Faction Alignment',
+      title: 'Choose Team',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,

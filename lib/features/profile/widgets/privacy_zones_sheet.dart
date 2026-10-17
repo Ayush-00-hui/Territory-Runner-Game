@@ -137,11 +137,11 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'PRIVACY ZONES',
-                          style: AppText.headingSmall.copyWith(fontSize: 15, fontWeight: FontWeight.w900),
+                          'Privacy zones',
+                          style: AppText.headingSmall.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          'GEO-MASKING EXCLUSION RADAR',
+                          'Privacy exclusion radius',
                           style: AppText.label.copyWith(color: AppColors.accent, fontSize: 9.5),
                         ),
                       ],
@@ -176,7 +176,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'NEW PRIVACY ZONE',
+                      'New privacy zone',
                       style: AppText.label.copyWith(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: AppSpacing.s8),
@@ -252,7 +252,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => setState(() => _isAdding = false),
-                            child: const Text('CANCEL', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.s8),
@@ -265,7 +265,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                               shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                             ),
                             onPressed: _saveNewZone,
-                            child: const Text('SAVE ZONE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            child: const Text('Save zone', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                           ),
                         ),
                       ],
@@ -293,8 +293,8 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                     const Icon(Icons.location_off_rounded, color: AppColors.textMuted, size: 32),
                     const SizedBox(height: AppSpacing.s8),
                     Text(
-                      'NO PRIVACY ZONES DEFINED',
-                      style: AppText.headingSmall.copyWith(fontSize: 12, letterSpacing: 1.1),
+                      'No privacy zones yet',
+                      style: AppText.headingSmall.copyWith(fontSize: 12, letterSpacing: 0.5),
                     ),
                     const SizedBox(height: AppSpacing.s4),
                     Text(

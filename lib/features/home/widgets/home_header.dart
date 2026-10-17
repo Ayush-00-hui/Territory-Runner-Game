@@ -64,7 +64,7 @@ class HomeHeader extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.s2),
               Text(
-                callsign.toUpperCase(),
+                callsign,
                 style: AppText.titleMedium,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -81,11 +81,11 @@ class HomeHeader extends StatelessWidget {
                       border: Border.all(color: AppColors.borderSubtle, width: 1.0),
                     ),
                     child: Text(
-                      'LVL ${profile.level}',
+                      'Level ${profile.level}',
                       style: AppText.labelSmall.copyWith(
                         color: AppColors.accent,
-                        fontSize: 9.5,
-                        letterSpacing: 0.4,
+                        fontSize: 10,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ),
@@ -101,11 +101,11 @@ class HomeHeader extends StatelessWidget {
                           border: Border.all(color: factionColor.withValues(alpha: 0.3)),
                         ),
                         child: Text(
-                          profile.faction.toUpperCase(),
+                          profile.faction,
                           style: AppText.labelSmall.copyWith(
                             color: factionColor,
-                            fontSize: 9.5,
-                            letterSpacing: 0.2,
+                            fontSize: 10,
+                            letterSpacing: 0.1,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,

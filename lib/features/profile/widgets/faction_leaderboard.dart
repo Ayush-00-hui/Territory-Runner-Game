@@ -173,12 +173,11 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                       const Icon(Icons.shield_rounded, color: AppColors.accent, size: 18),
                       const SizedBox(width: AppSpacing.s8),
                       Text(
-                        'TURF WAR DOMINANCE',
+                        'Team Standings',
                         style: AppText.headingSmall.copyWith(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
-                          letterSpacing: 0.8,
                         ),
                       ),
                     ],
@@ -259,12 +258,11 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'CONQUEROR RANKINGS',
+              'Leaderboard',
               style: AppText.headingSmall.copyWith(
                 color: AppColors.textPrimary,
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
               ),
             ),
             Row(
@@ -407,15 +405,15 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
         ),
         child: Column(
           children: [
-            const Icon(Icons.military_tech_outlined, color: AppColors.textMuted, size: 36),
+            const Icon(Icons.emoji_events_outlined, color: AppColors.textMuted, size: 36),
             const SizedBox(height: AppSpacing.s10),
             Text(
-              'Awaiting Conqueror Telemetry',
+              'No leaderboard entries yet',
               style: AppText.headingSmall.copyWith(fontSize: 14, color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.s4),
             Text(
-              'Claim your first territory to take the #1 pioneer rank on the leaderboard.',
+              'Claim your first territory to rank on the leaderboard.',
               textAlign: TextAlign.center,
               style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
             ),

@@ -76,7 +76,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         backgroundColor: AppColors.bgDeep,
         elevation: 0,
         title: Text(
-          'Athlete Hub',
+          'Profile',
           style: AppText.headingSmall.copyWith(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -85,11 +85,6 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.sports_kabaddi_rounded, color: AppColors.textSecondary),
-            onPressed: () => showSocialHubSheet(context),
-            tooltip: 'Social Syndicate & Duels',
-          ),
           IconButton(
             icon: const Icon(Icons.cloud_sync_outlined, color: AppColors.accent),
             onPressed: _openAuthDialog,
@@ -148,28 +143,28 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   Expanded(
                     child: _buildSegmentButton(
                       tab: ProfileTab.athlete,
-                      label: 'ATHLETE',
+                      label: 'Profile',
                       icon: Icons.person_rounded,
                     ),
                   ),
                   Expanded(
                     child: _buildSegmentButton(
                       tab: ProfileTab.turfWar,
-                      label: 'TURF WAR',
+                      label: 'Teams',
                       icon: Icons.shield_rounded,
                     ),
                   ),
                   Expanded(
                     child: _buildSegmentButton(
                       tab: ProfileTab.league,
-                      label: 'LEAGUE',
+                      label: 'League',
                       icon: Icons.leaderboard_rounded,
                     ),
                   ),
                   Expanded(
                     child: _buildSegmentButton(
                       tab: ProfileTab.squad,
-                      label: 'SQUAD',
+                      label: 'Friends',
                       icon: Icons.groups_rounded,
                     ),
                   ),
@@ -205,7 +200,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
               // --- METRIC OVERVIEW GRID ---
               Text(
-                'Performance Telemetry',
+                'Stats',
                 style: AppText.headingSmall.copyWith(
                   color: AppColors.textPrimary,
                   fontSize: 15,
@@ -232,12 +227,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
               // --- SETTINGS & CONTROLS ---
               Text(
-                'SETTINGS & PLATFORM',
+                'Settings',
                 style: AppText.headingSmall.copyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 14,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
                 ),
               ),
               const SizedBox(height: AppSpacing.s12),

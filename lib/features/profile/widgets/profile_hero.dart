@@ -66,7 +66,7 @@ class ProfileHeroCard extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            profile.username.isNotEmpty ? profile.username.toUpperCase() : 'ATHLETE',
+                            profile.username.isNotEmpty ? profile.username : 'Athlete',
                             style: AppText.headlineMedium.copyWith(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,

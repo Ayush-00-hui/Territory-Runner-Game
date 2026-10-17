@@ -161,8 +161,11 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'START CONQUEST',
-                      style: AppText.labelSmall.copyWith(color: AppColors.accent),
+                      'Start run',
+                      style: AppText.labelSmall.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
@@ -200,13 +203,13 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
                 ),
                 const SizedBox(height: AppSpacing.s12),
                 Text(
-                  'Acquiring GPS lock & starting sector capture...',
+                  'Connecting to GPS & preparing your run...',
                   textAlign: TextAlign.center,
                   style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: AppSpacing.s20),
                 PrimaryButton(
-                  label: 'Ready • Hit The Grid',
+                  label: 'Start run',
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
@@ -244,14 +247,7 @@ class _RunOverlayTrackPainter extends CustomPainter {
     if (head > tail) {
       final seg = m.extractPath(tail, head);
       final trailPaint = Paint()
-        ..shader = ui.Gradient.linear(
-          Offset(size.width * 0.1, size.height * 0.5),
-          Offset(size.width * 0.9, size.height * 0.5),
-          [
-            AppColors.accent.withValues(alpha: 0.15),
-            AppColors.accent,
-          ],
-        )
+        ..color = AppColors.accent
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round;

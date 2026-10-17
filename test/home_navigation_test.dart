@@ -29,9 +29,9 @@ void main() {
         ),
       );
 
-      expect(find.text('VORTEXRUNNER'), findsOneWidget);
-      expect(find.text('LVL 5'), findsOneWidget);
-      expect(find.text('CYBER VANGUARD'), findsOneWidget);
+      expect(find.text('VortexRunner'), findsOneWidget);
+      expect(find.text('Level 5'), findsOneWidget);
+      expect(find.text('Cyber Vanguard'), findsOneWidget);
       expect(find.text('7'), findsOneWidget);
     });
 
@@ -68,11 +68,11 @@ void main() {
         ),
       );
 
-      expect(find.text('WEEKLY PERFORMANCE'), findsOneWidget);
-      expect(find.text('LAST 7 DAYS'), findsOneWidget);
-      expect(find.text('DISTANCE'), findsOneWidget);
-      expect(find.text('TERRITORY'), findsOneWidget);
-      expect(find.text('RUNS'), findsOneWidget);
+      expect(find.text('Weekly summary'), findsOneWidget);
+      expect(find.text('7 days'), findsOneWidget);
+      expect(find.text('Distance'), findsOneWidget);
+      expect(find.text('Territory'), findsOneWidget);
+      expect(find.text('Runs'), findsOneWidget);
     });
 
     testWidgets('QuickLaunchHero triggers onStartRun callback when tapped', (tester) async {
@@ -87,8 +87,8 @@ void main() {
         ),
       );
 
-      expect(find.text('START CONQUEST RUN'), findsOneWidget);
-      await tester.tap(find.text('START CONQUEST RUN'));
+      expect(find.text('Start run'), findsOneWidget);
+      await tester.tap(find.text('Start run'));
       await tester.pump();
       expect(runStarted, isTrue);
     });

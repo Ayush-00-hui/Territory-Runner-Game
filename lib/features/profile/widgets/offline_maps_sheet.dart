@@ -151,7 +151,7 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
                     ),
                   ),
                   Text(
-                    'Zero-Signal Tactical Navigation',
+                    'Offline trail navigation',
                     style: AppText.labelSmall.copyWith(color: AppColors.accent, fontSize: 10),
                   ),
                 ],
