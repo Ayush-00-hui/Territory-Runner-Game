@@ -272,7 +272,6 @@ func TestMigration_000002_OnExistingRows(t *testing.T) {
 	assert.WithinDuration(t, time.Now().UTC(), lastDefendedAt, 10*time.Second)
 
 	// Revert 000002 down and clean up
-	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
 	_, err = pool.Exec(ctx, down2)
 	require.NoError(t, err)
 	_, err = pool.Exec(ctx, down1)
