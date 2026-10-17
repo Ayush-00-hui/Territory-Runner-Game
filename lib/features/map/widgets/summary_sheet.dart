@@ -115,10 +115,10 @@ class SummarySheet extends StatelessWidget {
           // Drag handle
           Center(
             child: Container(
-              width: 40,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: AppColors.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -134,13 +134,15 @@ class SummarySheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: (rejectionReason != null ? AppColors.rival : AppColors.accent).withValues(alpha: 0.15),
+                      color: (rejectionReason != null ? AppColors.error : AppColors.accent).withValues(alpha: 0.15),
                       borderRadius: AppSpacing.br12,
-                      border: Border.all(color: (rejectionReason != null ? AppColors.rival : AppColors.accent).withValues(alpha: 0.35)),
+                      border: Border.all(
+                        color: (rejectionReason != null ? AppColors.error : AppColors.accent).withValues(alpha: 0.35),
+                      ),
                     ),
                     child: Icon(
                       rejectionReason != null ? Icons.cancel_outlined : Icons.emoji_events_rounded,
-                      color: rejectionReason != null ? AppColors.rival : AppColors.accent,
+                      color: rejectionReason != null ? AppColors.error : AppColors.accent,
                       size: 20,
                     ),
                   ),
@@ -154,7 +156,7 @@ class SummarySheet extends StatelessWidget {
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.2,
-                          color: rejectionReason != null ? AppColors.rival : Colors.white,
+                          color: rejectionReason != null ? AppColors.error : AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -167,7 +169,7 @@ class SummarySheet extends StatelessWidget {
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white60),
+                icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -178,14 +180,14 @@ class SummarySheet extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.s12),
               decoration: BoxDecoration(
-                color: AppColors.rival.withValues(alpha: 0.12),
+                color: AppColors.error.withValues(alpha: 0.12),
                 borderRadius: AppSpacing.br12,
-                border: Border.all(color: AppColors.rival.withValues(alpha: 0.5)),
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.5)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: AppColors.rival, size: 20),
+                  const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 20),
                   const SizedBox(width: AppSpacing.s10),
                   Expanded(
                     child: Column(
@@ -194,7 +196,7 @@ class SummarySheet extends StatelessWidget {
                         Text(
                           'SERVER REJECTION REASON',
                           style: AppText.label.copyWith(
-                            color: AppColors.rival,
+                            color: AppColors.error,
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.1,
@@ -204,7 +206,7 @@ class SummarySheet extends StatelessWidget {
                         Text(
                           rejectionReason!,
                           style: AppText.bodySmall.copyWith(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 12,
                             height: 1.35,
                           ),
@@ -225,17 +227,17 @@ class SummarySheet extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: AppSpacing.br20,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.borderSubtle),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildMetricColumn('DISTANCE', '${distanceKm.toStringAsFixed(2)} km', AppColors.accent),
-                Container(width: 1, height: 36, color: AppColors.border),
-                _buildMetricColumn('TIME', _formatDuration(), Colors.white),
-                Container(width: 1, height: 36, color: AppColors.border),
-                _buildMetricColumn('AVG PACE', '${_formatPace()}/km', Colors.white),
-                Container(width: 1, height: 36, color: AppColors.border),
+                Container(width: 1, height: 36, color: AppColors.borderSubtle),
+                _buildMetricColumn('TIME', _formatDuration(), AppColors.textPrimary),
+                Container(width: 1, height: 36, color: AppColors.borderSubtle),
+                _buildMetricColumn('AVG PACE', '${_formatPace()}/km', AppColors.textPrimary),
+                Container(width: 1, height: 36, color: AppColors.borderSubtle),
                 _buildMetricColumn('TERRITORY', '+$territoriesClaimed', AppColors.accent),
               ],
             ),
@@ -250,7 +252,7 @@ class SummarySheet extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: AppSpacing.br16,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.borderSubtle),
             ),
             child: ClipRRect(
               borderRadius: AppSpacing.br16,
@@ -267,9 +269,9 @@ class SummarySheet extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.7),
+                        color: AppColors.bgDeep.withValues(alpha: 0.8),
                         borderRadius: AppSpacing.br8,
-                        border: Border.all(color: Colors.white12),
+                        border: Border.all(color: AppColors.borderSubtle),
                       ),
                       child: Text(
                         'CLAIMED: ${_formatArea()} • ${_estimateCalories()} KCAL',
@@ -277,6 +279,7 @@ class SummarySheet extends StatelessWidget {
                           color: AppColors.accent,
                           fontSize: 9.5,
                           fontWeight: FontWeight.w800,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),
@@ -304,7 +307,7 @@ class SummarySheet extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: AppSpacing.br16,
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.borderSubtle),
                 ),
                 child: snapshot.connectionState == ConnectionState.waiting
                     ? const Center(
@@ -345,15 +348,15 @@ class SummarySheet extends StatelessWidget {
                           const SizedBox(height: AppSpacing.s6),
                           Text(
                             insight?.summary ?? 'Conquest complete! Every closed loop expands your territorial perimeter.',
-                            style: AppText.body.copyWith(fontSize: 12.5),
+                            style: AppText.body.copyWith(fontSize: 12.5, color: AppColors.textPrimary),
                           ),
                           const SizedBox(height: AppSpacing.s8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                             decoration: BoxDecoration(
-                              color: AppColors.bgDeep,
+                              color: AppColors.surface2,
                               borderRadius: AppSpacing.br10,
-                              border: Border.all(color: Colors.white10),
+                              border: Border.all(color: AppColors.borderSubtle),
                             ),
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +365,7 @@ class SummarySheet extends StatelessWidget {
                                 Expanded(
                                   child: Text(
                                     insight?.tip ?? 'Keep up the rhythm! Regular runs compound territory sovereignty.',
-                                    style: AppText.bodySmall.copyWith(color: Colors.white70, fontSize: 11),
+                                    style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
                                   ),
                                 ),
                               ],
@@ -427,8 +430,8 @@ class SummarySheet extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: AppColors.border),
+                    foregroundColor: AppColors.textSecondary,
+                    side: const BorderSide(color: AppColors.borderSubtle),
                     padding: const EdgeInsets.symmetric(vertical: 11),
                     shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                   ),
@@ -447,12 +450,12 @@ class SummarySheet extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: AppColors.border),
+                    foregroundColor: AppColors.textSecondary,
+                    side: const BorderSide(color: AppColors.borderSubtle),
                     padding: const EdgeInsets.symmetric(vertical: 11),
                     shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                   ),
-                  icon: const Icon(Icons.polyline_rounded, size: 16, color: Color(0xFF00E5FF)),
+                  icon: const Icon(Icons.polyline_rounded, size: 16, color: AppColors.info),
                   label: const Text('EXPORT GEOJSON', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                   onPressed: () async {
                     AppMotion.lightTick();
@@ -493,6 +496,7 @@ class SummarySheet extends StatelessWidget {
             fontSize: 14,
             color: color,
             fontWeight: FontWeight.w900,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
       ],

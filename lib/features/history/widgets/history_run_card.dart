@@ -74,9 +74,9 @@ class HistoryRunCard extends StatelessWidget {
             children: [
               Center(
                 child: Container(
-                  width: 40,
+                  width: 36,
                   height: 4,
-                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: AppSpacing.s16),
@@ -107,7 +107,7 @@ class HistoryRunCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: AppSpacing.br20,
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.borderSubtle),
                 ),
                 child: ClipRRect(
                   borderRadius: AppSpacing.br20,
@@ -125,16 +125,16 @@ class HistoryRunCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: AppSpacing.br16,
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: AppColors.borderSubtle),
                 ),
                 child: Column(
                   children: [
                     _metricRow('CLAIMED TERRITORY', areaDisplay),
-                    const Divider(color: AppColors.border, height: 16),
+                    const Divider(color: AppColors.borderSubtle, height: 16),
                     _metricRow('ESTIMATED DISTANCE', '${estimatedKm.toStringAsFixed(2)} km'),
-                    const Divider(color: AppColors.border, height: 16),
+                    const Divider(color: AppColors.borderSubtle, height: 16),
                     _metricRow('POLYGON VERTICES', '${territory.polygon.length} GPS Coordinates'),
-                    const Divider(color: AppColors.border, height: 16),
+                    const Divider(color: AppColors.borderSubtle, height: 16),
                     _metricRow('SECURITY VERIFICATION', territory.isPendingReview ? 'Pending Review' : 'Verified Sovereign ✓'),
                   ],
                 ),
@@ -191,7 +191,14 @@ class HistoryRunCard extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 11)),
-        Text(value, style: AppText.bodyBold.copyWith(color: Colors.white, fontSize: 13)),
+        Text(
+          value,
+          style: AppText.bodyBold.copyWith(
+            color: AppColors.textPrimary,
+            fontSize: 13,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
       ],
     );
   }
@@ -208,7 +215,7 @@ class HistoryRunCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppSpacing.br20,
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderSubtle),
       ),
       child: Material(
         color: Colors.transparent,
@@ -234,7 +241,7 @@ class HistoryRunCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.surface2,
                     borderRadius: AppSpacing.br14,
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: AppColors.borderSubtle),
                   ),
                   child: ClipRRect(
                     borderRadius: AppSpacing.br14,
@@ -258,6 +265,7 @@ class HistoryRunCard extends StatelessWidget {
                             style: AppText.headingSmall.copyWith(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
                             ),
                           ),
                           Text(
@@ -285,13 +293,18 @@ class HistoryRunCard extends StatelessWidget {
                                 color: AppColors.accent,
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w800,
+                                fontFeatures: const [FontFeature.tabularFigures()],
                               ),
                             ),
                           ),
                           const SizedBox(width: AppSpacing.s8),
                           Text(
                             '${estimatedKm.toStringAsFixed(2)} km • ${territory.polygon.length} pts',
-                            style: AppText.bodySmall.copyWith(fontSize: 11),
+                            style: AppText.bodySmall.copyWith(
+                              color: AppColors.textSecondary,
+                              fontSize: 11,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
                           ),
                         ],
                       ),

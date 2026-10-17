@@ -112,18 +112,18 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
 
     switch (_selectedTheme) {
       case ShareCardTheme.athleticDark:
-        cardBg = const Color(0xFF0B0C10);
+        cardBg = AppColors.bgDeep;
         accentColor = AppColors.accent;
         hasGridOverlay = false;
         break;
       case ShareCardTheme.cyberVanguard:
         cardBg = const Color(0xFF080D14);
-        accentColor = const Color(0xFF00E5FF);
+        accentColor = AppColors.rival;
         hasGridOverlay = true;
         break;
       case ShareCardTheme.stealth:
-        cardBg = const Color(0xFF141519);
-        accentColor = Colors.white;
+        cardBg = AppColors.surface;
+        accentColor = AppColors.textPrimary;
         hasGridOverlay = false;
         break;
     }
@@ -154,7 +154,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       'TERRITORY RUNNER',
       const Offset(64, 64),
       TextStyle(
-        color: Colors.white,
+        color: AppColors.textPrimary,
         fontSize: 28,
         fontWeight: FontWeight.w900,
         letterSpacing: 2.0,
@@ -201,7 +201,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       widget.callsign.toUpperCase(),
       const Offset(64, 680),
       TextStyle(
-        color: Colors.white,
+        color: AppColors.textPrimary,
         fontSize: 44,
         fontWeight: FontWeight.w900,
         letterSpacing: 1.5,
@@ -214,7 +214,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       _formatDate(),
       const Offset(64, 735),
       TextStyle(
-        color: Colors.white54,
+        color: AppColors.textMuted,
         fontSize: 20,
         fontWeight: FontWeight.w600,
         fontFamily: 'Inter',
@@ -223,10 +223,10 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
 
     // 7. Stats Panel (Bottom Container: 952 x 180)
     final statsRect = const Rect.fromLTWH(64, 780, targetSize - 128, 170);
-    final statsBg = Paint()..color = Colors.black.withValues(alpha: 0.7);
+    final statsBg = Paint()..color = AppColors.bgDeep.withValues(alpha: 0.85);
     canvas.drawRRect(RRect.fromRectAndRadius(statsRect, const Radius.circular(28)), statsBg);
     final statsBorder = Paint()
-      ..color = Colors.white12
+      ..color = AppColors.borderSubtle
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0;
     canvas.drawRRect(RRect.fromRectAndRadius(statsRect, const Radius.circular(28)), statsBorder);
@@ -235,22 +235,70 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     final double colWidth = (targetSize - 128) / 3.0;
 
     // Col 1: Distance
-    _drawText(canvas, 'DISTANCE', Offset(64 + colWidth * 0.5 - 45, 808), const TextStyle(color: Colors.white54, fontSize: 18, fontWeight: FontWeight.w700));
-    _drawText(canvas, '${widget.distanceKm.toStringAsFixed(2)} KM', Offset(64 + colWidth * 0.5 - 65, 846), const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900));
+    _drawText(
+      canvas,
+      'DISTANCE',
+      Offset(64 + colWidth * 0.5 - 45, 808),
+      TextStyle(color: AppColors.textSecondary, fontSize: 18, fontWeight: FontWeight.w700, fontFamily: 'Inter'),
+    );
+    _drawText(
+      canvas,
+      '${widget.distanceKm.toStringAsFixed(2)} KM',
+      Offset(64 + colWidth * 0.5 - 65, 846),
+      TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 32,
+        fontWeight: FontWeight.w900,
+        fontFamily: 'Inter',
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
 
     // Divider 1
-    canvas.drawLine(Offset(64 + colWidth, 805), Offset(64 + colWidth, 925), Paint()..color = Colors.white12..strokeWidth = 2.0);
+    canvas.drawLine(Offset(64 + colWidth, 805), Offset(64 + colWidth, 925), Paint()..color = AppColors.divider..strokeWidth = 2.0);
 
     // Col 2: Pace
-    _drawText(canvas, 'PACE', Offset(64 + colWidth * 1.5 - 28, 808), const TextStyle(color: Colors.white54, fontSize: 18, fontWeight: FontWeight.w700));
-    _drawText(canvas, '${_formatPace()} /KM', Offset(64 + colWidth * 1.5 - 60, 846), const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900));
+    _drawText(
+      canvas,
+      'PACE',
+      Offset(64 + colWidth * 1.5 - 28, 808),
+      TextStyle(color: AppColors.textSecondary, fontSize: 18, fontWeight: FontWeight.w700, fontFamily: 'Inter'),
+    );
+    _drawText(
+      canvas,
+      '${_formatPace()} /KM',
+      Offset(64 + colWidth * 1.5 - 60, 846),
+      TextStyle(
+        color: AppColors.textPrimary,
+        fontSize: 32,
+        fontWeight: FontWeight.w900,
+        fontFamily: 'Inter',
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
 
     // Divider 2
-    canvas.drawLine(Offset(64 + colWidth * 2, 805), Offset(64 + colWidth * 2, 925), Paint()..color = Colors.white12..strokeWidth = 2.0);
+    canvas.drawLine(Offset(64 + colWidth * 2, 805), Offset(64 + colWidth * 2, 925), Paint()..color = AppColors.divider..strokeWidth = 2.0);
 
     // Col 3: Claimed Area
-    _drawText(canvas, 'CLAIMED', Offset(64 + colWidth * 2.5 - 42, 808), const TextStyle(color: Colors.white54, fontSize: 18, fontWeight: FontWeight.w700));
-    _drawText(canvas, _formatArea(), Offset(64 + colWidth * 2.5 - 65, 846), TextStyle(color: accentColor, fontSize: 32, fontWeight: FontWeight.w900));
+    _drawText(
+      canvas,
+      'CLAIMED',
+      Offset(64 + colWidth * 2.5 - 42, 808),
+      TextStyle(color: AppColors.textSecondary, fontSize: 18, fontWeight: FontWeight.w700, fontFamily: 'Inter'),
+    );
+    _drawText(
+      canvas,
+      _formatArea(),
+      Offset(64 + colWidth * 2.5 - 65, 846),
+      TextStyle(
+        color: accentColor,
+        fontSize: 32,
+        fontWeight: FontWeight.w900,
+        fontFamily: 'Inter',
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
 
     // 8. Watermark Footer
     _drawText(
@@ -258,7 +306,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       'SERVER-AUTHORITATIVE TERRITORY CONQUEST • POSTGIS SPATIAL PARITY',
       const Offset(240, 990),
       TextStyle(
-        color: Colors.white30,
+        color: AppColors.textMuted.withValues(alpha: 0.6),
         fontSize: 15,
         fontWeight: FontWeight.w700,
         letterSpacing: 1.0,
@@ -387,7 +435,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: AppColors.divider,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -407,6 +455,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.2,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -417,7 +466,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white60),
+                icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -525,15 +574,15 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                   height: 48,
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: AppColors.border),
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.borderSubtle),
                       shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                     ),
                     icon: const Icon(Icons.download_rounded, size: 18, color: AppColors.accent),
                     label: Text(
                       'SAVE PNG',
                       style: AppText.label.copyWith(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.w800,
                         fontSize: 11,
                       ),
@@ -552,8 +601,8 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                   height: 42,
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white70,
-                      side: const BorderSide(color: AppColors.border),
+                      foregroundColor: AppColors.textSecondary,
+                      side: const BorderSide(color: AppColors.borderSubtle),
                       shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                     ),
                     icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.accent),
@@ -573,11 +622,11 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                   height: 42,
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white70,
-                      side: const BorderSide(color: AppColors.border),
+                      foregroundColor: AppColors.textSecondary,
+                      side: const BorderSide(color: AppColors.borderSubtle),
                       shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                     ),
-                    icon: const Icon(Icons.polyline_rounded, size: 16, color: Color(0xFF00E5FF)),
+                    icon: const Icon(Icons.polyline_rounded, size: 16, color: AppColors.info),
                     label: const Text('EXPORT GEOJSON', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                     onPressed: () async {
                       await ExportService().exportAndShareGeoJson(
@@ -620,14 +669,14 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
           color: isSelected ? AppColors.accent.withValues(alpha: 0.18) : AppColors.surface,
           borderRadius: AppSpacing.brFull,
           border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.border,
+            color: isSelected ? AppColors.accent : AppColors.borderSubtle,
             width: isSelected ? 1.5 : 1.0,
           ),
         ),
         child: Text(
           label,
           style: AppText.label.copyWith(
-            color: isSelected ? AppColors.accent : AppColors.textMuted,
+            color: isSelected ? AppColors.accent : AppColors.textSecondary,
             fontSize: 10.5,
             fontWeight: FontWeight.w900,
             letterSpacing: 0.8,
@@ -645,21 +694,21 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
 
     switch (_selectedTheme) {
       case ShareCardTheme.athleticDark:
-        cardBg = const Color(0xFF0B0C10);
+        cardBg = AppColors.bgDeep;
         accentColor = AppColors.accent;
         borderColor = AppColors.border;
         hasGridOverlay = false;
         break;
       case ShareCardTheme.cyberVanguard:
         cardBg = const Color(0xFF080D14);
-        accentColor = const Color(0xFF00E5FF);
-        borderColor = const Color(0xFF00E5FF).withValues(alpha: 0.4);
+        accentColor = AppColors.rival;
+        borderColor = AppColors.rival.withValues(alpha: 0.4);
         hasGridOverlay = true;
         break;
       case ShareCardTheme.stealth:
-        cardBg = const Color(0xFF141519);
-        accentColor = Colors.white;
-        borderColor = Colors.white24;
+        cardBg = AppColors.surface;
+        accentColor = AppColors.textPrimary;
+        borderColor = AppColors.borderSubtle;
         hasGridOverlay = false;
         break;
     }
@@ -731,7 +780,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                               child: Text(
                                 'TERRITORY RUNNER',
                                 style: AppText.label.copyWith(
-                                  color: Colors.white,
+                                  color: AppColors.textPrimary,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w900,
                                   letterSpacing: 1.0,
@@ -776,7 +825,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                               style: AppText.headingMedium.copyWith(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w900,
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -785,7 +834,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                           Text(
                             _formatDate(),
                             style: AppText.bodySmall.copyWith(
-                              color: Colors.white54,
+                              color: AppColors.textMuted,
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
                             ),
@@ -798,16 +847,16 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.65),
+                          color: AppColors.bgDeep.withValues(alpha: 0.75),
                           borderRadius: AppSpacing.br16,
-                          border: Border.all(color: Colors.white12),
+                          border: Border.all(color: AppColors.borderSubtle),
                         ),
                         child: Row(
                           children: [
                             Expanded(child: _buildStatItem('DISTANCE', '${widget.distanceKm.toStringAsFixed(2)} KM', accentColor)),
-                            Container(width: 1, height: 26, color: Colors.white12),
+                            Container(width: 1, height: 26, color: AppColors.divider),
                             Expanded(child: _buildStatItem('PACE', '${_formatPace()} /KM', accentColor)),
-                            Container(width: 1, height: 26, color: Colors.white12),
+                            Container(width: 1, height: 26, color: AppColors.divider),
                             Expanded(child: _buildStatItem('CLAIMED', _formatArea(), accentColor)),
                           ],
                         ),
@@ -829,7 +878,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
         Text(
           label,
           style: AppText.label.copyWith(
-            color: Colors.white54,
+            color: AppColors.textSecondary,
             fontSize: 8.5,
             fontWeight: FontWeight.w700,
           ),
@@ -840,8 +889,9 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
           value,
           style: AppText.statSmall.copyWith(
             fontSize: 12.5,
-            color: Colors.white,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.w900,
+            fontFeatures: const [FontFeature.tabularFigures()],
           ),
           textAlign: TextAlign.center,
           overflow: TextOverflow.ellipsis,
