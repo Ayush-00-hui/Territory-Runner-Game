@@ -173,6 +173,13 @@ void main() {
       expect(safetyService.hasContactConfigured, isTrue);
     });
 
+    test('SafetyService tracks siren state and handles stop gracefully', () async {
+      final safetyService = SafetyService();
+      expect(safetyService.isSirenPlaying, isFalse);
+      await safetyService.stopTacticalSiren();
+      expect(safetyService.isSirenPlaying, isFalse);
+    });
+
     testWidgets('PrivacyZonesSheet renders list and allows adding a zone', (tester) async {
       SharedPreferences.setMockInitialValues({});
 

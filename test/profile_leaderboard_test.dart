@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:territory_runner/features/coach/voice_coach_service.dart';
+import 'package:territory_runner/services/app_preferences.dart';
 import 'package:territory_runner/features/gameplay/territory_service.dart';
 import 'package:territory_runner/features/profile/widgets/challenges_shelf.dart';
 import 'package:territory_runner/features/profile/widgets/faction_leaderboard.dart';
@@ -178,10 +178,10 @@ void main() {
       expect(find.text('GRID_PHANTOM'), findsOneWidget);
     });
 
-    testWidgets('ProfileSettingsList toggles voice coach audio and haptics', (tester) async {
-      final voiceCoach = VoiceCoachService();
-      final initialAudio = voiceCoach.isAudioEnabled;
-      final initialHaptics = voiceCoach.isHapticsEnabled;
+    testWidgets('ProfileSettingsList renders tactical haptics and no voice coach controls', (tester) async {
+      final appPrefs = AppPreferences();
+      await appPrefs.init();
+      final initialHaptics = appPrefs.isHapticsEnabled;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -198,21 +198,25 @@ void main() {
         ),
       );
 
-      expect(find.text('Voice Coach Audio Cues'), findsOneWidget);
+      // Voice Coach controls should be completely absent
+      expect(find.text('Voice Coach Audio Cues'), findsNothing);
+      expect(find.text('Audio & Haptics'), findsNothing);
+
+      // Tactical haptics & battery saver should be present
+      expect(find.text('Tactical Haptics'), findsOneWidget);
       expect(find.text('Tactical Haptic Bursts'), findsOneWidget);
       expect(find.text('Endurance Battery Saver'), findsOneWidget);
 
-      // Tap first switch
+      // Tap haptic switch
       final switchTiles = find.byType(Switch);
-      expect(switchTiles, findsNWidgets(3));
+      expect(switchTiles, findsNWidgets(2));
 
       await tester.tap(switchTiles.first);
       await tester.pumpAndSettle();
-      expect(voiceCoach.isAudioEnabled, !initialAudio);
+      expect(appPrefs.isHapticsEnabled, !initialHaptics);
 
       // Restore
-      voiceCoach.toggleAudio(initialAudio);
-      voiceCoach.toggleHaptics(initialHaptics);
+      await appPrefs.toggleHaptics(initialHaptics);
     });
 
     testWidgets('ProfilePage switches tabs between Athlete Profile and Faction Turf War', (tester) async {
