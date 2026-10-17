@@ -24,32 +24,35 @@ class ProgressRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          RepaintBoundary(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0.0, end: progress.clamp(0.0, 1.0)),
-              duration: AppMotion.duration(context, AppMotion.countUp),
-              curve: AppMotion.easeOut,
-              builder: (context, value, _) {
-                return CustomPaint(
-                  size: Size(size, size),
-                  painter: _ProgressRingPainter(
-                    progress: value,
-                    strokeWidth: strokeWidth,
-                    progressColor: progressColor,
-                    trackColor: trackColor,
-                  ),
-                );
-              },
+    return Semantics(
+      value: '${(progress.clamp(0.0, 1.0) * 100).round()}%',
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            RepaintBoundary(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.0, end: progress.clamp(0.0, 1.0)),
+                duration: AppMotion.duration(context, AppMotion.countUp),
+                curve: AppMotion.easeOut,
+                builder: (context, value, _) {
+                  return CustomPaint(
+                    size: Size(size, size),
+                    painter: _ProgressRingPainter(
+                      progress: value,
+                      strokeWidth: strokeWidth,
+                      progressColor: progressColor,
+                      trackColor: trackColor,
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-          ?center,
-        ],
+            ?center,
+          ],
+        ),
       ),
     );
   }

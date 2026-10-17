@@ -89,12 +89,6 @@ flutter:
     - assets/audio/
 
   fonts:
-    - family: Oswald
-      fonts:
-        - asset: assets/fonts/Oswald-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Oswald-Bold.ttf
-          weight: 700
     - family: Inter
       fonts:
         - asset: assets/fonts/Inter-Regular.ttf

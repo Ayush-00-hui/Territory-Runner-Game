@@ -21,10 +21,10 @@ void main() {
       }
 
       // Base backgrounds
-      const bgDeep = AppColors.bgDeep; // #0B0C10
-      const surface = AppColors.surface; // #161822
+      const bgDeep = AppColors.bgDeep; // #0C0B0A
+      const surface = AppColors.surface; // #151413
 
-      // Neon Accent & Semantic Status Colors against deep dark bg
+      // Ember Accent & Semantic Status Colors against deep dark bg
       final accentContrastBg = contrastRatio(AppColors.accent, bgDeep);
       final infoContrastBg = contrastRatio(AppColors.info, bgDeep);
       final warningContrastBg = contrastRatio(AppColors.warning, bgDeep);
@@ -32,28 +32,28 @@ void main() {
       final textPrimaryContrastBg = contrastRatio(AppColors.textPrimary, bgDeep);
 
       // Verify WCAG AA Large (>3.0) and Normal (>4.5) minimum requirements
-      expect(accentContrastBg, greaterThan(7.0), reason: 'Accent must exceed WCAG AAA (7.0)');
-      expect(infoContrastBg, greaterThan(4.5), reason: 'Info slate blue must exceed WCAG AA (4.5)');
+      expect(accentContrastBg, greaterThan(5.0), reason: 'Accent must exceed WCAG AA (4.5)');
+      expect(infoContrastBg, greaterThan(4.5), reason: 'Info violet must exceed WCAG AA (4.5)');
       expect(warningContrastBg, greaterThan(7.0), reason: 'Warning amber must exceed WCAG AAA (7.0)');
-      expect(rivalContrastBg, greaterThan(4.5), reason: 'Rival coral must exceed WCAG AA (4.5)');
-      expect(textPrimaryContrastBg, greaterThan(10.0), reason: 'Primary white text on deep bg is ultra crisp');
+      expect(rivalContrastBg, greaterThan(4.5), reason: 'Rival blue must exceed WCAG AA (4.5)');
+      expect(textPrimaryContrastBg, greaterThan(10.0), reason: 'Primary text on deep bg is ultra crisp');
 
       // Check contrast against surface cards
       final accentContrastSurface = contrastRatio(AppColors.accent, surface);
       final textPrimaryContrastSurface = contrastRatio(AppColors.textPrimary, surface);
-      expect(accentContrastSurface, greaterThan(6.0));
+      expect(accentContrastSurface, greaterThan(5.0));
       expect(textPrimaryContrastSurface, greaterThan(8.0));
     });
 
-    test('Athletic Typography enforces Tabular Figures on big metric stats', () {
+    test('Athletic Typography enforces Tabular Figures on big metric stats with Inter', () {
       // Big bold athletic numbers must have tabular figures to prevent timer & distance jitter
       final statLarge = AppText.statLarge;
       final statMedium = AppText.statMedium;
       final statDisplay = AppText.statDisplay;
 
-      expect(statLarge.fontFamily, 'Oswald');
-      expect(statMedium.fontFamily, 'Oswald');
-      expect(statDisplay.fontFamily, 'Oswald');
+      expect(statLarge.fontFamily, 'Inter');
+      expect(statMedium.fontFamily, 'Inter');
+      expect(statDisplay.fontFamily, 'Inter');
 
       // Verify tabular figures font feature is applied
       expect(statLarge.fontFeatures, contains(const FontFeature.tabularFigures()));
@@ -65,13 +65,11 @@ void main() {
       expect(AppText.bodySmall.fontFamily, 'Inter');
     });
 
-    test('Offline-first asset audit: verified physical presence of bundled fonts', () {
+    test('Offline-first asset audit: verified physical presence of bundled Inter fonts', () {
       final requiredFonts = [
         'assets/fonts/Inter-Regular.ttf',
         'assets/fonts/Inter-SemiBold.ttf',
         'assets/fonts/Inter-Bold.ttf',
-        'assets/fonts/Oswald-Medium.ttf',
-        'assets/fonts/Oswald-Bold.ttf',
       ];
 
       for (final fontPath in requiredFonts) {

@@ -20,7 +20,7 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.actionLabel,
     this.onAction,
-    this.iconColor = AppColors.accent,
+    this.iconColor = AppColors.textSecondary,
   });
 
   @override
@@ -33,28 +33,28 @@ class EmptyState extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              height: 72,
-              width: 72,
+              height: 64,
+              width: 64,
               decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.12),
+                color: AppColors.surface2,
                 shape: BoxShape.circle,
-                border: Border.all(color: iconColor.withValues(alpha: 0.3), width: 1.5),
+                border: Border.all(color: AppColors.borderSubtle, width: 1.0),
               ),
               child: Center(
-                child: Icon(icon, size: 34, color: iconColor),
+                child: Icon(icon, size: 28, color: iconColor),
               ),
             ),
             const SizedBox(height: AppSpacing.s20),
             Text(
-              title.toUpperCase(),
+              title,
               textAlign: TextAlign.center,
-              style: AppText.headingMedium,
+              style: AppText.titleLarge,
             ),
             const SizedBox(height: AppSpacing.s8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppText.body.copyWith(height: 1.4),
+              style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.s24),

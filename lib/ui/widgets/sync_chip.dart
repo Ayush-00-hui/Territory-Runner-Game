@@ -4,6 +4,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import '../motion/motion.dart';
+import 'app_toast.dart';
 
 /// Reusable athletic sync status indicator chip wired to [SyncQueueService].
 class SyncChip extends StatelessWidget {
@@ -27,67 +28,66 @@ class SyncChip extends StatelessWidget {
 
             switch (status) {
               case SyncStatus.synced:
-                color = AppColors.mine;
+                color = AppColors.success;
                 icon = Icons.cloud_done_rounded;
-                text = 'SYNCED';
+                text = 'Synced';
                 break;
               case SyncStatus.syncing:
-                color = const Color(0xFF29B6F6);
+                color = AppColors.info;
                 icon = Icons.sync_rounded;
-                text = 'SYNCING';
+                text = 'Syncing';
                 break;
               case SyncStatus.pending:
                 color = AppColors.warning;
                 icon = Icons.cloud_upload_rounded;
-                text = count > 0 ? 'PENDING ($count)' : 'PENDING';
+                text = count > 0 ? 'Pending ($count)' : 'Pending';
                 break;
               case SyncStatus.offline:
-                color = AppColors.rival;
+                color = AppColors.textMuted;
                 icon = Icons.cloud_off_rounded;
-                text = count > 0 ? 'OFFLINE ($count)' : 'OFFLINE';
+                text = count > 0 ? 'Offline ($count)' : 'Offline';
                 break;
             }
 
-            return GestureDetector(
-              onTap: () {
-                AppMotion.lightTick();
-                queue.syncPendingRuns();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: AppColors.surface,
-                    duration: const Duration(seconds: 2),
-                    content: Text(
-                      status == SyncStatus.synced
-                          ? 'All runs synced with server authority.'
-                          : 'Triggering background cloud sync...',
-                      style: TextStyle(color: color, fontWeight: FontWeight.bold),
-                    ),
+            return Semantics(
+              button: true,
+              label: 'Cloud Sync: $text',
+              child: GestureDetector(
+                onTap: () {
+                  AppMotion.selectionTick();
+                  queue.syncPendingRuns();
+                  AppToast.show(
+                    context,
+                    status == SyncStatus.synced
+                        ? 'All runs synced with server authority.'
+                        : 'Triggering background cloud sync...',
+                    icon: icon,
+                    type: status == SyncStatus.synced ? AppToastType.success : AppToastType.info,
+                  );
+                },
+                behavior: HitTestBehavior.opaque,
+                child: AnimatedContainer(
+                  duration: AppMotion.duration(context, AppMotion.fast),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: AppRadius.brFull,
+                    border: Border.all(color: color.withValues(alpha: 0.4), width: 1.0),
                   ),
-                );
-              },
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: AppMotion.duration(context, AppMotion.fast),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.15),
-                  borderRadius: AppSpacing.brFull,
-                  border: Border.all(color: color.withValues(alpha: 0.6), width: 1.0),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 12, color: color),
-                    const SizedBox(width: AppSpacing.s4),
-                    Text(
-                      text,
-                      style: AppText.label.copyWith(
-                        color: color,
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 14, color: color),
+                      const SizedBox(width: AppSpacing.s6),
+                      Text(
+                        text,
+                        style: AppText.labelSmall.copyWith(
+                          color: color,
+                          letterSpacing: 0.2,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );

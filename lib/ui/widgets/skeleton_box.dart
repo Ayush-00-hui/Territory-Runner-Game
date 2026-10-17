@@ -16,8 +16,8 @@ class SkeletonBox extends StatefulWidget {
     this.width,
     this.height,
     this.borderRadius,
-    this.baseColor = AppColors.surface2,
-    this.highlightColor = const Color(0xFF2C3247),
+    this.baseColor = AppColors.surface,
+    this.highlightColor = AppColors.surface2,
   });
 
   @override

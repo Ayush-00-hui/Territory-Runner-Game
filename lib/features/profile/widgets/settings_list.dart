@@ -9,6 +9,7 @@ import '../../../ui/ui.dart';
 import 'emergency_contact_dialog.dart';
 import 'offline_maps_sheet.dart';
 import 'privacy_zones_sheet.dart';
+import '../../gallery/design_gallery_screen.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -239,8 +240,20 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               showOfflineMapsSheet(context);
             },
           ),
-          // Reset Dev Mode (Only visible in debug builds)
+          // Dev Mode entries (Only visible in debug builds)
           if (kDebugMode) ...[
+            const Divider(height: 1, color: AppColors.border),
+            ProfileOptionTile(
+              icon: Icons.palette_rounded,
+              title: 'Design System Gallery (Dev Mode)',
+              subtitle: 'Inspect Charcoal + Ember tokens and UI components',
+              onTap: () {
+                AppMotion.lightTick();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const DesignGalleryScreen()),
+                );
+              },
+            ),
             const Divider(height: 1, color: AppColors.border),
             ProfileOptionTile(
               icon: Icons.refresh_rounded,

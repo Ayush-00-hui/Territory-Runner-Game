@@ -2,25 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 /// Territory Runner Design System: Shared Motion & Haptics Tokens
-/// Enforces purposeful, sports-feel animations (150-300ms for UI, up to 900ms for capture).
-/// Checks [MediaQuery.disableAnimations] to respect reduced-motion user preferences.
+/// Enforces purposeful athletic timing (150-250ms ease-out).
+/// No looping pulses, no bounces.
+/// Strictly honors [MediaQuery.disableAnimations] across all screens.
 class AppMotion {
   AppMotion._();
 
-  // Durations
-  static const Duration fast = Duration(milliseconds: 150);      // Micro-interactions, button presses, chips
-  static const Duration standard = Duration(milliseconds: 250);  // HUD sliding, tabs, cards
-  static const Duration sheet = Duration(milliseconds: 320);     // Modal bottom sheets
-  static const Duration countUp = Duration(milliseconds: 600);   // Stat tile number roll-up
-  static const Duration capture = Duration(milliseconds: 900);   // Big territory capture moment
-  static const Duration replay = Duration(milliseconds: 1500);   // Route path replay (skippable)
+  // Durations (150 - 250 ms)
+  static const Duration fast = Duration(milliseconds: 150);      // Micro-interactions, press states, chips
+  static const Duration standard = Duration(milliseconds: 220);  // Tab switches, card reveals, HUD slide
+  static const Duration sheet = Duration(milliseconds: 250);     // Modal bottom sheets & dialogs
+  static const Duration countUp = Duration(milliseconds: 500);   // Tabular number roll-ups
+  static const Duration capture = Duration(milliseconds: 600);   // Single polygon fill celebration
 
-  // Curves
+  // Interactive Press State
+  static const double pressScale = 0.97;
+
+  // Curves (Smooth sports-grade decel)
   static const Curve easeOut = Curves.easeOutCubic;
-  static const Curve emphasized = Curves.easeInOutCubicEmphasized;
-  static const Curve bounceOut = Curves.easeOutBack;
+  static const Curve easeInOut = Curves.easeInOutCubic;
 
-  /// Returns true if reduced motion is requested on the device
+  /// Global accessibility helper: returns true if reduced motion is requested
   static bool shouldReduceMotion(BuildContext context) {
     return MediaQuery.maybeDisableAnimationsOf(context) ?? false;
   }
@@ -35,23 +37,48 @@ class AppMotion {
 
   // --- PURPOSEFUL HAPTICS ---
 
-  /// Light haptic feedback for button taps and selection clicks
+  /// Light selection tick on tap / press
+  static void selectionTick() {
+    HapticFeedback.selectionClick();
+  }
+
+  /// Light impact tick
   static void lightTick() {
     HapticFeedback.lightImpact();
   }
 
-  /// Medium haptic feedback for mode switching, tab selection, and loop closure
+  /// Medium impact on milestone, goal closure or tab switch
   static void mediumTick() {
     HapticFeedback.mediumImpact();
   }
 
-  /// Heavy haptic burst for major milestones: run start, territory capture, rank up
+  /// Heavy impact for capture celebration / hold-to-finish completion
   static void heavyBurst() {
     HapticFeedback.heavyImpact();
   }
 
-  /// Selection tick for subtle slider / list movement
-  static void selectionTick() {
-    HapticFeedback.selectionClick();
+  // --- SHARED PAGE TRANSITIONS (FADE + SUBTLE SLIDE) ---
+
+  /// Creates a shared sports-grade transition: subtle fade + 12px vertical slide
+  static Widget sharedAxisTransition({
+    required BuildContext context,
+    required Animation<double> animation,
+    required Widget child,
+  }) {
+    if (shouldReduceMotion(context)) {
+      return child;
+    }
+
+    final curved = CurvedAnimation(parent: animation, curve: easeOut);
+    return FadeTransition(
+      opacity: curved,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0.0, 0.03),
+          end: Offset.zero,
+        ).animate(curved),
+        child: child,
+      ),
+    );
   }
 }

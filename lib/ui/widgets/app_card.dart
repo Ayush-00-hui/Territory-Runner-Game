@@ -3,8 +3,9 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../motion/motion.dart';
 
-/// Styled surface card container using design tokens.
-class AppCard extends StatelessWidget {
+/// Styled surface card container using Charcoal + Ember design tokens.
+/// Depth is created via surface tone steps + 1px hairline borders (borderSubtle).
+class AppCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
@@ -27,31 +28,62 @@ class AppCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final effectiveBorder = border ?? AppSpacing.cardBorder;
-    final effectiveRadius = borderRadius ?? AppSpacing.br24;
-    final effectiveShadow = boxShadow ?? AppSpacing.cardShadow;
+  State<AppCard> createState() => _AppCardState();
+}
 
-    final container = Container(
-      padding: padding,
-      clipBehavior: clipBehavior,
+class _AppCardState extends State<AppCard> {
+  bool _isPressed = false;
+
+  void _handleTapDown(TapDownDetails _) {
+    if (widget.onTap == null) return;
+    AppMotion.selectionTick();
+    setState(() => _isPressed = true);
+  }
+
+  void _handleTapUp(TapUpDetails _) {
+    if (widget.onTap == null) return;
+    setState(() => _isPressed = false);
+    widget.onTap?.call();
+  }
+
+  void _handleTapCancel() {
+    if (widget.onTap == null) return;
+    setState(() => _isPressed = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveBorder = widget.border ??
+        Border.all(color: AppColors.borderSubtle, width: 1.0);
+    final effectiveRadius = widget.borderRadius ?? AppRadius.br16;
+    final scale = (widget.onTap != null && _isPressed) ? AppMotion.pressScale : 1.0;
+
+    final container = AnimatedContainer(
+      duration: AppMotion.duration(context, AppMotion.fast),
+      curve: AppMotion.easeOut,
+      padding: widget.padding,
+      clipBehavior: widget.clipBehavior,
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: widget.backgroundColor,
         borderRadius: effectiveRadius,
         border: effectiveBorder,
-        boxShadow: effectiveShadow,
+        boxShadow: widget.boxShadow,
       ),
-      child: child,
+      child: widget.child,
     );
 
-    if (onTap != null) {
-      return GestureDetector(
-        onTap: () {
-          AppMotion.lightTick();
-          onTap!();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: container,
+    if (widget.onTap != null) {
+      return AnimatedScale(
+        scale: scale,
+        duration: AppMotion.duration(context, AppMotion.fast),
+        curve: AppMotion.easeOut,
+        child: GestureDetector(
+          onTapDown: _handleTapDown,
+          onTapUp: _handleTapUp,
+          onTapCancel: _handleTapCancel,
+          behavior: HitTestBehavior.opaque,
+          child: container,
+        ),
       );
     }
 

@@ -3,10 +3,11 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 
-/// Clean sports section header with title, optional subtitle and trailing action.
+/// Clean sports section header with title, optional overline/subtitle, and trailing action.
 class SectionHeader extends StatelessWidget {
   final String title;
   final String? subtitle;
+  final String? overline;
   final Widget? trailing;
   final String? actionLabel;
   final VoidCallback? onAction;
@@ -15,6 +16,7 @@ class SectionHeader extends StatelessWidget {
     super.key,
     required this.title,
     this.subtitle,
+    this.overline,
     this.trailing,
     this.actionLabel,
     this.onAction,
@@ -32,13 +34,8 @@ class SectionHeader extends StatelessWidget {
         ),
         onPressed: onAction,
         child: Text(
-          actionLabel!.toUpperCase(),
-          style: AppText.label.copyWith(
-            color: AppColors.accent,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.0,
-          ),
+          actionLabel!,
+          style: AppText.labelLarge.copyWith(color: AppColors.accent),
         ),
       );
     }
@@ -54,9 +51,16 @@ class SectionHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (overline != null) ...[
+                  Text(
+                    overline!.toUpperCase(),
+                    style: AppText.labelSmall,
+                  ),
+                  const SizedBox(height: AppSpacing.s2),
+                ],
                 Text(
-                  title.toUpperCase(),
-                  style: AppText.headingMedium,
+                  title,
+                  style: AppText.titleMedium,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -64,7 +68,7 @@ class SectionHeader extends StatelessWidget {
                   const SizedBox(height: AppSpacing.s4),
                   Text(
                     subtitle!,
-                    style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
+                    style: AppText.bodySmall,
                   ),
                 ],
               ],

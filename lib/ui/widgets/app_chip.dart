@@ -5,6 +5,7 @@ import '../theme/app_text.dart';
 import '../motion/motion.dart';
 
 /// Athletic Pill / Chip component for tags, status badges, and selectors.
+/// Clean subtle fills, hairline borders, no colored shadows.
 class AppChip extends StatelessWidget {
   final String label;
   final IconData? icon;
@@ -28,16 +29,16 @@ class AppChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textColor = isSelected
-        ? Colors.black
+        ? activeColor
         : (customTextColor ?? AppColors.textSecondary);
 
     final bgColor = isSelected
-        ? activeColor
+        ? AppColors.accentContainer
         : AppColors.surface2;
 
     final borderColor = isSelected
         ? activeColor
-        : AppColors.border;
+        : AppColors.borderSubtle;
 
     final content = AnimatedContainer(
       duration: AppMotion.duration(context, AppMotion.fast),
@@ -45,11 +46,8 @@ class AppChip extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: AppSpacing.brFull,
+        borderRadius: AppRadius.brFull,
         border: Border.all(color: borderColor, width: 1.0),
-        boxShadow: isSelected
-            ? AppSpacing.subtleElevation
-            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -60,9 +58,9 @@ class AppChip extends StatelessWidget {
           ],
           Text(
             label,
-            style: AppText.label.copyWith(
+            style: AppText.labelSmall.copyWith(
               color: textColor,
-              fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
             ),
           ),
         ],
@@ -70,13 +68,21 @@ class AppChip extends StatelessWidget {
     );
 
     if (onTap != null) {
-      return GestureDetector(
-        onTap: () {
-          AppMotion.lightTick();
-          onTap!();
-        },
-        behavior: HitTestBehavior.opaque,
-        child: content,
+      return Semantics(
+        button: true,
+        selected: isSelected,
+        label: label,
+        child: GestureDetector(
+          onTap: () {
+            AppMotion.selectionTick();
+            onTap!();
+          },
+          behavior: HitTestBehavior.opaque,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 36.0),
+            child: Center(widthFactor: 1.0, child: content),
+          ),
+        ),
       );
     }
 

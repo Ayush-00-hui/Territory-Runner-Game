@@ -5,6 +5,7 @@ import '../theme/app_text.dart';
 import '../motion/motion.dart';
 
 /// Athletic Primary Button with press-scale feedback and haptic tick.
+/// Ember fill `#FF6A3D`, onAccent `#0C0B0A` text, 48dp touch target, Semantics.
 class PrimaryButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -24,8 +25,8 @@ class PrimaryButton extends StatefulWidget {
     this.isLoading = false,
     this.isFullWidth = true,
     this.backgroundColor = AppColors.accent,
-    this.foregroundColor = Colors.black,
-    this.height = 52.0,
+    this.foregroundColor = AppColors.onAccent,
+    this.height = 48.0,
     this.isOutlined = false,
   });
 
@@ -35,10 +36,11 @@ class PrimaryButton extends StatefulWidget {
 
 class _PrimaryButtonState extends State<PrimaryButton> {
   bool _isPressed = false;
+  bool _isFocused = false;
 
   void _handleTapDown(TapDownDetails _) {
     if (widget.onPressed == null || widget.isLoading) return;
-    AppMotion.lightTick();
+    AppMotion.selectionTick();
     setState(() => _isPressed = true);
   }
 
@@ -56,7 +58,15 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   @override
   Widget build(BuildContext context) {
     final bool enabled = widget.onPressed != null && !widget.isLoading;
-    final scale = _isPressed ? 0.96 : 1.0;
+    final scale = _isPressed ? AppMotion.pressScale : 1.0;
+
+    final Color bgColor = widget.isOutlined
+        ? Colors.transparent
+        : (enabled ? widget.backgroundColor : AppColors.disabled);
+
+    final Color fgColor = enabled
+        ? (widget.isOutlined ? widget.backgroundColor : widget.foregroundColor)
+        : AppColors.textMuted;
 
     Widget content = Row(
       mainAxisSize: widget.isFullWidth ? MainAxisSize.max : MainAxisSize.min,
@@ -64,58 +74,62 @@ class _PrimaryButtonState extends State<PrimaryButton> {
       children: [
         if (widget.isLoading) ...[
           SizedBox(
-            height: 20,
-            width: 20,
+            height: 18,
+            width: 18,
             child: CircularProgressIndicator(
-              strokeWidth: 2.2,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                widget.isOutlined ? widget.backgroundColor : widget.foregroundColor,
-              ),
+              strokeWidth: 2.0,
+              valueColor: AlwaysStoppedAnimation<Color>(fgColor),
             ),
           ),
           const SizedBox(width: AppSpacing.s12),
         ] else if (widget.icon != null) ...[
           Icon(
             widget.icon,
-            color: widget.isOutlined ? widget.backgroundColor : widget.foregroundColor,
+            color: fgColor,
             size: 20,
           ),
           const SizedBox(width: AppSpacing.s8),
         ],
         Text(
-          widget.label.toUpperCase(),
-          style: AppText.button.copyWith(
-            color: widget.isOutlined ? widget.backgroundColor : widget.foregroundColor,
-          ),
+          widget.label,
+          style: AppText.button.copyWith(color: fgColor),
         ),
       ],
     );
 
-    return AnimatedScale(
-      scale: scale,
-      duration: AppMotion.duration(context, AppMotion.fast),
-      curve: AppMotion.easeOut,
-      child: GestureDetector(
-        onTapDown: enabled ? _handleTapDown : null,
-        onTapUp: enabled ? _handleTapUp : null,
-        onTapCancel: enabled ? _handleTapCancel : null,
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: widget.height,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
-          decoration: BoxDecoration(
-            color: widget.isOutlined
-                ? Colors.transparent
-                : (enabled ? widget.backgroundColor : widget.backgroundColor.withValues(alpha: 0.4)),
-            borderRadius: AppSpacing.br16,
-            border: widget.isOutlined
-                ? Border.all(color: widget.backgroundColor, width: 1.5)
-                : null,
-            boxShadow: (!widget.isOutlined && enabled)
-                ? AppSpacing.subtleElevation
-                : null,
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: widget.label,
+      child: Focus(
+        onFocusChange: (focused) => setState(() => _isFocused = focused),
+        child: AnimatedScale(
+          scale: scale,
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
+          child: GestureDetector(
+            onTapDown: enabled ? _handleTapDown : null,
+            onTapUp: enabled ? _handleTapUp : null,
+            onTapCancel: enabled ? _handleTapCancel : null,
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedContainer(
+              duration: AppMotion.duration(context, AppMotion.fast),
+              curve: AppMotion.easeOut,
+              height: widget.height,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: AppRadius.br12,
+                border: Border.all(
+                  color: _isFocused
+                      ? AppColors.textPrimary
+                      : (widget.isOutlined ? widget.backgroundColor : Colors.transparent),
+                  width: _isFocused ? 1.5 : (widget.isOutlined ? 1.2 : 0.0),
+                ),
+              ),
+              child: Center(child: content),
+            ),
           ),
-          child: Center(child: content),
         ),
       ),
     );
