@@ -309,7 +309,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 
 	insertRunQuery := `
 		INSERT INTO runs (id, user_id, idempotency_key, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, path, status, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $9::text IS NOT NULL THEN ST_GeomFromText($9, 4326) ELSE NULL END, $10, NOW());
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $9::text IS NOT NULL THEN ST_GeomFromText($9, 4326) ELSE NULL END, $10, $11);
 	`
 	anomalyReasons := run.AnomalyReasons
 	if anomalyReasons == nil {
@@ -319,10 +319,14 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	if status == "" {
 		status = "accepted"
 	}
+	createdAt := time.Now().UTC()
+	if !run.CreatedAt.IsZero() {
+		createdAt = run.CreatedAt
+	}
 
 	if _, err := tx.Exec(ctx, insertRunQuery,
 		run.ID, run.UserID, run.IdempotencyKey, run.DurationSeconds, run.DistanceMeters,
-		areaClaimed, run.AnomalyScore, anomalyReasons, pathWKT, status,
+		areaClaimed, run.AnomalyScore, anomalyReasons, pathWKT, status, createdAt,
 	); err != nil {
 		return nil, fmt.Errorf("failed to insert run: %w", err)
 	}
