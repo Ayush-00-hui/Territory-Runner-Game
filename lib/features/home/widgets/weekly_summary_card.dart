@@ -22,7 +22,7 @@ class WeeklySummaryCard extends StatelessWidget {
         : (totalAreaM2 > 0 ? '${totalAreaM2.toStringAsFixed(0)} M²' : '0 M²');
 
     final double weeklyDistanceKm = profile.totalDistanceKm > 0
-        ? (profile.totalDistanceKm / 4.0).clamp(0.5, profile.totalDistanceKm)
+        ? (profile.totalDistanceKm / 4.0).clamp(0.0, profile.totalDistanceKm)
         : 0.0;
     final int runsCount = territories.isNotEmpty
         ? territories.length
