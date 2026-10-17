@@ -162,4 +162,5 @@ class AppText {
   static const TextStyle headlineSmall = headingSmall;
   static const TextStyle bodyMedium = body;
   static const TextStyle labelSmall = label;
+  static const TextStyle caption = bodySmall;
 }

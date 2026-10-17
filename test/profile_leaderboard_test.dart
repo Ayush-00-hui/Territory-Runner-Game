@@ -203,24 +203,29 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Both segment tab buttons exist
-      expect(find.text('ATHLETE PROFILE'), findsOneWidget);
-      expect(find.text('FACTION TURF WAR'), findsOneWidget);
+      // All segment tab buttons exist
+      expect(find.text('ATHLETE'), findsOneWidget);
+      expect(find.text('TURF WAR'), findsOneWidget);
+      expect(find.text('LEAGUE'), findsOneWidget);
 
       // In athlete tab, Hero and Settings are visible
       expect(find.text('KAI_VALKYRIE'), findsOneWidget);
       expect(find.text('SETTINGS & PLATFORM'), findsOneWidget);
 
       // Tap Faction Turf War tab
-      await tester.tap(find.text('FACTION TURF WAR'));
+      await tester.tap(find.text('TURF WAR'));
       await tester.pumpAndSettle();
 
       // In Turf War tab, Dominance Meter is visible
       expect(find.text('TURF WAR DOMINANCE'), findsOneWidget);
       expect(find.text('CONQUEROR RANKINGS'), findsOneWidget);
 
+      // Tap League tab
+      await tester.tap(find.text('LEAGUE'));
+      await tester.pumpAndSettle();
+
       // Tap back to Athlete Profile
-      await tester.tap(find.text('ATHLETE PROFILE'));
+      await tester.tap(find.text('ATHLETE'));
       await tester.pumpAndSettle();
       expect(find.text('SETTINGS & PLATFORM'), findsOneWidget);
     });

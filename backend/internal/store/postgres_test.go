@@ -44,6 +44,7 @@ func readMigration(filename string) (string, error) {
 }
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
+	down3, _ := readMigration("000003_add_device_tokens.down.sql")
 	down2, _ := readMigration("000002_add_territory_strength.down.sql")
 	down1, _ := readMigration("000001_init_schema.down.sql")
 	up1, err := readMigration("000001_init_schema.up.sql")
@@ -54,7 +55,14 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
+	up3, err := readMigration("000003_add_device_tokens.up.sql")
+	if err != nil {
+		return err
+	}
 
+	if down3 != "" {
+		_, _ = pool.Exec(ctx, down3)
+	}
 	if down2 != "" {
 		_, _ = pool.Exec(ctx, down2)
 	}
@@ -66,6 +74,9 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	if _, err := pool.Exec(ctx, up2); err != nil {
 		return fmt.Errorf("failed executing 000002 up: %w", err)
+	}
+	if _, err := pool.Exec(ctx, up3); err != nil {
+		return fmt.Errorf("failed executing 000003 up: %w", err)
 	}
 	return nil
 }
@@ -745,3 +756,113 @@ func TestPostgres_LeaderboardOrdering(t *testing.T) {
 		assert.GreaterOrEqual(t, leaderboard[i].TotalAreaSqm, leaderboard[i+1].TotalAreaSqm)
 	}
 }
+
+// 10. Device Tokens persistence in PostgreSQL
+func TestPostgres_DeviceTokensPersistence(t *testing.T) {
+	st, _ := setupTestStore(t)
+	ctx := context.Background()
+
+	userID := "usr_token_test_1"
+	require.NoError(t, st.UpsertUser(ctx, &store.User{ID: userID, Username: "TokenTester", Faction: "Cyber Vanguard"}))
+
+	// Register two device tokens
+	require.NoError(t, st.SaveDeviceToken(ctx, userID, "token_pixel_7"))
+	require.NoError(t, st.SaveDeviceToken(ctx, userID, "token_ipad_pro"))
+
+	// Idempotent re-registration
+	require.NoError(t, st.SaveDeviceToken(ctx, userID, "token_pixel_7"))
+
+	tokens, err := st.GetDeviceTokens(ctx, userID)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"token_pixel_7", "token_ipad_pro"}, tokens)
+}
+
+// 11. Weekly League query aggregation in PostgreSQL
+func TestPostgres_WeeklyLeagueQuery(t *testing.T) {
+	st, _ := setupTestStore(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	weekStart := now.Add(-12 * time.Hour)
+	priorToWeek := now.Add(-10 * 24 * time.Hour) // Outside active week
+
+	u1 := &store.User{ID: "usr_league_gold", Username: "GoldSprinter", Faction: "Cyber Vanguard"}
+	u2 := &store.User{ID: "usr_league_silver", Username: "SilverPacer", Faction: "Neon Syndicate"}
+	u3 := &store.User{ID: "usr_league_old", Username: "OldTimer", Faction: "Solaris Nomads"}
+
+	require.NoError(t, st.UpsertUser(ctx, u1))
+	require.NoError(t, st.UpsertUser(ctx, u2))
+	require.NoError(t, st.UpsertUser(ctx, u3))
+
+	// Active week runs
+	loop1 := []geo.EnclosedLoop{{
+		AreaSqMeters: 12500.0,
+		Polygon: []geo.LatLng{
+			{Latitude: 51.51, Longitude: -0.11},
+			{Latitude: 51.52, Longitude: -0.11},
+			{Latitude: 51.52, Longitude: -0.10},
+			{Latitude: 51.51, Longitude: -0.10},
+			{Latitude: 51.51, Longitude: -0.11},
+		},
+	}}
+	_, err := st.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_league_01",
+		UserID:         u1.ID,
+		IdempotencyKey: "idem_league_01",
+		Status:         "accepted",
+		CreatedAt:      now.Add(-2 * time.Hour),
+	}, loop1, nil)
+	require.NoError(t, err)
+
+	loop2 := []geo.EnclosedLoop{{
+		AreaSqMeters: 4500.0,
+		Polygon: []geo.LatLng{
+			{Latitude: 51.53, Longitude: -0.11},
+			{Latitude: 51.54, Longitude: -0.11},
+			{Latitude: 51.54, Longitude: -0.10},
+			{Latitude: 51.53, Longitude: -0.10},
+			{Latitude: 51.53, Longitude: -0.11},
+		},
+	}}
+	_, err = st.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_league_02",
+		UserID:         u2.ID,
+		IdempotencyKey: "idem_league_02",
+		Status:         "accepted",
+		CreatedAt:      now.Add(-4 * time.Hour),
+	}, loop2, nil)
+	require.NoError(t, err)
+
+	// Prior to active week run - should NOT be included in weekly standings
+	loopOld := []geo.EnclosedLoop{{
+		AreaSqMeters: 50000.0,
+		Polygon: []geo.LatLng{
+			{Latitude: 51.55, Longitude: -0.11},
+			{Latitude: 51.56, Longitude: -0.11},
+			{Latitude: 51.56, Longitude: -0.10},
+			{Latitude: 51.55, Longitude: -0.10},
+			{Latitude: 51.55, Longitude: -0.11},
+		},
+	}}
+	_, err = st.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_league_old",
+		UserID:         u3.ID,
+		IdempotencyKey: "idem_league_old",
+		Status:         "accepted",
+		CreatedAt:      priorToWeek,
+	}, loopOld, nil)
+	require.NoError(t, err)
+
+	standings, err := st.GetWeeklyStandings(ctx, weekStart)
+	require.NoError(t, err)
+	require.Len(t, standings, 2, "Only users with runs in active week should be included")
+
+	// Order: u1 (GoldSprinter) > u2 (SilverPacer)
+	assert.Equal(t, u1.ID, standings[0].UserID)
+	assert.Equal(t, "GoldSprinter", standings[0].Username)
+	assert.Greater(t, standings[0].WeeklyAreaSqm, standings[1].WeeklyAreaSqm)
+
+	assert.Equal(t, u2.ID, standings[1].UserID)
+	assert.Equal(t, "SilverPacer", standings[1].Username)
+}
+

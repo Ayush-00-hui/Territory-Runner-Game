@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,6 +15,8 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws"
 	"github.com/go-chi/chi/v5"
@@ -27,6 +30,7 @@ type API struct {
 	detector          *anticheat.Detector
 	coachSvc          *coach.Service
 	wsHub             *ws.Hub
+	notifier          notify.Notifier
 	authenticator     *auth.Authenticator
 	logger            *slog.Logger
 	maxPointsPerRun   int
@@ -37,6 +41,13 @@ type API struct {
 
 // Option configures API dependencies.
 type Option func(*API)
+
+// WithNotifier injects an FCM push alert notifier.
+func WithNotifier(n notify.Notifier) Option {
+	return func(a *API) {
+		a.notifier = n
+	}
+}
 
 // WithCoachService injects a custom coach service.
 func WithCoachService(svc *coach.Service) Option {
@@ -295,13 +306,24 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Fan out real-time conquest broadcast and targeted victim alerts
-	if a.wsHub != nil && result.LoopDetected && result.AreaClaimedSqm > 0 {
+	// 5. Fan out real-time conquest broadcast and push notifications
+	if result.LoopDetected && result.AreaClaimedSqm > 0 {
 		username := "Runner_" + uid[:min(6, len(uid))]
 		if u, err := a.store.GetUser(r.Context(), uid); err == nil && u != nil {
 			username = u.Username
 		}
-		a.wsHub.BroadcastConquest(uid, username, result.AreaClaimedSqm, result.RivalsAffected)
+		if a.wsHub != nil {
+			a.wsHub.BroadcastConquest(uid, username, result.AreaClaimedSqm, result.RivalsAffected)
+		}
+		if a.notifier != nil && len(result.RivalsAffected) > 0 {
+			go func(rivals []string, territoryID, runnerName string, area float64) {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				for _, rUID := range rivals {
+					_ = a.notifier.SendTerritoryAlertToUser(ctx, rUID, territoryID, runnerName, area)
+				}
+			}(result.RivalsAffected, result.RunID, username, result.AreaClaimedSqm)
+		}
 	}
 
 	writeJSON(w, http.StatusCreated, result)
@@ -467,6 +489,67 @@ func (a *API) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.wsHub.ServeWS(w, r, uid, username, faction)
+}
+
+// DeviceTokenRequest encapsulates device registration payload.
+type DeviceTokenRequest struct {
+	Token string `json:"token"`
+}
+
+// HandleRegisterDeviceToken handles POST /v1/device-token.
+func (a *API) HandleRegisterDeviceToken(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var req DeviceTokenRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	trimmed := strings.TrimSpace(req.Token)
+	if trimmed == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_TOKEN", "Device token cannot be empty")
+		return
+	}
+
+	if err := a.store.SaveDeviceToken(r.Context(), uid, trimmed); err != nil {
+		a.logger.Error("failed to register device token", "user_id", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to register device token")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "registered",
+		"token":  trimmed,
+	})
+}
+
+// HandleGetCurrentLeague handles GET /v1/league/current.
+func (a *API) HandleGetCurrentLeague(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	now := time.Now().UTC()
+	weekStart := league.CurrentWeekStart(now)
+
+	standings, err := a.store.GetWeeklyStandings(r.Context(), weekStart)
+	if err != nil {
+		a.logger.Error("failed to query weekly standings", "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve weekly standings")
+		return
+	}
+
+	user, _ := a.store.GetUser(r.Context(), uid)
+	result := league.CalculateStandings(uid, standings, now, user)
+
+	writeJSON(w, http.StatusOK, result)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import '../models/leaderboard_entry.dart';
+import '../models/league_standing.dart';
 import '../models/runner_profile.dart';
 import '../models/territory.dart';
 import '../ui/theme/app_colors.dart';
@@ -324,6 +325,52 @@ class ApiClient {
       statusCode: response.statusCode,
       code: errorBody['error'] ?? 'LEADERBOARD_ERROR',
       message: errorBody['detail'] ?? 'Failed to load leaderboard',
+    );
+  }
+
+  /// Registers an FCM device registration token for push notifications (POST /v1/device-token)
+  Future<void> registerDeviceToken(String token) async {
+    final uri = Uri.parse('$baseUrl/v1/device-token');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'token': token});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+      maxRetries: 2,
+    );
+
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    final errorBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errorBody['error'] ?? 'DEVICE_TOKEN_ERROR',
+      message: errorBody['detail'] ?? 'Failed to register device token',
+    );
+  }
+
+  /// Fetches active weekly league standing and tier thresholds (GET /v1/league/current)
+  Future<LeagueStanding> getCurrentLeague() async {
+    final uri = Uri.parse('$baseUrl/v1/league/current');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+      maxRetries: 2,
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return LeagueStanding.fromJson(data);
+    }
+
+    final errorBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errorBody['error'] ?? 'LEAGUE_ERROR',
+      message: errorBody['detail'] ?? 'Failed to load weekly league standings',
     );
   }
 

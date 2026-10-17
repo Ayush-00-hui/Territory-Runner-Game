@@ -13,20 +13,22 @@ import (
 
 // MemoryStore provides a thread-safe, in-memory implementation of Store for hermetic unit testing.
 type MemoryStore struct {
-	mu          sync.Mutex
-	users       map[string]*User
-	runs        map[string]*Run
-	runsByOrder []string
-	territories map[string]*Territory
+	mu           sync.Mutex
+	users        map[string]*User
+	runs         map[string]*Run
+	runsByOrder  []string
+	territories  map[string]*Territory
+	deviceTokens map[string][]string
 }
 
 // NewMemoryStore initializes an in-memory store.
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		users:       make(map[string]*User),
-		runs:        make(map[string]*Run),
-		runsByOrder: make([]string, 0),
-		territories: make(map[string]*Territory),
+		users:        make(map[string]*User),
+		runs:         make(map[string]*Run),
+		runsByOrder:  make([]string, 0),
+		territories:  make(map[string]*Territory),
+		deviceTokens: make(map[string][]string),
 	}
 }
 
@@ -183,7 +185,12 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 
 	runCopy := *run
 	runCopy.AreaClaimed = areaClaimed
-	runCopy.CreatedAt = time.Now().UTC()
+	if runCopy.Status == "" {
+		runCopy.Status = "accepted"
+	}
+	if runCopy.CreatedAt.IsZero() {
+		runCopy.CreatedAt = time.Now().UTC()
+	}
 	m.runs[run.IdempotencyKey] = &runCopy
 	m.runsByOrder = append(m.runsByOrder, run.IdempotencyKey)
 
@@ -295,5 +302,82 @@ func (m *MemoryStore) GetTerritoryByID(ctx context.Context, id string) (*Territo
 	}
 	copy := *t
 	return &copy, nil
+}
+
+// SaveDeviceToken persists or updates an FCM registration token for a user.
+func (m *MemoryStore) SaveDeviceToken(ctx context.Context, userID, token string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	tokens := m.deviceTokens[userID]
+	for _, tok := range tokens {
+		if tok == token {
+			return nil
+		}
+	}
+	m.deviceTokens[userID] = append(tokens, token)
+	return nil
+}
+
+// GetDeviceTokens returns all active FCM device tokens registered for a user.
+func (m *MemoryStore) GetDeviceTokens(ctx context.Context, userID string) ([]string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	tokens, ok := m.deviceTokens[userID]
+	if !ok {
+		return nil, nil
+	}
+	copied := make([]string, len(tokens))
+	copy(copied, tokens)
+	return copied, nil
+}
+
+// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart.
+func (m *MemoryStore) GetWeeklyStandings(ctx context.Context, weekStart time.Time) ([]WeeklyParticipant, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	type stats struct {
+		area float64
+		runs int
+	}
+	userStats := make(map[string]*stats)
+
+	for _, r := range m.runs {
+		if r.Status == "accepted" && (r.CreatedAt.Equal(weekStart) || r.CreatedAt.After(weekStart)) {
+			s, exists := userStats[r.UserID]
+			if !exists {
+				s = &stats{}
+				userStats[r.UserID] = s
+			}
+			s.area += r.AreaClaimed
+			s.runs++
+		}
+	}
+
+	var participants []WeeklyParticipant
+	for uid, s := range userStats {
+		username := "Runner_" + uid[:min(6, len(uid))]
+		faction := "Cyber Vanguard"
+		if u, exists := m.users[uid]; exists {
+			username = u.Username
+			faction = u.Faction
+		}
+		participants = append(participants, WeeklyParticipant{
+			UserID:        uid,
+			Username:      username,
+			Faction:       faction,
+			WeeklyAreaSqm: s.area,
+			WeeklyRuns:    s.runs,
+		})
+	}
+
+	sort.Slice(participants, func(i, j int) bool {
+		if participants[i].WeeklyAreaSqm != participants[j].WeeklyAreaSqm {
+			return participants[i].WeeklyAreaSqm > participants[j].WeeklyAreaSqm
+		}
+		return participants[i].WeeklyRuns > participants[j].WeeklyRuns
+	})
+
+	return participants, nil
 }
 

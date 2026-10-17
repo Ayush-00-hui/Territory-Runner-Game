@@ -15,6 +15,7 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws"
 )
@@ -66,9 +67,12 @@ func main() {
 	go wsHub.Run()
 	defer wsHub.Stop()
 
+	fcmNotifier := notify.NewFCMClient(dataStore, logger)
+
 	apiHandler := api.NewAPI(dataStore, logger,
 		api.WithCoachService(coachSvc),
 		api.WithWebSocketHub(wsHub),
+		api.WithNotifier(fcmNotifier),
 		api.WithAuthenticator(authenticator),
 		api.WithLimits(cfg.MaxPointsPerRun, cfg.MaxRunDurationSec),
 	)

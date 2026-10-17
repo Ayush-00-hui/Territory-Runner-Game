@@ -73,6 +73,8 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 
 		v1.Get("/territories", api.HandleGetTerritories)
 		v1.Get("/leaderboard", api.HandleGetLeaderboard)
+		v1.Post("/device-token", api.HandleRegisterDeviceToken)
+		v1.Get("/league/current", api.HandleGetCurrentLeague)
 	})
 
 	return r

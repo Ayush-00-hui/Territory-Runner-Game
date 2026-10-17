@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws"
 	"github.com/gorilla/websocket"
@@ -626,4 +628,144 @@ func TestWebSocketOriginValidation(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, resp3.StatusCode)
 	}
 }
+
+func TestRegisterDeviceToken(t *testing.T) {
+	router, memStore := setupTestServer()
+
+	// 1. Success registration
+	body := bytes.NewBufferString(`{"token": "fcm_device_token_abc_123"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/device-token", body)
+	req.Header.Set("X-Dev-User", "runner_device_tester")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]string
+	err := json.Unmarshal(rec.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, "registered", resp["status"])
+	assert.Equal(t, "fcm_device_token_abc_123", resp["token"])
+
+	tokens, err := memStore.GetDeviceTokens(req.Context(), "runner_device_tester")
+	require.NoError(t, err)
+	assert.Contains(t, tokens, "fcm_device_token_abc_123")
+
+	// 2. Empty token rejected
+	emptyBody := bytes.NewBufferString(`{"token": "   "}`)
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/device-token", emptyBody)
+	req2.Header.Set("X-Dev-User", "runner_device_tester")
+	req2.Header.Set("Content-Type", "application/json")
+	rec2 := httptest.NewRecorder()
+
+	router.ServeHTTP(rec2, req2)
+	assert.Equal(t, http.StatusBadRequest, rec2.Code)
+}
+
+func TestGetCurrentLeague(t *testing.T) {
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+
+	// Seed multiple runner profiles and accepted runs in the active week
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "athlete_gold", Username: "SpeedyGold", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "athlete_silver", Username: "SwiftSilver", Faction: "Neon Syndicate"})
+
+	runTime := time.Now().UTC().Add(-1 * time.Hour)
+	_, _ = memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_seed_01",
+		UserID:         "athlete_gold",
+		IdempotencyKey: "idem_seed_01",
+		CreatedAt:      runTime,
+	}, []geo.EnclosedLoop{{AreaSqMeters: 15000.0}}, nil)
+
+	_, _ = memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_seed_02",
+		UserID:         "athlete_silver",
+		IdempotencyKey: "idem_seed_02",
+		CreatedAt:      runTime,
+	}, []geo.EnclosedLoop{{AreaSqMeters: 5000.0}}, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/league/current", nil)
+	req.Header.Set("X-Dev-User", "athlete_gold")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var standing store.LeagueStanding
+	err := json.Unmarshal(rec.Body.Bytes(), &standing)
+	require.NoError(t, err)
+
+	assert.Equal(t, "athlete_gold", standing.UserID)
+	assert.Equal(t, 1, standing.Rank)
+	assert.Equal(t, 15000.0, standing.WeeklyAreaSqm)
+	assert.True(t, standing.SecondsUntilReset > 0)
+	assert.NotEmpty(t, standing.Standings)
+}
+
+func TestConquestTriggersFCMAlert(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+	mockNotifier := notify.NewMockNotifier()
+
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithNotifier(mockNotifier),
+		api.WithAuthenticator(authenticator),
+	)
+	router := api.SetupRouter(apiHandler, authenticator)
+	ctx := context.Background()
+
+	// Seed victim user and existing territory
+	victimUID := "victim_runner_99"
+	_ = memStore.UpsertUser(ctx, &store.User{ID: victimUID, Username: "VictimBob", Faction: "Neon Syndicate"})
+	_, _ = memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_victim_init",
+		UserID:         victimUID,
+		IdempotencyKey: "idem_victim_init",
+		CreatedAt:      time.Now().UTC(),
+	}, []geo.EnclosedLoop{{
+		AreaSqMeters: 4000.0,
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.505, Longitude: -0.120},
+			{Latitude: 51.505, Longitude: -0.115},
+			{Latitude: 51.500, Longitude: -0.115},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+	}}, nil)
+
+	// Submitting a conquest run overlapping victim's territory
+	now := time.Now().UTC()
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_attacker_conquest",
+		DurationSeconds: 400,
+		DistanceMeters:  2000.0,
+		Points: []geo.TrackPoint{
+			{Latitude: 51.498, Longitude: -0.122, Timestamp: now.Add(-300 * time.Second)},
+			{Latitude: 51.507, Longitude: -0.122, Timestamp: now.Add(-200 * time.Second)},
+			{Latitude: 51.507, Longitude: -0.113, Timestamp: now.Add(-100 * time.Second)},
+			{Latitude: 51.498, Longitude: -0.113, Timestamp: now.Add(-50 * time.Second)},
+			{Latitude: 51.498, Longitude: -0.122, Timestamp: now},
+		},
+	}
+	body, _ := json.Marshal(runPayload)
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("X-Dev-User", "attacker_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	// Wait briefly for asynchronous notification goroutine
+	time.Sleep(50 * time.Millisecond)
+
+	// Assert that victim received push notification alert
+	assert.GreaterOrEqual(t, mockNotifier.TotalAlerts(), 1)
+	assert.Equal(t, victimUID, mockNotifier.SentAlerts[0].UserID)
+}
+
 

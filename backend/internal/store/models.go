@@ -66,3 +66,42 @@ type LeaderboardEntry struct {
 	Level        int     `json:"level"`
 	TotalRuns    int     `json:"total_runs"`
 }
+
+// WeeklyParticipant represents aggregated runner performance for the active week.
+type WeeklyParticipant struct {
+	UserID        string  `json:"user_id"`
+	Username      string  `json:"username"`
+	Faction       string  `json:"faction"`
+	WeeklyAreaSqm float64 `json:"weekly_area_sqm"`
+	WeeklyRuns    int     `json:"weekly_runs"`
+}
+
+// LeagueStanding encapsulates full weekly league standings, tier bracket, and promotion/relegation thresholds.
+type LeagueStanding struct {
+	UserID               string              `json:"user_id"`
+	Username             string              `json:"username"`
+	Faction              string              `json:"faction"`
+	Tier                 string              `json:"tier"` // "Diamond", "Gold", "Silver", "Bronze"
+	Rank                 int                 `json:"rank"`
+	TotalParticipants    int                 `json:"total_participants"`
+	WeeklyAreaSqm        float64             `json:"weekly_area_sqm"`
+	WeeklyRuns           int                 `json:"weekly_runs"`
+	PromotionRankCutoff  int                 `json:"promotion_rank_cutoff"`
+	RelegationRankCutoff int                 `json:"relegation_rank_cutoff"`
+	ResetAt              time.Time           `json:"reset_at"`
+	SecondsUntilReset    int64               `json:"seconds_until_reset"`
+	Standings            []LeagueParticipant `json:"standings"`
+}
+
+// LeagueParticipant represents an individual participant in the current weekly league table.
+type LeagueParticipant struct {
+	Rank          int     `json:"rank"`
+	UserID        string  `json:"user_id"`
+	Username      string  `json:"username"`
+	Faction       string  `json:"faction"`
+	Tier          string  `json:"tier"`
+	WeeklyAreaSqm float64 `json:"weekly_area_sqm"`
+	WeeklyRuns    int     `json:"weekly_runs"`
+	IsCurrentUser bool    `json:"is_current_user"`
+}
+

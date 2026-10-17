@@ -8,12 +8,13 @@ import 'features/profile/widgets/profile_dialogs.dart';
 import 'features/profile/widgets/profile_hero.dart';
 import 'features/profile/widgets/settings_list.dart';
 import 'features/profile/widgets/stat_grid.dart';
+import 'features/profile/widgets/weekly_league_view.dart';
 import 'models/runner_profile.dart';
 import 'models/territory.dart';
 import 'services/firebase_service.dart';
 import 'ui/ui.dart';
 
-enum ProfileTab { athlete, turfWar }
+enum ProfileTab { athlete, turfWar, league }
 
 class ProfilePage extends StatefulWidget {
   final RunnerProfile? initialProfile;
@@ -142,15 +143,22 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                   Expanded(
                     child: _buildSegmentButton(
                       tab: ProfileTab.athlete,
-                      label: 'ATHLETE PROFILE',
+                      label: 'ATHLETE',
                       icon: Icons.person_rounded,
                     ),
                   ),
                   Expanded(
                     child: _buildSegmentButton(
                       tab: ProfileTab.turfWar,
-                      label: 'FACTION TURF WAR',
+                      label: 'TURF WAR',
                       icon: Icons.shield_rounded,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildSegmentButton(
+                      tab: ProfileTab.league,
+                      label: 'LEAGUE',
+                      icon: Icons.leaderboard_rounded,
                     ),
                   ),
                 ],
@@ -228,12 +236,15 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 territoryService: _territoryService,
                 onOpenAuth: _openAuthDialog,
               ),
-            ] else ...[
+            ] else if (_activeTab == ProfileTab.turfWar) ...[
               // --- FACTION LEADERBOARD & TURF WAR DOMINANCE ---
               FactionLeaderboard(
                 profile: profile,
                 territories: territories,
               ),
+            ] else ...[
+              // --- WEEKLY LEAGUE STANDINGS & CUTOFFS ---
+              const WeeklyLeagueView(),
             ],
           ],
         ),

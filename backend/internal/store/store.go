@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 )
@@ -42,6 +43,15 @@ type Store interface {
 
 	// GetLeaderboard returns runners ordered descending by total claimed sovereign area.
 	GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error)
+
+	// SaveDeviceToken persists or updates an FCM registration token for a user.
+	SaveDeviceToken(ctx context.Context, userID, token string) error
+
+	// GetDeviceTokens returns all active FCM device tokens registered for a user.
+	GetDeviceTokens(ctx context.Context, userID string) ([]string, error)
+
+	// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart.
+	GetWeeklyStandings(ctx context.Context, weekStart time.Time) ([]WeeklyParticipant, error)
 
 	// Ping checks database connectivity.
 	Ping(ctx context.Context) error

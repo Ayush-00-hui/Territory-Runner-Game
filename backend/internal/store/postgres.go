@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 	"github.com/jackc/pgx/v5"
@@ -438,6 +439,69 @@ func (s *PostgresStore) GetTerritoryByID(ctx context.Context, id string) (*Terri
 		return nil, fmt.Errorf("error querying territory by id: %w", err)
 	}
 	return &t, nil
+}
+
+// SaveDeviceToken persists or updates an FCM registration token for a user.
+func (s *PostgresStore) SaveDeviceToken(ctx context.Context, userID, token string) error {
+	query := `
+		INSERT INTO device_tokens (user_id, token, updated_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (user_id, token) DO UPDATE SET updated_at = NOW();
+	`
+	_, err := s.pool.Exec(ctx, query, userID, token)
+	return err
+}
+
+// GetDeviceTokens returns all active FCM device tokens registered for a user.
+func (s *PostgresStore) GetDeviceTokens(ctx context.Context, userID string) ([]string, error) {
+	query := `
+		SELECT token
+		FROM device_tokens
+		WHERE user_id = $1
+		ORDER BY updated_at DESC;
+	`
+	rows, err := s.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tokens []string
+	for rows.Next() {
+		var tok string
+		if err := rows.Scan(&tok); err == nil && tok != "" {
+			tokens = append(tokens, tok)
+		}
+	}
+	return tokens, nil
+}
+
+// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart.
+func (s *PostgresStore) GetWeeklyStandings(ctx context.Context, weekStart time.Time) ([]WeeklyParticipant, error) {
+	query := `
+		SELECT r.user_id, u.username, u.faction, COALESCE(SUM(r.area_claimed), 0.0) AS weekly_area, COUNT(r.id) AS weekly_runs
+		FROM runs r
+		JOIN users u ON u.id = r.user_id
+		WHERE r.created_at >= $1
+		  AND r.status = 'accepted'
+		GROUP BY r.user_id, u.username, u.faction
+		ORDER BY weekly_area DESC, weekly_runs DESC;
+	`
+	rows, err := s.pool.Query(ctx, query, weekStart)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var standings []WeeklyParticipant
+	for rows.Next() {
+		var p WeeklyParticipant
+		if err := rows.Scan(&p.UserID, &p.Username, &p.Faction, &p.WeeklyAreaSqm, &p.WeeklyRuns); err != nil {
+			return nil, err
+		}
+		standings = append(standings, p)
+	}
+	return standings, nil
 }
 
 func polygonToWKT(ring []geo.LatLng) string {
