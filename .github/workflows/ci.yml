@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, feature/go-backend, feature/mechanics-v2, feature/hardening-v3 ]
+    branches: [ main, feature/go-backend, feature/mechanics-v2, feature/hardening-v3, feature/complete-v4, ui-premium-v2 ]
   pull_request:
-    branches: [ main, feature/go-backend, feature/mechanics-v2, feature/hardening-v3 ]
+    branches: [ main, feature/go-backend, feature/mechanics-v2, feature/hardening-v3, feature/complete-v4, ui-premium-v2 ]
 
 jobs:
   flutter_test:

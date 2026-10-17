@@ -21,13 +21,9 @@ void showProfileAuthModal(
   String? verificationId;
   bool isLoading = false;
 
-  showModalBottomSheet(
+  AppSheet.show(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.bgElevated,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (ctx) {
       return StatefulBuilder(
         builder: (context, setModalState) {
@@ -35,7 +31,7 @@ void showProfileAuthModal(
             padding: EdgeInsets.only(
               left: 20,
               right: 20,
-              top: 20,
+              top: 12,
               bottom: MediaQuery.of(context).viewInsets.bottom + 24,
             ),
             child: SingleChildScrollView(
@@ -45,11 +41,11 @@ void showProfileAuthModal(
                 children: [
                   Center(
                     child: Container(
-                      width: 44,
+                      width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(10),
+                        color: AppColors.disabled,
+                        borderRadius: AppRadius.brFull,
                       ),
                     ),
                   ),
@@ -64,7 +60,7 @@ void showProfileAuthModal(
                           Text(
                             'ATHLETE CLOUD SYNC',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               fontSize: 17,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.1,
@@ -73,7 +69,7 @@ void showProfileAuthModal(
                         ],
                       ),
                       IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white60),
+                        icon: const Icon(Icons.close, color: AppColors.textSecondary),
                         onPressed: () => Navigator.pop(ctx),
                       ),
                     ],
@@ -108,7 +104,7 @@ void showProfileAuthModal(
                                 child: Text(
                                   '📱 Mobile OTP',
                                   style: TextStyle(
-                                    color: authMode == 0 ? Colors.black : AppColors.textSecondary,
+                                    color: authMode == 0 ? AppColors.onAccent : AppColors.textSecondary,
                                     fontWeight: FontWeight.w800,
                                     fontSize: 13,
                                   ),
@@ -134,7 +130,7 @@ void showProfileAuthModal(
                                 child: Text(
                                   '✉️ Email Login',
                                   style: TextStyle(
-                                    color: authMode == 1 ? Colors.black : AppColors.textSecondary,
+                                    color: authMode == 1 ? AppColors.onAccent : AppColors.textSecondary,
                                     fontWeight: FontWeight.w800,
                                     fontSize: 13,
                                   ),
@@ -159,7 +155,7 @@ void showProfileAuthModal(
                       TextField(
                         controller: phoneController,
                         keyboardType: TextInputType.phone,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
                           labelText: 'Mobile Number (+ country code e.g. +91...)',
                           labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 12),
@@ -174,7 +170,7 @@ void showProfileAuthModal(
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accent,
-                          foregroundColor: Colors.black,
+                          foregroundColor: AppColors.onAccent,
                           minimumSize: const Size.fromHeight(52),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
@@ -183,9 +179,7 @@ void showProfileAuthModal(
                             : () async {
                                 String phone = phoneController.text.trim();
                                 if (phone.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please enter a phone number with country code (e.g. +91...)')),
-                                  );
+                                  AppToast.show(context, 'Please enter a phone number with country code (e.g. +91...)', type: AppToastType.warning);
                                   return;
                                 }
                                 if (!phone.startsWith('+')) {
@@ -201,9 +195,7 @@ void showProfileAuthModal(
                                         codeSent = true;
                                         isLoading = false;
                                       });
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('SMS OTP code sent to $phone')),
-                                      );
+                                      AppToast.show(context, 'SMS OTP code sent to $phone', type: AppToastType.success);
                                     },
                                     onVerificationFailed: (e) {
                                       setModalState(() => isLoading = false);
@@ -212,7 +204,7 @@ void showProfileAuthModal(
                                         builder: (dialogCtx) => AlertDialog(
                                           backgroundColor: AppColors.surface,
                                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                          title: const Text('Athlete Auth Notice', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                          title: const Text('Athlete Auth Notice', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
                                           content: Text(
                                             'Firebase returned: ${e.message ?? e.code}\n\n'
                                             'To authenticate seamlessly in testing, you can tap Demo Login below.',
@@ -224,7 +216,7 @@ void showProfileAuthModal(
                                               child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
                                             ),
                                             ElevatedButton(
-                                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: Colors.black),
+                                              style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent, foregroundColor: AppColors.onAccent),
                                               onPressed: () async {
                                                 Navigator.pop(dialogCtx);
                                                 final profile = territoryService.getProfile();
@@ -233,9 +225,7 @@ void showProfileAuthModal(
                                                 if (context.mounted) {
                                                   Navigator.pop(ctx);
                                                   onProfileUpdated();
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(content: Text('⚡ Athlete Profile Synced!')),
-                                                  );
+                                                  AppToast.show(context, '⚡ Athlete Profile Synced!', type: AppToastType.success);
                                                 }
                                               },
                                               child: const Text('Demo Login', style: TextStyle(fontWeight: FontWeight.bold)),
@@ -251,14 +241,12 @@ void showProfileAuthModal(
                                 } catch (e) {
                                   setModalState(() => isLoading = false);
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
-                                    );
+                                    AppToast.show(context, 'Error: $e', type: AppToastType.error);
                                   }
                                 }
                               },
                         child: isLoading
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onAccent))
                             : const Text('Send SMS Verification Code', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                       ),
                     ] else ...[
@@ -272,11 +260,11 @@ void showProfileAuthModal(
                         keyboardType: TextInputType.number,
                         maxLength: 6,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
                         decoration: InputDecoration(
                           counterText: '',
                           hintText: '••••••',
-                          hintStyle: const TextStyle(color: Colors.white24),
+                          hintStyle: const TextStyle(color: AppColors.disabled),
                           filled: true,
                           fillColor: AppColors.surface,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
@@ -287,7 +275,7 @@ void showProfileAuthModal(
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accent,
-                          foregroundColor: Colors.black,
+                          foregroundColor: AppColors.onAccent,
                           minimumSize: const Size.fromHeight(52),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
@@ -296,9 +284,7 @@ void showProfileAuthModal(
                             : () async {
                                 final smsCode = otpController.text.trim();
                                 if (smsCode.length < 6 || verificationId == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please enter the 6-digit code')),
-                                  );
+                                  AppToast.show(context, 'Please enter the 6-digit code', type: AppToastType.warning);
                                   return;
                                 }
                                 setModalState(() => isLoading = true);
@@ -311,21 +297,17 @@ void showProfileAuthModal(
                                   if (context.mounted) {
                                     Navigator.pop(ctx);
                                     onProfileUpdated();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('⚡ Athlete Profile Synced & Connected!')),
-                                    );
+                                    AppToast.show(context, '⚡ Athlete Profile Synced & Connected!', type: AppToastType.success);
                                   }
                                 } catch (e) {
                                   setModalState(() => isLoading = false);
                                   if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Verification error: $e')),
-                                    );
+                                    AppToast.show(context, 'Verification error: $e', type: AppToastType.error);
                                   }
                                 }
                               },
                         child: isLoading
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
+                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onAccent))
                             : const Text('Verify Code & Connect', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
                       ),
                       TextButton(
@@ -342,7 +324,7 @@ void showProfileAuthModal(
                     if (isSignUp) ...[
                       TextField(
                         controller: nameController,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: AppColors.textPrimary),
                         decoration: InputDecoration(
                           labelText: 'Athlete Display Name',
                           labelStyle: const TextStyle(color: AppColors.textMuted),
@@ -356,7 +338,7 @@ void showProfileAuthModal(
                     ],
                     TextField(
                       controller: emailController,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.textPrimary),
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: 'Email Address',
@@ -371,7 +353,7 @@ void showProfileAuthModal(
                     TextField(
                       controller: passController,
                       obscureText: true,
-                      style: const TextStyle(color: Colors.white),
+                      style: const TextStyle(color: AppColors.textPrimary),
                       decoration: InputDecoration(
                         labelText: 'Password',
                         labelStyle: const TextStyle(color: AppColors.textMuted),
@@ -385,7 +367,7 @@ void showProfileAuthModal(
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.black,
+                        foregroundColor: AppColors.onAccent,
                         minimumSize: const Size.fromHeight(52),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
@@ -406,15 +388,11 @@ void showProfileAuthModal(
                           if (context.mounted) {
                             Navigator.pop(ctx);
                             onProfileUpdated();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('⚡ Athlete Account Synced!')),
-                            );
+                            AppToast.show(context, '⚡ Athlete Account Synced!', type: AppToastType.success);
                           }
                         } catch (e) {
                           if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Auth error: $e')),
-                            );
+                            AppToast.show(context, 'Auth error: $e', type: AppToastType.error);
                           }
                         }
                       },

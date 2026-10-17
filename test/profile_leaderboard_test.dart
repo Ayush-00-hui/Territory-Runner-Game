@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:territory_runner/features/coach/voice_coach_service.dart';
 import 'package:territory_runner/features/gameplay/territory_service.dart';
 import 'package:territory_runner/features/profile/widgets/challenges_shelf.dart';
@@ -16,6 +17,12 @@ import 'package:territory_runner/services/firebase_service.dart';
 import 'package:territory_runner/ui/ui.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('Phase 4: Athlete Hub, Challenges Shelf & Faction Turf War Tests', () {
     final testProfile = RunnerProfile(
       id: 'athlete_unit_01',

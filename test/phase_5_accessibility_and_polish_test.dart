@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:territory_runner/features/map/widgets/amoled_battery_saver_overlay.dart';
 import 'package:territory_runner/features/map/widgets/hold_to_finish_button.dart';
 import 'package:territory_runner/features/map/widgets/run_hud.dart';
@@ -11,10 +12,15 @@ import 'package:territory_runner/ui/ui.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  setUpAll(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('Phase 5: Battery Saver Service Tests', () {
     final batteryService = BatterySaverService();
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       batteryService.resetForTest(enabled: false);
     });
 

@@ -5,13 +5,8 @@ import '../../../services/tile_cache_service.dart';
 import '../../../ui/ui.dart';
 
 void showOfflineMapsSheet(BuildContext context) {
-  showModalBottomSheet(
+  AppSheet.show(
     context: context,
-    backgroundColor: AppColors.bgElevated,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (ctx) => const _OfflineMapsSheet(),
   );
 }
@@ -80,18 +75,19 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
       await _refreshStats();
       if (mounted) {
         setState(() => _isDownloading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.surface,
-            content: Text('Offline sector cached! Added $newTiles map tiles.', style: const TextStyle(color: AppColors.accent)),
-          ),
+        AppToast.show(
+          context,
+          'Offline sector cached! Added $newTiles map tiles.',
+          type: AppToastType.success,
         );
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isDownloading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not download sector: $e')),
+        AppToast.show(
+          context,
+          'Could not download sector: $e',
+          type: AppToastType.error,
         );
       }
     }
@@ -101,9 +97,7 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
     await _cacheService.clearCache();
     await _refreshStats();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Offline map cache purged.')),
-      );
+      AppToast.show(context, 'Offline map cache purged.');
     }
   }
 
@@ -126,9 +120,9 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
         children: [
           Center(
             child: Container(
-              width: 44,
+              width: 36,
               height: 4,
-              decoration: BoxDecoration(color: AppColors.borderSubtle, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.disabled, borderRadius: AppRadius.brFull),
             ),
           ),
           const SizedBox(height: AppSpacing.s16),

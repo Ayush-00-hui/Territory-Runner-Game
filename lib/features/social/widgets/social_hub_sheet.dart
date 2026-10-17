@@ -11,10 +11,9 @@ Future<void> showSocialHubSheet(
   ApiClient? apiClient,
   String? currentUserId,
 }) {
-  return showModalBottomSheet(
+  return AppSheet.show<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: Colors.transparent,
     builder: (context) => FractionallySizedBox(
       heightFactor: 0.9,
       child: SocialHubSheet(
@@ -38,10 +37,9 @@ class SocialHubSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.bgDeep,
-        borderRadius: const BorderRadius.vertical(top: AppSpacing.r24),
-        border: Border.all(color: AppColors.border),
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.vertical(top: AppSpacing.r24),
       ),
       child: SafeArea(
         top: false,
@@ -51,11 +49,11 @@ class SocialHubSheet extends StatelessWidget {
             // Handle bar
             Center(
               child: Container(
-                width: 40,
+                width: 36,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: AppColors.textMuted.withValues(alpha: 0.4),
-                  borderRadius: AppSpacing.brFull,
+                  color: AppColors.disabled,
+                  borderRadius: AppRadius.brFull,
                 ),
               ),
             ),

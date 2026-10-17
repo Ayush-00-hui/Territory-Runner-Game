@@ -131,13 +131,8 @@ class NotificationService {
 
     if (!context.mounted) return false;
 
-    final accepted = await showModalBottomSheet<bool>(
+    final accepted = await AppSheet.show<bool?>(
       context: context,
-      backgroundColor: AppColors.bgElevated,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
       builder: (ctx) => const _PermissionPrimerSheet(),
     );
 
@@ -209,11 +204,11 @@ class _PermissionPrimerSheet extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              width: 44,
+              width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
+                color: AppColors.disabled,
+                borderRadius: AppRadius.brFull,
               ),
             ),
           ),
@@ -226,7 +221,7 @@ class _PermissionPrimerSheet extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.15),
+                  color: AppColors.accentContainer,
                   shape: BoxShape.circle,
                   border: Border.all(color: AppColors.accent.withValues(alpha: 0.4), width: 1.5),
                 ),
@@ -304,7 +299,7 @@ class _PermissionPrimerSheet extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
+                    foregroundColor: AppColors.textSecondary,
                     side: const BorderSide(color: AppColors.border),
                     shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -319,7 +314,7 @@ class _PermissionPrimerSheet extends StatelessWidget {
                 child: FilledButton(
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.black,
+                    foregroundColor: AppColors.onAccent,
                     shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
@@ -349,7 +344,7 @@ class _PermissionPrimerSheet extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppText.bodyBold.copyWith(fontSize: 12, color: Colors.white),
+                style: AppText.bodyBold.copyWith(fontSize: 12, color: AppColors.textPrimary),
               ),
               Text(
                 description,

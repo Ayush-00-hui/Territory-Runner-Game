@@ -7,13 +7,8 @@ import '../../../services/privacy_zone_service.dart';
 import '../../../ui/ui.dart';
 
 void showPrivacyZonesSheet(BuildContext context) {
-  showModalBottomSheet(
+  AppSheet.show(
     context: context,
-    backgroundColor: AppColors.bgElevated,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
     builder: (ctx) => const _PrivacyZonesSheet(),
   );
 }
@@ -65,9 +60,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLocating = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to acquire GPS location: $e')),
-        );
+        AppToast.show(context, 'Failed to acquire GPS location: $e', type: AppToastType.error);
       }
     }
   }
@@ -94,11 +87,10 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
         _nameController.text = 'Office';
         _selectedCoordinates = null;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.surface,
-          content: Text('Privacy zone "$name" created. Tracks will be masked.', style: const TextStyle(color: AppColors.accent)),
-        ),
+      AppToast.show(
+        context,
+        'Privacy zone "$name" created. Tracks will be masked.',
+        type: AppToastType.success,
       );
     }
   }
@@ -119,9 +111,9 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
           children: [
             Center(
               child: Container(
-                width: 44,
+                width: 36,
                 height: 4,
-                decoration: BoxDecoration(color: AppColors.borderSubtle, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: AppColors.disabled, borderRadius: AppRadius.brFull),
               ),
             ),
             const SizedBox(height: AppSpacing.s16),
@@ -269,7 +261,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                           child: FilledButton(
                             style: FilledButton.styleFrom(
                               backgroundColor: AppColors.accent,
-                              foregroundColor: Colors.black,
+                              foregroundColor: AppColors.onAccent,
                               shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                             ),
                             onPressed: _saveNewZone,
