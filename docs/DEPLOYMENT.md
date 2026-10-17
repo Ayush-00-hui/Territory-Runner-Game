@@ -49,6 +49,7 @@ To stay well within free-tier connection limits while maintaining concurrency:
 Migrations are stored under `backend/migrations/`:
 - `000001_init_schema.up.sql`: Initial PostGIS extension, `users`, `territories`, `runs`, and GiST spatial indices.
 - `000002_add_territory_strength.up.sql`: Territory decay fortifications (`strength`, `last_defended_at`).
+- `000003_add_device_tokens.up.sql`: FCM push notification device registration tokens (`device_tokens`).
 
 ### Option A: Via `golang-migrate` CLI (Automated CI/CD)
 ```bash
@@ -63,6 +64,7 @@ migrate -path backend/migrations -database "$DATABASE_URL" up
 Execute the files sequentially in the dashboard SQL editor:
 1. Run `backend/migrations/000001_init_schema.up.sql`
 2. Run `backend/migrations/000002_add_territory_strength.up.sql`
+3. Run `backend/migrations/000003_add_device_tokens.up.sql`
 
 Both migration scripts use `IF NOT EXISTS` guards and idempotent constraints, ensuring zero downtime and safe re-application.
 
