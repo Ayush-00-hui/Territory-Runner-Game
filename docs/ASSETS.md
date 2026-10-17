@@ -10,10 +10,7 @@ All sound effects bundled in Territory Runner are procedurally synthesized harmo
 
 | Asset File | Duration | Format | Audio Description | Source / Generator | License |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `run_start.wav` | 0.6s | 22.05 kHz 16-bit Mono PCM | Rising tactical dual-tone chime (440 Hz $\to$ 880 Hz) indicating GPS workout tracking activation. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
-| `loop_capture.wav` | 0.9s | 22.05 kHz 16-bit Mono PCM | Triumphant 3-note arpeggio (C5 $\to$ E5 $\to$ G5) signaling closed loop territorial conquest. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
-| `attack_alert.wav` | 0.6s | 22.05 kHz 16-bit Mono PCM | Pulsed dual-frequency caution ping (880 Hz / 587 Hz) alerting athlete of rival sector encroachment. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
-| `run_complete.wav` | 1.2s | 22.05 kHz 16-bit Mono PCM | Harmonic 4-voice victory chord (C5 + E5 + G5 + C6) with exponential decay for workout conclusion. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
+| `sos_siren.wav` | 0.6s (loopable) | 22.05 kHz 16-bit Mono PCM | High-intensity pulsed dual-frequency siren (880 Hz / 587 Hz) for SafetyService emergency SOS distress beacon. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
 
 ---
 

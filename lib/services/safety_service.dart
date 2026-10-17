@@ -134,7 +134,7 @@ class SafetyService {
       _sirenPlayer ??= AudioPlayer();
       await _sirenPlayer!.setReleaseMode(ReleaseMode.loop);
       await _sirenPlayer!.setVolume(1.0);
-      await _sirenPlayer!.play(AssetSource('audio/attack_alert.wav'));
+      await _sirenPlayer!.play(AssetSource('audio/sos_siren.wav'));
     } catch (e) {
       debugPrint('[SafetyService] Error playing tactical siren: $e');
     }
