@@ -38,7 +38,6 @@ import 'widgets/loop_celebration_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
 import 'widgets/amoled_battery_saver_overlay.dart';
-import '../../ui/ui.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
