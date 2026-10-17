@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/activity_type.dart';
 
 /// Simulation modes for desktop, browser, and indoor development
 enum VirtualPacerMode {
@@ -106,8 +107,8 @@ class LocationService {
   /// High-Precision Jitter & Multipath Outlier Filtering:
   /// 1. Reject fixes with satellite accuracy dilution > 30 meters.
   /// 2. Suppress stationary GPS wandering (displacement < 1.8m when velocity < 2.0 km/h).
-  /// 3. Discard satellite multipath outliers > 35 km/h (unless Zero-G mode is active).
-  bool isValidFix(Position newPos, Position? lastPos, {bool isZeroG = false}) {
+  /// 3. Discard satellite multipath outliers exceeding activity speed ceiling (unless Zero-G mode is active).
+  bool isValidFix(Position newPos, Position? lastPos, {bool isZeroG = false, ExerciseActivityType exerciseActivity = ExerciseActivityType.running}) {
     // 1. Accuracy dilution gate
     if (newPos.accuracy > 30.0) {
       return false;
@@ -132,8 +133,9 @@ class LocationService {
       return false;
     }
 
-    // 3. Satellite multipath outlier gate: discard impossible spikes > 35 km/h unless Zero-G is active
-    if (!isZeroG && (calculatedSpeedKmh > 35.0 || (newPos.speed * 3.6 > 35.0 && timeDeltaSeconds < 5.0))) {
+    // 3. Activity-specific speed ceiling gate (with 2.0 km/h buffer for GNSS precision noise)
+    final maxSpeed = exerciseActivity.maxSpeedKmh + 2.0;
+    if (!isZeroG && (calculatedSpeedKmh > maxSpeed || (newPos.speed * 3.6 > maxSpeed && timeDeltaSeconds < 5.0))) {
       return false;
     }
 
@@ -173,7 +175,12 @@ class LocationService {
     }
   }
 
-  void startTracking({bool isZeroG = false, String? liveStatusText}) async {
+  ExerciseActivityType currentActivity = ExerciseActivityType.running;
+
+  void startTracking({bool isZeroG = false, String? liveStatusText, ExerciseActivityType? activityType}) async {
+    if (activityType != null) {
+      currentActivity = activityType;
+    }
     if (_pacerMode != VirtualPacerMode.none) {
       _startSimulation();
       return;
@@ -197,7 +204,7 @@ class LocationService {
       _positionStreamSubscription = Geolocator.getPositionStream(
         locationSettings: locationSettings,
       ).listen((Position position) {
-        if (isValidFix(position, _lastValidPosition, isZeroG: isZeroG)) {
+        if (isValidFix(position, _lastValidPosition, isZeroG: isZeroG, exerciseActivity: currentActivity)) {
           _lastValidPosition = position;
           _locationController.add(position);
         }

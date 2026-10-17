@@ -292,6 +292,7 @@ func (a *API) HandleUpdatePrivacyZones(w http.ResponseWriter, r *http.Request) {
 // SubmitRunRequest defines the payload for POST /v1/runs.
 type SubmitRunRequest struct {
 	IdempotencyKey  string           `json:"idempotency_key"`
+	ActivityType    string           `json:"activity_type,omitempty"`
 	Points          []geo.TrackPoint `json:"points"`
 	DurationSeconds int              `json:"duration_seconds"`
 	DistanceMeters  float64          `json:"distance_meters"`
@@ -327,6 +328,15 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 
 	if req.IdempotencyKey == "" {
 		writeError(w, http.StatusBadRequest, "MISSING_KEY", "idempotency_key is required")
+		return
+	}
+
+	activityType := strings.ToLower(strings.TrimSpace(req.ActivityType))
+	if activityType == "" {
+		activityType = "running"
+	}
+	if activityType != "running" && activityType != "walking" && activityType != "cycling" {
+		writeError(w, http.StatusBadRequest, "INVALID_ACTIVITY_TYPE", "Activity type must be 'running', 'walking', or 'cycling'")
 		return
 	}
 
@@ -372,10 +382,10 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Anti-cheat / GPS Anomaly Detection & Spoofing Mitigation
-	anomalyRes := a.detector.EvaluateTrack(req.Points)
+	// 2. Anti-cheat / GPS Anomaly Detection & Spoofing Mitigation (activity-aware)
+	anomalyRes := a.detector.EvaluateTrackWithActivity(req.Points, activityType)
 	if anomalyRes.IsAnomaly && anomalyRes.Score >= 50.0 {
-		a.logger.Warn("run rejected due to critical anomaly", "score", anomalyRes.Score, "reasons", anomalyRes.Reasons)
+		a.logger.Warn("run rejected due to critical anomaly", "score", anomalyRes.Score, "reasons", anomalyRes.Reasons, "activity_type", activityType)
 		writeError(w, http.StatusUnprocessableEntity, "ANOMALY_REJECTED", strings.Join(anomalyRes.Reasons, "; "))
 		return
 	}
@@ -399,6 +409,7 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		ID:              runID,
 		UserID:          uid,
 		IdempotencyKey:  req.IdempotencyKey,
+		ActivityType:    activityType,
 		DurationSeconds: req.DurationSeconds,
 		DistanceMeters:  req.DistanceMeters,
 		AnomalyScore:    anomalyRes.Score,

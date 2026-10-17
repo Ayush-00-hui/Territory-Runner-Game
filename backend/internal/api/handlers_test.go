@@ -1059,5 +1059,102 @@ func TestPrivacyZonesEndpoints(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "INVALID_RADIUS")
 }
 
+func TestSubmitRunActivityTypeValidationAndSpeedCeiling(t *testing.T) {
+	router, _ := setupTestServer()
+	now := time.Now().UTC()
+
+	// Loop points in London
+	loopPoints := []geo.TrackPoint{
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now, Speed: 2.5},
+		{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute), Speed: 2.5},
+		{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute), Speed: 2.5},
+		{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute), Speed: 2.5},
+		{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute), Speed: 2.5},
+	}
+
+	// 1. Reject invalid activity type
+	invalidReq := api.SubmitRunRequest{
+		IdempotencyKey:  "run_invalid_act",
+		ActivityType:    "hovercraft",
+		DurationSeconds: 240,
+		DistanceMeters:  400.0,
+		Points:          loopPoints,
+	}
+	body, _ := json.Marshal(invalidReq)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "act_runner_1")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "INVALID_ACTIVITY_TYPE")
+
+	// 2. Reject cycling speed (>25 km/h, e.g. 8.3 m/s = 30 km/h) when declared as running
+	cyclingPoints := []geo.TrackPoint{
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now, Speed: 8.3},
+		{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second), Speed: 8.3},
+		{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(20 * time.Second), Speed: 8.3},
+		{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(30 * time.Second), Speed: 8.3},
+		{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(40 * time.Second), Speed: 8.3},
+	}
+	runningCyclingReq := api.SubmitRunRequest{
+		IdempotencyKey:  "run_cycling_as_running",
+		ActivityType:    "running",
+		DurationSeconds: 40,
+		DistanceMeters:  400.0,
+		Points:          cyclingPoints,
+	}
+	body, _ = json.Marshal(runningCyclingReq)
+	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "act_runner_1")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	assert.Contains(t, rec.Body.String(), "ANOMALY_REJECTED")
+	assert.Contains(t, rec.Body.String(), "exceeds human running ceiling")
+
+	// 3. Accept same cycling speed when legitimately declared as cycling
+	cyclingLegitReq := api.SubmitRunRequest{
+		IdempotencyKey:  "run_cycling_legit",
+		ActivityType:    "cycling",
+		DurationSeconds: 40,
+		DistanceMeters:  400.0,
+		Points:          cyclingPoints,
+	}
+	body, _ = json.Marshal(cyclingLegitReq)
+	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "act_runner_1")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+	var captureRes store.CaptureResult
+	err := json.Unmarshal(rec.Body.Bytes(), &captureRes)
+	require.NoError(t, err)
+	assert.Equal(t, "cycling", captureRes.ActivityType)
+	assert.True(t, captureRes.LoopDetected)
+
+	// 4. Accept legitimate running activity
+	normalRunReq := api.SubmitRunRequest{
+		IdempotencyKey:  "run_normal_running",
+		ActivityType:    "running",
+		DurationSeconds: 240,
+		DistanceMeters:  400.0,
+		Points:          loopPoints,
+	}
+	body, _ = json.Marshal(normalRunReq)
+	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "act_runner_1")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+	var normalRes store.CaptureResult
+	err = json.Unmarshal(rec.Body.Bytes(), &normalRes)
+	require.NoError(t, err)
+	assert.Equal(t, "running", normalRes.ActivityType)
+}
+
 
 

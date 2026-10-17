@@ -163,6 +163,7 @@ class ApiClient {
     required List<LatLng> points,
     required int durationSeconds,
     required double distanceMeters,
+    String activityType = 'running',
     double? clientPreviewArea,
     int? clientPreviewXp,
   }) async {
@@ -172,6 +173,7 @@ class ApiClient {
     final now = DateTime.now();
     final body = jsonEncode({
       'idempotency_key': idempotencyKey,
+      'activity_type': activityType,
       'duration_seconds': durationSeconds,
       'distance_meters': distanceMeters,
       'client_preview': {

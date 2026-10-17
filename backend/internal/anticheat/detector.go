@@ -3,6 +3,7 @@ package anticheat
 import (
 	"fmt"
 	"math"
+	"strings"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 )
@@ -13,6 +14,32 @@ type Result struct {
 	Score     float64            `json:"score"`
 	Reasons   []string           `json:"reasons"`
 	Features  map[string]float64 `json:"features,omitempty"`
+}
+
+// ActivityLimits defines realistic human kinematics ceilings for a specific exercise activity.
+type ActivityLimits struct {
+	MaxInstantSpeedKmh float64
+	MaxAverageSpeedKmh float64
+	MaxTeleportSpeed   float64
+}
+
+// DefaultActivityLimits maps each supported activity type to its calibrated limits.
+var DefaultActivityLimits = map[string]ActivityLimits{
+	"running": {
+		MaxInstantSpeedKmh: 25.0, // Human sprinting/distance ceiling
+		MaxAverageSpeedKmh: 22.0, // World record marathon pace is ~20.9 km/h
+		MaxTeleportSpeed:   35.0,
+	},
+	"walking": {
+		MaxInstantSpeedKmh: 10.0, // Walking pace ceiling (jogging starts > 9-10 km/h)
+		MaxAverageSpeedKmh: 8.5,
+		MaxTeleportSpeed:   15.0,
+	},
+	"cycling": {
+		MaxInstantSpeedKmh: 50.0, // Urban/road cycling ceiling
+		MaxAverageSpeedKmh: 40.0, // Peloton average ceiling
+		MaxTeleportSpeed:   65.0,
+	},
 }
 
 // Config stores calibrated statistical baselines and deterministic thresholds.
@@ -54,14 +81,28 @@ func NewDetector(cfg ...Config) *Detector {
 	return &Detector{cfg: c}
 }
 
-// EvaluateTrack evaluates a sequence of GPS breadcrumbs for potential spoofing or physics violations.
+// EvaluateTrack evaluates a sequence of GPS breadcrumbs for potential spoofing or physics violations assuming running.
 func (d *Detector) EvaluateTrack(points []geo.TrackPoint) Result {
+	return d.EvaluateTrackWithActivity(points, "running")
+}
+
+// EvaluateTrackWithActivity evaluates GPS points against activity-specific speed and kinematics limits.
+func (d *Detector) EvaluateTrackWithActivity(points []geo.TrackPoint, activityType string) Result {
 	if len(points) == 0 {
 		return Result{
 			IsAnomaly: false,
 			Score:     0.0,
 			Reasons:   []string{"Empty GPS telemetry"},
 		}
+	}
+
+	activityType = strings.ToLower(strings.TrimSpace(activityType))
+	if activityType == "" {
+		activityType = "running"
+	}
+	limits, ok := DefaultActivityLimits[activityType]
+	if !ok {
+		limits = DefaultActivityLimits["running"]
 	}
 
 	var reasons []string
@@ -79,14 +120,18 @@ func (d *Detector) EvaluateTrack(points []geo.TrackPoint) Result {
 			}
 		}
 
-		// Rule 2: Instantaneous speed ceiling (> 25 km/h)
+		// Rule 2: Instantaneous speed ceiling
 		instantKmh := pt.Speed * 3.6
-		if instantKmh > d.cfg.MaxHumanSpeedKmh {
-			ruleScore := 10.0 + (instantKmh - d.cfg.MaxHumanSpeedKmh)
+		if instantKmh > limits.MaxInstantSpeedKmh {
+			ruleScore := 55.0 + (instantKmh - limits.MaxInstantSpeedKmh)
 			if ruleScore > maxScore {
 				maxScore = ruleScore
 			}
-			reasons = append(reasons, fmt.Sprintf("Instantaneous speed %.1f km/h exceeds human running ceiling (%.1f km/h)", instantKmh, d.cfg.MaxHumanSpeedKmh))
+			if activityType == "running" {
+				reasons = append(reasons, fmt.Sprintf("Instantaneous speed %.1f km/h exceeds human running ceiling (%.1f km/h); cycling or vehicle suspected", instantKmh, limits.MaxInstantSpeedKmh))
+			} else {
+				reasons = append(reasons, fmt.Sprintf("Instantaneous speed %.1f km/h exceeds %s ceiling (%.1f km/h)", instantKmh, activityType, limits.MaxInstantSpeedKmh))
+			}
 		}
 
 		// Rule 3: Teleport jumps against previous coordinate
@@ -96,8 +141,8 @@ func (d *Detector) EvaluateTrack(points []geo.TrackPoint) Result {
 			if dt > 0 && dt <= 3.0 {
 				distMeters := geo.HaversineDistanceMeters(prev.ToLatLng(), pt.ToLatLng())
 				stepSpeedKmh := (distMeters / dt) * 3.6
-				if stepSpeedKmh > d.cfg.MaxTeleportSpeed || (distMeters > 50.0 && dt <= 1.0) {
-					ruleScore := 15.0
+				if stepSpeedKmh > limits.MaxTeleportSpeed || (distMeters > 50.0 && dt <= 1.0) {
+					ruleScore := 55.0
 					if ruleScore > maxScore {
 						maxScore = ruleScore
 					}
@@ -125,6 +170,19 @@ func (d *Detector) EvaluateTrack(points []geo.TrackPoint) Result {
 		}
 	}
 
+	features := d.extractFeatures(points)
+
+	// Rule 5: Sustained average speed ceiling check
+	if avgSpeed, ok := features["avg_speed"]; ok && len(points) >= 3 {
+		if avgSpeed > limits.MaxAverageSpeedKmh {
+			ruleScore := 55.0 + (avgSpeed - limits.MaxAverageSpeedKmh)
+			if ruleScore > maxScore {
+				maxScore = ruleScore
+			}
+			reasons = append(reasons, fmt.Sprintf("Average speed %.1f km/h exceeds %s endurance ceiling (%.1f km/h); cycling or vehicle suspected", avgSpeed, activityType, limits.MaxAverageSpeedKmh))
+		}
+	}
+
 	if len(points) < 3 {
 		isAnomaly := maxScore > d.cfg.AnomalyThreshold
 		return Result{
@@ -134,29 +192,30 @@ func (d *Detector) EvaluateTrack(points []geo.TrackPoint) Result {
 		}
 	}
 
-	// --- Tier 2: Calibrated Multi-Feature Weighted Z-Score Scoring ---
-	features := d.extractFeatures(points)
-	fVector := [5]float64{
-		features["avg_speed"],
-		features["max_accel"],
-		features["heading_rate"],
-		features["sinuosity"],
-		features["stop_freq"],
-	}
+	// --- Tier 2: Calibrated Multi-Feature Weighted Z-Score Scoring (Running Baseline) ---
+	if activityType == "running" {
+		fVector := [5]float64{
+			features["avg_speed"],
+			features["max_accel"],
+			features["heading_rate"],
+			features["sinuosity"],
+			features["stop_freq"],
+		}
 
-	var weightedScore float64
-	for i := 0; i < 5; i++ {
-		z := math.Abs((fVector[i] - d.cfg.Means[i]) / d.cfg.Stds[i])
-		weightedScore += z * d.cfg.Weights[i]
-	}
-	normalizedScore := weightedScore / 7.5
+		var weightedScore float64
+		for i := 0; i < 5; i++ {
+			z := math.Abs((fVector[i] - d.cfg.Means[i]) / d.cfg.Stds[i])
+			weightedScore += z * d.cfg.Weights[i]
+		}
+		normalizedScore := weightedScore / 7.5
 
-	if normalizedScore > maxScore {
-		maxScore = normalizedScore
-	}
+		if normalizedScore > maxScore {
+			maxScore = normalizedScore
+		}
 
-	if normalizedScore > d.cfg.AnomalyThreshold {
-		reasons = append(reasons, fmt.Sprintf("Unnatural movement telemetry pattern (Z-Score: %.2f > %.2f)", normalizedScore, d.cfg.AnomalyThreshold))
+		if normalizedScore > d.cfg.AnomalyThreshold {
+			reasons = append(reasons, fmt.Sprintf("Unnatural movement telemetry pattern (Z-Score: %.2f > %.2f)", normalizedScore, d.cfg.AnomalyThreshold))
+		}
 	}
 
 	isAnomaly := maxScore > d.cfg.AnomalyThreshold

@@ -128,6 +128,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		return &CaptureResult{
 			RunID:              existing.ID,
 			IdempotencyKey:     existing.IdempotencyKey,
+			ActivityType:       existing.ActivityType,
 			Status:             existing.Status,
 			AnomalyScore:       existing.AnomalyScore,
 			AnomalyReasons:     existing.AnomalyReasons,
@@ -190,6 +191,9 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	}
 
 	runCopy := *run
+	if runCopy.ActivityType == "" {
+		runCopy.ActivityType = "running"
+	}
 	runCopy.AreaClaimed = areaClaimed
 	if runCopy.Status == "" {
 		runCopy.Status = "accepted"
@@ -214,6 +218,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	return &CaptureResult{
 		RunID:              run.ID,
 		IdempotencyKey:     run.IdempotencyKey,
+		ActivityType:       runCopy.ActivityType,
 		Status:             run.Status,
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,

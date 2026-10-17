@@ -117,13 +117,13 @@ func (s *PostgresStore) GetRunsByUser(ctx context.Context, userID string, limit 
 // GetRunByIdempotencyKey fetches an existing run by idempotency key.
 func (s *PostgresStore) GetRunByIdempotencyKey(ctx context.Context, key string) (*Run, error) {
 	query := `
-		SELECT id, user_id, idempotency_key, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
+		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
 		FROM runs
 		WHERE idempotency_key = $1;
 	`
 	var r Run
 	err := s.pool.QueryRow(ctx, query, key).Scan(
-		&r.ID, &r.UserID, &r.IdempotencyKey, &r.DurationSeconds, &r.DistanceMeters,
+		&r.ID, &r.UserID, &r.IdempotencyKey, &r.ActivityType, &r.DurationSeconds, &r.DistanceMeters,
 		&r.AreaClaimed, &r.AnomalyScore, &r.AnomalyReasons, &r.Status, &r.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -183,10 +183,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	// 2. Idempotency Check:
 	var existing Run
 	err = tx.QueryRow(ctx, `
-		SELECT id, user_id, idempotency_key, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
+		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
 		FROM runs WHERE idempotency_key = $1;
 	`, run.IdempotencyKey).Scan(
-		&existing.ID, &existing.UserID, &existing.IdempotencyKey, &existing.DurationSeconds,
+		&existing.ID, &existing.UserID, &existing.IdempotencyKey, &existing.ActivityType, &existing.DurationSeconds,
 		&existing.DistanceMeters, &existing.AreaClaimed, &existing.AnomalyScore,
 		&existing.AnomalyReasons, &existing.Status, &existing.CreatedAt,
 	)
@@ -203,6 +203,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		return &CaptureResult{
 			RunID:              existing.ID,
 			IdempotencyKey:     existing.IdempotencyKey,
+			ActivityType:       existing.ActivityType,
 			Status:             existing.Status,
 			AnomalyScore:       existing.AnomalyScore,
 			AnomalyReasons:     existing.AnomalyReasons,
@@ -308,9 +309,14 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		pathWKT = &wkt
 	}
 
+	activityType := run.ActivityType
+	if activityType == "" {
+		activityType = "running"
+	}
+
 	insertRunQuery := `
-		INSERT INTO runs (id, user_id, idempotency_key, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, path, status, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $9::text IS NOT NULL THEN ST_GeomFromText($9, 4326) ELSE NULL END, $10, $11);
+		INSERT INTO runs (id, user_id, idempotency_key, activity_type, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, path, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CASE WHEN $10::text IS NOT NULL THEN ST_GeomFromText($10, 4326) ELSE NULL END, $11, $12);
 	`
 	anomalyReasons := run.AnomalyReasons
 	if anomalyReasons == nil {
@@ -326,7 +332,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	}
 
 	if _, err := tx.Exec(ctx, insertRunQuery,
-		run.ID, run.UserID, run.IdempotencyKey, run.DurationSeconds, run.DistanceMeters,
+		run.ID, run.UserID, run.IdempotencyKey, activityType, run.DurationSeconds, run.DistanceMeters,
 		areaClaimed, run.AnomalyScore, anomalyReasons, pathWKT, status, createdAt,
 	); err != nil {
 		return nil, fmt.Errorf("failed to insert run: %w", err)
@@ -341,6 +347,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	return &CaptureResult{
 		RunID:              run.ID,
 		IdempotencyKey:     run.IdempotencyKey,
+		ActivityType:       activityType,
 		Status:             run.Status,
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,

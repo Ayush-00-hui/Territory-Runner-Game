@@ -32,6 +32,7 @@ type Run struct {
 	ID              string    `json:"id"`
 	UserID          string    `json:"user_id"`
 	IdempotencyKey  string    `json:"idempotency_key"`
+	ActivityType    string    `json:"activity_type,omitempty"`
 	DurationSeconds int       `json:"duration_seconds"`
 	DistanceMeters  float64   `json:"distance_meters"`
 	AreaClaimed     float64   `json:"area_claimed"`
@@ -43,14 +44,15 @@ type Run struct {
 
 // CaptureResult encapsulates the output of a single transaction territory capture.
 type CaptureResult struct {
-	RunID               string  `json:"run_id"`
-	IdempotencyKey      string  `json:"idempotency_key"`
-	Status              string  `json:"status"`
-	AnomalyScore        float64 `json:"anomaly_score"`
-	AnomalyReasons      []string`json:"anomaly_reasons"`
-	LoopDetected        bool    `json:"loop_detected"`
-	AreaClaimedSqm      float64 `json:"area_claimed_sqm"`
-	XpAwarded           int     `json:"xp_awarded"`
+	RunID               string   `json:"run_id"`
+	IdempotencyKey      string   `json:"idempotency_key"`
+	ActivityType        string   `json:"activity_type,omitempty"`
+	Status              string   `json:"status"`
+	AnomalyScore        float64  `json:"anomaly_score"`
+	AnomalyReasons      []string `json:"anomaly_reasons"`
+	LoopDetected        bool     `json:"loop_detected"`
+	AreaClaimedSqm      float64  `json:"area_claimed_sqm"`
+	XpAwarded           int      `json:"xp_awarded"`
 	PlayerTotalAreaSqm  float64  `json:"player_total_area_sqm"`
 	TerritoryGeoJSON    string   `json:"territory_geojson,omitempty"`
 	RivalsAffected      []string `json:"rivals_affected,omitempty"`

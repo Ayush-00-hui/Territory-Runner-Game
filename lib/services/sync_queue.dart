@@ -19,6 +19,7 @@ enum SyncStatus {
 /// A serialized offline run record awaiting synchronization
 class QueuedRun {
   final String idempotencyKey;
+  final String activityType;
   final List<LatLng> points;
   final int durationSeconds;
   final double distanceMeters;
@@ -29,6 +30,7 @@ class QueuedRun {
 
   QueuedRun({
     required this.idempotencyKey,
+    this.activityType = 'running',
     required this.points,
     required this.durationSeconds,
     required this.distanceMeters,
@@ -40,6 +42,7 @@ class QueuedRun {
 
   Map<String, dynamic> toJson() => {
     'idempotencyKey': idempotencyKey,
+    'activityType': activityType,
     'points': points.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
     'durationSeconds': durationSeconds,
     'distanceMeters': distanceMeters,
@@ -58,6 +61,7 @@ class QueuedRun {
 
     return QueuedRun(
       idempotencyKey: json['idempotencyKey'] as String? ?? const Uuid().v4(),
+      activityType: json['activityType'] as String? ?? 'running',
       points: points,
       durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
       distanceMeters: (json['distanceMeters'] as num?)?.toDouble() ?? 0.0,
@@ -70,9 +74,10 @@ class QueuedRun {
     );
   }
 
-  QueuedRun copyWith({int? retryCount}) {
+  QueuedRun copyWith({int? retryCount, String? activityType}) {
     return QueuedRun(
       idempotencyKey: idempotencyKey,
+      activityType: activityType ?? this.activityType,
       points: points,
       durationSeconds: durationSeconds,
       distanceMeters: distanceMeters,
@@ -252,6 +257,7 @@ class SyncQueueService {
     required double distanceMeters,
     required double clientPreviewArea,
     required int clientPreviewXp,
+    String activityType = 'running',
     String? idempotencyKey,
     bool autoSync = true,
   }) async {
@@ -260,6 +266,7 @@ class SyncQueueService {
 
     final item = QueuedRun(
       idempotencyKey: key,
+      activityType: activityType,
       points: points,
       durationSeconds: durationSeconds,
       distanceMeters: distanceMeters,
@@ -311,6 +318,7 @@ class SyncQueueService {
       try {
         final serverResponse = await _apiClient.submitRun(
           idempotencyKey: run.idempotencyKey,
+          activityType: run.activityType,
           points: run.points,
           durationSeconds: run.durationSeconds,
           distanceMeters: run.distanceMeters,

@@ -23,6 +23,7 @@ import '../../models/ws_events.dart';
 import '../../main.dart'; // For showRunStartAnimation
 import '../../models/territory.dart';
 import '../../models/run_goal.dart';
+import '../../models/activity_type.dart';
 import '../../services/auto_pause_engine.dart';
 import '../../services/firebase_service.dart';
 import '../../services/notification_service.dart';
@@ -80,6 +81,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   bool _isRunActive = false;
   int _lastAnnouncedKm = 0;
   int _selectedModeTab = 0;
+  final ExerciseActivityType _selectedActivity = ExerciseActivityType.running;
 
   // AI Route Suggestion State
   SuggestedRoute? _activeSuggestedRoute;
@@ -903,6 +905,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           points: List<LatLng>.from(_runCoordinates),
           durationSeconds: finalSeconds,
           distanceMeters: finalDistance * 1000.0,
+          activityType: _selectedActivity.id,
           clientPreviewArea: _accumulatedRunPreviewArea,
           clientPreviewXp: _accumulatedRunPreviewXp,
         );
