@@ -75,7 +75,7 @@ class VirtualPacerSheet extends StatelessWidget {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
+                    color: AppColors.borderSubtle,
                     borderRadius: AppSpacing.brFull,
                   ),
                 ),
@@ -209,7 +209,7 @@ class VirtualPacerSheet extends StatelessWidget {
                   Text(
                     title,
                     style: AppText.bodyBold.copyWith(
-                      color: isSelected ? color : Colors.white,
+                      color: isSelected ? color : AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s2),

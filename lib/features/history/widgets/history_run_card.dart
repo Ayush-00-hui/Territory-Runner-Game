@@ -352,7 +352,7 @@ class _HistoryPolygonPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (points.isEmpty) {
       final p = Paint()
-        ..color = Colors.white10
+        ..color = AppColors.borderSubtle
         ..strokeWidth = 1.0;
       canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), p);
       canvas.drawLine(Offset(size.width / 2, 0), Offset(size.width / 2, size.height), p);
@@ -415,7 +415,7 @@ class _HistoryPolygonPainter extends CustomPainter {
       canvas.drawCircle(Offset(x0, y0), 5, dotGlow);
 
       final dotPaint = Paint()
-        ..color = Colors.white
+        ..color = AppColors.textPrimary
         ..style = PaintingStyle.fill;
       canvas.drawCircle(Offset(x0, y0), 2.5, dotPaint);
     }

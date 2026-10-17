@@ -117,7 +117,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
         hasGridOverlay = false;
         break;
       case ShareCardTheme.cyberVanguard:
-        cardBg = const Color(0xFF080D14);
+        cardBg = AppColors.bgElevated;
         accentColor = AppColors.rival;
         hasGridOverlay = true;
         break;
@@ -700,7 +700,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
         hasGridOverlay = false;
         break;
       case ShareCardTheme.cyberVanguard:
-        cardBg = const Color(0xFF080D14);
+        cardBg = AppColors.bgElevated;
         accentColor = AppColors.rival;
         borderColor = AppColors.rival.withValues(alpha: 0.4);
         hasGridOverlay = true;
@@ -981,7 +981,7 @@ class _ShareCardMapPainter extends CustomPainter {
       final double y0 = padding + (1.0 - ((p0.latitude - minLat) / latSpan)) * usableH;
 
       canvas.drawCircle(Offset(x0, y0), 7, Paint()..color = accentColor.withValues(alpha: 0.4));
-      canvas.drawCircle(Offset(x0, y0), 3.5, Paint()..color = Colors.white);
+      canvas.drawCircle(Offset(x0, y0), 3.5, Paint()..color = AppColors.textPrimary);
     }
   }
 
@@ -1003,7 +1003,7 @@ class _ShareCardMapPainter extends CustomPainter {
 
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);
-    canvas.drawCircle(Offset(cx + r, cy), 4, Paint()..color = Colors.white);
+    canvas.drawCircle(Offset(cx + r, cy), 4, Paint()..color = AppColors.textPrimary);
   }
 
   @override

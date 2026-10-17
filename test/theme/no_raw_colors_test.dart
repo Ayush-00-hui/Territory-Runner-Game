@@ -12,50 +12,9 @@ void main() {
         .where((f) => f.path.endsWith('.dart'))
         .toList();
 
-    // Whitelist of legacy files scheduled for phased elimination across Phases 2-5.
-    // Files that are modified or newly added in Phase 1 MUST NOT appear here.
-    final allowedLegacyFiles = <String>{
-      'lib/features/auth/auth_screen.dart',
-      'lib/features/history/run_history_screen.dart',
-      'lib/features/history/widgets/history_run_card.dart',
-      'lib/features/history/widgets/run_share_card_modal.dart',
-      'lib/features/home/home_screen.dart',
-      'lib/features/home/widgets/home_header.dart',
-      'lib/features/home/widgets/quick_launch_hero.dart',
-      'lib/features/home/widgets/recent_activity_feed.dart',
-      'lib/features/home/widgets/weekly_summary_card.dart',
-      'lib/features/map/map_screen.dart',
-      'lib/features/map/widgets/amoled_battery_saver_overlay.dart',
-      'lib/features/map/widgets/claim_planner_sheet.dart',
-      'lib/features/map/widgets/demo_controls.dart',
-      'lib/features/map/widgets/hold_to_finish_button.dart',
-      'lib/features/map/widgets/leaderboard_sheet.dart',
-      'lib/features/map/widgets/loop_celebration_overlay.dart',
-      'lib/features/map/widgets/map_layers.dart',
-      'lib/features/map/widgets/mode_tabs.dart',
-      'lib/features/map/widgets/pacer_sheet.dart',
-      'lib/features/map/widgets/run_goal_sheet.dart',
-      'lib/features/map/widgets/run_hud.dart',
-      'lib/features/map/widgets/sos_beacon_sheet.dart',
-      'lib/features/map/widgets/summary_sheet.dart',
-      'lib/features/profile/widgets/achievements_list.dart',
-      'lib/features/profile/widgets/auth_modal.dart',
-      'lib/features/profile/widgets/challenges_shelf.dart',
-      'lib/features/profile/widgets/emergency_contact_dialog.dart',
-      'lib/features/profile/widgets/faction_leaderboard.dart',
-      'lib/features/profile/widgets/offline_maps_sheet.dart',
-      'lib/features/profile/widgets/privacy_zones_sheet.dart',
-      'lib/features/profile/widgets/profile_dialogs.dart',
-      'lib/features/profile/widgets/profile_hero.dart',
-      'lib/features/profile/widgets/settings_list.dart',
-      'lib/features/profile/widgets/stat_grid.dart',
-      'lib/features/profile/widgets/weekly_league_view.dart',
-      'lib/features/social/widgets/social_hub_sheet.dart',
-      'lib/models/territory.dart',
-      'lib/services/notification_service.dart',
-      'lib/profile_page.dart',
-      'lib/main.dart',
-    };
+    // Zero files are whitelisted. All legacy colors have been completely migrated
+    // to Charcoal + Ember semantic tokens across all phases (1-6).
+    final allowedLegacyFiles = <String>{};
 
     final violations = <String>[];
 

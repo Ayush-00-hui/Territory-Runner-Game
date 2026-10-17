@@ -38,6 +38,7 @@ import 'widgets/loop_celebration_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
 import 'widgets/amoled_battery_saver_overlay.dart';
+import '../../ui/ui.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -208,7 +209,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     const SizedBox(height: 2),
                     Text(
                       alert.message,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
                     ),
                   ],
                 ),
@@ -303,37 +304,26 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void _onRunRejected() {
     final rejection = SyncQueueService().lastRejectionNotifier.value;
     if (rejection != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF1E212B),
-          duration: const Duration(seconds: 8),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFFF5252), width: 1.2),
-          ),
-          content: Text(
-            '❌ ${rejection.humanReason}',
-            style: const TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold, fontSize: 12.5),
-          ),
-          action: SnackBarAction(
-            label: 'VIEW RUN',
-            textColor: AppColors.accent,
-            onPressed: () {
-              SummarySheet.show(
-                context: context,
-                distanceKm: rejection.run.distanceMeters / 1000.0,
-                durationSeconds: rejection.run.durationSeconds,
-                territoriesClaimed: 0,
-                profile: _territoryService.getProfile(),
-                coachService: _coachService,
-                routePoints: rejection.run.points,
-                areaSqMeters: rejection.run.clientPreviewArea,
-                rejectionReason: rejection.humanReason,
-              );
-            },
-          ),
-        ),
+      AppToast.show(
+        context,
+        rejection.humanReason,
+        icon: Icons.error_rounded,
+        type: AppToastType.error,
+        duration: const Duration(seconds: 8),
+        actionLabel: 'VIEW RUN',
+        onAction: () {
+          SummarySheet.show(
+            context: context,
+            distanceKm: rejection.run.distanceMeters / 1000.0,
+            durationSeconds: rejection.run.durationSeconds,
+            territoriesClaimed: 0,
+            profile: _territoryService.getProfile(),
+            coachService: _coachService,
+            routePoints: rejection.run.points,
+            areaSqMeters: rejection.run.clientPreviewArea,
+            rejectionReason: rejection.humanReason,
+          );
+        },
       );
     }
   }
@@ -354,7 +344,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               SizedBox(width: 10),
               Text(
                 'TACTICAL HUD AUTHORIZATION',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.1),
+                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.1),
               ),
             ],
           ),
@@ -378,7 +368,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   children: [
                     Icon(Icons.gps_fixed_rounded, color: AppColors.accent, size: 16),
                     SizedBox(width: 8),
-                    Text('High-Accuracy GPS (Sub-meter)', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text('High-Accuracy GPS (Sub-meter)', style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -434,7 +424,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             SizedBox(width: 8),
             Text(
               'RESUME RUN?',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.0),
+              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.0),
             ),
           ],
         ),
@@ -457,7 +447,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Distance: ${snapshot.distanceKm.toStringAsFixed(2)} km', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                  Text('Distance: ${snapshot.distanceKm.toStringAsFixed(2)} km', style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
                   Text('${snapshot.coordinates.length} GPS Points', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
                 ],
               ),
@@ -619,15 +609,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             }
           });
         } else if (_polygonEngine.lastInvalidReason != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: const Color(0xFF1E212B),
-              duration: const Duration(seconds: 3),
-              content: Text(
-                '⚠️ ${_polygonEngine.lastInvalidReason}',
-                style: const TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold),
-              ),
-            ),
+          AppToast.show(
+            context,
+            _polygonEngine.lastInvalidReason!,
+            type: AppToastType.warning,
           );
         }
 
@@ -699,15 +684,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     final double claimed = netGained + stolen;
 
     if (claimed < TerritoryService.minClaimAreaSqMeters) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: Color(0xFF1E212B),
-          duration: Duration(seconds: 3),
-          content: Text(
-            'Already your territory — loop around new ground to claim more land.',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-        ),
+      AppToast.show(
+        context,
+        'Already your territory — loop around new ground to claim more land.',
+        type: AppToastType.info,
       );
       return;
     }
@@ -730,8 +710,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _sealCurrentShape() {
     if (!_isRunActive) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Start a run first to seal sovereign territory')),
+      AppToast.show(
+        context,
+        'Start a run first to seal sovereign territory',
+        type: AppToastType.warning,
       );
       return;
     }
@@ -752,11 +734,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       });
     } else {
       final errorMsg = _polygonEngine.lastInvalidReason ?? 'Need at least 3 GPS path points to seal a domain shape';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF1E212B),
-          content: Text('⚠️ $errorMsg', style: const TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold)),
-        ),
+      AppToast.show(
+        context,
+        errorMsg,
+        type: AppToastType.warning,
       );
     }
   }
@@ -815,7 +796,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 Expanded(
                   child: Text(
                     '🎯 TARGET ACCOMPLISHED!\n${_activeGoal.title} completed.',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
                   ),
                 ),
               ],
@@ -996,7 +977,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               child: Text(
                 'Active Guidance: Follow the Solar Orange path (${route.totalDistanceKm.toStringAsFixed(2)} km, ~${route.estimatedNewTerritoryAreaSqM.toStringAsFixed(0)} m² new land)',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 12.5,
                 ),
@@ -1231,23 +1212,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   }
 
   void _simulateSpeedAnomaly() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: Color(0xFF1E212B),
-        duration: Duration(seconds: 4),
-        content: Row(
-          children: [
-            Icon(Icons.shield_rounded, color: Color(0xFFFF5252), size: 20),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                '🚨 ANTI-CHEAT TRIGGERED: Telemetry speed 48.5 km/h exceeds human capability threshold (25 km/h)!',
-                style: TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
+    AppToast.show(
+      context,
+      'ANTI-CHEAT TRIGGERED: Telemetry speed 48.5 km/h exceeds human capability threshold (25 km/h)!',
+      icon: Icons.shield_rounded,
+      type: AppToastType.error,
+      duration: const Duration(seconds: 4),
     );
     HapticFeedback.heavyImpact();
   }
@@ -1858,7 +1828,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     SizedBox(height: 2),
                     Text(
                       '⚠️ Rival ShadowRunner captured 3,500 m²! Defenses compromised (20% strength).',
-                      style: TextStyle(color: Colors.white, fontSize: 13),
+                      style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
                     ),
                   ],
                 ),

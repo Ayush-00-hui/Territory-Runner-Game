@@ -171,7 +171,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
               width: 44,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.white24,
+                color: AppColors.borderSubtle,
                 borderRadius: AppSpacing.brFull,
               ),
             ),
@@ -262,7 +262,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                           Text(
                             preset.label,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : AppColors.textMuted,
+                              color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
                             ),
@@ -389,14 +389,14 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                       label: 'EST. DISTANCE',
                       value: route != null ? '${route.totalDistanceKm.toStringAsFixed(2)} km' : '--',
                       icon: Icons.straighten_rounded,
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                     ),
                     const SizedBox(width: 12),
                     _buildTelemetryTile(
                       label: 'EST. DURATION',
                       value: route != null ? '~${route.estimatedDurationMinutes} min' : '--',
                       icon: Icons.timer_outlined,
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                     ),
                   ],
                 ),

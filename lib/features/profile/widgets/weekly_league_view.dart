@@ -97,14 +97,14 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
   Color _getTierColor(String tier) {
     switch (tier.toLowerCase()) {
       case 'diamond':
-        return const Color(0xFF5C85FF); // Slate Blue
+        return AppColors.info;
       case 'gold':
-        return AppColors.warning; // Amber
+        return AppColors.gold;
       case 'silver':
-        return const Color(0xFFC0C0C0);
+        return AppColors.silver;
       case 'bronze':
       default:
-        return const Color(0xFFCD7F32);
+        return AppColors.bronze;
     }
   }
 

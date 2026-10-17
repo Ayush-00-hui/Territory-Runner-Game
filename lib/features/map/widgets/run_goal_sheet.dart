@@ -96,7 +96,7 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
             child: Container(
               width: 44,
               height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.borderSubtle, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: AppSpacing.s16),
@@ -321,7 +321,7 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
             Text(
               title,
               style: TextStyle(
-                color: isSelected ? AppColors.accent : Colors.white,
+                color: isSelected ? AppColors.accent : AppColors.textPrimary,
                 fontWeight: FontWeight.w900,
                 fontSize: 14,
               ),
@@ -330,7 +330,7 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
             Text(
               subtitle,
               style: TextStyle(
-                color: isSelected ? Colors.white70 : AppColors.textMuted,
+                color: isSelected ? AppColors.textSecondary : AppColors.textMuted,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),

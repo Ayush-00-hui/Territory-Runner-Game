@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:latlong2/latlong.dart';
+import '../ui/theme/app_colors.dart';
 
 class Territory {
   final String id;
@@ -28,7 +29,7 @@ class Territory {
     required this.capturedAt,
     DateTime? lastDefendedAt,
     double? strength,
-    this.color = const Color(0xFFCCFF00),
+    this.color = AppColors.mine,
     this.isPendingReview = false,
   })  : polygons = polygons ?? (polygon.isNotEmpty ? [polygon] : []),
         lastDefendedAt = lastDefendedAt ?? capturedAt,
@@ -124,7 +125,7 @@ class Territory {
       capturedAt: captured,
       lastDefendedAt: defended,
       strength: parsedStrength,
-      color: json['color'] != null ? Color(json['color'] as int) : const Color(0xFFCCFF00),
+      color: json['color'] != null ? Color(json['color'] as int) : AppColors.mine,
       isPendingReview: json['isPendingReview'] as bool? ?? false,
     );
   }
