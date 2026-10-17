@@ -154,11 +154,11 @@ class _SocialHubViewState extends State<SocialHubView> {
               const SizedBox(width: AppSpacing.s8),
               Expanded(
                 child: Text(
-                  'SOCIAL SYNDICATE & DUELS',
+                  'Social Syndicate & Duels',
                   style: AppText.headingSmall.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
+                    letterSpacing: 0.6,
                     fontSize: 15,
                   ),
                 ),
@@ -187,14 +187,14 @@ class _SocialHubViewState extends State<SocialHubView> {
                 Expanded(
                   child: _buildSubTab(
                     tab: _SocialTab.squad,
-                    label: 'SQUAD (${_friends.length})',
+                    label: 'Squad (${_friends.length})',
                     icon: Icons.people_rounded,
                   ),
                 ),
                 Expanded(
                   child: _buildSubTab(
                     tab: _SocialTab.duels,
-                    label: 'DUELS (${_duels.where((d) => d.isActive).length})',
+                    label: 'Duels (${_duels.where((d) => d.isActive).length})',
                     icon: Icons.sports_kabaddi_rounded,
                   ),
                 ),
@@ -276,16 +276,16 @@ class _SocialHubViewState extends State<SocialHubView> {
             Icon(
               icon,
               size: 16,
-              color: isSelected ? Colors.black : AppColors.textSecondary,
+              color: isSelected ? AppColors.onAccent : AppColors.textSecondary,
             ),
             const SizedBox(width: AppSpacing.s6),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.black : AppColors.textSecondary,
+                color: isSelected ? AppColors.onAccent : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                 fontSize: 12,
-                letterSpacing: 0.8,
+                letterSpacing: 0.4,
               ),
             ),
           ],
@@ -306,11 +306,11 @@ class _SocialHubViewState extends State<SocialHubView> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'ATHLETIC SQUAD',
+              'Athletic squad',
               style: AppText.label.copyWith(
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
+                letterSpacing: 0.8,
                 fontSize: 11,
               ),
             ),
@@ -318,7 +318,7 @@ class _SocialHubViewState extends State<SocialHubView> {
               onPressed: _showAddFriendDialog,
               icon: const Icon(Icons.person_add_rounded, size: 16, color: AppColors.accent),
               label: const Text(
-                'ADD RUNNER',
+                'Add runner',
                 style: TextStyle(
                   color: AppColors.accent,
                   fontWeight: FontWeight.w800,
@@ -347,12 +347,12 @@ class _SocialHubViewState extends State<SocialHubView> {
                     const Icon(Icons.mark_email_unread_rounded, color: AppColors.accent, size: 16),
                     const SizedBox(width: AppSpacing.s6),
                     Text(
-                      'INCOMING SQUAD INVITATIONS (${incomingRequests.length})',
+                      'Incoming squad invitations (${incomingRequests.length})',
                       style: const TextStyle(
                         color: AppColors.accent,
                         fontWeight: FontWeight.w900,
                         fontSize: 11,
-                        letterSpacing: 1.0,
+                        letterSpacing: 0.6,
                       ),
                     ),
                   ],
@@ -379,12 +379,12 @@ class _SocialHubViewState extends State<SocialHubView> {
                 const Icon(Icons.group_off_rounded, color: AppColors.textMuted, size: 40),
                 const SizedBox(height: AppSpacing.s12),
                 const Text(
-                  'NO SQUAD MEMBERS YET',
+                  'No squad members yet',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
-                    letterSpacing: 1.0,
+                    letterSpacing: 0.4,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.s6),
@@ -397,12 +397,12 @@ class _SocialHubViewState extends State<SocialHubView> {
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.black,
+                    foregroundColor: AppColors.onAccent,
                     shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                   ),
                   onPressed: _showAddFriendDialog,
                   icon: const Icon(Icons.person_add_rounded, size: 18),
-                  label: const Text('SEND FRIEND REQUEST', style: TextStyle(fontWeight: FontWeight.w900)),
+                  label: const Text('Send friend request', style: TextStyle(fontWeight: FontWeight.w900)),
                 ),
               ],
             ),
@@ -506,7 +506,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                         border: Border.all(color: AppColors.borderSubtle),
                       ),
                       child: Text(
-                        'LVL ${friend.level}',
+                        'Lvl ${friend.level}',
                         style: const TextStyle(
                           color: AppColors.accent,
                           fontSize: 9,
@@ -526,17 +526,17 @@ class _SocialHubViewState extends State<SocialHubView> {
           ),
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.secondary.withValues(alpha: 0.15),
-              foregroundColor: AppColors.secondary,
-              side: const BorderSide(color: AppColors.secondary, width: 1.0),
+              backgroundColor: AppColors.accentContainer,
+              foregroundColor: AppColors.accent,
+              side: BorderSide(color: AppColors.accent.withValues(alpha: 0.4), width: 1.0),
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.br10),
             ),
             onPressed: () => _showCreateDuelDialog(targetFriend: friend),
             icon: const Icon(Icons.sports_kabaddi_rounded, size: 14),
             label: const Text(
-              'DUEL',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5),
+              'Duel',
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.3),
             ),
           ),
         ],
@@ -557,21 +557,21 @@ class _SocialHubViewState extends State<SocialHubView> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'HEAD-TO-HEAD BATTLES',
+              'Head-to-head battles',
               style: AppText.label.copyWith(
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
+                letterSpacing: 0.8,
                 fontSize: 11,
               ),
             ),
             TextButton.icon(
               onPressed: () => _showCreateDuelDialog(),
-              icon: const Icon(Icons.add_rounded, size: 16, color: AppColors.secondary),
+              icon: const Icon(Icons.add_rounded, size: 16, color: AppColors.accent),
               label: const Text(
-                'NEW DUEL',
+                'New duel',
                 style: TextStyle(
-                  color: AppColors.secondary,
+                  color: AppColors.accent,
                   fontWeight: FontWeight.w800,
                   fontSize: 12,
                 ),
@@ -590,12 +590,12 @@ class _SocialHubViewState extends State<SocialHubView> {
         if (activeDuels.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.s8),
           Text(
-            'ACTIVE CONQUESTS (${activeDuels.length})',
+            'Active conquests (${activeDuels.length})',
             style: const TextStyle(
               color: AppColors.accent,
               fontWeight: FontWeight.w900,
               fontSize: 11,
-              letterSpacing: 1.0,
+              letterSpacing: 0.6,
             ),
           ),
           const SizedBox(height: AppSpacing.s8),
@@ -616,12 +616,12 @@ class _SocialHubViewState extends State<SocialHubView> {
                 const Icon(Icons.sports_kabaddi_rounded, color: AppColors.textMuted, size: 40),
                 const SizedBox(height: AppSpacing.s12),
                 const Text(
-                  'NO DUELS IN PROGRESS',
+                  'No duels in progress',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w800,
                     fontSize: 14,
-                    letterSpacing: 1.0,
+                    letterSpacing: 0.4,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.s6),
@@ -633,13 +633,13 @@ class _SocialHubViewState extends State<SocialHubView> {
                 const SizedBox(height: AppSpacing.s16),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.secondary,
-                    foregroundColor: Colors.black,
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.onAccent,
                     shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                   ),
                   onPressed: () => _showCreateDuelDialog(),
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('CREATE FIRST DUEL', style: TextStyle(fontWeight: FontWeight.w900)),
+                  label: const Text('Create first duel', style: TextStyle(fontWeight: FontWeight.w900)),
                 ),
               ],
             ),
@@ -649,11 +649,11 @@ class _SocialHubViewState extends State<SocialHubView> {
         if (completedDuels.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.s20),
           Text(
-            'BATTLE ARCHIVE (${completedDuels.length})',
+            'Battle archive (${completedDuels.length})',
             style: AppText.label.copyWith(
               color: AppColors.textMuted,
               fontWeight: FontWeight.w900,
-              letterSpacing: 1.2,
+              letterSpacing: 0.8,
               fontSize: 11,
             ),
           ),
@@ -686,17 +686,17 @@ class _SocialHubViewState extends State<SocialHubView> {
     String statusText;
     if (duel.isPending) {
       statusColor = AppColors.warning;
-      statusText = isMeChallenger ? 'AWAITING OPPONENT' : 'CHALLENGE RECEIVED';
+      statusText = isMeChallenger ? 'Awaiting opponent' : 'Challenge received';
     } else if (duel.isActive) {
       statusColor = AppColors.accent;
-      statusText = 'BATTLE IN PROGRESS';
+      statusText = 'Battle in progress';
     } else if (duel.isCompleted) {
       final iWon = duel.didIWin(_myUid);
       statusColor = iWon ? AppColors.gold : AppColors.error;
-      statusText = iWon ? 'VICTORY (+${duel.xpStake} XP)' : 'DEFEATED';
+      statusText = iWon ? 'Victory (+${duel.xpStake} XP)' : 'Defeated';
     } else {
       statusColor = AppColors.textMuted;
-      statusText = duel.status.toUpperCase();
+      statusText = duel.status;
     }
 
     return Container(
@@ -725,7 +725,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   ),
                   const SizedBox(width: AppSpacing.s6),
                   Text(
-                    '${duel.targetType.toUpperCase()}: $targetDisplay',
+                    '${duel.targetType == 'distance' ? 'Distance' : 'Area'}: $targetDisplay',
                     style: const TextStyle(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w900,

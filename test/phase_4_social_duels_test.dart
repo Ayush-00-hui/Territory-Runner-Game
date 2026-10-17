@@ -331,19 +331,19 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Verify Squad tab is active and shows ValkyrieRunner
-      expect(find.text('SOCIAL SYNDICATE & DUELS'), findsOneWidget);
+      expect(find.text('Social Syndicate & Duels'), findsOneWidget);
       expect(find.text('ValkyrieRunner'), findsOneWidget);
-      expect(find.text('LVL 5'), findsOneWidget);
-      expect(find.text('DUEL'), findsOneWidget);
+      expect(find.text('Lvl 5'), findsOneWidget);
+      expect(find.text('Duel'), findsOneWidget);
 
       // Switch to Duels tab
-      await tester.tap(find.textContaining('DUELS (1)'));
+      await tester.tap(find.textContaining('Duels (1)'));
       await tester.pumpAndSettle();
 
       // Verify active duel details
-      expect(find.text('ACTIVE CONQUESTS (1)'), findsOneWidget);
-      expect(find.text('AREA: 10000 m²'), findsOneWidget);
-      expect(find.text('BATTLE IN PROGRESS'), findsOneWidget);
+      expect(find.text('Active conquests (1)'), findsOneWidget);
+      expect(find.text('Area: 10000 m²'), findsOneWidget);
+      expect(find.text('Battle in progress'), findsOneWidget);
       expect(find.textContaining('VS ValkyrieRunner'), findsOneWidget);
     });
 
@@ -392,7 +392,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.textContaining('INCOMING SQUAD INVITATIONS (1)'), findsOneWidget);
+      expect(find.textContaining('Incoming squad invitations (1)'), findsOneWidget);
       expect(find.text('AlexStriker'), findsOneWidget);
       expect(find.text('Neon Syndicate'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);

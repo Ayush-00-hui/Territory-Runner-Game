@@ -40,23 +40,23 @@ class ChallengesShelf extends StatelessWidget {
                       const Icon(Icons.bolt_rounded, color: AppColors.accent, size: 18),
                       const SizedBox(width: AppSpacing.s8),
                       Text(
-                        'ACTIVE CONQUEST QUESTS',
+                        'Active conquest quests',
                         style: AppText.headingSmall.copyWith(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
-                          letterSpacing: 0.8,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ],
                   ),
                   Text(
-                    'RESETS IN 14H',
+                    'Resets in 14h',
                     style: AppText.labelSmall.copyWith(
                       color: AppColors.textMuted,
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 0.6,
+                      letterSpacing: 0.4,
                     ),
                   ),
                 ],
@@ -65,7 +65,7 @@ class ChallengesShelf extends StatelessWidget {
 
               // Quest 1: Distance
               _buildQuestItem(
-                title: 'DAILY SECTOR SCOUT',
+                title: 'Daily sector scout',
                 description: 'Run at least 2.0 km on foot',
                 current: profile.totalDistanceKm,
                 target: 2.0,
@@ -77,7 +77,7 @@ class ChallengesShelf extends StatelessWidget {
 
               // Quest 2: Loops
               _buildQuestItem(
-                title: 'LOOP CLOSURE',
+                title: 'Loop closure',
                 description: 'Enclose and claim 1 territory polygon',
                 current: territoriesCount.toDouble(),
                 target: 1.0,
@@ -89,7 +89,7 @@ class ChallengesShelf extends StatelessWidget {
 
               // Quest 3: Territory Footprint
               _buildQuestItem(
-                title: 'TERRITORY EXPANSION',
+                title: 'Territory expansion',
                 description: 'Hold over 10,000 m² of ground',
                 current: totalAreaSqMeters,
                 target: 10000.0,
@@ -104,12 +104,12 @@ class ChallengesShelf extends StatelessWidget {
 
         // --- TROPHY CASE SECTION HEADER ---
         Text(
-          'TROPHY CASE & BADGES',
+          'Trophy case & badges',
           style: AppText.headingSmall.copyWith(
             color: AppColors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
+            letterSpacing: 0.2,
           ),
         ),
         const SizedBox(height: AppSpacing.s12),

@@ -213,26 +213,26 @@ void main() {
       await tester.pumpAndSettle();
 
       // Division header and rank
-      expect(find.text('GOLD DIVISION'), findsOneWidget);
+      expect(find.text('Gold Division'), findsOneWidget);
       expect(find.text('Rank #2 of 5'), findsOneWidget);
 
       // Stat metrics
-      expect(find.text('WEEKLY AREA'), findsOneWidget);
-      expect(find.text('CONQUEST RUNS'), findsOneWidget);
-      expect(find.text('LEAGUE STATUS'), findsOneWidget);
+      expect(find.text('Weekly area'), findsOneWidget);
+      expect(find.text('Conquest runs'), findsOneWidget);
+      expect(find.text('League status'), findsOneWidget);
 
       // Section header
-      expect(find.text('DIVISION STANDINGS'), findsOneWidget);
-      expect(find.text('RESETS MONDAY 00:00 UTC'), findsOneWidget);
+      expect(find.text('Division standings'), findsOneWidget);
+      expect(find.text('Resets Monday 00:00 UTC'), findsOneWidget);
 
       // Promotion & Relegation threshold lines
-      expect(find.text('PROMOTION ZONE'), findsOneWidget);
-      expect(find.text('RELEGATION ZONE'), findsOneWidget);
+      expect(find.text('Promotion zone'), findsOneWidget);
+      expect(find.text('Relegation zone'), findsOneWidget);
 
-      // Participant names and 'YOU' badge
+      // Participant names and 'You' badge
       expect(find.text('Overlord'), findsOneWidget);
       expect(find.text('ShadowRacer'), findsOneWidget);
-      expect(find.text('YOU'), findsOneWidget);
+      expect(find.text('You'), findsOneWidget);
     });
 
     testWidgets('WeeklyLeagueView renders offline error state with retry button when API fails', (tester) async {
@@ -254,7 +254,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Offline: unable to fetch league standings'), findsOneWidget);
-      expect(find.text('RETRY'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
   });
 }

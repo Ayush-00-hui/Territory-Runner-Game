@@ -103,12 +103,12 @@ class ProfileHeroCard extends StatelessWidget {
                             border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
                           ),
                           child: Text(
-                            'LEVEL ${profile.level} ATHLETE',
+                            'Level ${profile.level} athlete',
                             style: AppText.labelSmall.copyWith(
                               color: AppColors.accent,
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 0.6,
+                              letterSpacing: 0.4,
                             ),
                           ),
                         ),
@@ -187,12 +187,12 @@ class ProfileHeroCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'TIER PROGRESSION',
+                    'Tier progression',
                     style: AppText.labelSmall.copyWith(
                       color: AppColors.textMuted,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 0.8,
+                      letterSpacing: 0.6,
                     ),
                   ),
                   Text(

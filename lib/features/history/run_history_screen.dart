@@ -89,10 +89,9 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'CONQUEST ARCHIVE',
+          'Run history',
           style: AppText.headingSmall.copyWith(
-            letterSpacing: 1.5,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             fontSize: 16,
             color: AppColors.textPrimary,
           ),
@@ -153,11 +152,11 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildSummaryMetric('TOTAL AREA', totalAreaFormatted, AppColors.accent),
+                  _buildSummaryMetric('Total area', totalAreaFormatted, AppColors.accent),
                   Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                  _buildSummaryMetric('CONQUESTS', '${rawTerritories.length}', AppColors.textPrimary),
+                  _buildSummaryMetric('Conquests', '${rawTerritories.length}', AppColors.textPrimary),
                   Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                  _buildSummaryMetric('TOTAL DIST', '${totalDist.toStringAsFixed(1)} km', AppColors.textPrimary),
+                  _buildSummaryMetric('Total distance', '${totalDist.toStringAsFixed(1)} km', AppColors.textPrimary),
                 ],
               ),
             ),
@@ -176,11 +175,11 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      _buildFilterChip(HistoryTimeFilter.all, 'ALL RUNS'),
+                      _buildFilterChip(HistoryTimeFilter.all, 'All runs'),
                       const SizedBox(width: AppSpacing.s8),
-                      _buildFilterChip(HistoryTimeFilter.thisWeek, 'THIS WEEK'),
+                      _buildFilterChip(HistoryTimeFilter.thisWeek, 'This week'),
                       const SizedBox(width: AppSpacing.s8),
-                      _buildFilterChip(HistoryTimeFilter.thisMonth, 'THIS MONTH'),
+                      _buildFilterChip(HistoryTimeFilter.thisMonth, 'This month'),
                     ],
                   ),
                 ),
@@ -191,8 +190,8 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '${territories.length} CONQUESTS FOUND',
-                      style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 10.5),
+                      '${territories.length} conquests',
+                      style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 11),
                     ),
                     PopupMenuButton<HistorySortOption>(
                       initialValue: _sortOption,
@@ -253,9 +252,9 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                           padding: const EdgeInsets.all(AppSpacing.s24),
                           child: EmptyState(
                             icon: Icons.history_toggle_off_rounded,
-                            title: 'No Conquests In Range',
+                            title: 'No runs in range',
                             message: 'Try changing your filters or start a new run to capture sovereign loops.',
-                            actionLabel: _timeFilter != HistoryTimeFilter.all ? 'RESET FILTERS' : null,
+                            actionLabel: _timeFilter != HistoryTimeFilter.all ? 'Reset filters' : null,
                             onAction: _timeFilter != HistoryTimeFilter.all
                                 ? () => setState(() => _timeFilter = HistoryTimeFilter.all)
                                 : null,
@@ -292,11 +291,11 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
   String _sortLabel(HistorySortOption opt) {
     switch (opt) {
       case HistorySortOption.newest:
-        return 'NEWEST';
+        return 'Newest';
       case HistorySortOption.largestArea:
-        return 'LARGEST AREA';
+        return 'Largest area';
       case HistorySortOption.longestDistance:
-        return 'LONGEST';
+        return 'Longest';
     }
   }
 
@@ -322,9 +321,8 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           label,
           style: AppText.label.copyWith(
             color: isSelected ? AppColors.accent : AppColors.textMuted,
-            fontSize: 10.5,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.8,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),

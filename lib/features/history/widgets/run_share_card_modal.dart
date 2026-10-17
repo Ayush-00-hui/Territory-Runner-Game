@@ -174,13 +174,12 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
 
     _drawText(
       canvas,
-      'SOVEREIGN RUN',
-      const Offset(targetSize - 250, 68),
+      'Closed loop',
+      const Offset(targetSize - 230, 68),
       TextStyle(
         color: accentColor,
         fontSize: 16,
-        fontWeight: FontWeight.w900,
-        letterSpacing: 1.2,
+        fontWeight: FontWeight.w700,
         fontFamily: 'Inter',
       ),
     );
@@ -450,17 +449,16 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'SHARE CONQUEST',
+                    'Share run',
                     style: AppText.headingSmall.copyWith(
                       fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    'Export Strava-ready 1080x1080 victory artwork',
+                    'Export 1080x1080 run card for Strava & social',
                     style: AppText.bodySmall.copyWith(color: AppColors.textMuted),
                   ),
                 ],
@@ -479,11 +477,11 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildThemePill(ShareCardTheme.athleticDark, 'ATHLETIC DARK'),
+                _buildThemePill(ShareCardTheme.athleticDark, 'Athletic Dark'),
                 const SizedBox(width: AppSpacing.s8),
-                _buildThemePill(ShareCardTheme.cyberVanguard, 'CYBER NEON'),
+                _buildThemePill(ShareCardTheme.cyberVanguard, 'Cyber Neon'),
                 const SizedBox(width: AppSpacing.s8),
-                _buildThemePill(ShareCardTheme.stealth, 'STEALTH'),
+                _buildThemePill(ShareCardTheme.stealth, 'Stealth'),
               ],
             ),
           ),
@@ -562,7 +560,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
               Expanded(
                 flex: 3,
                 child: PrimaryButton(
-                  label: _isExporting ? 'GENERATING 1080P...' : 'GENERATE & EXPORT CARD',
+                  label: _isExporting ? 'Generating 1080p...' : 'Share card',
                   icon: Icons.share_rounded,
                   onPressed: _isExporting ? null : _exportCard,
                 ),
@@ -580,10 +578,10 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                     ),
                     icon: const Icon(Icons.download_rounded, size: 18, color: AppColors.accent),
                     label: Text(
-                      'SAVE PNG',
+                      'Save PNG',
                       style: AppText.label.copyWith(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         fontSize: 11,
                       ),
                     ),
@@ -606,7 +604,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                       shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                     ),
                     icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.accent),
-                    label: const Text('EXPORT GPX', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                    label: const Text('Export GPX', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
                     onPressed: () async {
                       await ExportService().exportAndShareGpx(
                         runTitle: 'Territory Run - ${widget.callsign}',
@@ -627,7 +625,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                       shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                     ),
                     icon: const Icon(Icons.polyline_rounded, size: 16, color: AppColors.info),
-                    label: const Text('EXPORT GEOJSON', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                    label: const Text('Export GeoJSON', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
                     onPressed: () async {
                       await ExportService().exportAndShareGeoJson(
                         territories: [
@@ -800,11 +798,11 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                           border: Border.all(color: accentColor.withValues(alpha: 0.4)),
                         ),
                         child: Text(
-                          'SOVEREIGN RUN',
+                          'Closed loop',
                           style: AppText.label.copyWith(
                             color: accentColor,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w900,
+                            fontSize: 8.5,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
@@ -952,36 +950,27 @@ class _ShareCardMapPainter extends CustomPainter {
 
     // Fill territory
     final fillPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.22)
+      ..color = accentColor.withValues(alpha: 0.18)
       ..style = PaintingStyle.fill;
     canvas.drawPath(path, fillPaint);
 
-    // Outer glow stroke
-    final glowPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.45)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5.0
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, glowPaint);
-
-    // Sharp stroke
+    // Sharp solid stroke, NO glow
     final strokePaint = Paint()
       ..color = accentColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
+      ..strokeWidth = 2.2
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(path, strokePaint);
 
-    // Glowing origin node
+    // Origin node with clean dark border, NO glow
     if (points.isNotEmpty) {
       final p0 = points.first;
       final double x0 = padding + ((p0.longitude - minLng) / lngSpan) * usableW;
       final double y0 = padding + (1.0 - ((p0.latitude - minLat) / latSpan)) * usableH;
 
-      canvas.drawCircle(Offset(x0, y0), 7, Paint()..color = accentColor.withValues(alpha: 0.4));
-      canvas.drawCircle(Offset(x0, y0), 3.5, Paint()..color = AppColors.textPrimary);
+      canvas.drawCircle(Offset(x0, y0), 4.5, Paint()..color = AppColors.bgDeep);
+      canvas.drawCircle(Offset(x0, y0), 3.0, Paint()..color = accentColor);
     }
   }
 

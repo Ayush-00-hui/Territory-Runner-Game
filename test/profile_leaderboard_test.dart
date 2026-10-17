@@ -82,7 +82,7 @@ void main() {
       expect(find.text('K'), findsOneWidget); // Avatar initial
 
       // Verify level and faction badges
-      expect(find.text('LEVEL 5 ATHLETE'), findsOneWidget);
+      expect(find.text('Level 5 athlete'), findsOneWidget);
       expect(find.text('Cyber Vanguard'), findsOneWidget);
 
       // Verify streak counter
@@ -90,7 +90,7 @@ void main() {
       expect(find.byIcon(Icons.local_fire_department), findsOneWidget);
 
       // Verify Tier progress text
-      expect(find.text('TIER PROGRESSION'), findsOneWidget);
+      expect(find.text('Tier progression'), findsOneWidget);
       expect(find.text('1250 / 1250 XP'), findsOneWidget);
     });
 
@@ -111,16 +111,16 @@ void main() {
       );
 
       // Verify quests shelf header
-      expect(find.text('ACTIVE CONQUEST QUESTS'), findsOneWidget);
-      expect(find.text('RESETS IN 14H'), findsOneWidget);
+      expect(find.text('Active conquest quests'), findsOneWidget);
+      expect(find.text('Resets in 14h'), findsOneWidget);
 
       // Verify quests appear
-      expect(find.text('DAILY SECTOR SCOUT'), findsOneWidget);
-      expect(find.text('LOOP CLOSURE'), findsOneWidget);
-      expect(find.text('TERRITORY EXPANSION'), findsOneWidget);
+      expect(find.text('Daily sector scout'), findsOneWidget);
+      expect(find.text('Loop closure'), findsOneWidget);
+      expect(find.text('Territory expansion'), findsOneWidget);
 
       // Verify Trophy Case shelf header
-      expect(find.text('TROPHY CASE & BADGES'), findsOneWidget);
+      expect(find.text('Trophy case & badges'), findsOneWidget);
 
       // Verify unlocked and locked badges appear
       expect(find.text('First Conquest'), findsOneWidget);
@@ -158,18 +158,18 @@ void main() {
 
       // Dominance meter headers
       expect(find.text('Team Standings'), findsOneWidget);
-      expect(find.text('CONTESTED'), findsOneWidget);
-      expect(find.text('VANGUARD'), findsWidgets);
-      expect(find.text('SYNDICATE'), findsWidgets);
-      expect(find.text('NOMADS'), findsWidgets);
+      expect(find.text('Contested'), findsOneWidget);
+      expect(find.text('Vanguard'), findsWidgets);
+      expect(find.text('Syndicate'), findsWidgets);
+      expect(find.text('Nomads'), findsWidgets);
 
       // Scope filter pills
-      expect(find.text('GLOBAL'), findsOneWidget);
-      expect(find.text('CITY'), findsOneWidget);
-      expect(find.text('LOCAL'), findsOneWidget);
+      expect(find.text('Global'), findsOneWidget);
+      expect(find.text('City'), findsOneWidget);
+      expect(find.text('Local'), findsOneWidget);
 
       // Switch scope to City Grid
-      await tester.tap(find.text('CITY'));
+      await tester.tap(find.text('City'));
       await tester.pumpAndSettle();
 
       // Check leaderboard rankings

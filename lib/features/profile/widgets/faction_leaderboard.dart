@@ -190,12 +190,12 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                       border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      totalAreaSqm > 0 ? 'CONTESTED' : 'UNCLAIMED',
+                      totalAreaSqm > 0 ? 'Contested' : 'Unclaimed',
                       style: AppText.labelSmall.copyWith(
                         color: AppColors.accent,
                         fontSize: 9.5,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 0.6,
+                        letterSpacing: 0.4,
                       ),
                     ),
                   ),
@@ -234,9 +234,9 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildFactionLegend('VANGUARD', '$vanguardPct%', _formatArea(vanguard.totalAreaSqm), AppColors.accent),
-                  _buildFactionLegend('SYNDICATE', '$syndicatePct%', _formatArea(syndicate.totalAreaSqm), AppColors.warning),
-                  _buildFactionLegend('NOMADS', '$nomadsPct%', _formatArea(nomads.totalAreaSqm), AppColors.info),
+                  _buildFactionLegend('Vanguard', '$vanguardPct%', _formatArea(vanguard.totalAreaSqm), AppColors.accent),
+                  _buildFactionLegend('Syndicate', '$syndicatePct%', _formatArea(syndicate.totalAreaSqm), AppColors.warning),
+                  _buildFactionLegend('Nomads', '$nomadsPct%', _formatArea(nomads.totalAreaSqm), AppColors.info),
                 ],
               ),
 
@@ -267,11 +267,11 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
             ),
             Row(
               children: [
-                _buildScopeChip(LeaderboardScope.global, 'GLOBAL'),
+                _buildScopeChip(LeaderboardScope.global, 'Global'),
                 const SizedBox(width: AppSpacing.s6),
-                _buildScopeChip(LeaderboardScope.city, 'CITY'),
+                _buildScopeChip(LeaderboardScope.city, 'City'),
                 const SizedBox(width: AppSpacing.s6),
-                _buildScopeChip(LeaderboardScope.local, 'LOCAL'),
+                _buildScopeChip(LeaderboardScope.local, 'Local'),
               ],
             ),
           ],
@@ -509,7 +509,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                           borderRadius: AppSpacing.br8,
                         ),
                         child: const Text(
-                          'YOU',
+                          'You',
                           style: TextStyle(
                             color: AppColors.onAccent,
                             fontSize: 8.5,

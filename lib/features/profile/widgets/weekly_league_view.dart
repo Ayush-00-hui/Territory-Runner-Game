@@ -82,14 +82,14 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
   }
 
   String _formatCountdown(int seconds) {
-    if (seconds <= 0) return 'RESETTING...';
+    if (seconds <= 0) return 'Resetting...';
     final days = seconds ~/ 86400;
     final hours = (seconds % 86400) ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final secs = seconds % 60;
 
     if (days > 0) {
-      return '${days}D ${hours}H ${minutes}M';
+      return '${days}d ${hours}h ${minutes}m';
     }
     return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
@@ -153,7 +153,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
             ),
             const SizedBox(height: AppSpacing.s16),
             PrimaryButton(
-              label: 'RETRY',
+              label: 'Retry',
               onPressed: _fetchLeagueStandings,
             ),
           ],
@@ -176,7 +176,6 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
             color: AppColors.surface,
             borderRadius: AppSpacing.br24,
             border: Border.all(color: AppColors.border),
-            boxShadow: AppSpacing.subtleElevation,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -200,12 +199,12 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${standing.tier.toUpperCase()} DIVISION',
+                            '${standing.tier} Division',
                             style: AppText.label.copyWith(
                               color: tierColor,
                               fontWeight: FontWeight.w900,
                               fontSize: 13,
-                              letterSpacing: 1.2,
+                              letterSpacing: 0.6,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -253,19 +252,19 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
                   _buildStatTile(
-                    label: 'WEEKLY AREA',
+                    label: 'Weekly area',
                     value: '${(standing.weeklyAreaSqm / 1000).toStringAsFixed(1)}k',
                     unit: 'm²',
                   ),
                   Container(width: 1, height: 32, color: AppColors.border),
                   _buildStatTile(
-                    label: 'CONQUEST RUNS',
+                    label: 'Conquest runs',
                     value: '${standing.weeklyRuns}',
                     unit: 'sessions',
                   ),
                   Container(width: 1, height: 32, color: AppColors.border),
                   _buildStatTile(
-                    label: 'LEAGUE STATUS',
+                    label: 'League status',
                     value: _getZoneLabel(standing),
                     unit: '',
                     valueColor: _getZoneColor(standing),
@@ -283,16 +282,16 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'DIVISION STANDINGS',
+              'Division standings',
               style: AppText.label.copyWith(
                 color: AppColors.textMuted,
                 fontSize: 11,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
+                letterSpacing: 0.8,
               ),
             ),
             Text(
-              'RESETS MONDAY 00:00 UTC',
+              'Resets Monday 00:00 UTC',
               style: AppText.caption.copyWith(
                 color: AppColors.textMuted,
                 fontSize: 10,
@@ -310,7 +309,6 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
             color: AppColors.surface,
             borderRadius: AppSpacing.br16,
             border: Border.all(color: AppColors.border),
-            boxShadow: AppSpacing.subtleElevation,
           ),
           child: ClipRRect(
             borderRadius: AppSpacing.br16,
@@ -323,12 +321,12 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
 
                 // Promotion zone threshold line
                 if (standing.promotionRankCutoff > 0 && currentRank == standing.promotionRankCutoff) {
-                  return _buildThresholdLine('PROMOTION ZONE', AppColors.accent);
+                  return _buildThresholdLine('Promotion zone', AppColors.accent);
                 }
 
                 // Relegation zone threshold line
                 if (standing.relegationRankCutoff > 0 && currentRank == standing.relegationRankCutoff) {
-                  return _buildThresholdLine('RELEGATION ZONE', AppColors.rival);
+                  return _buildThresholdLine('Relegation zone', AppColors.rival);
                 }
 
                 return const Divider(color: AppColors.border, height: 1);
@@ -425,7 +423,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
-                          'YOU',
+                          'You',
                           style: TextStyle(
                             color: AppColors.onAccent,
                             fontSize: 9,
@@ -487,8 +485,8 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
           style: AppText.caption.copyWith(
             color: AppColors.textMuted,
             fontSize: 9,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.0,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
           ),
         ),
         const SizedBox(height: 4),
@@ -524,12 +522,12 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
 
   String _getZoneLabel(LeagueStanding s) {
     if (s.promotionRankCutoff > 0 && s.rank <= s.promotionRankCutoff) {
-      return 'PROMOTION';
+      return 'Promotion';
     }
     if (s.relegationRankCutoff > 0 && s.rank > s.relegationRankCutoff) {
-      return 'RELEGATION';
+      return 'Relegation';
     }
-    return 'SAFE ZONE';
+    return 'Safe zone';
   }
 
   Color _getZoneColor(LeagueStanding s) {

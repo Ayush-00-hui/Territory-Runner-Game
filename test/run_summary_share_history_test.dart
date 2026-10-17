@@ -113,20 +113,20 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('SHARE CONQUEST'), findsOneWidget);
-      expect(find.text('ATHLETIC DARK'), findsOneWidget);
-      expect(find.text('CYBER NEON'), findsOneWidget);
-      expect(find.text('STEALTH'), findsOneWidget);
+      expect(find.text('Share run'), findsOneWidget);
+      expect(find.text('Athletic Dark'), findsOneWidget);
+      expect(find.text('Cyber Neon'), findsOneWidget);
+      expect(find.text('Stealth'), findsOneWidget);
       expect(find.text('TERRITORY RUNNER'), findsOneWidget);
-      expect(find.text('SOVEREIGN RUN'), findsOneWidget);
+      expect(find.text('Closed loop'), findsOneWidget);
       expect(find.text('NEONPHANTOM'), findsOneWidget);
       expect(find.text('5.20 KM'), findsOneWidget);
 
       // Switch to Cyber Neon theme
-      await tester.tap(find.text('CYBER NEON'));
+      await tester.tap(find.text('Cyber Neon'));
       await tester.pumpAndSettle();
 
-      expect(find.text('GENERATE & EXPORT CARD'), findsOneWidget);
+      expect(find.text('Share card'), findsOneWidget);
     });
 
     testWidgets('HistoryRunCard renders conquest details and opens detail sheet', (tester) async {
@@ -161,16 +161,16 @@ void main() {
         ),
       );
 
-      expect(find.text('SOVEREIGN CONQUEST'), findsOneWidget);
-      expect(find.textContaining('0.02 km² CLAIMED'), findsOneWidget);
+      expect(find.text('Closed loop'), findsOneWidget);
+      expect(find.textContaining('0.02 km² claimed'), findsOneWidget);
 
       // Tap card to open modal sheet
-      await tester.tap(find.text('SOVEREIGN CONQUEST'));
+      await tester.tap(find.text('Closed loop'));
       await tester.pumpAndSettle();
 
-      expect(find.text('CONQUEST DOSSIER'), findsOneWidget);
-      expect(find.text('SHARE CARD'), findsOneWidget);
-      expect(find.text('CLOSE'), findsOneWidget);
+      expect(find.text('Run dossier'), findsOneWidget);
+      expect(find.text('Share run'), findsOneWidget);
+      expect(find.text('Done'), findsOneWidget);
     });
 
     testWidgets('RunHistoryScreen displays archive metrics and filter chips', (tester) async {
@@ -209,18 +209,18 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('CONQUEST ARCHIVE'), findsOneWidget);
-      expect(find.text('TOTAL AREA'), findsOneWidget);
-      expect(find.text('CONQUESTS'), findsOneWidget);
-      expect(find.text('ALL RUNS'), findsOneWidget);
-      expect(find.text('THIS WEEK'), findsOneWidget);
-      expect(find.text('THIS MONTH'), findsOneWidget);
+      expect(find.text('Run history'), findsOneWidget);
+      expect(find.text('Total area'), findsOneWidget);
+      expect(find.text('Conquests'), findsOneWidget);
+      expect(find.text('All runs'), findsOneWidget);
+      expect(find.text('This week'), findsOneWidget);
+      expect(find.text('This month'), findsOneWidget);
 
       // Tap filter
-      await tester.tap(find.text('THIS WEEK'));
+      await tester.tap(find.text('This week'));
       await tester.pumpAndSettle();
 
-      expect(find.text('SOVEREIGN CONQUEST'), findsOneWidget);
+      expect(find.text('Closed loop'), findsOneWidget);
     });
   });
 }

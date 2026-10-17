@@ -84,12 +84,11 @@ class HistoryRunCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'CONQUEST DOSSIER',
-                    style: AppText.label.copyWith(
-                      color: AppColors.accent,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
+                    'Run dossier',
+                    style: AppText.headingSmall.copyWith(
+                      color: AppColors.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   Text(
@@ -129,13 +128,13 @@ class HistoryRunCard extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    _metricRow('CLAIMED TERRITORY', areaDisplay),
+                    _metricRow('Claimed territory', areaDisplay),
                     const Divider(color: AppColors.borderSubtle, height: 16),
-                    _metricRow('ESTIMATED DISTANCE', '${estimatedKm.toStringAsFixed(2)} km'),
+                    _metricRow('Estimated distance', '${estimatedKm.toStringAsFixed(2)} km'),
                     const Divider(color: AppColors.borderSubtle, height: 16),
-                    _metricRow('POLYGON VERTICES', '${territory.polygon.length} GPS Coordinates'),
+                    _metricRow('Polygon coordinates', '${territory.polygon.length} GPS points'),
                     const Divider(color: AppColors.borderSubtle, height: 16),
-                    _metricRow('SECURITY VERIFICATION', territory.isPendingReview ? 'Pending Review' : 'Verified Sovereign ✓'),
+                    _metricRow('Verification', territory.isPendingReview ? 'Pending Review' : 'Verified Sovereign ✓'),
                   ],
                 ),
               ),
@@ -153,7 +152,7 @@ class HistoryRunCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
                       ),
                       icon: const Icon(Icons.share_rounded, size: 18),
-                      label: const Text('SHARE CARD', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                      label: const Text('Share run', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                       onPressed: () {
                         Navigator.pop(ctx);
                         RunShareCardModal.show(
@@ -172,7 +171,7 @@ class HistoryRunCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.s12),
                   Expanded(
                     child: PrimaryButton(
-                      label: 'CLOSE',
+                      label: 'Done',
                       onPressed: () => Navigator.pop(ctx),
                     ),
                   ),
@@ -261,10 +260,10 @@ class HistoryRunCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'SOVEREIGN CONQUEST',
+                            'Closed loop',
                             style: AppText.headingSmall.copyWith(
                               fontSize: 14,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
                           ),
@@ -283,16 +282,16 @@ class HistoryRunCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppColors.accent.withValues(alpha: 0.15),
+                              color: AppColors.accent.withValues(alpha: 0.12),
                               borderRadius: AppSpacing.br8,
-                              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                              border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
                             ),
                             child: Text(
-                              '+$areaDisplay CLAIMED',
+                              '+$areaDisplay claimed',
                               style: AppText.label.copyWith(
                                 color: AppColors.accent,
                                 fontSize: 9.5,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w700,
                                 fontFeatures: const [FontFeature.tabularFigures()],
                               ),
                             ),
@@ -393,13 +392,13 @@ class _HistoryPolygonPainter extends CustomPainter {
     path.close();
 
     final fillPaint = Paint()
-      ..color = AppColors.accent.withValues(alpha: 0.25)
+      ..color = AppColors.territoryMineFill
       ..style = PaintingStyle.fill;
 
     final strokePaint = Paint()
-      ..color = AppColors.accent
+      ..color = AppColors.territoryMineBorder
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 1.5;
 
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);
@@ -409,13 +408,13 @@ class _HistoryPolygonPainter extends CustomPainter {
       final double x0 = padding + ((p0.longitude - minLng) / lngSpan) * usableW;
       final double y0 = padding + (1.0 - ((p0.latitude - minLat) / latSpan)) * usableH;
 
-      final dotGlow = Paint()
-        ..color = AppColors.accent.withValues(alpha: 0.4)
+      final dotBorder = Paint()
+        ..color = AppColors.bgDeep
         ..style = PaintingStyle.fill;
-      canvas.drawCircle(Offset(x0, y0), 5, dotGlow);
+      canvas.drawCircle(Offset(x0, y0), 4, dotBorder);
 
       final dotPaint = Paint()
-        ..color = AppColors.textPrimary
+        ..color = AppColors.accent
         ..style = PaintingStyle.fill;
       canvas.drawCircle(Offset(x0, y0), 2.5, dotPaint);
     }
