@@ -2,23 +2,43 @@
 
 <div align="center">
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.13+-02569B.svg?style=for-the-badge&logo=Flutter&logoColor=white)](https://flutter.dev/)
-[![Dart](https://img.shields.io/badge/Dart-3.0+-0175C2.svg?style=for-the-badge&logo=dart&logoColor=white)](https://dart.dev/)
-[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8.svg?style=for-the-badge&logo=go&logoColor=white)](https://go.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16_PostGIS-4169E1.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://postgis.net/)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-114%2F114_Passing-brightgreen.svg?style=for-the-badge)](test/)
-[![Go Tests](https://img.shields.io/badge/Go_Backend_Tests-60_Unit_%2B_11_PostGIS-brightgreen.svg?style=for-the-badge)](backend/)
-[![Golden Fixtures](https://img.shields.io/badge/Golden_Fixtures-7%2F7_Parity-success.svg?style=for-the-badge)](test_fixtures/)
-[![Design System](https://img.shields.io/badge/Palette-Whoop%2FOura_Obsidian_%230B0C0E-3DDC97?style=for-the-badge)](lib/core/theme/)
-[![Push Alerts](https://img.shields.io/badge/Push_Alerts-FCM_HTTP_v1_OAuth2-FFCA28?style=for-the-badge&logo=firebase)](backend/internal/notify/)
-[![Auth](https://img.shields.io/badge/Auth-Firebase_RS256_JWT-FFA000?style=for-the-badge&logo=firebase)](backend/internal/auth/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+```
+  _______             _ _                     _____                                 
+ |__   __|           (_) |                   |  __ \                                
+    | | ___ _ __ _ __ _| |_ ___  _ __ _   _  | |__) |   _ _ __  _ __   ___ _ __     
+    | |/ _ \ '__| '__| | __/ _ \| '__| | | | |  _  / | | | '_ \| '_ \ / _ \ '__|    
+    | |  __/ |  | |  | | || (_) | |  | |_| | | | \ \ |_| | | | | | | |  __/ |       
+    |_|\___|_|  |_|  |_|\__\___/|_|   \__, | |_|  \_\__,_|_| |_|_| |_|\___|_|       
+                                       __/ |                                        
+                                      |___/                                         
+```
+
+**Real-Time Server-Authoritative Location-Based Athletic Fitness Gamification Platform**  
+*Conquer arbitrary closed-loop GPS territory polygons on a calm, high-contrast tactical map. Defend land from rivals, climb weekly competitive league tiers, and receive tactical AI coaching.*
 
 <br>
 
-**Territory Runner** is a real-time, server-authoritative, location-based athletic fitness gamification platform. By running, jogging, or walking in the physical world, athletes conquer arbitrary closed-loop GPS territory polygons on a calm, high-contrast tactical map, competing for territory sovereignty, defending land from rivals, climbing weekly competitive league tiers, and receiving AI coaching insights.
+[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/Ayush-00-hui/Territory-Runner-Game/ci.yml?branch=feature/hardening-v3&style=for-the-badge&label=CI%20Pipeline&logo=githubactions&logoColor=white)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-114%2F114_Passing-3DDC97.svg?style=for-the-badge&logo=flutter&logoColor=white)](test/)
+[![Go Tests](https://img.shields.io/badge/Go_Backend-60_Unit_%2B_11_PostGIS-00ADD8.svg?style=for-the-badge&logo=go&logoColor=white)](backend/)
+[![Golden Parity](https://img.shields.io/badge/Golden_Parity-7%2F7_Fixtures_%3C0.5%25_Delta-success.svg?style=for-the-badge)](test_fixtures/)
+[![Design System](https://img.shields.io/badge/Palette-Whoop%2FOura_Obsidian_%230B0C0E-16181D?style=for-the-badge&logo=materialdesign&logoColor=3DDC97)](lib/core/theme/)
 
-[✨ Key Features](#-key-features) • [🏗️ Architecture](#%EF%B8%8F-system-architecture) • [📊 Verification Matrix](#-honest-feature-verification-matrix) • [📡 API Reference](#-rest--websocket-api-reference) • [🎓 Viva Defense Guide](docs/VIVA.md) • [🚢 PostGIS Deployment Guide](docs/DEPLOYMENT.md)
+<br>
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.13+-02569B.svg?style=flat-square&logo=Flutter&logoColor=white)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-3.0+-0175C2.svg?style=flat-square&logo=dart&logoColor=white)](https://dart.dev/)
+[![Go](https://img.shields.io/badge/Go-1.22+-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16_PostGIS_3.4-4169E1.svg?style=flat-square&logo=postgresql&logoColor=white)](https://postgis.net/)
+[![Docker](https://img.shields.io/badge/Docker-Multi--Stage_Build-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](backend/Dockerfile)
+[![Auth](https://img.shields.io/badge/Auth-Firebase_RS256_JWT-FFA000.svg?style=flat-square&logo=firebase&logoColor=white)](backend/internal/auth/)
+[![Push Alerts](https://img.shields.io/badge/Push_Alerts-FCM_HTTP_v1_OAuth2-FFCA28.svg?style=flat-square&logo=firebase&logoColor=black)](backend/internal/notify/)
+[![Gemini](https://img.shields.io/badge/AI_Coach-Google_Gemini_1.5_Flash-4285F4.svg?style=flat-square&logo=google&logoColor=white)](backend/internal/coach/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
+
+<br>
+
+[🌟 Overview](#-executive-overview) • [💡 The "Why"](#-why-territory-runner) • [🏗️ Architecture](#%EF%B8%8F-system-architecture) • [📊 Verification Matrix](#-honest-feature-verification-matrix) • [🚀 Quickstart](#-getting-started--local-development) • [📡 API Reference](#-rest--websocket-api-reference) • [🧮 Core Algorithms](#-core-mechanics--algorithmic-parity) • [🎓 Viva Defense](docs/VIVA.md) • [🚢 Deployment](docs/DEPLOYMENT.md)
 
 </div>
 
@@ -26,26 +46,39 @@
 
 ## 📑 Table of Contents
 - [Executive Overview](#-executive-overview)
+- [Why Territory Runner? (Comparative Analysis)](#-why-territory-runner-comparative-analysis)
 - [System Architecture](#%EF%B8%8F-system-architecture)
+  - [1. End-to-End Component Architecture](#1-end-to-end-component-architecture)
+  - [2. Run Conquest Lifecycle (Sequence Diagram)](#2-run-conquest-lifecycle-sequence-diagram)
+  - [3. Spatial Database Entity Relationship Diagram](#3-spatial-database-entity-relationship-diagram)
 - [Honest Feature Verification Matrix](#-honest-feature-verification-matrix)
 - [Key Features](#-key-features)
+- [Getting Started & Local Development](#-getting-started--local-development)
+  - [Prerequisites](#prerequisites)
+  - [Option A: Full Stack with Docker Compose (Recommended)](#option-a-full-stack-with-docker-compose-recommended)
+  - [Option B: Backend with Hermetic In-Memory Dev Store](#option-b-backend-with-hermetic-in-memory-dev-store)
+  - [Running the Flutter Mobile Client](#running-the-flutter-mobile-client)
+- [Environment Variables & Configuration Reference](#-environment-variables--configuration-reference)
 - [REST & WebSocket API Reference](#-rest--websocket-api-reference)
+  - [Endpoint Directory](#endpoint-directory)
+  - [Detailed Request & Response Specifications](#detailed-request--response-specifications)
+  - [WebSocket Frame Protocol](#websocket-frame-protocol)
 - [Core Mechanics & Algorithmic Parity](#-core-mechanics--algorithmic-parity)
   - [1. Multi-Candidate & Lasso Loop Closure](#1-multi-candidate--lasso-loop-closure)
-  - [2. Multi-Loop Atomic PostGIS Transactions](#2-multi-loop-atomic-postgis-transactions)
-  - [3. Territory Strength, Decay & Defense](#3-territory-strength-decay--defense)
-  - [4. Explore Claim Planner with Net-New Area Deduction](#4-explore-claim-planner-with-net-new-area-deduction)
-  - [5. Donut Hole Classification & Rendering](#5-donut-hole-classification--rendering)
-  - [6. GPS Anomaly Detection & Spoofing Mitigation](#6-gps-anomaly-detection--spoofing-mitigation)
+  - [2. Geodesic Shoelace Area Calculation](#2-geodesic-shoelace-area-calculation)
+  - [3. Multi-Loop Atomic PostGIS Transactions](#3-multi-loop-atomic-postgis-transactions)
+  - [4. Territory Strength Decay & Defense Mechanics](#4-territory-strength-decay--defense-mechanics)
+  - [5. Explore Claim Planner with Net-New Area Deduction](#5-explore-claim-planner-with-net-new-area-deduction)
+  - [6. Donut Hole Classification & Rendering](#6-donut-hole-classification--rendering)
+  - [7. Kinematic GPS Anomaly Detection & Spoofing Mitigation](#7-kinematic-gps-anomaly-detection--spoofing-mitigation)
 - [Push Notification Infrastructure (FCM HTTP v1)](#-push-notification-infrastructure-fcm-http-v1)
 - [Weekly Competitive League Engine](#-weekly-competitive-league-engine)
-- [Classroom & Viva Demonstration Lab](#-classroom--viva-demonstration-lab)
-- [Technology Stack](#%EF%B8%8F-technology-stack)
-- [Project Directory Structure](#-project-directory-structure)
-- [Getting Started & Local Development](#-getting-started--local-development)
+- [Calm Athletic Design System (Whoop/Oura Obsidian)](#-calm-athletic-design-system-whoopoura-obsidian)
 - [Production Deployment Notes](#-production-deployment-notes)
 - [Test Suite & Quality Verification](#-test-suite--quality-verification)
+- [Classroom & Viva Demonstration Lab](#-classroom--viva-demonstration-lab)
 - [Known Limitations](#%EF%B8%8F-known-limitations)
+- [Troubleshooting & FAQ](#-troubleshooting--faq)
 - [Contributing & License](#-contributing--license)
 
 ---
@@ -72,20 +105,37 @@ Traditional fitness trackers record passive linear polylines. **Territory Runner
 
 ---
 
+## 💡 Why Territory Runner? (Comparative Analysis)
+
+| Feature | Standard Trackers (Strava, Nike) | Grid-Based GPS Games (Ingress, Turf) | Territory Runner |
+| :--- | :--- | :--- | :--- |
+| **Spatial Model** | Passive 1D polylines (no territory concept) | Rigid discrete cells (S2 / H3 hex grids) | **Continuous arbitrary organic 2D polygons** |
+| **Enclosure Mechanism** | None | Fixed geographic portal linking | **Real-time proximity & lasso self-intersection snap** |
+| **Concurrency Control** | Independent runs, no conflict | Optimistic locks with retry aborts | **Transaction-scoped PostGIS advisory lock (`pg_advisory_xact_lock`)** |
+| **Offline Capability** | Records track, no gameplay | Fails without active cell signal | **Dual-engine: local Clipper2 optimistic preview + Hive FIFO queue** |
+| **Screen Lock GPS** | Standard OS background tracking | Often throttled by OS battery management | **Hardened foreground service with sticky notification & wakelock** |
+| **Anti-Cheat Validation** | Post-hoc manual flag reviews | Basic speed thresholds | **Kinematic window filter: hard ceiling 25 km/h, accel variance, jitter** |
+| **Rival Alerts** | None | Delayed batch emails | **Real-time WebSocket alerts + FCM HTTP v1 background push** |
+| **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Calm, distraction-free Whoop/Oura matte obsidian (`#0B0C0E`)** |
+
+---
+
 ## 🏗️ System Architecture
+
+### 1. End-to-End Component Architecture
 
 ```mermaid
 graph TD
     subgraph Client ["Flutter Mobile Client (Offline-First & Background Hardened)"]
         UI[Tactical Map HUD & Whoop/Oura Design System]
-        ForegroundService[Foreground Location Service & Notification]
+        ForegroundService[Foreground Location Service & Sticky Notification]
         WakeLockMgr[Wakelock Keep-Alive Manager]
         CrashBox[(Hive Crash Recovery Box)]
         SignalFilter[Signal Gap Interpolator & Kinematic Filter]
         ClaimPlanner[Explore Claim Planner & Net-New Area]
         LocalEngine[Clipper2 Optimistic Engine & Loop Enclosure]
         HiveQueue[(Hive Offline Sync Queue)]
-        ApiClient[ApiClient with Backoff & 4xx Halt]
+        ApiClient[ApiClient with Exponential Backoff & 4xx Halt]
         HoleClassifier[Ray-Casting Hole Classifier]
         LeagueView[Weekly League View & Percentile HUD]
         
@@ -155,6 +205,106 @@ graph TD
 
 ---
 
+### 2. Run Conquest Lifecycle (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Athlete as 🏃 Athlete
+    participant GPS as 🛰️ GPS & Foreground Service
+    participant Client as 📱 Flutter Client (Clipper2)
+    participant Hive as 💾 Hive Storage
+    participant API as 🌐 Go Chi API (:8085)
+    participant Lock as 🔒 pg_advisory_xact_lock
+    participant DB as 🐘 PostgreSQL / PostGIS 3.4
+    participant FCM as 📲 FCM HTTP v1
+    participant Rival as 🏃 Rival Athlete
+
+    Athlete->>GPS: Starts Outdoor Workout Session
+    GPS->>Client: Continuous GPS Point Stream (1 Hz)
+    Client->>Hive: Flushes point to running_session_box (Crash Recovery)
+    Athlete->>GPS: Crosses Previous Track (Lasso Closure)
+    Client->>Client: Detects Loop Closure & Computes Clipper2 Optimistic Area
+    Client->>UI: Renders Instant Optimistic Sector on Map
+    Athlete->>Client: Finishes Run & Confirms Submission
+    Client->>Hive: Enqueues Run into Persistent FIFO Sync Queue
+    Hive->>API: POST /v1/runs (with Idempotency Key & Raw Points)
+    API->>API: Verifies Firebase RS256 JWT Token & Checks Rate Limit
+    API->>API: Evaluates Kinematic Anomaly Window (Speed < 25 km/h)
+    API->>Lock: Acquires pg_advisory_xact_lock(hashtext('territory_mutation_lock'))
+    API->>DB: ST_MakeValid(ST_PolygonFromText(Loop))
+    API->>DB: ST_Union into Runner Sovereign Geometry
+    API->>DB: ST_Difference against Overlapping Rival Territories
+    DB-->>API: Returns Net Claimed Area, New Total Area & Affected Rivals
+    API->>DB: Commits Spatial Mutation Transaction & Releases Lock
+    API-->>Client: Returns HTTP 201 Created (Claimed Area, XP, Status)
+    Client->>Hive: Dequeues Run from Sync Queue & Clears Crash Box
+    Client->>UI: Displays Area Reconciliation Toast if Server Area Differs
+    
+    par Async Push Notification Fan-Out
+        API-)FCM: Signs RS256 Assertion & Dispatches Push Alert (5s Timeout)
+        FCM-)Rival: "Your territory in Sector 4 was carved by Runner X!"
+    and Real-Time WebSocket Broadcast
+        API-)Rival: WS Broadcast `territory_under_attack` HUD Alert
+    end
+```
+
+---
+
+### 3. Spatial Database Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    users ||--o{ territories : "owns"
+    users ||--o{ runs : "executes"
+    users ||--o{ device_tokens : "registers"
+
+    users {
+        varchar(64) id PK "Unique athlete identifier (Firebase UID)"
+        varchar(64) username "Display callsign"
+        varchar(32) faction "Cyber Vanguard | Neon Syndicate | Solaris Nomads"
+        double_precision total_area_sqm "Cumulative sovereign territory area"
+        integer xp "Lifetime experience points"
+        integer level "Athlete level (derived from XP)"
+        integer total_runs "Total completed runs count"
+        timestamptz created_at "Registration timestamp"
+        timestamptz updated_at "Last mutation timestamp"
+    }
+
+    territories {
+        varchar(128) id PK "Unique polygon sector identifier"
+        varchar(64) owner_id FK "References users.id"
+        geometry geom "PostGIS geometry(MultiPolygon, 4326)"
+        double_precision area_sqm "Spherical geodesic area in square meters"
+        double_precision strength "Territory health (0.0 to 100.0)"
+        timestamptz last_defended_at "Timestamp of last friendly run traversal"
+        timestamptz updated_at "Last spatial update timestamp"
+    }
+
+    runs {
+        varchar(64) id PK "Unique run identifier"
+        varchar(64) user_id FK "References users.id"
+        varchar(128) idempotency_key UK "Client-generated deduplication UUID"
+        integer duration_seconds "Total elapsed workout duration"
+        double_precision distance_meters "Total kinematic distance traversed"
+        double_precision area_claimed "Net-new surface area conquered (sqm)"
+        double_precision anomaly_score "Computed kinematic anomaly score (0.0 - 1.0)"
+        text_array anomaly_reasons "Array of triggered anti-cheat flags"
+        geometry path "PostGIS geometry(LineString, 4326)"
+        varchar(32) status "accepted | flagged | rejected"
+        timestamptz created_at "Run completion timestamp (UTC)"
+    }
+
+    device_tokens {
+        varchar(64) user_id FK "References users.id"
+        text token PK "Firebase Cloud Messaging device token"
+        varchar(16) platform "android | ios"
+        timestamptz updated_at "Last registration / refresh timestamp"
+    }
+```
+
+---
+
 ## 📊 Honest Feature Verification Matrix
 
 This matrix documents actual tested reality versus theoretical claims:
@@ -191,15 +341,119 @@ This matrix documents actual tested reality versus theoretical claims:
 
 ---
 
+## 🚀 Getting Started & Local Development
+
+### Prerequisites
+
+| Tool | Version Requirement | Purpose |
+| :--- | :--- | :--- |
+| **Go** | 1.22+ | Backend server compilation & test execution |
+| **Flutter SDK** | 3.13+ (Dart 3.0+) | Cross-platform mobile application |
+| **Docker & Docker Compose** | v2.20+ | Multi-stage build & local PostGIS database |
+| **Android SDK / Xcode** | Android 13+ (API 33+) / iOS 15+ | Mobile deployment target |
+
+---
+
+### Option A: Full Stack with Docker Compose (Recommended)
+
+1. **Clone Repository & Navigate to Backend**:
+   ```bash
+   git clone https://github.com/Ayush-00-hui/Territory-Runner-Game.git
+   cd Territory-Runner-Game/backend
+   ```
+
+2. **Launch PostGIS 16 & Server**:
+   ```bash
+   docker compose up -d --build
+   ```
+   * The PostgreSQL + PostGIS 16 container initializes on port `5432`.
+   * SQL schema migrations in `migrations/` are applied automatically.
+   * The Go backend listens on `http://localhost:8085`.
+
+3. **Verify Service Health**:
+   ```bash
+   curl -i http://localhost:8085/healthz
+   # Expected response: HTTP/1.1 200 OK {"status":"ok","database":"connected"}
+   ```
+
+---
+
+### Option B: Backend with Hermetic In-Memory Dev Store
+
+When Docker is unavailable, the backend seamlessly runs with zero external dependencies:
+
+```bash
+cd backend
+# Set environment variables for development mode
+export ENV=development
+export AUTH_MODE=dev
+export PORT=8085
+
+go run ./cmd/server
+```
+
+* Automatically initializes the thread-safe hermetic in-memory store.
+* Accepts test user headers (`X-Dev-User: athlete_alpha`) without requiring Firebase tokens.
+
+---
+
+### Running the Flutter Mobile Client
+
+1. **Install Dependencies**:
+   ```bash
+   flutter pub get
+   ```
+
+2. **Forward Backend Port (Android Emulator)**:
+   ```bash
+   adb reverse tcp:8085 tcp:8085
+   ```
+
+3. **Run on Target Device**:
+   ```bash
+   # Android Emulator
+   flutter run -d emulator-5554
+
+   # iOS Simulator
+   open -a Simulator
+   flutter run -d iPhone
+   ```
+
+---
+
+## ⚙️ Environment Variables & Configuration Reference
+
+Configure the backend using environment variables or a `.env` file in `backend/`:
+
+| Variable | Type | Default | Production Requirement | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `PORT` | Integer | `8085` | Cloud-assigned (e.g. `8080`) | HTTP server listening port |
+| `ENV` | String | `development` | `production` | Environment mode (`production` disables dev auth mode) |
+| `AUTH_MODE` | String | `dev` | `firebase` | Authentication mode (`firebase` validates RS256 Google JWTs) |
+| `DATABASE_URL` | String | `""` | **Required** | PostgreSQL connection URI (`postgres://user:pass@host:5432/db`) |
+| `ALLOWED_ORIGINS` | String | `*` | Specific origins / empty | Comma-separated CORS and WebSocket allowed origin whitelist |
+| `GEMINI_API_KEY` | String | `""` | Optional | Google Gemini API key (server-side proxy for AI coaching) |
+| `GEMINI_MODEL` | String | `gemini-1.5-flash` | `gemini-1.5-flash` | Gemini model name identifier |
+| `FCM_SERVICE_ACCOUNT_JSON`| JSON String | `""` | Optional | Google Service Account JSON for FCM HTTP v1 OAuth2 push alerts |
+| `RATE_LIMIT_GLOBAL` | Integer | `100` | `100` | Max requests per minute per IP for standard endpoints |
+| `RATE_LIMIT_RUNS` | Integer | `5` | `5` | Max run submissions per minute per IP |
+| `RATE_LIMIT_COACH` | Integer | `10` | `10` | Max AI coaching debrief requests per minute per IP |
+
+---
+
 ## 📡 REST & WebSocket API Reference
 
-The Go server serves all endpoints on port `8085` (default). All routes except `/healthz` require a valid Firebase ID Token (`Authorization: Bearer <token>`) or `X-Dev-User: <username>` when `AUTH_MODE=dev`.
+### Endpoint Directory
+
+All endpoints except `/healthz` require authentication:
+- In production (`AUTH_MODE=firebase`): `Authorization: Bearer <Firebase_ID_Token>`
+- In development (`AUTH_MODE=dev`): `X-Dev-User: <username>` or `Authorization: Bearer <any>`
 
 | Method | Endpoint | Auth | Description | Status Codes |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/healthz` | None | Service liveness probe & database connectivity status | `200 OK`, `503 Service Unavailable` |
-| `GET` | `/v1/ws` | Token / Dev | Full-duplex WebSocket for live runner GPS presence & attack alerts | `101 Switching Protocols`, `401 Unauthorized`, `403 Forbidden` |
-| `GET` | `/v1/me` | Required | Current authenticated athlete profile (XP, level, total area, runs) | `200 OK`, `401 Unauthorized` |
+| `GET` | `/healthz` | None | Service liveness probe & database connection health | `200 OK`, `503 Service Unavailable` |
+| `GET` | `/v1/ws` | Token / Dev | Full-duplex WebSocket for live rival GPS & attack alerts | `101 Switching Protocols`, `401`, `403` |
+| `GET` | `/v1/me` | Required | Current athlete profile (XP, level, total area, runs) | `200 OK`, `401 Unauthorized` |
 | `POST` | `/v1/runs` | Required | Submits GPS track points with idempotency key; executes PostGIS conquest | `201 Created`, `200 OK (replay)`, `400`, `401`, `413`, `422`, `429` |
 | `GET` | `/v1/runs` | Required | Retrieves recent run history for the authenticated user | `200 OK`, `401 Unauthorized` |
 | `POST` | `/v1/runs/{id}/coach` | Required | Calls Google Gemini LLM proxy to generate post-run tactical debrief | `200 OK`, `401 Unauthorized`, `404 Not Found`, `429 Rate Limited` |
@@ -208,17 +462,56 @@ The Go server serves all endpoints on port `8085` (default). All routes except `
 | `POST` | `/v1/device-token` | Required | Registers or refreshes athlete FCM device token for push alerts | `200 OK`, `400 Bad Request`, `401 Unauthorized` |
 | `GET` | `/v1/league/current` | Required | Fetches current weekly league standings, user tier, and reset countdown | `200 OK`, `401 Unauthorized` |
 
-### Key Payloads
+---
 
-#### `POST /v1/device-token` Request:
-```json
+### Detailed Request & Response Specifications
+
+#### 1. `POST /v1/runs` — Submit Workout Track
+
+```http
+POST /v1/runs HTTP/1.1
+Host: localhost:8085
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJSUzI1Ni...
+
 {
-  "token": "dK3f9X...fcm_device_registration_token...",
-  "platform": "android"
+  "idempotency_key": "run_01j9a8b7c6d5e4f3",
+  "duration_seconds": 940,
+  "distance_meters": 2450.5,
+  "points": [
+    {"lat": 51.5074, "lng": -0.1278, "timestamp": 1729000000000, "speed": 2.8, "is_mocked": false},
+    {"lat": 51.5085, "lng": -0.1265, "timestamp": 1729000010000, "speed": 3.1, "is_mocked": false},
+    {"lat": 51.5074, "lng": -0.1278, "timestamp": 1729000040000, "speed": 2.9, "is_mocked": false}
+  ]
 }
 ```
 
-#### `GET /v1/league/current` Response:
+**Response (`201 Created` on new capture / `200 OK` on idempotent replay):**
+```json
+{
+  "run_id": "run_9f8e7d6c-5b4a-3210-fedc-ba9876543210",
+  "idempotency_key": "run_01j9a8b7c6d5e4f3",
+  "status": "accepted",
+  "area_claimed": 14250.75,
+  "loops_count": 1,
+  "xp_awarded": 1425,
+  "player_total_area_sqm": 89400.25,
+  "anomaly_score": 0.08,
+  "anomaly_reasons": [],
+  "territory_geojson": "{\"type\":\"MultiPolygon\",\"coordinates\":[[[[-0.1278,51.5074],...]]]]}"
+}
+```
+
+---
+
+#### 2. `GET /v1/league/current` — Weekly League Standings
+
+```http
+GET /v1/league/current HTTP/1.1
+Authorization: Bearer eyJhbGciOiJSUzI1Ni...
+```
+
+**Response (`200 OK`):**
 ```json
 {
   "league_id": "league_2026_w42",
@@ -228,11 +521,28 @@ The Go server serves all endpoints on port `8085` (default). All routes except `
   "user_rank": 3,
   "user_weekly_area": 48250.0,
   "standings": [
-    {"rank": 1, "user_id": "user_apex", "weekly_area_sqm": 72500.0, "runs_count": 8, "tier": "diamond"},
-    {"rank": 2, "user_id": "user_blaze", "weekly_area_sqm": 54100.0, "runs_count": 6, "tier": "diamond"},
-    {"rank": 3, "user_id": "current_user", "weekly_area_sqm": 48250.0, "runs_count": 5, "tier": "diamond"}
+    {"rank": 1, "user_id": "usr_apex", "username": "ApexRunner", "faction": "Cyber Vanguard", "weekly_area_sqm": 72500.0, "runs_count": 8, "tier": "diamond"},
+    {"rank": 2, "user_id": "usr_blaze", "username": "BlazePacer", "faction": "Neon Syndicate", "weekly_area_sqm": 54100.0, "runs_count": 6, "tier": "diamond"},
+    {"rank": 3, "user_id": "usr_current", "username": "ShadowStrider", "faction": "Solaris Nomads", "weekly_area_sqm": 48250.0, "runs_count": 5, "tier": "diamond"}
   ]
 }
+```
+
+---
+
+### WebSocket Frame Protocol
+
+Connect to `ws://localhost:8085/v1/ws?token=<token>` (or `?dev_user=<username>` in dev mode).
+
+```json
+// 1. Client Presence Heartbeat:
+{"type": "presence", "lat": 51.5074, "lng": -0.1278, "speed": 3.2, "heading": 142.5}
+
+// 2. Server Broadcast of Nearby Rivals:
+{"type": "rival_update", "user_id": "usr_rival_9", "callsign": "Vanguard_9", "faction": "Cyber Vanguard", "lat": 51.5080, "lng": -0.1270, "speed": 3.4, "heading": 180.0}
+
+// 3. Server Targeted Attack Alert:
+{"type": "territory_under_attack", "attacker_id": "usr_rival_9", "attacker_callsign": "Vanguard_9", "sector_id": "poly_usr_current_territory", "timestamp": "2026-10-17T12:00:00Z"}
 ```
 
 ---
@@ -247,7 +557,18 @@ The enclosure engines in Dart (`polygon_enclosure_engine.dart`) and Go (`backend
   The preceding path tail $[P_0, \dots, P_i, Q]$ is retained for continuous running.
 - **Max-Area & Self-Intersection Guard:** Single loops exceeding $5\text{ km}^2$ ($5,000,000\text{ m}^2$) or self-intersecting figures are rejected with explicit reasons.
 
-### 2. Multi-Loop Atomic PostGIS Transactions
+---
+
+### 2. Geodesic Shoelace Area Calculation
+Planar Euclidean geometry distorts true physical surface area at non-equatorial latitudes. The engine projects spherical lat/lng into local metric space using the mean latitude cosine projection:
+$$x_i = R_{\text{earth}} \cdot \lambda_i \cdot \cos(\bar{\phi}), \quad y_i = R_{\text{earth}} \cdot \phi_i$$
+Where $\bar{\phi} = \frac{1}{n}\sum_{i=1}^n \phi_i$. The signed enclosed area is evaluated via Gauss's Shoelace formula:
+$$\text{Area} = \frac{1}{2} \left| \sum_{i=1}^n (x_i y_{i+1} - x_{i+1} y_i) \right|$$
+This achieves $<0.5\%$ error relative to PostGIS `ST_Area(geom::geography)` ellipsoidal integration.
+
+---
+
+### 3. Multi-Loop Atomic PostGIS Transactions
 When multiple loops occur within one run:
 1. `ProcessTrack` collects all non-overlapping valid loops.
 2. In PostgreSQL, `CaptureRunAndMutateTerritories` locks `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))`.
@@ -258,14 +579,18 @@ When multiple loops occur within one run:
    - Updates `strength = 100.0` and `last_defended_at = NOW()`.
    - Sums net area and commits atomically.
 
-### 3. Territory Strength, Decay & Defense
+---
+
+### 4. Territory Strength Decay & Defense Mechanics
 $$\text{Strength}(t) = \max\left(0, 100.0 - 15.0 \times \frac{t - t_{\text{defended}}}{86400\text{ s}}\right)$$
 - Undefended territory decays at $15\text{ points/day}$.
 - Running through own territory resets strength to $100\%$.
 - Sectors with $\text{strength} < 30\%$ grant $1.5\times$ net XP bonus to conquering rivals.
 - If a rival's capture reduces a weak sector's remaining area below $50\text{ m}^2$, the sector collapses completely.
 
-### 4. Explore Claim Planner with Net-New Area Deduction
+---
+
+### 5. Explore Claim Planner with Net-New Area Deduction
 1. **Target Area to Perimeter Scaling:** Urban walking/running paths exhibit a street grid factor $\approx 3.8$:
    $$P_{\text{meters}} \approx 3.8 \times \sqrt{A_{\text{target}}}$$
 2. **Route Generation:** OSRM Pedestrian generates real walkable road loops. If offline, the client falls back to synthetic geodesic loops.
@@ -273,13 +598,17 @@ $$\text{Strength}(t) = \max\left(0, 100.0 - 15.0 \times \frac{t - t_{\text{defen
    $$\text{Area}_{\text{net}} = \text{Clipper2.difference}(\text{RoutePoly}, \text{OwnedTerritory})$$
    Telemetry HUD displays Total Estimated Area, Estimated NEW Area, Distance, and Duration.
 
-### 5. Donut Hole Classification & Rendering
+---
+
+### 6. Donut Hole Classification & Rendering
 Multi-ring polygons (rings with inner holes) are classified via 2D ray-casting containment depth:
 $$\text{depth}(R) = \sum_{j \neq R} \mathbf{1}_{R \subset P_j}$$
 - Rings with **even depth** are exterior shells.
 - Rings with **odd depth** are holes assigned to `Polygon.holePointsList`, rendering inner holes transparently instead of filling them.
 
-### 6. GPS Anomaly Detection & Spoofing Mitigation
+---
+
+### 7. Kinematic GPS Anomaly Detection & Spoofing Mitigation
 The telemetry evaluator operates on sliding windows without false claims of impenetrable security:
 - **Instant Hard Rejections:** `isMocked == true`, speed $> 25\text{ km/h}$ ($6.94\text{ m/s}$), teleport jump $> 50\text{ m}$ in $\le 1.0\text{ s}$.
 - **Kinematic Weighted Z-Scores:** Tracks acceleration variance $\sigma^2_a$, heading angular jerk, and identical-step coordinate repeats.
@@ -310,110 +639,19 @@ Territory Runner uses the **Firebase Cloud Messaging HTTP v1 API** (the legacy F
 
 ---
 
-## 🎮 Classroom & Viva Demonstration Lab
+## 🎨 Calm Athletic Design System (Whoop/Oura Obsidian)
 
-For deep academic and architectural defense, see the comprehensive [🎓 Viva Examiner Defense Guide](docs/VIVA.md).
+Designed specifically for outdoor athletic performance, high contrast in direct sunlight, and zero visual clutter:
 
-| Scenario | Demonstration Trigger | Algorithmic Mechanism | Expected Result |
-| :--- | :--- | :--- | :--- |
-| 🎯 **Lasso Loop Capture** | Run crossing loop | Line-segment intersection snap & tail retention | Loop snaps at intersection, awards area, retains trailing path |
-| 🛡️ **Territory Defense** | Run through own land | `last_defended_at` timestamp renewal | Strength resets to $100\%$, glowing shield HUD badge |
-| 🗺️ **Claim Planner** | Explore Tab $\to$ Area Slider | OSRM loop + Clipper2 net-new area subtraction | Solar orange glowing route preview with net area stats |
-| ⚔️ **Rival Attack Alert** | Simulate rival cut | WebSocket `territory_under_attack` broadcast + FCM v1 | Victim receives instant amber HUD warning toast & push notification |
-| 🚨 **Spoofing Mitigation** | Inject speed $>25\text{ km/h}$ | Kinematic speed ceiling rule | Permanent rejection ($422$), zero silent retries |
-| 🔋 **Background Tracking** | Lock phone screen during run | `flutter_foreground_task` sticky notification | Continuous GPS points recorded without OS throttling |
-| 💾 **Crash Recovery** | Force-kill app during run | Hive `running_session_box` restoration | Recovery modal appears on relaunch to resume workout |
-
----
-
-## 🛠️ Technology Stack
-
-| Component | Technology | Version | Purpose |
-| :--- | :--- | :--- | :--- |
-| **Mobile Client** | Flutter / Dart | 3.13+ / 3.0+ | Cross-platform athletic HUD & UI |
-| **Background Service**| flutter_foreground_task | ^6.1.1 | Sticky notification & persistent background GPS tracking |
-| **Screen Wake Lock** | wakelock_plus | ^1.2.8 | Prevents CPU sleep during active outdoor workouts |
-| **Backend Server** | Go | 1.22+ | High-throughput server-authoritative API |
-| **HTTP Router** | Chi | v5.0.12 | Lightweight idiomatic Go router |
-| **Spatial Database**| PostgreSQL + PostGIS | 16-3.4-alpine | GiST-indexed geometric storage & Boolean operations |
-| **Database Driver** | pgx / v5 | v5.5.5 | High-performance PostgreSQL toolkit |
-| **Geometry Client** | Clipper2 | ^0.2.1 | Integer-scaled 2D polygon Boolean operations |
-| **Map Rendering** | FlutterMap | ^8.3.2 | Fast vector/raster tile rendering with hole support |
-| **Offline DB** | Hive | ^2.2.3 | High-speed local binary NoSQL storage |
-| **Push Notifications**| FCM HTTP v1 | REST API v1 | Modern OAuth2 RS256 push alert infrastructure |
-| **Road Routing** | OSRM Pedestrian | v5 | Open-source road network pedestrian loop routing |
-| **AI Coach Proxy** | Google Gemini | 1.5 Flash | Structured tactical workout debriefs |
-
----
-
-## 📂 Project Directory Structure
-
-```text
-territory_runner/
-├── .github/workflows/ci.yml         # CI: flutter analyze+test, go vet+test, docker build
-├── docs/
-│   ├── DEPLOYMENT.md                # PostGIS deployment guide (Supabase/Neon/Render)
-│   └── VIVA.md                      # Comprehensive academic & viva examiner defense
-├── backend/                         # Go 1.22+ server-authoritative backend
-│   ├── cmd/server/main.go           # Server entrypoint, graceful shutdown, slog config
-│   ├── internal/
-│   │   ├── anticheat/               # Kinematic anomaly detection & spoofing mitigation
-│   │   ├── api/                     # Chi HTTP handlers, router, rate limiters, & middleware
-│   │   ├── auth/                    # Firebase ID token RS256 verifier & dev auth mode
-│   │   ├── coach/                   # Gemini LLM coach proxy & heuristic fallback
-│   │   ├── config/                  # Environment variable configuration loader
-│   │   ├── geo/                     # Loop enclosure, lasso closure & Shoelace area
-│   │   ├── league/                  # Weekly league engine & Monday UTC resets
-│   │   ├── notify/                  # FCM HTTP v1 push notification client & OAuth2 signer
-│   │   ├── store/                   # PostGIS store (advisory lock) & hermetic in-memory store
-│   │   └── ws/                      # Real-time WebSocket hub & targeted attack alerts
-│   ├── migrations/                  # Versioned SQL migrations (000001, 000002, 000003)
-│   ├── Dockerfile                   # Multi-stage production container build
-│   └── docker-compose.yml           # PostGIS 16 + Backend local composition
-├── lib/                             # Flutter mobile application
-│   ├── core/theme/                  # Whoop/Oura Obsidian (#0B0C0E) design system
-│   ├── features/
-│   │   ├── gameplay/                # PolygonEnclosureEngine & TerritoryService
-│   │   ├── map/                     # MapScreen, MapLayers, ClaimPlannerSheet
-│   │   ├── profile/widgets/         # WeeklyLeagueView, FactionTurfWar, AthleteHub
-│   │   ├── routing/                 # RouteService (OSRM + Clipper2 net area)
-│   │   └── security/                # AnomalyService (kinematic validator)
-│   ├── services/
-│   │   ├── api_client.dart          # HTTP client with retry and error parsing
-│   │   ├── location_service.dart    # Foreground tracking, wakelock & crash recovery
-│   │   ├── sync_queue.dart          # Offline Hive queue, reconciliation toast & 4xx halt
-│   │   └── websocket_service.dart   # Live presence & territory attack listener
-│   └── main.dart                    # Application bootstrap & dependency injection
-├── test/                            # 114 passing automated unit & widget tests
-└── test_fixtures/                   # 7 shared golden JSON tracks read by Dart and Go
-```
-
----
-
-## 🚀 Getting Started & Local Development
-
-### 1. Start Backend & PostGIS via Docker Compose
-```bash
-cd backend
-docker compose up -d
-```
-The server will start listening on `http://localhost:8085`.
-
-### 2. Or Run Backend Locally with In-Memory Store
-If PostgreSQL is not running locally, the server automatically starts in dev mode:
-```bash
-cd backend
-go run ./cmd/server
-```
-
-### 3. Connect Flutter Client
-```bash
-# Android Emulator (forward port 8085)
-adb reverse tcp:8085 tcp:8085
-
-# Launch Flutter
-flutter run -d emulator-5554
-```
+| Token Name | Hex Code | Visual Application |
+| :--- | :--- | :--- |
+| `obsidianBase` | `#0B0C0E` | Deepest background canvas (OLED power conservation) |
+| `elevatedSlate`| `#16181D` | Tactical cards, floating bottom sheets, modal dialogs |
+| `subtleBorder` | `#21242C` | Hairline card boundaries and dividing rules |
+| `athleticMint` | `#3DDC97` | Primary action buttons, energy metrics, claim paths |
+| `hazardCrimson`| `#FF5252` | Rival sectors, under-attack warning toasts |
+| `amberWarning` | `#FFB300` | Decaying territory warning badges, GPS dropouts |
+| `slateMuted`   | `#8A909D` | Secondary labels, timestamps, unit descriptors |
 
 ---
 
@@ -460,6 +698,22 @@ go test -v ./...
 
 ---
 
+## 🎮 Classroom & Viva Demonstration Lab
+
+For deep academic and architectural defense, see the comprehensive [🎓 Viva Examiner Defense Guide](docs/VIVA.md).
+
+| Scenario | Demonstration Trigger | Algorithmic Mechanism | Expected Result |
+| :--- | :--- | :--- | :--- |
+| 🎯 **Lasso Loop Capture** | Run crossing loop | Line-segment intersection snap & tail retention | Loop snaps at intersection, awards area, retains trailing path |
+| 🛡️ **Territory Defense** | Run through own land | `last_defended_at` timestamp renewal | Strength resets to $100\%$, glowing shield HUD badge |
+| 🗺️ **Claim Planner** | Explore Tab $\to$ Area Slider | OSRM loop + Clipper2 net-new area subtraction | Solar orange glowing route preview with net area stats |
+| ⚔️ **Rival Attack Alert** | Simulate rival cut | WebSocket `territory_under_attack` broadcast + FCM v1 | Victim receives instant amber HUD warning toast & push notification |
+| 🚨 **Spoofing Mitigation** | Inject speed $>25\text{ km/h}$ | Kinematic speed ceiling rule | Permanent rejection ($422$), zero silent retries |
+| 🔋 **Background Tracking** | Lock phone screen during run | `flutter_foreground_task` sticky notification | Continuous GPS points recorded without OS throttling |
+| 💾 **Crash Recovery** | Force-kill app during run | Hive `running_session_box` restoration | Recovery modal appears on relaunch to resume workout |
+
+---
+
 ## ⚠️ Known Limitations
 
 1. **GPS Anomaly Detection vs. Kernel-Level Spoofing:**
@@ -469,6 +723,26 @@ go test -v ./...
 3. **External Cloud Dependencies:**
    - Real device push alerts require a valid Google Service Account JSON. When omitted in development, the backend logs a warning and gracefully continues without push dispatch.
    - The Claim Planner relies on public OSRM pedestrian routing demo endpoints; if the external service experiences outages, the app automatically falls back to on-device geodesic loops.
+
+---
+
+## ❓ Troubleshooting & FAQ
+
+#### Q: GPS tracking stops or drops points when I turn off the phone screen.
+**A**: Ensure background location permissions are set to "Allow all the time". Territory Runner runs an Android foreground service with a persistent sticky notification (`FOREGROUND_SERVICE_LOCATION`) and requests a CPU wake lock (`wakelock_plus`) to prevent OS battery optimization from suspending the GPS sensor.
+
+#### Q: The mobile client cannot connect to `http://localhost:8085` on an Android Emulator.
+**A**: Android emulators route `localhost` to the emulator loopback, not the host machine. Run:
+```bash
+adb reverse tcp:8085 tcp:8085
+```
+Or set `API_BASE_URL=http://10.0.2.2:8085` in the mobile client configuration.
+
+#### Q: Why does the Go server fail to start with `database connection refused`?
+**A**: Ensure PostgreSQL with PostGIS is running (`docker compose up -d`). If developing without PostgreSQL, start the server with `ENV=development` and omit `DATABASE_URL`; it will automatically fall back to the hermetic in-memory store.
+
+#### Q: How do I obtain a Google Gemini API key for post-run coaching debriefs?
+**A**: Visit [Google AI Studio](https://aistudio.google.com/), generate an API key, and set `GEMINI_API_KEY=AIzaSy...` in your backend `.env` file. If omitted, the backend automatically uses an on-device heuristic sports physiology rule engine.
 
 ---
 
