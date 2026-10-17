@@ -44,39 +44,43 @@ func readMigration(filename string) (string, error) {
 }
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
-	down3, _ := readMigration("000003_add_device_tokens.down.sql")
-	down2, _ := readMigration("000002_add_territory_strength.down.sql")
-	down1, _ := readMigration("000001_init_schema.down.sql")
-	up1, err := readMigration("000001_init_schema.up.sql")
-	if err != nil {
-		return err
-	}
-	up2, err := readMigration("000002_add_territory_strength.up.sql")
-	if err != nil {
-		return err
-	}
-	up3, err := readMigration("000003_add_device_tokens.up.sql")
-	if err != nil {
-		return err
+	downFiles := []string{
+		"000008_add_friends_duels_constraints.down.sql",
+		"000007_add_activity_type.down.sql",
+		"000006_add_privacy_zones.down.sql",
+		"000005_add_friends_and_duels.down.sql",
+		"000004_add_faction_index.down.sql",
+		"000003_add_device_tokens.down.sql",
+		"000002_add_territory_strength.down.sql",
+		"000001_init_schema.down.sql",
 	}
 
-	if down3 != "" {
-		_, _ = pool.Exec(ctx, down3)
+	for _, df := range downFiles {
+		if sql, err := readMigration(df); err == nil && sql != "" {
+			_, _ = pool.Exec(ctx, sql)
+		}
 	}
-	if down2 != "" {
-		_, _ = pool.Exec(ctx, down2)
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
+
+	upFiles := []string{
+		"000001_init_schema.up.sql",
+		"000002_add_territory_strength.up.sql",
+		"000003_add_device_tokens.up.sql",
+		"000004_add_faction_index.up.sql",
+		"000005_add_friends_and_duels.up.sql",
+		"000006_add_privacy_zones.up.sql",
+		"000007_add_activity_type.up.sql",
+		"000008_add_friends_duels_constraints.up.sql",
 	}
-	if down1 != "" {
-		_, _ = pool.Exec(ctx, down1)
-	}
-	if _, err := pool.Exec(ctx, up1); err != nil {
-		return fmt.Errorf("failed executing 000001 up: %w", err)
-	}
-	if _, err := pool.Exec(ctx, up2); err != nil {
-		return fmt.Errorf("failed executing 000002 up: %w", err)
-	}
-	if _, err := pool.Exec(ctx, up3); err != nil {
-		return fmt.Errorf("failed executing 000003 up: %w", err)
+
+	for _, uf := range upFiles {
+		sql, err := readMigration(uf)
+		if err != nil {
+			return fmt.Errorf("failed reading migration %s: %w", uf, err)
+		}
+		if _, err := pool.Exec(ctx, sql); err != nil {
+			return fmt.Errorf("failed executing migration %s: %w", uf, err)
+		}
 	}
 	return nil
 }
@@ -142,6 +146,7 @@ func TestMigrations_UpAndDown(t *testing.T) {
 	require.NoError(t, err)
 
 	// Clean slate
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
 	_, _ = pool.Exec(ctx, down2)
 	_, _ = pool.Exec(ctx, down1)
 
@@ -219,6 +224,7 @@ func TestMigration_000002_OnExistingRows(t *testing.T) {
 	require.NoError(t, err)
 
 	// Clean slate and apply 000001 only
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
 	_, _ = pool.Exec(ctx, down2)
 	_, _ = pool.Exec(ctx, down1)
 	_, err = pool.Exec(ctx, up1)
@@ -266,6 +272,7 @@ func TestMigration_000002_OnExistingRows(t *testing.T) {
 	assert.WithinDuration(t, time.Now().UTC(), lastDefendedAt, 10*time.Second)
 
 	// Revert 000002 down and clean up
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
 	_, err = pool.Exec(ctx, down2)
 	require.NoError(t, err)
 	_, err = pool.Exec(ctx, down1)
