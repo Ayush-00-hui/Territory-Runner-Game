@@ -3,7 +3,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../motion/motion.dart';
 
-/// Styled surface card container using Charcoal + Ember design tokens.
+/// Styled surface card container using Ink + Pacer Blue design tokens.
 /// Depth is created via surface tone steps + 1px hairline borders (borderSubtle).
 class AppCard extends StatefulWidget {
   final Widget child;

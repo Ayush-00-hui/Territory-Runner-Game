@@ -32,7 +32,7 @@ double _calculateContrast(Color foreground, Color background) {
 }
 
 void main() {
-  group('WCAG AA Contrast Ratios for Charcoal + Ember Palette', () {
+  group('WCAG AA Contrast Ratios for Ink + Pacer Blue Palette', () {
     test('Body text contrast >= 4.5:1 on surfaces', () {
       final textPrimaryOnSurface = _calculateContrast(AppColors.textPrimary, AppColors.surface);
       final textPrimaryOnSurface2 = _calculateContrast(AppColors.textPrimary, AppColors.surface2);
@@ -61,6 +61,8 @@ void main() {
       final rivalOnSurface = _calculateContrast(AppColors.rival, AppColors.surface);
       final warningOnSurface = _calculateContrast(AppColors.warning, AppColors.surface);
       final errorOnSurface = _calculateContrast(AppColors.error, AppColors.surface);
+      final successOnSurface = _calculateContrast(AppColors.success, AppColors.surface);
+      final infoOnSurface = _calculateContrast(AppColors.info, AppColors.surface);
 
       expect(textMutedOnSurface, greaterThanOrEqualTo(3.0),
           reason: 'textMuted ($textMutedOnSurface:1) must meet WCAG AA large/secondary contrast on surface');
@@ -72,6 +74,10 @@ void main() {
           reason: 'warning ($warningOnSurface:1) must meet WCAG AA graphical UI contrast on surface');
       expect(errorOnSurface, greaterThanOrEqualTo(3.0),
           reason: 'error ($errorOnSurface:1) must meet WCAG AA graphical UI contrast on surface');
+      expect(successOnSurface, greaterThanOrEqualTo(3.0),
+          reason: 'success ($successOnSurface:1) must meet WCAG AA graphical UI contrast on surface');
+      expect(infoOnSurface, greaterThanOrEqualTo(3.0),
+          reason: 'info ($infoOnSurface:1) must meet WCAG AA graphical UI contrast on surface');
     });
   });
 }

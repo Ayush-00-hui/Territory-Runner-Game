@@ -5,7 +5,7 @@ import '../theme/app_text.dart';
 import '../motion/motion.dart';
 
 /// Athletic Primary Button with press-scale feedback and haptic tick.
-/// Ember fill `#FF6A3D`, onAccent `#0C0B0A` text, 48dp touch target, Semantics.
+/// Pacer Blue fill `#4C8DFF`, onAccent `#06080C` text, 48dp touch target, Semantics.
 class PrimaryButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;

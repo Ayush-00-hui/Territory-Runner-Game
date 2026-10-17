@@ -4,16 +4,16 @@ import 'package:territory_runner/ui/ui.dart';
 
 void main() {
   group('Territory Runner Design System Tokens', () {
-    test('AppColors token palette definitions (Charcoal + Ember)', () {
-      expect(AppColors.bgDeep, const Color(0xFF0C0B0A));
-      expect(AppColors.surface, const Color(0xFF151413));
-      expect(AppColors.accent, const Color(0xFFFF6A3D));
-      expect(AppColors.mine, const Color(0xFFFF6A3D));
-      expect(AppColors.rival, const Color(0xFF6EA8FE));
-      expect(AppColors.warning, const Color(0xFFF2B84B));
-      expect(AppColors.info, const Color(0xFF9B8CFF));
+    test('AppColors token palette definitions (Ink + Pacer Blue)', () {
+      expect(AppColors.bgDeep, const Color(0xFF090B0F));
+      expect(AppColors.surface, const Color(0xFF12151B));
+      expect(AppColors.accent, const Color(0xFF4C8DFF));
+      expect(AppColors.mine, const Color(0xFF4C8DFF));
+      expect(AppColors.rival, const Color(0xFFFF7A59));
+      expect(AppColors.warning, const Color(0xFFF5B544));
+      expect(AppColors.info, const Color(0xFF94A3B8));
       expect(AppColors.error, const Color(0xFFF2677A));
-      expect(AppColors.success, const Color(0xFF5FCB8C));
+      expect(AppColors.success, const Color(0xFF4FD1A5));
       expect(AppColors.gold, const Color(0xFFD9B45B));
       expect(AppColors.silver, const Color(0xFFB8BCC4));
       expect(AppColors.bronze, const Color(0xFFB98558));
@@ -72,7 +72,7 @@ void main() {
       );
 
       await tester.pumpAndSettle();
-      expect(find.text('TOTAL DISTANCE'), findsOneWidget);
+      expect(find.text('Total Distance'), findsOneWidget);
       expect(find.text('12.4'), findsOneWidget);
       expect(find.text('KM'), findsOneWidget);
     });

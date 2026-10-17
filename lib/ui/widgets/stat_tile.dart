@@ -50,7 +50,7 @@ class StatTile extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  label.toUpperCase(),
+                  label,
                   style: AppText.labelSmall,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

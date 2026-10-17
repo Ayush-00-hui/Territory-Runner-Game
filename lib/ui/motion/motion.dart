@@ -27,6 +27,9 @@ class AppMotion {
     return MediaQuery.maybeDisableAnimationsOf(context) ?? false;
   }
 
+  /// Ergonomic alias for [shouldReduceMotion]
+  static bool isReducedMotion(BuildContext context) => shouldReduceMotion(context);
+
   /// Scales duration to zero if reduced motion is enabled
   static Duration duration(BuildContext context, Duration baseDuration) {
     if (shouldReduceMotion(context)) {

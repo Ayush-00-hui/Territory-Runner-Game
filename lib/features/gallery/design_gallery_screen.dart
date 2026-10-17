@@ -38,23 +38,23 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
         children: [
           // 1. Color Palette
           const SectionHeader(
-            title: 'Charcoal + Ember Palette',
+            title: 'Ink + Pacer Blue Palette',
             overline: 'COLOR SYSTEM',
-            subtitle: 'Dark-only athletic palette tokens',
+            subtitle: 'Dark-only sporty, minimal & premium tokens',
           ),
           const SizedBox(height: AppSpacing.s8),
           _buildColorGrid([
-            _ColorSwatch('bgDeep', AppColors.bgDeep, '#0C0B0A'),
-            _ColorSwatch('bgElevated', AppColors.bgElevated, '#121110'),
-            _ColorSwatch('surface', AppColors.surface, '#151413'),
-            _ColorSwatch('surface2', AppColors.surface2, '#1D1B19'),
-            _ColorSwatch('border', AppColors.border, '#2B2926'),
-            _ColorSwatch('accent (mine)', AppColors.accent, '#FF6A3D'),
-            _ColorSwatch('rival', AppColors.rival, '#6EA8FE'),
-            _ColorSwatch('warning', AppColors.warning, '#F2B84B'),
+            _ColorSwatch('bgDeep', AppColors.bgDeep, '#090B0F'),
+            _ColorSwatch('bgElevated', AppColors.bgElevated, '#0E1116'),
+            _ColorSwatch('surface', AppColors.surface, '#12151B'),
+            _ColorSwatch('surface2', AppColors.surface2, '#191D25'),
+            _ColorSwatch('border', AppColors.border, '#262B35'),
+            _ColorSwatch('accent (mine)', AppColors.accent, '#4C8DFF'),
+            _ColorSwatch('rival', AppColors.rival, '#FF7A59'),
+            _ColorSwatch('warning', AppColors.warning, '#F5B544'),
             _ColorSwatch('error', AppColors.error, '#F2677A'),
-            _ColorSwatch('success', AppColors.success, '#5FCB8C'),
-            _ColorSwatch('info', AppColors.info, '#9B8CFF'),
+            _ColorSwatch('success', AppColors.success, '#4FD1A5'),
+            _ColorSwatch('info', AppColors.info, '#94A3B8'),
             _ColorSwatch('gold', AppColors.gold, '#D9B45B'),
             _ColorSwatch('silver', AppColors.silver, '#B8BCC4'),
             _ColorSwatch('bronze', AppColors.bronze, '#B98558'),
@@ -300,18 +300,18 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                   AppSheet.show(
                     context: context,
                     builder: (ctx) => AppSheet(
-                      title: 'Tactical Claim Planner',
-                      subtitle: 'Choose target conquest domain',
+                      title: 'Route Planner',
+                      subtitle: 'Choose planned territory loop',
                       child: Column(
                         children: [
                           const StatTile(
-                            label: 'Projected Domain',
+                            label: 'Projected Route',
                             stringValue: 'Park Loop',
                             unit: 'PRESET',
                           ),
                           const SizedBox(height: AppSpacing.s16),
                           PrimaryButton(
-                            label: 'Confirm Target',
+                            label: 'Confirm Route',
                             onPressed: () => Navigator.of(ctx).pop(),
                           ),
                         ],
@@ -328,7 +328,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                   final confirmed = await AppDialog.showConfirmation(
                     context: context,
                     title: 'Discard In-Progress Run?',
-                    message: 'Your route telemetry and loop closure will be deleted permanently.',
+                    message: 'Your route coordinates and loop closure will be deleted permanently.',
                     confirmLabel: 'Discard Run',
                     cancelLabel: 'Keep Running',
                     isDestructive: true,
