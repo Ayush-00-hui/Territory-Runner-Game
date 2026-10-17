@@ -96,7 +96,7 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
         return IgnorePointer(
           child: Stack(
             children: [
-              // 1. Full-screen emerald flash gradient
+              // 1. Full-screen ember flash gradient
               Opacity(
                 opacity: _flashAnimation.value,
                 child: Container(
@@ -105,8 +105,8 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                       center: Alignment.center,
                       radius: 1.0,
                       colors: [
-                        AppColors.accent.withValues(alpha: 0.75),
-                        AppColors.accent.withValues(alpha: 0.15),
+                        AppColors.accent.withValues(alpha: 0.35),
+                        AppColors.accent.withValues(alpha: 0.08),
                         Colors.transparent,
                       ],
                     ),
@@ -121,8 +121,8 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                   child: Container(
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: AppColors.accent,
-                        width: 4.0,
+                        color: AppColors.accent.withValues(alpha: 0.6),
+                        width: 2.5,
                       ),
                     ),
                   ),
@@ -144,7 +144,7 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                       decoration: BoxDecoration(
                         color: AppColors.surface,
                         borderRadius: AppSpacing.br28,
-                        border: Border.all(color: AppColors.accent, width: 2.0),
+                        border: Border.all(color: AppColors.accent, width: 1.5),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.5),
@@ -174,7 +174,7 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                             child: const Center(
                               child: Icon(
                                 Icons.shield_rounded,
-                                color: Colors.black,
+                                color: AppColors.onAccent,
                                 size: 36,
                               ),
                             ),
@@ -187,7 +187,7 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                               fontSize: 22,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 1.2,
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -222,7 +222,7 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                                 child: Text(
                                   '+${widget.xpAwarded} XP',
                                   style: AppText.label.copyWith(
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w900,
                                   ),

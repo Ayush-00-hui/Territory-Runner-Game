@@ -82,7 +82,7 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                       ),
                       IconButton(
                         tooltip: 'Wake Map View',
-                        icon: const Icon(Icons.fullscreen_exit_rounded, color: Colors.white70, size: 24),
+                        icon: const Icon(Icons.fullscreen_exit_rounded, color: AppColors.textSecondary, size: 24),
                         onPressed: onWake,
                       ),
                     ],
@@ -96,7 +96,7 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                       Text(
                         _formatDuration(elapsedSeconds),
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 64,
                           fontWeight: FontWeight.w900,
                           fontFeatures: [FontFeature.tabularFigures()],
@@ -153,9 +153,10 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                               Text(
                                 splitPace.isNotEmpty ? splitPace : "--'--\"",
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.textPrimary,
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -176,9 +177,10 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                               Text(
                                 '${currentSpeedKmh.toStringAsFixed(1)} km/h',
                                 style: const TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.textPrimary,
                                   fontSize: 22,
                                   fontWeight: FontWeight.w800,
+                                  fontFeatures: [FontFeature.tabularFigures()],
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -203,12 +205,12 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.black,
                             borderRadius: AppSpacing.brFull,
-                            border: Border.all(color: AppColors.secondary, width: 1.0),
+                            border: Border.all(color: AppColors.gold, width: 1.0),
                           ),
                           child: Text(
                             runGoal!.title,
                             style: const TextStyle(
-                              color: AppColors.secondary,
+                              color: AppColors.gold,
                               fontSize: 11,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.8,
@@ -223,12 +225,12 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.touch_app_rounded, color: Colors.white38, size: 20),
+                      const Icon(Icons.touch_app_rounded, color: AppColors.textMuted, size: 20),
                       const SizedBox(height: AppSpacing.s6),
                       Text(
                         'DOUBLE-TAP ANYWHERE TO WAKE MAP',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.5),
+                          color: AppColors.textMuted,
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.2,

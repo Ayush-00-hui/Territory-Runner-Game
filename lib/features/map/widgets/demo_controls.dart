@@ -70,7 +70,7 @@ class DemoControlsLab extends StatelessWidget {
           title: '🤖 Instant Gemini AI Coach Debrief',
           subtitle: 'Simulates completed 3.5km workout with LLM tactical insights',
           icon: Icons.psychology_rounded,
-          color: const Color(0xFF9C27B0),
+          color: AppColors.info,
           onTap: onSimulateCoachDebrief,
         ),
         _buildDemoActionTile(
@@ -78,7 +78,7 @@ class DemoControlsLab extends StatelessWidget {
           title: '🛡️ Simulate Decay & Under Attack Alert',
           subtitle: 'Degrades territory to 20% strength & dispatches targeted attack alert',
           icon: Icons.security_update_warning_rounded,
-          color: const Color(0xFFFF5252),
+          color: AppColors.error,
           onTap: onSimulateDecayAndAttack,
         ),
         if (onToggleRivalSimulation != null)
@@ -91,7 +91,7 @@ class DemoControlsLab extends StatelessWidget {
                 ? 'Halt simulated rival movement and breadcrumbs'
                 : 'Streams real-time moving rival marker with glowing breadcrumbs',
             icon: isRivalSimulating ? Icons.stop_circle_rounded : Icons.radar_rounded,
-            color: isRivalSimulating ? const Color(0xFFFFB300) : AppColors.rival,
+            color: isRivalSimulating ? AppColors.warning : AppColors.rival,
             onTap: onToggleRivalSimulation!,
           ),
       ],

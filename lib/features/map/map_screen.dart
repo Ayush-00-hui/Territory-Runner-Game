@@ -1326,15 +1326,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             backgroundColor: AppColors.surface2,
                             child: Text(
                               athleteName.isNotEmpty ? athleteName[0].toUpperCase() : 'A',
-                              style: AppText.headingSmall,
+                              style: AppText.headingSmall.copyWith(color: AppColors.textPrimary),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Good run,', style: AppText.bodySmall),
-                              Text('$athleteName 👋', style: AppText.headingSmall),
+                              Text('Good run,', style: AppText.bodySmall.copyWith(color: AppColors.textMuted)),
+                              Text('$athleteName 👋', style: AppText.headingSmall.copyWith(color: AppColors.textPrimary)),
                             ],
                           ),
                         ],
@@ -1347,13 +1347,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                             decoration: BoxDecoration(
-                              color: AppColors.surface.withValues(alpha: 0.9),
+                              color: AppColors.surfaceGlass,
                               borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.border),
+                              border: Border.all(color: AppColors.borderSubtle),
                             ),
                             child: Text(
                               profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
-                              style: AppText.bodyBold,
+                              style: AppText.bodyBold.copyWith(color: AppColors.textPrimary),
                             ),
                           ),
                         ],
@@ -1416,7 +1416,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             Text(
                               '${_activeRivalRunners.length} RIVAL${_activeRivalRunners.length > 1 ? 'S' : ''} IN SECTOR',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 11,
                                 letterSpacing: 0.8,
@@ -1464,12 +1464,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.surface.withValues(alpha: 0.92),
+                    color: AppColors.surfaceGlass,
                     borderRadius: AppSpacing.br16,
                     border: Border.all(
                       color: _locationService.pacerMode != VirtualPacerMode.none
                           ? AppColors.info
-                          : AppColors.border,
+                          : AppColors.borderSubtle,
                     ),
                     boxShadow: _locationService.pacerMode != VirtualPacerMode.none
                         ? AppSpacing.subtleElevation
@@ -1510,9 +1510,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.surface.withValues(alpha: 0.92),
+                  color: AppColors.surfaceGlass,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1520,7 +1520,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     const Text('You own', style: AppText.label),
                     Text(
                       totalAreaSqKm > 0 ? '${totalAreaSqKm.toStringAsFixed(2)} km²' : '0.00 km²',
-                      style: AppText.statSmall.copyWith(color: AppColors.accent),
+                      style: AppText.statSmall.copyWith(
+                        color: AppColors.accent,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                     const Text('here', style: AppText.label),
                   ],
@@ -1536,7 +1539,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 children: [
                   _buildFloatingCircleButton(
                     icon: Icons.speed_rounded,
-                    color: _locationService.pacerMode != VirtualPacerMode.none ? AppColors.secondary : Colors.white70,
+                    color: _locationService.pacerMode != VirtualPacerMode.none ? AppColors.info : AppColors.textSecondary,
                     onTap: () {
                       VirtualPacerSheet.show(
                         context: context,
@@ -1563,7 +1566,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: _isCameraFollowLocked ? Icons.gps_fixed_rounded : Icons.pan_tool_rounded,
-                    color: _isCameraFollowLocked ? AppColors.accent : Colors.white70,
+                    color: _isCameraFollowLocked ? AppColors.accent : AppColors.textSecondary,
                     tooltip: _isCameraFollowLocked ? 'Unlock Camera Pan' : 'Lock Camera Follow',
                     semanticLabel: 'Toggle camera auto-follow',
                     onTap: () {
@@ -1577,6 +1580,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.layers_rounded,
+                    color: AppColors.textSecondary,
                     tooltip: 'AI Route & Sector Planner',
                     semanticLabel: 'Suggest tactical running route',
                     onTap: _suggestAiRoute,
@@ -1584,7 +1588,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.flag_rounded,
-                    color: _activeGoal.isActive ? AppColors.gold : Colors.white70,
+                    color: _activeGoal.isActive ? AppColors.gold : AppColors.textSecondary,
                     tooltip: 'Campaign Goals',
                     semanticLabel: 'Open conquest goals selector',
                     onTap: _openGoalSelector,
@@ -1605,7 +1609,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.emergency_rounded,
-                    color: Colors.redAccent,
+                    color: AppColors.error,
                     tooltip: 'Emergency SOS Beacon',
                     semanticLabel: 'Trigger emergency SOS distress beacon',
                     onTap: () {
@@ -1616,6 +1620,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.my_location_rounded,
+                    color: AppColors.textSecondary,
                     tooltip: 'Recenter Map',
                     semanticLabel: 'Recenter map to runner position',
                     onTap: _recenter,
@@ -1636,7 +1641,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.surface.withValues(alpha: 0.95),
+                      color: AppColors.surfaceGlass,
                       borderRadius: AppSpacing.br16,
                       border: Border.all(color: AppColors.rival, width: 1.5),
                       boxShadow: [
@@ -1733,7 +1738,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   Widget _buildFloatingCircleButton({
     required IconData icon,
     required VoidCallback onTap,
-    Color color = Colors.white70,
+    Color color = AppColors.textSecondary,
     String? tooltip,
     String? semanticLabel,
   }) {
@@ -1748,9 +1753,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             height: 44,
             width: 44,
             decoration: BoxDecoration(
-              color: AppColors.surface.withValues(alpha: 0.92),
+              color: AppColors.surfaceGlass,
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: AppColors.borderSubtle),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.3),

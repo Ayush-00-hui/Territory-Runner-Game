@@ -66,7 +66,7 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
             child: Container(
               width: 44,
               height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: AppSpacing.s16),
@@ -78,10 +78,10 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: Colors.redAccent.withValues(alpha: 0.2),
-                  border: Border.all(color: Colors.redAccent, width: 2),
+                  color: AppColors.error.withValues(alpha: 0.16),
+                  border: Border.all(color: AppColors.error, width: 2),
                 ),
-                child: const Icon(Icons.emergency_rounded, color: Colors.redAccent, size: 24),
+                child: const Icon(Icons.emergency_rounded, color: AppColors.error, size: 24),
               ),
               const SizedBox(width: AppSpacing.s12),
               Expanded(
@@ -91,7 +91,7 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                     Text(
                       'TACTICAL SOS BEACON',
                       style: AppText.headingSmall.copyWith(
-                        color: Colors.redAccent,
+                        color: AppColors.error,
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.2,
@@ -121,8 +121,8 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
             height: 52,
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFD32F2F),
-                foregroundColor: Colors.white,
+                backgroundColor: AppColors.error,
+                foregroundColor: AppColors.onAccent,
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
               ),
               icon: const Icon(Icons.phone_in_talk_rounded, size: 22),
@@ -144,11 +144,11 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
             height: 50,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.white,
-                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                foregroundColor: AppColors.textPrimary,
+                side: const BorderSide(color: AppColors.error, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
               ),
-              icon: const Icon(Icons.sms_rounded, color: Colors.redAccent, size: 20),
+              icon: const Icon(Icons.sms_rounded, color: AppColors.error, size: 20),
               label: Text(
                 _safetyService.hasContactConfigured
                     ? 'SMS CONTACT (${_safetyService.contactName.isNotEmpty ? _safetyService.contactName : _safetyService.contactPhone})'
@@ -175,8 +175,8 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                   height: 48,
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: AppColors.border),
+                      foregroundColor: AppColors.textPrimary,
+                      side: const BorderSide(color: AppColors.borderSubtle),
                       shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                     ),
                     icon: const Icon(Icons.share_location_rounded, color: AppColors.accent, size: 18),
@@ -193,11 +193,11 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                   height: 48,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: _isSirenOn ? Colors.orangeAccent : AppColors.surface,
-                      foregroundColor: _isSirenOn ? Colors.black : Colors.white,
+                      backgroundColor: _isSirenOn ? AppColors.warning : AppColors.surface,
+                      foregroundColor: _isSirenOn ? AppColors.onAccent : AppColors.textPrimary,
                       shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                       side: BorderSide(
-                        color: _isSirenOn ? Colors.orangeAccent : AppColors.border,
+                        color: _isSirenOn ? AppColors.warning : AppColors.borderSubtle,
                       ),
                     ),
                     icon: Icon(_isSirenOn ? Icons.volume_off_rounded : Icons.volume_up_rounded, size: 18),

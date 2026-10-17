@@ -22,9 +22,9 @@ class ModeTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.s4),
       decoration: BoxDecoration(
-        color: AppColors.surface.withValues(alpha: 0.88),
+        color: AppColors.surfaceGlass,
         borderRadius: AppSpacing.br16,
-        border: AppSpacing.cardBorder,
+        border: Border.all(color: AppColors.borderSubtle),
       ),
       child: Row(
         children: List.generate(tabs.length, (index) {
@@ -51,7 +51,7 @@ class ModeTabs extends StatelessWidget {
                     tabs[index],
                     style: isSelected
                         ? AppText.label.copyWith(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontWeight: FontWeight.w900,
                           )
                         : AppText.label.copyWith(color: AppColors.textMuted),

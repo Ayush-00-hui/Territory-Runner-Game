@@ -25,9 +25,9 @@ class MapLayers {
       tileBuilder: (context, tileWidget, tile) {
         return ColorFiltered(
           colorFilter: const ColorFilter.matrix(<double>[
-            -0.82, 0, 0, 0, 230,
-            0, -0.82, 0, 0, 230,
-            0, 0, -0.82, 0, 230,
+            -0.85, 0, 0, 0, 220,
+            0, -0.85, 0, 0, 220,
+            0, 0, -0.85, 0, 220,
             0, 0, 0, 1.0, 0,
           ]),
           child: tileWidget,
@@ -40,6 +40,7 @@ class MapLayers {
   static PolygonLayer buildPolygonLayer(
     List<Territory> territories, {
     String? highlightedTerritoryId,
+    String? currentUserId,
   }) {
     final List<Polygon> polygons = [];
 
@@ -48,17 +49,27 @@ class MapLayers {
       // Strength shown as outline opacity (from 0.25 at 0% strength to 1.0 at 100%)
       final double outlineAlpha = (0.25 + 0.75 * (currentStrength / 100.0)).clamp(0.20, 1.0);
       final bool isHighlighted = territory.id == highlightedTerritoryId;
+      final bool isRival = territory.color == AppColors.rival ||
+          territory.id.contains('rival') ||
+          (currentUserId != null && territory.ownerId.isNotEmpty && territory.ownerId != currentUserId);
 
-      final Color borderColor = isHighlighted
-          ? AppColors.gold
-          : territory.color.withValues(alpha: outlineAlpha);
-      final double strokeWidth = isHighlighted
-          ? 4.0
-          : (territory.isWeak() ? 1.5 : 2.5);
+      final Color borderColor;
+      final Color fillColor;
+      final double strokeWidth;
 
-      final Color fillColor = isHighlighted
-          ? AppColors.gold.withValues(alpha: 0.35)
-          : territory.color.withValues(alpha: (0.25 * (currentStrength / 100.0)).clamp(0.12, 0.30));
+      if (isHighlighted) {
+        borderColor = AppColors.gold;
+        fillColor = AppColors.gold.withValues(alpha: 0.35);
+        strokeWidth = 3.0;
+      } else if (isRival) {
+        borderColor = AppColors.territoryRivalBorder.withValues(alpha: outlineAlpha);
+        fillColor = AppColors.territoryRivalFill.withValues(alpha: (0.14 * (currentStrength / 100.0)).clamp(0.08, 0.20));
+        strokeWidth = 1.5;
+      } else {
+        borderColor = AppColors.territoryMineBorder.withValues(alpha: outlineAlpha);
+        fillColor = AppColors.territoryMineFill.withValues(alpha: (0.16 * (currentStrength / 100.0)).clamp(0.10, 0.25));
+        strokeWidth = 1.5;
+      }
 
       final shells = classifyRings(territory.polygons);
       for (final shell in shells) {
@@ -223,10 +234,11 @@ class MapLayers {
                 const SizedBox(width: 3),
                 Text(
                   '${currentStrength.round()}%',
-                  style: TextStyle(
-                    color: Colors.white,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
                     fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: [FontFeature.tabularFigures()],
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -295,16 +307,16 @@ class MapLayers {
           ),
         // AI Suggested Route
         if (suggestedRouteCoordinates != null && suggestedRouteCoordinates.length >= 2) ...[
-          // Outer Luminous Solar Orange Glow
+          // Outer Luminous Ember Glow
           Polyline(
             points: suggestedRouteCoordinates,
-            color: const Color(0xFFFF6D00).withValues(alpha: 0.35),
-            strokeWidth: 8.5,
+            color: AppColors.accent.withValues(alpha: 0.35),
+            strokeWidth: 8.0,
           ),
-          // Inner Crisp Athletic Solar Orange Core
+          // Inner Crisp Athletic Ember Core
           Polyline(
             points: suggestedRouteCoordinates,
-            color: const Color(0xFFFF6D00),
+            color: AppColors.accent,
             strokeWidth: 3.5,
           ),
         ],
@@ -319,7 +331,7 @@ class MapLayers {
   }) {
     final List<Marker> markers = [];
 
-    // User Waypoint Marker (Glowing Blue Pin)
+    // User Waypoint Marker (Glowing Ember Pin)
     if (currentLocation != null) {
       markers.add(
         Marker(
@@ -334,7 +346,7 @@ class MapLayers {
                 height: 38,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF2979FF).withValues(alpha: 0.25),
+                  color: AppColors.accent.withValues(alpha: 0.20),
                 ),
               ),
               Container(
@@ -343,7 +355,7 @@ class MapLayers {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: AppColors.accent,
-                  border: Border.all(color: Colors.white, width: 3.0),
+                  border: Border.all(color: AppColors.textPrimary, width: 2.5),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.4),
@@ -403,7 +415,7 @@ class MapLayers {
                       child: Text(
                         rival.username,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
@@ -418,6 +430,7 @@ class MapLayers {
                           color: rivalColor,
                           fontSize: 8.5,
                           fontWeight: FontWeight.w900,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],

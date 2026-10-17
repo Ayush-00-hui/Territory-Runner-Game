@@ -77,8 +77,8 @@ class RunHud extends StatelessWidget {
           border: Border.all(
             color: isAutoPaused
                 ? AppColors.warning.withValues(alpha: 0.6)
-                : (isNearClosure ? AppColors.accent : AppColors.border),
-            width: isNearClosure ? 1.6 : 1.2,
+                : (isNearClosure ? AppColors.accent : AppColors.borderSubtle),
+            width: isNearClosure ? 1.5 : 1.0,
           ),
           boxShadow: AppSpacing.hudShadow,
         ),
@@ -94,7 +94,7 @@ class RunHud extends StatelessWidget {
                   margin: const EdgeInsets.only(bottom: AppSpacing.s10),
                   padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s4),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withValues(alpha: 0.2),
+                    color: AppColors.warning.withValues(alpha: 0.16),
                     borderRadius: AppSpacing.brFull,
                     border: Border.all(color: AppColors.warning, width: 1),
                   ),
@@ -133,7 +133,7 @@ class RunHud extends StatelessWidget {
                       color: AppColors.gold.withValues(alpha: 0.12),
                       borderRadius: AppSpacing.br12,
                       border: Border.all(
-                        color: AppColors.gold.withValues(alpha: 0.8),
+                        color: AppColors.gold.withValues(alpha: 0.6),
                         width: 1.0,
                       ),
                     ),
@@ -165,9 +165,10 @@ class RunHud extends StatelessWidget {
                                 currentAreaSqm: currentAreaSqm,
                               ),
                               style: const TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w700,
                                 fontSize: 9.5,
+                                fontFeatures: [FontFeature.tabularFigures()],
                               ),
                             ),
                           ],
@@ -234,9 +235,10 @@ class RunHud extends StatelessWidget {
                               Text(
                                 '${closureDist.round()}M TO ORIGIN',
                                 style: AppText.label.copyWith(
-                                  color: isNearClosure ? AppColors.accent : Colors.white70,
+                                  color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w800,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
                                 ),
                               ),
                             ],
@@ -267,7 +269,7 @@ class RunHud extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                // Massive Distance (Tabular Oswald)
+                // Massive Distance (Tabular Inter)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -279,7 +281,10 @@ class RunHud extends StatelessWidget {
                       children: [
                         Text(
                           isRunActive ? distanceKm.toStringAsFixed(2) : '0.00',
-                          style: AppText.statLarge.copyWith(fontSize: 30),
+                          style: AppText.statHero.copyWith(
+                            fontSize: 32,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
                         const SizedBox(width: AppSpacing.s4),
                         const Text('KM', style: AppText.labelAccent),
@@ -314,12 +319,14 @@ class RunHud extends StatelessWidget {
                       isRunActive
                           ? _formatDuration(movingSeconds > 0 ? movingSeconds : elapsedSeconds)
                           : '00:00',
-                      style: AppText.timer,
+                      style: AppText.timer.copyWith(
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ),
 
-                // Split Pace (Tabular Oswald)
+                // Split Pace (Tabular Inter)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -349,7 +356,10 @@ class RunHud extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       isRunActive ? splitPace : "--'--\"",
-                      style: AppText.statLarge.copyWith(fontSize: 24),
+                      style: AppText.statHero.copyWith(
+                        fontSize: 26,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ),
@@ -364,7 +374,7 @@ class RunHud extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 borderRadius: AppSpacing.br14,
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.borderSubtle),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -375,7 +385,10 @@ class RunHud extends StatelessWidget {
                       const SizedBox(width: AppSpacing.s4),
                       Text(
                         '${currentSpeedKmh.toStringAsFixed(1)} km/h',
-                        style: AppText.bodyBold.copyWith(fontSize: 11),
+                        style: AppText.bodyBold.copyWith(
+                          fontSize: 11,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ],
                   ),
@@ -385,7 +398,10 @@ class RunHud extends StatelessWidget {
                       const SizedBox(width: AppSpacing.s4),
                       Text(
                         '+${(distanceKm * 65.0).round()} kcal',
-                        style: AppText.bodyBold.copyWith(fontSize: 11),
+                        style: AppText.bodyBold.copyWith(
+                          fontSize: 11,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ],
                   ),
@@ -408,6 +424,7 @@ class RunHud extends StatelessWidget {
                           color: satelliteAccuracyMeters <= 10.0
                               ? AppColors.textSecondary
                               : (satelliteAccuracyMeters <= 30.0 ? AppColors.warning : AppColors.rival),
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ],
@@ -418,7 +435,10 @@ class RunHud extends StatelessWidget {
                       const SizedBox(width: AppSpacing.s4),
                       Text(
                         '$territoriesClaimed territories',
-                        style: AppText.bodyBold.copyWith(fontSize: 11),
+                        style: AppText.bodyBold.copyWith(
+                          fontSize: 11,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ],
                   ),
@@ -449,7 +469,7 @@ class RunHud extends StatelessWidget {
                           color: AppColors.surface,
                           borderRadius: AppSpacing.br16,
                           border: Border.all(
-                            color: isNearClosure ? AppColors.accent : AppColors.border,
+                            color: isNearClosure ? AppColors.accent : AppColors.borderSubtle,
                             width: 1.2,
                           ),
                           boxShadow: AppSpacing.subtleElevation,
@@ -468,7 +488,7 @@ class RunHud extends StatelessWidget {
                               child: Text(
                                 'SEAL SHAPE',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 10,
                                   letterSpacing: 0.6,
@@ -512,7 +532,7 @@ class RunHud extends StatelessWidget {
                       child: Center(
                         child: Icon(
                           isRunActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                          color: Colors.black,
+                          color: AppColors.onAccent,
                           size: 34,
                         ),
                       ),

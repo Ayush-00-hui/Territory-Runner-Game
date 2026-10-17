@@ -53,7 +53,7 @@ class LeaderboardSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.white24,
+              color: AppColors.divider,
               borderRadius: AppSpacing.brFull,
             ),
           ),
@@ -72,7 +72,7 @@ class LeaderboardSheet extends StatelessWidget {
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -118,12 +118,12 @@ class LeaderboardSheet extends StatelessWidget {
 
                 return ListView.separated(
                   itemCount: entries.length,
-                  separatorBuilder: (context, index) => const Divider(color: AppColors.border, height: 1),
+                  separatorBuilder: (context, index) => const Divider(color: AppColors.borderSubtle, height: 1),
                   itemBuilder: (context, index) {
                     final entry = entries[index];
                     final isCurrent = entry.userId == currentUserId;
 
-                    Color rankColor = Colors.white70;
+                    Color rankColor = AppColors.textSecondary;
                     if (entry.rank == 1) rankColor = AppColors.gold;
                     if (entry.rank == 2) rankColor = AppColors.silver;
                     if (entry.rank == 3) rankColor = AppColors.bronze;
@@ -143,6 +143,7 @@ class LeaderboardSheet extends StatelessWidget {
                               style: AppText.statSmall.copyWith(
                                 color: rankColor,
                                 fontWeight: FontWeight.w900,
+                                fontFeatures: const [FontFeature.tabularFigures()],
                               ),
                             ),
                           ),
@@ -156,7 +157,7 @@ class LeaderboardSheet extends StatelessWidget {
                                     Text(
                                       entry.username,
                                       style: AppText.bodyBold.copyWith(
-                                        color: isCurrent ? AppColors.accent : Colors.white,
+                                        color: isCurrent ? AppColors.accent : AppColors.textPrimary,
                                       ),
                                     ),
                                     if (isCurrent) ...[
@@ -170,7 +171,7 @@ class LeaderboardSheet extends StatelessWidget {
                                         child: const Text(
                                           'YOU',
                                           style: TextStyle(
-                                            color: Colors.black,
+                                            color: AppColors.onAccent,
                                             fontSize: 9,
                                             fontWeight: FontWeight.w900,
                                           ),
@@ -197,6 +198,7 @@ class LeaderboardSheet extends StatelessWidget {
                                 style: AppText.statSmall.copyWith(
                                   color: AppColors.accent,
                                   fontWeight: FontWeight.w900,
+                                  fontFeatures: const [FontFeature.tabularFigures()],
                                 ),
                               ),
                               const Text(
