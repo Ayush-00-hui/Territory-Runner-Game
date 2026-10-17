@@ -39,29 +39,91 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           children: [
             // Voice Coach Toggle
             SwitchListTile(
-            secondary: const Icon(Icons.record_voice_over_rounded, color: AppColors.accent, size: 22),
-            title: Text(
-              'Voice Coach Audio Cues',
-              style: AppText.bodyMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+              secondary: const Icon(Icons.record_voice_over_rounded, color: AppColors.accent, size: 22),
+              title: Text(
+                'Voice Coach Audio Cues',
+                style: AppText.bodyMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              subtitle: Text(
+                'Milestone distance & pace announcements via TTS',
+                style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
+              ),
+              activeThumbColor: AppColors.accent,
+              value: _voiceCoach.isAudioEnabled,
+              onChanged: (val) {
+                AppMotion.lightTick();
+                setState(() {
+                  _voiceCoach.toggleAudio(val);
+                });
+              },
+            ),
+            if (_voiceCoach.isAudioEnabled) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.volume_up_rounded, color: AppColors.textMuted, size: 18),
+                    const SizedBox(width: 8),
+                    Text('Volume', style: AppText.bodySmall.copyWith(color: AppColors.textMuted)),
+                    Expanded(
+                      child: Slider(
+                        value: _voiceCoach.volume,
+                        activeColor: AppColors.accent,
+                        inactiveColor: AppColors.surface2,
+                        onChanged: (v) {
+                          setState(() {
+                            _voiceCoach.setVolume(v);
+                          });
+                        },
+                      ),
+                    ),
+                    Text('${(_voiceCoach.volume * 100).round()}%', style: AppText.label.copyWith(color: Colors.white70)),
+                  ],
+                ),
+              ),
+            ],
+            const Divider(height: 1, color: AppColors.border),
+
+            // Units Setting (Metric / Imperial)
+            ListTile(
+              leading: const Icon(Icons.straighten_rounded, color: AppColors.accent, size: 22),
+              title: Text(
+                'Measurement Units',
+                style: AppText.bodyMedium.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+              subtitle: Text(
+                _voiceCoach.unit == DistanceUnit.metric ? 'Metric (Kilometers, m²)' : 'Imperial (Miles, Acres)',
+                style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
+              ),
+              trailing: SegmentedButton<DistanceUnit>(
+                segments: const [
+                  ButtonSegment(value: DistanceUnit.metric, label: Text('KM', style: TextStyle(fontSize: 11))),
+                  ButtonSegment(value: DistanceUnit.imperial, label: Text('MI', style: TextStyle(fontSize: 11))),
+                ],
+                selected: {_voiceCoach.unit},
+                style: SegmentedButton.styleFrom(
+                  selectedBackgroundColor: AppColors.accent,
+                  selectedForegroundColor: Colors.black,
+                  foregroundColor: Colors.white70,
+                  backgroundColor: AppColors.surface,
+                ),
+                onSelectionChanged: (Set<DistanceUnit> selected) {
+                  AppMotion.lightTick();
+                  setState(() {
+                    _voiceCoach.setUnit(selected.first);
+                  });
+                },
               ),
             ),
-            subtitle: Text(
-              'Milestone distance & pace announcements',
-              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
-            ),
-            activeThumbColor: AppColors.accent,
-            value: _voiceCoach.isAudioEnabled,
-            onChanged: (val) {
-              AppMotion.lightTick();
-              setState(() {
-                _voiceCoach.toggleAudio(val);
-              });
-            },
-          ),
-          const Divider(height: 1, color: AppColors.border),
+            const Divider(height: 1, color: AppColors.border),
 
           // Haptics Toggle
           SwitchListTile(

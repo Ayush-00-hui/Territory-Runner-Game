@@ -162,6 +162,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
     _wsAlertSub = _wsService.alertStream.listen((alert) {
       if (!mounted) return;
+      _voiceCoach.announceTerritoryUnderAttack(alert.attackerCallsign);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppColors.bgElevated,
@@ -705,7 +706,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       areaSqMeters: claimed,
       xpAwarded: xp,
     );
-    _voiceCoach.announceHexConquered(_territoriesClaimedThisRun);
+    _voiceCoach.announceLoopClosed(claimed);
   }
 
   void _sealCurrentShape() {
