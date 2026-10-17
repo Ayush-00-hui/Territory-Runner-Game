@@ -151,17 +151,16 @@ class SummarySheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        rejectionReason != null ? 'RUN REJECTED' : 'CONQUEST COMPLETE',
+                        rejectionReason != null ? 'Run rejected' : 'Run complete',
                         style: AppText.headingSmall.copyWith(
                           fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w700,
                           color: rejectionReason != null ? AppColors.error : AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${profile.username.toUpperCase()} • ${profile.faction.toUpperCase()}',
+                        '${profile.username} • ${profile.faction}',
                         style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
                       ),
                     ],
@@ -194,12 +193,11 @@ class SummarySheet extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'SERVER REJECTION REASON',
-                          style: AppText.label.copyWith(
+                          'Rejection reason',
+                          style: AppText.labelSmall.copyWith(
                             color: AppColors.error,
                             fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.1,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -232,13 +230,13 @@ class SummarySheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMetricColumn('DISTANCE', '${distanceKm.toStringAsFixed(2)} km', AppColors.accent),
+                _buildMetricColumn('Distance', '${distanceKm.toStringAsFixed(2)} km', AppColors.accent),
                 Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn('TIME', _formatDuration(), AppColors.textPrimary),
+                _buildMetricColumn('Time', _formatDuration(), AppColors.textPrimary),
                 Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn('AVG PACE', '${_formatPace()}/km', AppColors.textPrimary),
+                _buildMetricColumn('Pace', '${_formatPace()}/km', AppColors.textPrimary),
                 Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn('TERRITORY', '+$territoriesClaimed', AppColors.accent),
+                _buildMetricColumn('Territory', '+$territoriesClaimed', AppColors.accent),
               ],
             ),
           ),
@@ -274,11 +272,11 @@ class SummarySheet extends StatelessWidget {
                         border: Border.all(color: AppColors.borderSubtle),
                       ),
                       child: Text(
-                        'CLAIMED: ${_formatArea()} • ${_estimateCalories()} KCAL',
+                        'Claimed: ${_formatArea()} • ${_estimateCalories()} kcal',
                         style: AppText.label.copyWith(
                           color: AppColors.accent,
                           fontSize: 9.5,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
@@ -335,12 +333,12 @@ class SummarySheet extends StatelessWidget {
                               const Icon(Icons.auto_awesome, color: AppColors.accent, size: 16),
                               const SizedBox(width: AppSpacing.s8),
                               Text(
-                                'AI COACH DEBRIEF • ${insight?.moodTag.name.toUpperCase() ?? 'COACH'}',
+                                'AI Coach debrief • ${insight?.moodTag.name.toUpperCase() ?? 'COACH'}',
                                 style: AppText.label.copyWith(
                                   color: AppColors.accent,
                                   fontSize: 10.5,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.0,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ],
@@ -392,8 +390,8 @@ class SummarySheet extends StatelessWidget {
                   ),
                   icon: const Icon(Icons.share_rounded, size: 18),
                   label: const Text(
-                    'SHARE CARD',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, letterSpacing: 0.8),
+                    'Share run',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   onPressed: () {
                     AppMotion.lightTick();
@@ -413,7 +411,7 @@ class SummarySheet extends StatelessWidget {
               const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: PrimaryButton(
-                  label: 'CLAIM REWARDS',
+                  label: 'Done',
                   onPressed: () {
                     AppMotion.heavyBurst();
                     Navigator.pop(context);
@@ -436,7 +434,7 @@ class SummarySheet extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                   ),
                   icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.accent),
-                  label: const Text('EXPORT GPX', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  label: const Text('Export GPX', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
                   onPressed: () async {
                     AppMotion.lightTick();
                     await ExportService().exportAndShareGpx(
@@ -456,7 +454,7 @@ class SummarySheet extends StatelessWidget {
                     shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                   ),
                   icon: const Icon(Icons.polyline_rounded, size: 16, color: AppColors.info),
-                  label: const Text('EXPORT GEOJSON', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  label: const Text('Export GeoJSON', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
                   onPressed: () async {
                     AppMotion.lightTick();
                     await ExportService().exportAndShareGeoJson(
@@ -550,12 +548,12 @@ class _VictoryMapPainter extends CustomPainter {
     path.close();
 
     final fillPaint = Paint()
-      ..color = AppColors.accent.withValues(alpha: 0.22)
+      ..color = AppColors.territoryMineFill
       ..style = PaintingStyle.fill;
     final strokePaint = Paint()
-      ..color = AppColors.accent
+      ..color = AppColors.territoryMineBorder
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2;
+      ..strokeWidth = 1.5;
 
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);
@@ -569,12 +567,12 @@ class _VictoryMapPainter extends CustomPainter {
     final path = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r));
 
     final fillPaint = Paint()
-      ..color = AppColors.accent.withValues(alpha: 0.20)
+      ..color = AppColors.territoryMineFill
       ..style = PaintingStyle.fill;
     final strokePaint = Paint()
-      ..color = AppColors.accent
+      ..color = AppColors.territoryMineBorder
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 1.5;
 
     canvas.drawPath(path, fillPaint);
     canvas.drawPath(path, strokePaint);

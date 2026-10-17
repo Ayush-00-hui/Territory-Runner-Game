@@ -142,27 +142,27 @@ void main() {
       await tester.tap(find.text('Open Goals'));
       await tester.pumpAndSettle();
 
-      expect(find.text('CAMPAIGN TARGET'), findsOneWidget);
-      expect(find.text('DISTANCE'), findsOneWidget);
-      expect(find.text('TIME'), findsOneWidget);
-      expect(find.text('DOMAIN'), findsOneWidget);
-      expect(find.text('OPEN'), findsOneWidget);
+      expect(find.text('Run goal'), findsOneWidget);
+      expect(find.text('Distance'), findsOneWidget);
+      expect(find.text('Time'), findsOneWidget);
+      expect(find.text('Territory'), findsOneWidget);
+      expect(find.text('Open'), findsOneWidget);
 
-      // Switch to DISTANCE tab
-      await tester.tap(find.text('DISTANCE'));
+      // Switch to Distance tab
+      await tester.tap(find.text('Distance'));
       await tester.pumpAndSettle();
 
       // Distance presets visible
-      expect(find.text('3.0 KM'), findsOneWidget);
-      expect(find.text('5.0 KM'), findsOneWidget);
-      expect(find.text('10.0 KM'), findsOneWidget);
+      expect(find.text('3.0 km'), findsOneWidget);
+      expect(find.text('5.0 km'), findsOneWidget);
+      expect(find.text('10.0 km'), findsOneWidget);
 
-      // Select 10.0 KM
-      await tester.tap(find.text('10.0 KM'));
+      // Select 10.0 km
+      await tester.tap(find.text('10.0 km'));
       await tester.pumpAndSettle();
 
       // Lock in
-      await tester.tap(find.text('LOCK IN TARGET'));
+      await tester.tap(find.text('Set goal'));
       await tester.pumpAndSettle();
 
       expect(selectedGoal, isNotNull);

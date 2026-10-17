@@ -247,18 +247,18 @@ void main() {
       await tester.tap(find.text('OPEN SOS'));
       await tester.pumpAndSettle();
 
-      expect(find.text('TACTICAL SOS BEACON'), findsOneWidget);
+      expect(find.text('Tactical SOS beacon'), findsOneWidget);
       expect(find.text('GPS: 37.774900, -122.419400'), findsOneWidget);
-      expect(find.text('CALL EMERGENCY (911)'), findsOneWidget);
-      expect(find.text('SET UP EMERGENCY CONTACT SMS'), findsOneWidget);
-      expect(find.text('SHARE GPS'), findsOneWidget);
-      expect(find.text('SIREN ALARM'), findsOneWidget);
+      expect(find.text('Call emergency (911)'), findsOneWidget);
+      expect(find.text('Set up emergency contact SMS'), findsOneWidget);
+      expect(find.text('Share GPS'), findsOneWidget);
+      expect(find.text('Siren alarm'), findsOneWidget);
 
       // Tap siren button to toggle
-      await tester.tap(find.text('SIREN ALARM'));
+      await tester.tap(find.text('Siren alarm'));
       await tester.pumpAndSettle();
 
-      expect(find.text('STOP SIREN'), findsOneWidget);
+      expect(find.text('Stop siren'), findsOneWidget);
     });
   });
 }

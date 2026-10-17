@@ -382,13 +382,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accent,
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                foregroundColor: AppColors.onAccent,
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
               ),
               onPressed: () {
                 Navigator.of(ctx).pop();
               },
-              child: const Text('ENGAGE TRACKING & PROCEED', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+              child: const Text('Start tracking', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
             ),
           ],
         ),
@@ -459,19 +459,19 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               Navigator.of(ctx).pop();
               _runRecoveryService.clearRecovery();
             },
-            child: const Text('DISCARD', style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold, fontSize: 12)),
+            child: const Text('Discard', style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600, fontSize: 12)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accent,
-              foregroundColor: Colors.black,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              foregroundColor: AppColors.onAccent,
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.br10),
             ),
             onPressed: () {
               Navigator.of(ctx).pop();
               _resumeRun(snapshot);
             },
-            child: const Text('RESUME RUN', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+            child: const Text('Resume run', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
           ),
         ],
       ),
@@ -1362,13 +1362,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             color: AppColors.rival.withValues(alpha: 0.8),
                             width: 1.2,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.35),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                          boxShadow: AppElevation.floating,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -1457,14 +1451,14 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       const SizedBox(width: 6),
                       Text(
                         _locationService.pacerMode != VirtualPacerMode.none
-                            ? 'PACER ${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
-                            : 'PACER OFF',
+                            ? 'Pacer ${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+                            : 'Pacer off',
                         style: AppText.label.copyWith(
                           color: _locationService.pacerMode != VirtualPacerMode.none
                               ? AppColors.info
                               : AppColors.textMuted,
                           fontSize: 10,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -1613,13 +1607,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       color: AppColors.surfaceGlass,
                       borderRadius: AppSpacing.br16,
                       border: Border.all(color: AppColors.rival, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
+                      boxShadow: AppElevation.floating,
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1627,12 +1615,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         Icon(Icons.shield_outlined, color: AppColors.rival, size: 16),
                         SizedBox(width: 6),
                         Text(
-                          'DEFEND',
+                          'Defend',
                           style: TextStyle(
                             color: AppColors.rival,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                             fontSize: 12,
-                            letterSpacing: 1.0,
                           ),
                         ),
                       ],
@@ -1725,13 +1712,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               color: AppColors.surfaceGlass,
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.borderSubtle),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              boxShadow: AppElevation.floating,
             ),
             child: Icon(icon, color: color, size: 20),
           ),

@@ -85,11 +85,11 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
               const Icon(Icons.lock_outline_rounded, color: AppColors.disabled, size: 16),
               const SizedBox(width: AppSpacing.s4),
               Text(
-                'LOCKED',
-                style: AppText.label.copyWith(
+                'Locked',
+                style: AppText.labelSmall.copyWith(
                   color: AppColors.disabled,
                   fontSize: 10,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ],
@@ -120,9 +120,6 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
                 color: AppColors.rival,
                 width: 1.5,
               ),
-              boxShadow: _isHolding
-                  ? AppSpacing.subtleElevation
-                  : null,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -150,12 +147,11 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
                 ),
                 const SizedBox(width: AppSpacing.s6),
                 Text(
-                  _isHolding ? 'HOLD ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s' : 'HOLD STOP',
-                  style: AppText.label.copyWith(
+                  _isHolding ? 'Hold ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s' : 'Hold stop',
+                  style: AppText.labelSmall.copyWith(
                     color: AppColors.rival,
                     fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.6,
+                    fontWeight: FontWeight.w700,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),

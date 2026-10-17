@@ -86,7 +86,7 @@ class VirtualPacerSheet extends StatelessWidget {
                   Icon(Icons.speed_rounded, color: AppColors.accent, size: 24),
                   SizedBox(width: AppSpacing.s8),
                   Text(
-                    'VIRTUAL PACER & GNSS SIMULATION',
+                    'Virtual pacer & simulation',
                     style: AppText.headingSmall,
                   ),
                 ],

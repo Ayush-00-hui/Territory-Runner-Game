@@ -66,7 +66,7 @@ class LeaderboardSheet extends StatelessWidget {
                   Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 24),
                   SizedBox(width: AppSpacing.s8),
                   Text(
-                    'GLOBAL LEADERBOARD',
+                    'Global leaderboard',
                     style: AppText.headingSmall,
                   ),
                 ],

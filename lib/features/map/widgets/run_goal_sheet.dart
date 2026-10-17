@@ -107,22 +107,22 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
+                  color: AppColors.accent.withValues(alpha: 0.12),
                   borderRadius: AppSpacing.br10,
                 ),
-                child: const Icon(Icons.flag_rounded, color: AppColors.gold, size: 22),
+                child: const Icon(Icons.flag_outlined, color: AppColors.accent, size: 22),
               ),
               const SizedBox(width: AppSpacing.s10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'CAMPAIGN TARGET',
-                    style: AppText.headingSmall.copyWith(fontSize: 15, fontWeight: FontWeight.w900),
+                    'Run goal',
+                    style: AppText.headingSmall.copyWith(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                   Text(
-                    'CONQUEST OBJECTIVES & MILESTONES',
-                    style: AppText.label.copyWith(color: AppColors.gold, fontSize: 9.5),
+                    'Set a target for your run',
+                    style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 11),
                   ),
                 ],
               ),
@@ -145,15 +145,15 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
                 color: AppColors.accent,
                 borderRadius: AppSpacing.br12,
               ),
-              labelColor: Colors.black,
+              labelColor: AppColors.onAccent,
               unselectedLabelColor: AppColors.textSecondary,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11),
+              labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
               tabs: const [
-                Tab(text: 'DISTANCE'),
-                Tab(text: 'TIME'),
-                Tab(text: 'DOMAIN'),
-                Tab(text: 'OPEN'),
+                Tab(text: 'Distance'),
+                Tab(text: 'Time'),
+                Tab(text: 'Territory'),
+                Tab(text: 'Open'),
               ],
             ),
           ),
@@ -180,7 +180,7 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
             child: FilledButton(
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.accent,
-                foregroundColor: Colors.black,
+                foregroundColor: AppColors.onAccent,
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
               ),
               onPressed: () {
@@ -189,8 +189,8 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
                 Navigator.of(context).pop(goal);
               },
               child: Text(
-                _selectedType == GoalType.none ? 'START OPEN EXPLORATION' : 'LOCK IN TARGET',
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.8),
+                _selectedType == GoalType.none ? 'Start open run' : 'Set goal',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               ),
             ),
           ),
@@ -204,17 +204,17 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
       children: [
         Row(
           children: [
-            Expanded(child: _buildPresetCard('3.0 KM', 'Quick Strike', 3.0, _selectedValue == 3.0)),
+            Expanded(child: _buildPresetCard('3.0 km', 'Quick Strike', 3.0, _selectedValue == 3.0)),
             const SizedBox(width: 10),
-            Expanded(child: _buildPresetCard('5.0 KM', 'Sector Patrol', 5.0, _selectedValue == 5.0)),
+            Expanded(child: _buildPresetCard('5.0 km', 'Sector Patrol', 5.0, _selectedValue == 5.0)),
           ],
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _buildPresetCard('10.0 KM', 'Endurance Sweep', 10.0, _selectedValue == 10.0)),
+            Expanded(child: _buildPresetCard('10.0 km', 'Endurance Sweep', 10.0, _selectedValue == 10.0)),
             const SizedBox(width: 10),
-            Expanded(child: _buildPresetCard('21.1 KM', 'Half-Marathon', 21.1, _selectedValue == 21.1)),
+            Expanded(child: _buildPresetCard('21.1 km', 'Half-Marathon', 21.1, _selectedValue == 21.1)),
           ],
         ),
       ],
@@ -226,17 +226,17 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
       children: [
         Row(
           children: [
-            Expanded(child: _buildPresetCard('15 MIN', 'Fast Burn', 900.0, _selectedValue == 900.0)),
+            Expanded(child: _buildPresetCard('15 min', 'Fast Burn', 900.0, _selectedValue == 900.0)),
             const SizedBox(width: 10),
-            Expanded(child: _buildPresetCard('30 MIN', 'Standard Run', 1800.0, _selectedValue == 1800.0)),
+            Expanded(child: _buildPresetCard('30 min', 'Standard Run', 1800.0, _selectedValue == 1800.0)),
           ],
         ),
         const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: _buildPresetCard('45 MIN', 'Power Session', 2700.0, _selectedValue == 2700.0)),
+            Expanded(child: _buildPresetCard('45 min', 'Power Session', 2700.0, _selectedValue == 2700.0)),
             const SizedBox(width: 10),
-            Expanded(child: _buildPresetCard('60 MIN', 'Full Campaign', 3600.0, _selectedValue == 3600.0)),
+            Expanded(child: _buildPresetCard('60 min', 'Full Campaign', 3600.0, _selectedValue == 3600.0)),
           ],
         ),
       ],
@@ -282,8 +282,8 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
               const Icon(Icons.explore_rounded, color: AppColors.accent, size: 20),
               const SizedBox(width: 8),
               Text(
-                'NO SET TARGET',
-                style: AppText.headingSmall.copyWith(fontSize: 14, fontWeight: FontWeight.bold),
+                'No set target',
+                style: AppText.headingSmall.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -311,8 +311,8 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
           color: isSelected ? AppColors.accent.withValues(alpha: 0.12) : AppColors.surface,
           borderRadius: AppSpacing.br14,
           border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.border,
-            width: isSelected ? 1.8 : 1.0,
+            color: isSelected ? AppColors.accent : AppColors.borderSubtle,
+            width: isSelected ? 1.5 : 1.0,
           ),
         ),
         child: Column(
@@ -322,7 +322,7 @@ class _RunGoalSheetState extends State<RunGoalSheet> with SingleTickerProviderSt
               title,
               style: TextStyle(
                 color: isSelected ? AppColors.accent : AppColors.textPrimary,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 fontSize: 14,
               ),
             ),

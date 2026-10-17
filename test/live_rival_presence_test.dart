@@ -27,7 +27,7 @@ void main() {
       );
     });
 
-    test('buildPolylineLayer generates dual-stroke rival breadcrumb wake and core', () {
+    test('buildPolylineLayer generates clean solid rival breadcrumb line with NO glow', () {
       final rivalTrails = <String, List<LatLng>>{
         'rival_01': [
           const LatLng(51.505, -0.125),
@@ -59,17 +59,13 @@ void main() {
         activeRivalRunners: activeRivals,
       );
 
-      // Should generate 2 polylines for rival_01 (glow + core), and 0 for rival_single_point
-      expect(polylineLayer.polylines.length, equals(2));
+      // Should generate 1 clean polyline for rival_01 (core line, NO glow wake), and 0 for rival_single_point
+      expect(polylineLayer.polylines.length, equals(1));
 
-      final outerGlow = polylineLayer.polylines[0];
-      final innerCore = polylineLayer.polylines[1];
-
-      expect(outerGlow.strokeWidth, equals(6.0));
-      expect(outerGlow.points.length, equals(3));
-
-      expect(innerCore.strokeWidth, equals(2.5));
-      expect(innerCore.color, equals(AppColors.rival));
+      final core = polylineLayer.polylines[0];
+      expect(core.strokeWidth, equals(2.0));
+      expect(core.color, equals(AppColors.rival));
+      expect(core.points.length, equals(3));
     });
 
     test('buildMarkerLayer creates tactical callsign and speed pill for rival', () {

@@ -89,12 +89,11 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'TACTICAL SOS BEACON',
+                      'Tactical SOS beacon',
                       style: AppText.headingSmall.copyWith(
                         color: AppColors.error,
                         fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -127,8 +126,8 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
               ),
               icon: const Icon(Icons.phone_in_talk_rounded, size: 22),
               label: const Text(
-                'CALL EMERGENCY (911)',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1.0),
+                'Call emergency (911)',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
               ),
               onPressed: () {
                 _safetyService.callEmergencyServices(dialNumber: '911');
@@ -151,9 +150,9 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
               icon: const Icon(Icons.sms_rounded, color: AppColors.error, size: 20),
               label: Text(
                 _safetyService.hasContactConfigured
-                    ? 'SMS CONTACT (${_safetyService.contactName.isNotEmpty ? _safetyService.contactName : _safetyService.contactPhone})'
-                    : 'SET UP EMERGENCY CONTACT SMS',
-                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
+                    ? 'SMS contact (${_safetyService.contactName.isNotEmpty ? _safetyService.contactName : _safetyService.contactPhone})'
+                    : 'Set up emergency contact SMS',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
               ),
               onPressed: () {
                 if (_safetyService.hasContactConfigured) {
@@ -180,7 +179,7 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                       shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
                     ),
                     icon: const Icon(Icons.share_location_rounded, color: AppColors.accent, size: 18),
-                    label: const Text('SHARE GPS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                    label: const Text('Share GPS', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
                     onPressed: () {
                       _safetyService.shareLiveLocation(position: position);
                     },
@@ -202,8 +201,8 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                     ),
                     icon: Icon(_isSirenOn ? Icons.volume_off_rounded : Icons.volume_up_rounded, size: 18),
                     label: Text(
-                      _isSirenOn ? 'STOP SIREN' : 'SIREN ALARM',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+                      _isSirenOn ? 'Stop siren' : 'Siren alarm',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
                     ),
                     onPressed: _toggleSiren,
                   ),

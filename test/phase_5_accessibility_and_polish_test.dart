@@ -76,11 +76,11 @@ void main() {
       // Verify telemetry display
       expect(find.text('25:30'), findsOneWidget);
       expect(find.text('5.42'), findsOneWidget);
-      expect(find.text('KM'), findsOneWidget);
+      expect(find.text('km'), findsOneWidget);
       expect(find.text("4'42\""), findsOneWidget);
       expect(find.text('12.8 km/h'), findsOneWidget);
       expect(find.text('10 KM TARGET'), findsOneWidget);
-      expect(find.text('AMOLED SAVER ACTIVE'), findsOneWidget);
+      expect(find.text('Battery saver active'), findsOneWidget);
 
       // Double tap to wake
       await tester.tap(find.byType(GestureDetector).first);

@@ -69,12 +69,12 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('CONQUEST COMPLETE'), findsOneWidget);
-      expect(find.text('APEXSTRIDER • CYBER VANGUARD'), findsOneWidget);
+      expect(find.text('Run complete'), findsOneWidget);
+      expect(find.text('ApexStrider • Cyber Vanguard'), findsOneWidget);
       expect(find.text('3.45 km'), findsOneWidget);
       expect(find.text('+3'), findsOneWidget);
-      expect(find.text('SHARE CARD'), findsOneWidget);
-      expect(find.text('CLAIM REWARDS'), findsOneWidget);
+      expect(find.text('Share run'), findsOneWidget);
+      expect(find.text('Done'), findsOneWidget);
       expect(find.textContaining('Outstanding loop execution'), findsOneWidget);
     });
 

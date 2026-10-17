@@ -34,9 +34,9 @@ void main() {
       expect(find.text('4.82'), findsOneWidget);
       expect(find.text("5'12\""), findsOneWidget);
       expect(find.text('25:00'), findsOneWidget);
-      expect(find.text('READY TO ENCLOSE!'), findsOneWidget);
-      expect(find.text('18M TO ORIGIN'), findsOneWidget);
-      expect(find.text('SEAL SHAPE'), findsOneWidget);
+      expect(find.text('Ready to close loop'), findsOneWidget);
+      expect(find.text('18 m to start'), findsOneWidget);
+      expect(find.text('Close loop'), findsOneWidget);
     });
 
     testWidgets('HoldToFinishButton shows LOCKED when inactive', (tester) async {
@@ -51,7 +51,7 @@ void main() {
         ),
       );
 
-      expect(find.text('LOCKED'), findsOneWidget);
+      expect(find.text('Locked'), findsOneWidget);
     });
 
     testWidgets('HoldToFinishButton triggers finish callback when held', (tester) async {
@@ -67,11 +67,11 @@ void main() {
         ),
       );
 
-      expect(find.text('HOLD STOP'), findsOneWidget);
+      expect(find.text('Hold stop'), findsOneWidget);
 
-      final gesture = await tester.startGesture(tester.getCenter(find.text('HOLD STOP')));
+      final gesture = await tester.startGesture(tester.getCenter(find.text('Hold stop')));
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.textContaining('HOLD'), findsOneWidget);
+      expect(find.textContaining('Hold'), findsOneWidget);
       expect(finished, isFalse);
 
       await tester.pumpAndSettle();
@@ -93,8 +93,7 @@ void main() {
         ),
       );
 
-      expect(find.text('TERRITORY CONQUERED!'), findsOneWidget);
-      expect(find.text('+0.01 KM² CLAIMED'), findsOneWidget);
+      expect(find.text('+0.01 km² claimed'), findsOneWidget);
       expect(find.text('+620 XP'), findsOneWidget);
     });
   });

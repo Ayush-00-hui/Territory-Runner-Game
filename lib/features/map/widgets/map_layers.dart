@@ -213,14 +213,7 @@ class MapLayers {
             decoration: BoxDecoration(
               color: AppColors.surfaceGlass,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: badgeColor.withValues(alpha: 0.8), width: 1.2),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 4,
-                  offset: const Offset(0, 1),
-                ),
-              ],
+              border: Border.all(color: badgeColor.withValues(alpha: 0.8), width: 1.0),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -277,49 +270,33 @@ class MapLayers {
         // Live Rival Moving Breadcrumb Trails
         if (rivalBreadcrumbs != null)
           for (final entry in rivalBreadcrumbs.entries)
-            if (entry.value.length >= 2) ...[
-              // Outer luminous rival wake
-              Polyline(
-                points: entry.value,
-                color: _resolveRivalColor(entry.key, activeRivalRunners).withValues(alpha: 0.35),
-                strokeWidth: 6.0,
-              ),
-              // Inner sharp rival trail
+            if (entry.value.length >= 2)
               Polyline(
                 points: entry.value,
                 color: _resolveRivalColor(entry.key, activeRivalRunners),
-                strokeWidth: 2.5,
+                strokeWidth: 2.0,
               ),
-            ],
-        // Local Runner Sovereign Trail
+        // Local Runner Trail: Solid 2.5px Pacer Blue (accent), NO glow
         if (isRunActive && runCoordinates.length >= 2)
           Polyline(
             points: runCoordinates,
-            color: AppColors.mine,
-            strokeWidth: 4.0,
+            color: AppColors.accent,
+            strokeWidth: 2.5,
           ),
         // Enclosure Proximity Path
         if (currentEnclosurePath.length >= 2)
           Polyline(
             points: currentEnclosurePath,
             color: AppColors.info,
+            strokeWidth: 2.0,
+          ),
+        // AI Suggested Route: Clean 2.5px line, NO glow
+        if (suggestedRouteCoordinates != null && suggestedRouteCoordinates.length >= 2)
+          Polyline(
+            points: suggestedRouteCoordinates,
+            color: AppColors.accent.withValues(alpha: 0.6),
             strokeWidth: 2.5,
           ),
-        // AI Suggested Route
-        if (suggestedRouteCoordinates != null && suggestedRouteCoordinates.length >= 2) ...[
-          // Outer Luminous Ember Glow
-          Polyline(
-            points: suggestedRouteCoordinates,
-            color: AppColors.accent.withValues(alpha: 0.35),
-            strokeWidth: 8.0,
-          ),
-          // Inner Crisp Athletic Ember Core
-          Polyline(
-            points: suggestedRouteCoordinates,
-            color: AppColors.accent,
-            strokeWidth: 3.5,
-          ),
-        ],
       ],
     );
   }
@@ -331,41 +308,33 @@ class MapLayers {
   }) {
     final List<Marker> markers = [];
 
-    // User Waypoint Marker (Glowing Ember Pin)
+    // User Position Marker: Crisp geometric circle with center notch, NO pulsing rings, NO glow
     if (currentLocation != null) {
       markers.add(
         Marker(
           point: currentLocation,
-          width: 44,
-          height: 44,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.accent.withValues(alpha: 0.20),
+          width: 28,
+          height: 28,
+          child: Center(
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.accent,
+                border: Border.all(color: AppColors.bgDeep, width: 2.5),
+              ),
+              child: Center(
+                child: Container(
+                  width: 5,
+                  height: 5,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.onAccent,
+                  ),
                 ),
               ),
-              Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.accent,
-                  border: Border.all(color: AppColors.textPrimary, width: 2.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.4),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -384,20 +353,13 @@ class MapLayers {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Tactical Callsign & Speed Badge
+              // Clean Callsign & Speed Badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
                 decoration: BoxDecoration(
-                  color: AppColors.surfaceGlass,
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: rivalColor.withValues(alpha: 0.8), width: 1.2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  border: Border.all(color: rivalColor.withValues(alpha: 0.6), width: 1.0),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -417,7 +379,7 @@ class MapLayers {
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 9,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w600,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -429,7 +391,7 @@ class MapLayers {
                         style: TextStyle(
                           color: rivalColor,
                           fontSize: 8.5,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
@@ -438,33 +400,14 @@ class MapLayers {
                 ),
               ),
               const SizedBox(height: 2),
-              // Radar Halo + Directional Heading Arrow
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: rivalColor.withValues(alpha: 0.22),
-                    ),
-                  ),
-                  Transform.rotate(
-                    angle: rival.heading * (math.pi / 180.0),
-                    child: Icon(
-                      Icons.navigation_rounded,
-                      color: rivalColor,
-                      size: 22,
-                      shadows: [
-                        Shadow(
-                          color: rivalColor.withValues(alpha: 0.8),
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              // Directional Heading Indicator (crisp geometric icon, NO glow)
+              Transform.rotate(
+                angle: rival.heading * (math.pi / 180.0),
+                child: Icon(
+                  Icons.navigation_rounded,
+                  color: rivalColor,
+                  size: 18,
+                ),
               ),
             ],
           ),

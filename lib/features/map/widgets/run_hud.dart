@@ -80,7 +80,7 @@ class RunHud extends StatelessWidget {
                 : (isNearClosure ? AppColors.accent : AppColors.borderSubtle),
             width: isNearClosure ? 1.5 : 1.0,
           ),
-          boxShadow: AppSpacing.hudShadow,
+          boxShadow: AppElevation.floating,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -104,12 +104,12 @@ class RunHud extends StatelessWidget {
                       Icon(Icons.pause_circle_filled_rounded, color: AppColors.warning, size: 14),
                       SizedBox(width: AppSpacing.s6),
                       Text(
-                        'AUTO-PAUSED • MOVING SPEED < 1.8 KM/H',
+                        'Auto-paused • Speed < 1.8 km/h',
                         style: TextStyle(
                           color: AppColors.warning,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           fontSize: 10,
-                          letterSpacing: 0.8,
+                          letterSpacing: 0.3,
                         ),
                       ),
                     ],
@@ -224,20 +224,20 @@ class RunHud extends StatelessWidget {
                             children: [
                               Text(
                                 isNearClosure
-                                    ? 'READY TO ENCLOSE!'
-                                    : 'LOOP PROXIMITY',
-                                style: AppText.label.copyWith(
+                                    ? 'Ready to close loop'
+                                    : 'Loop proximity',
+                                style: AppText.labelSmall.copyWith(
                                   color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                               Text(
-                                '${closureDist.round()}M TO ORIGIN',
-                                style: AppText.label.copyWith(
+                                '${closureDist.round()} m to start',
+                                style: AppText.labelSmall.copyWith(
                                   color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w800,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
                                   fontFeatures: const [FontFeature.tabularFigures()],
                                 ),
                               ),
@@ -263,17 +263,17 @@ class RunHud extends StatelessWidget {
               ),
             ],
 
-            // Core Strava Metric Readouts: Distance | Time | Split Pace
+            // Core Metric Readouts: Distance | Time | Pace
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                // Massive Distance (Tabular Inter)
+                // Distance (Tabular Inter)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('DISTANCE', style: AppText.label),
+                    const Text('Distance', style: AppText.labelSmall),
                     const SizedBox(height: 2),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -287,20 +287,20 @@ class RunHud extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: AppSpacing.s4),
-                        const Text('KM', style: AppText.labelAccent),
+                        const Text('km', style: AppText.labelAccent),
                       ],
                     ),
                   ],
                 ),
 
-                // Moving Time (Tabular Oswald)
+                // Moving Time (Tabular)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('TIME', style: AppText.label),
+                        const Text('Time', style: AppText.labelSmall),
                         if (isRunActive && !isAutoPaused) ...[
                           const SizedBox(width: AppSpacing.s4),
                           Container(
@@ -326,14 +326,14 @@ class RunHud extends StatelessWidget {
                   ],
                 ),
 
-                // Split Pace (Tabular Inter)
+                // Pace (Tabular Inter)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('AVG PACE', style: AppText.label),
+                        const Text('Pace', style: AppText.labelSmall),
                         if (targetPace != null) ...[
                           const SizedBox(width: 4),
                           Container(
@@ -344,7 +344,7 @@ class RunHud extends StatelessWidget {
                             ),
                             child: Text(
                               'P: $targetPace',
-                              style: AppText.label.copyWith(
+                              style: AppText.labelSmall.copyWith(
                                 color: AppColors.info,
                                 fontSize: 8.5,
                               ),
@@ -472,7 +472,6 @@ class RunHud extends StatelessWidget {
                             color: isNearClosure ? AppColors.accent : AppColors.borderSubtle,
                             width: 1.2,
                           ),
-                          boxShadow: AppSpacing.subtleElevation,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -486,12 +485,11 @@ class RunHud extends StatelessWidget {
                             const SizedBox(width: AppSpacing.s4),
                             const Flexible(
                               child: Text(
-                                'SEAL SHAPE',
+                                'Close loop',
                                 style: TextStyle(
                                   color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 10,
-                                  letterSpacing: 0.6,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -518,16 +516,9 @@ class RunHud extends StatelessWidget {
                     child: Container(
                       height: 58,
                       width: 58,
-                      decoration: BoxDecoration(
+                      decoration: const BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppColors.accent,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.35),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
                       ),
                       child: Center(
                         child: Icon(

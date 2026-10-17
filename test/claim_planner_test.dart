@@ -234,22 +234,22 @@ void main() {
       await tester.pump();
 
       // Verify Header
-      expect(find.text('CLAIM PLANNER'), findsOneWidget);
+      expect(find.text('Claim planner'), findsOneWidget);
 
       // Verify Presets
-      expect(find.text('PARK'), findsOneWidget);
-      expect(find.text('DISTRICT'), findsOneWidget);
-      expect(find.text('CITADEL'), findsOneWidget);
-      expect(find.text('EMPIRE'), findsOneWidget);
+      expect(find.text('Park'), findsOneWidget);
+      expect(find.text('District'), findsOneWidget);
+      expect(find.text('Citadel'), findsOneWidget);
+      expect(find.text('Empire'), findsOneWidget);
 
       // Verify Telemetry labels
-      expect(find.text('EST. DISTANCE'), findsOneWidget);
-      expect(find.text('EST. DURATION'), findsOneWidget);
-      expect(find.text('EST. NEW AREA'), findsOneWidget);
-      expect(find.text('PROJECTED XP'), findsOneWidget);
+      expect(find.text('Est. distance'), findsOneWidget);
+      expect(find.text('Est. duration'), findsOneWidget);
+      expect(find.text('Est. new area'), findsOneWidget);
+      expect(find.text('Projected XP'), findsOneWidget);
 
       // Verify Start CTA
-      final startButton = find.text('START RUN WITH ROUTE');
+      final startButton = find.text('Start run with route');
       expect(startButton, findsOneWidget);
 
       // Tap Start Run
@@ -294,8 +294,8 @@ void main() {
       await tester.pump();
       expect(find.text('2000 m²'), findsOneWidget);
 
-      // Tap CITADEL (10,000 m²)
-      await tester.tap(find.text('CITADEL'));
+      // Tap Citadel (10,000 m²)
+      await tester.tap(find.text('Citadel'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
