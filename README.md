@@ -18,11 +18,11 @@
 
 <br>
 
-[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/Ayush-00-hui/Territory-Runner-Game/ci.yml?branch=feature/complete-v4&style=for-the-badge&label=CI%20Pipeline&logo=githubactions&logoColor=white)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-174%2F174_Passing-2563EB.svg?style=for-the-badge&logo=flutter&logoColor=white)](test/)
-[![Go Tests](https://img.shields.io/badge/Go_Backend-27_Test_Suites_Passing-00ADD8.svg?style=for-the-badge&logo=go&logoColor=white)](backend/)
+[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/Ayush-00-hui/Territory-Runner-Game/ci.yml?branch=main&style=for-the-badge&label=CI%20Pipeline&logo=githubactions&logoColor=white)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-181%2F181_Passing-4C8DFF.svg?style=for-the-badge&logo=flutter&logoColor=white)](test/)
+[![Go Tests](https://img.shields.io/badge/Go_Backend-79_Passing_(9_Packages)-00ADD8.svg?style=for-the-badge&logo=go&logoColor=white)](backend/)
 [![Golden Parity](https://img.shields.io/badge/Golden_Parity-7%2F7_Fixtures_%3C0.5%25_Delta-success.svg?style=for-the-badge)](test_fixtures/)
-[![Design System](https://img.shields.io/badge/Palette-Ink_%26_Pacer_Blue_%230B0E14-111622?style=for-the-badge&logo=materialdesign&logoColor=2563EB)](lib/ui/)
+[![Design System](https://img.shields.io/badge/Palette-Ink_%26_Pacer_Blue_%23090B0F-12151B?style=for-the-badge&logo=materialdesign&logoColor=4C8DFF)](lib/ui/)
 
 <br>
 
@@ -70,7 +70,9 @@
   - [4. Territory Strength Decay & Defense Mechanics](#4-territory-strength-decay--defense-mechanics)
   - [5. Explore Claim Planner with Net-New Area Deduction](#5-explore-claim-planner-with-net-new-area-deduction)
   - [6. Donut Hole Classification & Rendering](#6-donut-hole-classification--rendering)
-  - [7. Kinematic GPS Anomaly Detection & Spoofing Mitigation](#7-kinematic-gps-anomaly-detection--spoofing-mitigation)
+  - [7. Kinematic GPS Anomaly Detection & Activity Speed Ceilings](#7-kinematic-gps-anomaly-detection--activity-speed-ceilings)
+  - [8. Server-Enforced Privacy Zones & WebSocket Suppression](#8-server-enforced-privacy-zones--websocket-suppression)
+  - [9. Social Duels & Anti-Abuse Integrity](#9-social-duels--anti-abuse-integrity)
 - [Push Notification Infrastructure (FCM HTTP v1)](#-push-notification-infrastructure-fcm-http-v1)
 - [Weekly Competitive League Engine](#-weekly-competitive-league-engine)
 - [Athletic Minimal Design System (Ink + Pacer Blue)](#-athletic-minimal-design-system-ink--pacer-blue)
@@ -99,7 +101,7 @@ Traditional fitness trackers record passive linear polylines. **Territory Runner
 - 🔋 **Real-World GPS & Screen Lock Persistence:** Foreground location services (`flutter_foreground_task`) with a persistent sticky notification and wake locks ensure unthrottled tracking while running with screen locked or app backgrounded.
 - 💾 **Crash Recovery Safety Box:** Active track waypoints persist continuously to Hive storage (`running_session_box`); unexpected OS terminations prompt seamless session restoration upon relaunch.
 - ⚡ **Offline-First Resilience:** Local Clipper2 generates instant optimistic previews. Runs queue in persistent Hive boxes and sync seamlessly with server reconciliation toasts upon reconnection.
-- 🎨 **Calm Premium Athletic Aesthetic:** Built upon Whoop/Oura-inspired Obsidian Dark (`#0B0C0E`), Elevated Slate (`#16181D`), and Athletic Mint (`#3DDC97`) for distraction-free performance.
+- 🎨 **Ink + Pacer Blue Athletic Aesthetic:** Built upon deep ink canvas (`#090B0F`), dark elevated slate (`#12151B`), and crisp Pacer Blue (`#4C8DFF`) with coral rival indicators (`#FF7A59`) for high sunlight readability and zero visual clutter.
 - 📲 **Modern FCM HTTP v1 Alerts:** Asynchronous, non-blocking rival conquest push alerts powered by server-side Google OAuth2 RS256 JWT assertion signing.
 - 🏅 **Weekly Competitive League:** Monday 00:00:00 UTC automated weekly resets categorizing athletes into dynamic Diamond (top 5%), Gold (next 20%), Silver (next 35%), and Bronze (bottom 40%) percentile divisions.
 
@@ -114,9 +116,10 @@ Traditional fitness trackers record passive linear polylines. **Territory Runner
 | **Concurrency Control** | Independent runs, no conflict | Optimistic locks with retry aborts | **Transaction-scoped PostGIS advisory lock (`pg_advisory_xact_lock`)** |
 | **Offline Capability** | Records track, no gameplay | Fails without active cell signal | **Dual-engine: local Clipper2 optimistic preview + Hive FIFO queue** |
 | **Screen Lock GPS** | Standard OS background tracking | Often throttled by OS battery management | **Hardened foreground service with sticky notification & wakelock** |
-| **Anti-Cheat Validation** | Post-hoc manual flag reviews | Basic speed thresholds | **Kinematic window filter: hard ceiling 25 km/h, accel variance, jitter** |
+| **Anti-Cheat Validation** | Post-hoc manual flag reviews | Basic speed thresholds | **Kinematic filter with activity-specific speed ceilings (running: 25 km/h, walking: 10 km/h, cycling: 50 km/h)** |
+| **Privacy Safeguards** | Client-only map blur | None | **Dual-layer: client redaction + server-side geodesic suppression in WebSockets & exports** |
 | **Rival Alerts** | None | Delayed batch emails | **Real-time WebSocket alerts + FCM HTTP v1 background push** |
-| **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Calm, distraction-free Whoop/Oura matte obsidian (`#0B0C0E`)** |
+| **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Calm, high-contrast Ink + Pacer Blue (`#090B0F`, `#4C8DFF`)** |
 
 ---
 
@@ -317,20 +320,22 @@ This matrix documents actual tested reality versus theoretical claims:
 | **Crash Recovery Box** | Active track points flushed continuously to Hive `running_session_box`; restored on restart via dialog. | `flutter test test/tracking_crash_recovery_test.dart` | **PASS (6 tests)**. Simulated kill restored points, elapsed time, and distance. |
 | **Signal Gap Interpolation** | Linear dead-reckoning and speed estimation across GPS tunnel dropouts $>5\text{ s}$ and $<120\text{ s}$. | `flutter test test/tracking_crash_recovery_test.dart` | **PASS**. Smooth trajectory continuity without false teleport anomaly triggers. |
 | **PostGIS Spatial Mutations** | `ST_MakeValid`, `ST_Union`, `ST_Difference`, transaction-scoped `pg_advisory_xact_lock`, GiST index. | `cd backend; go test -v ./internal/store -run TestPostgres` | **PASS (11 integration tests)**. Concurrent runs serialize safely; invalid self-touching rings auto-heal. |
-| **Faction Global Dominance** | Real-time aggregate territory dominance via PostGIS SQL aggregation (`GET /v1/factions/standings` & `PUT /v1/me/faction`). | `cd backend; go test -v ./internal/api -run TestFactionStandings` | **PASS**. Replaced hard-coded mock standings with live sector dominance metrics. |
-| **True 1080p Share Card** | Multi-theme athletic card generator (`1080x1920` render) with instant native system sharing via `share_plus` and `path_provider`. | `flutter test test/run_summary_share_history_test.dart` | **PASS**. Zero fake toasts; writes temporary PNG and delegates to Android/iOS share sheet. |
-| **Tactical Haptics & Units** | Tactile vibration bursts (`vibration`) upon loop closure, auto-pause, milestones, and attacks, with metric/imperial preferences. | `flutter test test/app_preferences_test.dart` | **PASS (6 tests)**. Verified key persistence (`pref_voice_coach_haptics_enabled`, `pref_distance_unit`), distance formatting, and multi-pulse haptics. |
+| **Faction Global Dominance** | Real-time aggregate territory dominance via PostGIS SQL aggregation (`GET /v1/factions/standings` & `PUT /v1/me/faction`). | `cd backend; go test -v ./internal/api -run TestFactionStandings` | **PASS**. Live sector dominance metrics. |
+| **True 1080p Share Card** | Multi-theme athletic card generator (`1080x1920` render) with instant native system sharing via `share_plus` and `path_provider`. | `flutter test test/run_summary_share_history_test.dart` | **PASS**. Writes temporary PNG and delegates to Android/iOS share sheet. |
+| **Tactical Haptics & Units** | Tactile vibration bursts (`vibration`) upon loop closure, auto-pause, milestones, and attacks, with metric/imperial preferences. | `flutter test test/app_preferences_test.dart` | **PASS (6 tests)**. Verified key persistence, distance formatting, and multi-pulse haptics. |
 | **FCM Push Client** | Full `firebase_messaging` integration with permission primer bottom sheet, background message handler, and token registration. | `flutter test test/notification_service_test.dart` | **PASS**. Tokens sent to backend `/v1/device-token`; background channel created. |
-| **Privacy Exclusion Zones** | Spherical geodesic masking of sensitive tracks (home & office) with export redaction. | `flutter test test/privacy_and_export_test.dart` | **PASS (8 tests)**. Excludes waypoints within configured radius; redacts from GPX/GeoJSON. |
+| **Server Privacy Zones & WS Suppression** | Geodesic point masking (`geo/privacy.go`), WebSocket presence suppression (`ws/hub.go`), and bidirectional offline-first sync (`GET/PUT /v1/me/privacy-zones`). | `cd backend; go test -v ./internal/geo ./internal/ws` & `flutter test test/privacy_and_export_test.dart` | **PASS (11 tests)**. Masks coordinates within user radius, suppresses rival map broadcasting, and exports safely. |
+| **Activity Speed Ceilings** | Kinematic limits for `running` (25 km/h instant, 22 km/h avg), `walking` (10 km/h instant, 8.5 km/h avg), and `cycling` (50 km/h instant, 40 km/h avg); rejects cycling speeds submitted under running. | `cd backend; go test -v ./internal/anticheat ./internal/api -run TestSubmitRunActivityTypeValidationAndSpeedCeiling` | **PASS (5 tests)**. Rejection score $\ge 55$ with `ANOMALY_REJECTED`. |
+| **Friends & Duels Anti-Abuse** | Symmetric unique pair constraint (`LEAST/GREATEST`), max 1 concurrent active/pending duel, concurrency limits (5 active, 10 pending), XP stake bounds [0, 1000], target bounds [500-500,000 sqm], and auto-expiration sweep. | `cd backend; go test -v ./internal/store ./internal/api -run "TestFriendsAndDuelsAntiAbuse"` | **PASS (8 tests)**. Zero self-dueling, zero duplicate challenges, zero unconstrained XP exploitation. |
 | **GPX 1.1 / GeoJSON Export** | Standard athletic route export format with elevation, timestamp, and privacy masking. | `flutter test test/privacy_and_export_test.dart` | **PASS**. Produces valid XML GPX 1.1 and RFC 7946 GeoJSON. |
 | **Emergency SOS Beacon** | Rapid 911 dialing, SMS distress beacon with Google Maps GPS pin link, and pulsating siren for runner safety. | `flutter test test/privacy_and_export_test.dart` | **PASS**. Single-tap emergency dispatch with automated SMS composition. |
 | **Campaign Conquest Goals** | Distance, duration, and turf area goals with active HUD progress and celebration triggers. | `flutter test test/phase_3_run_experience_test.dart` | **PASS**. Accurate progress calculation and live remaining distance/time formatting. |
 | **Smart Auto-Pause** | Hysteresis speed engine (<1.8 km/h for 3s to pause, ≥3.0 km/h to resume). | `flutter test test/phase_3_run_experience_test.dart` | **PASS**. Zero false pauses during normal athletic stride variations. |
 | **Offline Map Pre-Caching** | Slippy coordinate math, offline tile store, and `OfflineFirstTileProvider` for zero-connectivity running. | `flutter test test/phase_3_run_experience_test.dart` | **PASS**. Pre-downloads sector zoom levels and serves cached tiles during offline runs. |
-| **Social Squad & Duels** | Friends system, 24h Area & Distance head-to-head conquest challenges with comparative progress bars and XP stakes. | `flutter test test/phase_4_social_duels_test.dart` & `cd backend; go test -v ./internal/store -run "TestFriend\|TestDuel"` | **PASS (9 tests)**. Automatic run submission duel advancing and winner declaration. |
+| **Social Squad & Duels** | Friends system, 24h Area & Distance head-to-head conquest challenges with comparative progress bars and XP stakes. | `flutter test test/phase_4_social_duels_test.dart` & `cd backend; go test -v ./internal/store -run "TestFriend\|TestDuel"` | **PASS (11 tests)**. Automatic run submission duel advancing and winner declaration. |
 | **Endurance Battery Saver** | Low-power AMOLED pure black HUD overlay, suppressed map animations, and optimized GPS polling for marathon running. | `flutter test test/phase_5_accessibility_and_polish_test.dart` | **PASS (6 tests)**. Reduces OLED power draw; tap-to-wake gesture arena resolution. |
 | **Accessibility & WCAG AA** | Screen-reader `Semantics` tags, enlarged $\ge 48\times 48\text{ dp}$ touch targets, press-scale micro-interactions (0.96), and WCAG 2.1 AA compliant contrast ($\ge 4.5:1$). | `flutter test test/theme/wcag_contrast_test.dart` | **PASS (3 tests)**. Validated across body text, icons, and surface tone hierarchies. |
-| **Charcoal + Ember UI/UX** | Apple Fitness/Whoop dark aesthetic (`#0C0B0A`, `#151413`, `#FF6A3D`), Inter tabular figures (`FontFeature.tabularFigures()`), zero raw colors outside theme, and unified `AppToast`/`AppSheet`/`AppDialog`. | `flutter test test/theme/no_raw_colors_test.dart` & `flutter test` (all 159 tests) | **PASS (100%)**. Absolute zero raw `Color(0x` or `Colors.white` outside `lib/ui/theme` enforced with 0-whitelist test. |
+| **Ink + Pacer Blue UI/UX** | Sporty minimal dark aesthetic (`#090B0F`, `#12151B`, `#4C8DFF`), tabular figures, zero raw colors outside theme, and unified `AppToast`/`AppSheet`/`AppDialog`. | `flutter test test/theme/no_raw_colors_test.dart` & `flutter test` (all 181 tests) | **PASS (100%)**. Absolute zero raw `Color(0x` or `Colors.white` outside `lib/ui/theme` enforced with 0-whitelist test. |
 | **3-Slide Onboarding & Primers** | Lightweight vector carousel (*Run & Claim*, *Defend & Compete*, *Athletic Precision*) with pre-permission educational primers (`PermissionPrimerSheet`) and auth redesign. | `flutter test test/phase_6_onboarding_and_auth_test.dart` | **PASS (9 tests)**. Slide progression, skip, permission explanations, and guest mode verified. |
 | **FCM HTTP v1 Push Alerts** | Pure Go OAuth2 RS256 JWT assertion client for `fcm.googleapis.com/v1`; asynchronous background fan-out to carved rivals. | `cd backend; go test -v ./internal/notify` | **PASS (5 tests)**. Gracefully degrades to no-op when credentials omitted. |
 | **Weekly Competitive League** | Deterministic Monday 00:00:00 UTC resets; dynamic percentile divisions (Diamond 5%, Gold 20%, Silver 35%, Bronze 40%). | `cd backend; go test -v ./internal/league` | **PASS (4 tests)**. Guaranteed UTC canonical timing; no client clock manipulation. |
@@ -349,13 +354,14 @@ This matrix documents actual tested reality versus theoretical claims:
 - 🚀 **3-Slide Vector Onboarding:** High-craft vector carousel explaining loop conquest, faction rivalry, and athletic metrics with persistent completion state.
 - 🛡️ **Educational Permission Primers:** Context-aware `PermissionPrimerSheet` explaining GPS satellite lock, locked-screen tracking, and notification value before system dialogs.
 - 🔐 **Athletic Multi-Path Auth:** Instant Guest Mode for immediate exploration, Google One-Tap, Email/Password (with show/hide eye toggle), and Phone OTP SMS.
-- 🎨 **Charcoal + Ember Design System:** Cohesive dark-only athletic palette (`#0C0B0A`, `#151413`, `#FF6A3D`) with Inter tabular figures, squircle radii, and tactile press-scale feedback.
-- ⚔️ **Head-to-Head Conquest Duels:** Issue 24-hour Area or Distance challenges to squad friends with XP stakes. Runs submitted during active duels automatically advance your competitive meter with real-time comparative dual progress tracking.
-- 👥 **Social Squad Syndicate:** Friend management system with instant invites, callsign searching, incoming invitation accepting/declining, and squad territory leaderboards.
+- 🎨 **Ink + Pacer Blue Design System:** Cohesive dark-only athletic palette (`#090B0F`, `#12151B`, `#4C8DFF`, `#FF7A59`) with Inter tabular figures, squircle radii, and tactile press-scale feedback.
+- 🚴 **Activity-Specific Speed Ceilings:** Distinct kinematic velocity thresholds for Running ($25\text{ km/h}$ instant, $22\text{ km/h}$ avg), Walking ($10\text{ km/h}$ instant), and Cycling ($50\text{ km/h}$ instant). Submitting cycling speeds under running triggers immediate anomaly rejection.
+- 🔒 **Dual-Layer Privacy Zones & WebSocket Suppression:** Define circular geo-masking exclusion zones (100m - 1000m) around home or workplace; synchronized offline-first with backend (`GET/PUT /v1/me/privacy-zones`). The server suppresses rival presence in WebSocket broadcasts and masks sensitive tracks from public exports.
+- ⚔️ **Head-to-Head Conquest Duels & Anti-Abuse:** Issue 24-hour Area or Distance challenges with XP stakes. Protected by symmetric uniqueness constraints (`uq_duels_active_pair`), concurrency limits (max 5 active), XP stake bounds, and automated expiration resolution.
+- 👥 **Social Squad Syndicate:** Friend management system with bidirectional canonical pair constraints, pending request rate limiting, callsign searching, and squad leaderboards.
 - 🎯 **Run Conquest Goals:** Select Distance (e.g. 5K, 10K), Duration (e.g. 30m, 45m), or Turf Area (e.g. 50,000 m²) goals with real-time HUD progress and completion celebrations.
 - ⏸️ **Smart Auto-Pause Engine:** Hysteresis kinematic filter (<1.8 km/h for 3s to pause, ≥3.0 km/h to resume) prevents stoplight drift without premature pauses during slow athletic strides.
 - 🗺️ **Offline Map Storage:** Pre-cache OpenStreetMap Slippy vector tiles for zero-connectivity trail or mountain grid exploration via `OfflineFirstTileProvider`.
-- 🛡️ **Privacy Exclusion Zones:** Define circular geo-masking exclusion zones (100m - 1000m) around home or workplace; sensitive waypoints are clipped before cloud submission or export.
 - 📤 **GPX 1.1 & GeoJSON Route Export:** Export running sessions with privacy redaction for Strava, Garmin Connect, or GIS visualization.
 - 🆘 **Emergency Safety SOS Beacon & Siren:** Solo runner distress beacon dispatching an automated SMS with current GPS coordinates and Google Maps pin link, 911 dialing, and audible acoustic siren.
 - 📳 **Tactical Haptics & Metric/Imperial Units:** Tactile vibration bursts (`vibration`) upon loop closure, auto-pause/resume, distance milestones, and territory attack warnings, with persistent measurement unit controls.
@@ -481,15 +487,27 @@ All endpoints except `/healthz` require authentication:
 | Method | Endpoint | Auth | Description | Status Codes |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/healthz` | None | Service liveness probe & database connection health | `200 OK`, `503 Service Unavailable` |
-| `GET` | `/v1/ws` | Token / Dev | Full-duplex WebSocket for live rival GPS & attack alerts | `101 Switching Protocols`, `401`, `403` |
+| `GET` | `/v1/ws` | Token / Dev | Full-duplex WebSocket for live rival GPS & attack alerts (privacy-zone masked) | `101 Switching Protocols`, `401`, `403` |
 | `GET` | `/v1/me` | Required | Current athlete profile (XP, level, total area, runs) | `200 OK`, `401 Unauthorized` |
-| `POST` | `/v1/runs` | Required | Submits GPS track points with idempotency key; executes PostGIS conquest | `201 Created`, `200 OK (replay)`, `400`, `401`, `413`, `422`, `429` |
+| `POST` | `/v1/runs` | Required | Submits GPS track points with idempotency key & activity type; executes PostGIS conquest | `201 Created`, `200 OK (replay)`, `400`, `401`, `413`, `422`, `429` |
 | `GET` | `/v1/runs` | Required | Retrieves recent run history for the authenticated user | `200 OK`, `401 Unauthorized` |
 | `POST` | `/v1/runs/{id}/coach` | Required | Calls Google Gemini LLM proxy to generate post-run tactical debrief | `200 OK`, `401 Unauthorized`, `404 Not Found`, `429 Rate Limited` |
 | `GET` | `/v1/territories` | Required | Bounding box GeoJSON query: `?bbox=minLng,minLat,maxLng,maxLat` | `200 OK`, `400 Bad Request`, `401 Unauthorized` |
 | `GET` | `/v1/leaderboard` | Required | Global territory leaderboard ranked by `total_area_sqm` DESC | `200 OK`, `401 Unauthorized` |
 | `POST` | `/v1/device-token` | Required | Registers or refreshes athlete FCM device token for push alerts | `200 OK`, `400 Bad Request`, `401 Unauthorized` |
 | `GET` | `/v1/league/current` | Required | Fetches current weekly league standings, user tier, and reset countdown | `200 OK`, `401 Unauthorized` |
+| `GET` | `/v1/me/privacy-zones` | Required | Retrieves athlete's configured circular privacy exclusion zones | `200 OK`, `401 Unauthorized` |
+| `PUT` | `/v1/me/privacy-zones` | Required | Replaces athlete's privacy zones with full validation (lat/lng, radius 50-2000m) | `200 OK`, `400 Bad Request`, `401 Unauthorized` |
+| `GET` | `/v1/friends` | Required | Retrieves all accepted squad friends with athlete telemetry | `200 OK`, `401 Unauthorized` |
+| `GET` | `/v1/friends/requests` | Required | Fetches incoming and outgoing pending friend requests | `200 OK`, `401 Unauthorized` |
+| `POST` | `/v1/friends/request` | Required | Sends a new friend request (rate limited, no self-friending, canonical pair) | `201 Created`, `400 Bad Request`, `401 Unauthorized` |
+| `PUT` | `/v1/friends/request/{id}`| Required | Accepts or declines a pending friend request | `200 OK`, `400 Bad Request`, `401 Unauthorized` |
+| `GET` | `/v1/duels` | Required | Fetches all active, pending, and past head-to-head duels with progress | `200 OK`, `401 Unauthorized` |
+| `POST` | `/v1/duels` | Required | Creates a 24h Area or Distance duel challenge (bounds enforced, max 1 active pair) | `201 Created`, `400 Bad Request`, `401 Unauthorized` |
+| `PUT` | `/v1/duels/{id}/accept` | Required | Accepts a pending duel challenge (unexpired only) | `200 OK`, `400 Bad Request`, `401 Unauthorized` |
+| `PUT` | `/v1/duels/{id}/decline`| Required | Declines a pending duel challenge | `200 OK`, `400 Bad Request`, `401 Unauthorized` |
+| `GET` | `/v1/factions/standings` | Required | Fetches global territory dominance percentages per athletic faction | `200 OK`, `401 Unauthorized` |
+| `PUT` | `/v1/me/faction` | Required | Updates athlete's chosen athletic faction | `200 OK`, `400 Bad Request`, `401 Unauthorized` |
 
 ---
 
@@ -505,6 +523,7 @@ Authorization: Bearer eyJhbGciOiJSUzI1Ni...
 
 {
   "idempotency_key": "run_01j9a8b7c6d5e4f3",
+  "activity_type": "running",
   "duration_seconds": 940,
   "distance_meters": 2450.5,
   "points": [
@@ -637,10 +656,38 @@ $$\text{depth}(R) = \sum_{j \neq R} \mathbf{1}_{R \subset P_j}$$
 
 ---
 
-### 7. Kinematic GPS Anomaly Detection & Spoofing Mitigation
-The telemetry evaluator operates on sliding windows without false claims of impenetrable security:
-- **Instant Hard Rejections:** `isMocked == true`, speed $> 25\text{ km/h}$ ($6.94\text{ m/s}$), teleport jump $> 50\text{ m}$ in $\le 1.0\text{ s}$.
-- **Kinematic Weighted Z-Scores:** Tracks acceleration variance $\sigma^2_a$, heading angular jerk, and identical-step coordinate repeats.
+### 7. Kinematic GPS Anomaly Detection & Activity Speed Ceilings
+The server-side detector (`backend/internal/anticheat/detector.go`) enforces activity-specific kinematic thresholds:
+- **Running (Default):**
+  - Instantaneous Speed Ceiling: $25.0\text{ km/h}$ ($6.94\text{ m/s}$).
+  - Average Speed Ceiling: $22.0\text{ km/h}$ ($6.11\text{ m/s}$).
+  - Runs submitted under `running` exhibiting vehicular or cycling speeds are rejected with anomaly score $\ge 55$ and `ANOMALY_REJECTED`.
+- **Walking:**
+  - Instantaneous Speed Ceiling: $10.0\text{ km/h}$ ($2.78\text{ m/s}$).
+  - Average Speed Ceiling: $8.5\text{ km/h}$ ($2.36\text{ m/s}$).
+- **Cycling:**
+  - Instantaneous Speed Ceiling: $50.0\text{ km/h}$ ($13.89\text{ m/s}$).
+  - Average Speed Ceiling: $40.0\text{ km/h}$ ($11.11\text{ m/s}$).
+- **Kinematic Weighted Z-Scores:** Tracks acceleration variance $\sigma^2_a$, heading angular jerk, teleport jumps ($>50\text{ m}$ in $\le 1.0\text{ s}$), and identical-step coordinate repeats.
+
+---
+
+### 8. Server-Enforced Privacy Zones & WebSocket Suppression
+Sensitive locations (home, workplace) are protected by a dual-layer privacy engine:
+- **Circular Geodesic Masking:** Users configure circular exclusion zones ($50\text{ m}$ to $2,000\text{ m}$ radius).
+- **Client Offline-First Sync:** `PrivacyZoneService` caches zones locally in Hive (`privacy_zones_box`) and synchronizes with `GET/PUT /v1/me/privacy-zones`.
+- **Server Geodesic Suppression (`backend/internal/geo/privacy.go`):** In the server's real-time WebSocket presence hub (`ws/hub.go`), whenever a runner enters their enabled privacy zone, their location coordinates and presence broadcast are actively suppressed from rival radar feeds. Public track exports automatically redact all sensitive waypoints within private zones.
+- Detailed architecture and viva defenses documented in [`docs/PRIVACY.md`](docs/PRIVACY.md).
+
+---
+
+### 9. Social Duels & Anti-Abuse Integrity
+Head-to-head athletic conquest battles are safeguarded against exploitation and denial-of-service spam:
+- **Canonical Symmetric Pair Constraint:** Database partial unique index `uq_duels_active_pair` on `(LEAST(challenger_id, opponent_id), GREATEST(challenger_id, opponent_id)) WHERE status IN ('pending', 'active')` guarantees that no two runners can ever engage in multiple simultaneous pending or active duels.
+- **Self-Challenge Prevention:** Both database check constraints (`chk_duels_no_self`, `chk_friendships_no_self`) and API validation reject self-dueling (`CANNOT_DUEL_SELF`) and self-friending (`CANNOT_FRIEND_SELF`).
+- **Concurrency Rate Limits:** Bounded to a maximum of 5 concurrent active duels and 10 pending challenges per runner (`DUEL_LIMIT_EXCEEDED`).
+- **Stake & Target Guardrails:** XP stakes are strictly constrained between 0 and 1,000 XP (`INVALID_XP_STAKE`), with area targets bounded between $500\text{ m}^2$ and $500,000\text{ m}^2$ and distance targets between $0.5\text{ km}$ and $50.0\text{ km}$ (`INVALID_TARGET_VALUE`).
+- **Automated Expiration Sweep:** Active and pending duels past their 24-hour expiration window automatically transition to `expired` or `completed` with fair winner resolution and XP stake distribution.
 
 ---
 
@@ -681,19 +728,20 @@ Designed specifically for intense outdoor athletic performance, direct sunlight 
 
 | Token Name | Hex Code | Visual Application & Purpose |
 | :--- | :--- | :--- |
-| `bgDeep` | `#0B0E14` | Deepest ink canvas (OLED power conservation & high contrast) |
-| `surface` | `#111622` | Tactical card backgrounds, bottom sheets, navigation bars |
-| `surface2` | `#182030` | Nested containers, vector map previews, inactive stat pills |
-| `border` | `#1E293B` | Structural hairline boundaries and dividers |
-| `borderSubtle` | `#162032` | Secondary dividers and non-critical module borders |
-| `accent` | `#2563EB` | **Pacer Blue** — Primary actions, active run paths, player territory |
-| `accentSecondary` | `#38BDF8` | **Sky Blue** — Milestone progress, secondary accents |
-| `textPrimary` | `#F8FAFC` | High-contrast white typography for swift glanceability |
-| `textSecondary` | `#94A3B8` | Slate secondary labels, metrics, and descriptions |
-| `textMuted` | `#64748B` | Subtle timestamps, coordinate labels, and units |
-| `success` | `#10B981` | Loop closure confirmation and completed quests |
-| `warning` | `#F59E0B` | Territory decay warnings and syndicate faction identity |
-| `error` | `#EF4444` | Stop run trigger, hazard warnings, and rival intrusion alerts |
+| `bgDeep` | `#090B0F` | Deepest ink canvas (OLED power conservation & high contrast) |
+| `bgElevated` | `#0E1116` | Elevated ink canvas (modal backdrops & layered panels) |
+| `surface` | `#12151B` | Tactical card backgrounds, bottom sheets, navigation bars |
+| `surface2` | `#191D25` | Nested containers, vector map previews, inactive stat pills |
+| `border` | `#262B35` | Structural hairline boundaries and dividers |
+| `borderSubtle` | `#FFFFFF @ 8%` | Secondary dividers and non-critical module borders |
+| `accent` | `#4C8DFF` | **Pacer Blue** — Primary actions, active run paths, player territory |
+| `rival` | `#FF7A59` | **Coral** — Rival territory sectors, opponent progress, rival breadcrumbs |
+| `textPrimary` | `#F2F4F7` | High-contrast typography for swift outdoor glanceability |
+| `textSecondary` | `#A0A8B5` | Slate secondary labels, metrics, and descriptions |
+| `textMuted` | `#7F8897` | Subtle timestamps, coordinate labels, and units |
+| `success` | `#4FD1A5` | **Emerald** — Loop closure confirmation, sync success, podium ranks |
+| `warning` | `#F5B544` | **Amber** — Territory decay warnings, anomaly alerts, syndicate identity |
+| `error` | `#F2677A` | **Rose** — Stop run trigger, hazard warnings, and rival intrusion alerts |
 
 ### 3. Component Architecture & Tokens (`lib/ui/`)
 - **Tokens**:
@@ -753,16 +801,16 @@ go test -v ./...
 ```
 
 ### Measured Test Verification Metrics (Real Terminal Outputs):
-- **Flutter Test Suite:** **174 passed** across 26 test suites (0 failures, 0 skipped).
+- **Flutter Test Suite:** **181 passed** across 27 test suites (0 failures, 0 skipped).
 - **Flutter Analyzer:** **0 issues found** (clean static analysis).
-- **Go Test Suite:** **60 unit tests passed** across 9 packages (`anticheat`, `api`, `auth`, `coach`, `geo`, `league`, `notify`, `store`, `ws`) + **11 PostGIS live database integration tests**.
+- **Go Test Suite:** **79 unit tests passed** across 9 packages (`anticheat`, `api`, `auth`, `coach`, `geo`, `league`, `notify`, `store`, `ws`).
 - **Shared Golden Parity:** **7/7 Golden fixtures** verified in both Dart and Go, agreeing within $<0.5\%$ area tolerance.
 
 ---
 
 ## 🎮 Classroom & Viva Demonstration Lab
 
-For deep academic and architectural defense, see the comprehensive [🎓 Viva Examiner Defense Guide](docs/VIVA.md).
+For deep academic and architectural defense, see the comprehensive [🎓 Viva Examiner Defense Guide](docs/VIVA.md) and [🔒 Privacy Architecture](docs/PRIVACY.md).
 
 | Scenario | Demonstration Trigger | Algorithmic Mechanism | Expected Result |
 | :--- | :--- | :--- | :--- |
@@ -770,7 +818,9 @@ For deep academic and architectural defense, see the comprehensive [🎓 Viva Ex
 | 🛡️ **Territory Defense** | Run through own land | `last_defended_at` timestamp renewal | Strength resets to $100\%$, shield HUD badge updates |
 | 🗺️ **Claim Planner** | Explore Tab $\to$ Area Slider | OSRM loop + Clipper2 net-new area subtraction | Electric blue tactical route preview with net area stats |
 | ⚔️ **Rival Attack Alert** | Simulate rival cut | WebSocket `territory_under_attack` broadcast + FCM v1 | Victim receives instant amber HUD warning toast & push notification |
-| 🚨 **Spoofing Mitigation** | Inject speed $>25\text{ km/h}$ | Kinematic speed ceiling rule | Permanent rejection ($422$), zero silent retries |
+| 🚨 **Speed Ceiling Anomaly** | Submit cycling speeds as run | Activity-specific kinematic speed ceiling ($25\text{ km/h}$) | Permanent rejection ($422\text{ Unprocessable Entity}$), anomaly score $\ge 55$ |
+| 🔒 **Privacy Masking** | Enter privacy zone during run | Server geodesic suppression in `ws/hub.go` | Location redacted from rival map stream and excluded from public export |
+| 👥 **Anti-Abuse Duel Guard** | Attempt duplicate or self-duel | Symmetric partial unique index `uq_duels_active_pair` | Immediate $400\text{ Bad Request}$ (`DUEL_ALREADY_EXISTS` / `CANNOT_DUEL_SELF`) |
 | 🔋 **Background Tracking** | Lock phone screen during run | `flutter_foreground_task` sticky notification | Continuous GPS points recorded without OS throttling |
 | 💾 **Crash Recovery** | Force-kill app during run | Hive `running_session_box` restoration | Recovery modal appears on relaunch to resume workout |
 
