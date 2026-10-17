@@ -35,21 +35,27 @@ class ChallengesShelf extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.bolt_rounded, color: AppColors.accent, size: 18),
-                      const SizedBox(width: AppSpacing.s8),
-                      Text(
-                        'Active conquest quests',
-                        style: AppText.headingSmall.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          letterSpacing: 0.2,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.bolt_rounded, color: AppColors.accent, size: 18),
+                        const SizedBox(width: AppSpacing.s8),
+                        Flexible(
+                          child: Text(
+                            'Active conquest quests',
+                            style: AppText.headingSmall.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                              letterSpacing: 0.2,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.s8),
                   Text(
                     'Resets in 14h',
                     style: AppText.labelSmall.copyWith(
@@ -258,7 +264,7 @@ class ChallengesShelf extends StatelessWidget {
       crossAxisCount: 2,
       crossAxisSpacing: AppSpacing.s12,
       mainAxisSpacing: AppSpacing.s12,
-      childAspectRatio: 1.5,
+      childAspectRatio: MediaQuery.sizeOf(context).width < 360 ? 1.25 : 1.5,
       children: badges.map((b) => _buildBadgeCard(context, b)).toList(),
     );
   }

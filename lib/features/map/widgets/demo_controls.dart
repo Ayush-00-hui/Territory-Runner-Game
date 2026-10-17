@@ -89,7 +89,7 @@ class DemoControlsLab extends StatelessWidget {
                 : '🔴 Simulate Live Rival Runner (GPS Stream)',
             subtitle: isRivalSimulating
                 ? 'Halt simulated rival movement and breadcrumbs'
-                : 'Streams real-time moving rival marker with glowing breadcrumbs',
+                : 'Streams real-time moving rival marker with live trail breadcrumbs',
             icon: isRivalSimulating ? Icons.stop_circle_rounded : Icons.radar_rounded,
             color: isRivalSimulating ? AppColors.warning : AppColors.rival,
             onTap: onToggleRivalSimulation!,

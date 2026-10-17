@@ -19,10 +19,10 @@
 <br>
 
 [![CI Pipeline](https://img.shields.io/github/actions/workflow/status/Ayush-00-hui/Territory-Runner-Game/ci.yml?branch=feature/complete-v4&style=for-the-badge&label=CI%20Pipeline&logo=githubactions&logoColor=white)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-146%2F146_Passing-3DDC97.svg?style=for-the-badge&logo=flutter&logoColor=white)](test/)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-174%2F174_Passing-2563EB.svg?style=for-the-badge&logo=flutter&logoColor=white)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Backend-27_Test_Suites_Passing-00ADD8.svg?style=for-the-badge&logo=go&logoColor=white)](backend/)
 [![Golden Parity](https://img.shields.io/badge/Golden_Parity-7%2F7_Fixtures_%3C0.5%25_Delta-success.svg?style=for-the-badge)](test_fixtures/)
-[![Design System](https://img.shields.io/badge/Palette-Whoop%2FOura_Obsidian_%230B0C0E-16181D?style=for-the-badge&logo=materialdesign&logoColor=3DDC97)](lib/core/theme/)
+[![Design System](https://img.shields.io/badge/Palette-Ink_%26_Pacer_Blue_%230B0E14-111622?style=for-the-badge&logo=materialdesign&logoColor=2563EB)](lib/ui/)
 
 <br>
 
@@ -73,7 +73,7 @@
   - [7. Kinematic GPS Anomaly Detection & Spoofing Mitigation](#7-kinematic-gps-anomaly-detection--spoofing-mitigation)
 - [Push Notification Infrastructure (FCM HTTP v1)](#-push-notification-infrastructure-fcm-http-v1)
 - [Weekly Competitive League Engine](#-weekly-competitive-league-engine)
-- [Calm Athletic Design System (Whoop/Oura Obsidian)](#-calm-athletic-design-system-whoopoura-obsidian)
+- [Athletic Minimal Design System (Ink + Pacer Blue)](#-athletic-minimal-design-system-ink--pacer-blue)
 - [Production Deployment Notes](#-production-deployment-notes)
 - [Test Suite & Quality Verification](#-test-suite--quality-verification)
 - [Classroom & Viva Demonstration Lab](#-classroom--viva-demonstration-lab)
@@ -668,19 +668,52 @@ Territory Runner uses the **Firebase Cloud Messaging HTTP v1 API** (the legacy F
 
 ---
 
-## 🎨 Calm Athletic Design System (Whoop/Oura Obsidian)
+## 🎨 Athletic Minimal Design System (Ink + Pacer Blue)
 
-Designed specifically for outdoor athletic performance, high contrast in direct sunlight, and zero visual clutter:
+Designed specifically for intense outdoor athletic performance, direct sunlight readability, battery efficiency on OLED displays, and zero visual clutter.
 
-| Token Name | Hex Code | Visual Application |
+### 1. Zero-Glow Rule & Visual Philosophy
+- **Zero Glow Policy:** All neon drop shadows, colored box blurs, radial outer glows, and pulsing halos are strictly eliminated. Surfaces communicate hierarchy via crisp 1px hair-line borders (`AppColors.border` / `AppColors.borderSubtle`) and neutral, non-colored elevation shadows (`AppElevation`).
+- **Tactical Dark-Only:** Deep ink canvas with subtle dark navy surfaces minimizes backlight wash and battery drain during long GPS runs.
+- **Natural Copy Case:** Replaced ALL-CAPS screaming labels with clean, natural title and sentence casing across HUDs, modals, and leaderboards.
+
+### 2. Core Color Tokens
+
+| Token Name | Hex Code | Visual Application & Purpose |
 | :--- | :--- | :--- |
-| `obsidianBase` | `#0B0C0E` | Deepest background canvas (OLED power conservation) |
-| `elevatedSlate`| `#16181D` | Tactical cards, floating bottom sheets, modal dialogs |
-| `subtleBorder` | `#21242C` | Hairline card boundaries and dividing rules |
-| `athleticMint` | `#3DDC97` | Primary action buttons, energy metrics, claim paths |
-| `hazardCrimson`| `#FF5252` | Rival sectors, under-attack warning toasts |
-| `amberWarning` | `#FFB300` | Decaying territory warning badges, GPS dropouts |
-| `slateMuted`   | `#8A909D` | Secondary labels, timestamps, unit descriptors |
+| `bgDeep` | `#0B0E14` | Deepest ink canvas (OLED power conservation & high contrast) |
+| `surface` | `#111622` | Tactical card backgrounds, bottom sheets, navigation bars |
+| `surface2` | `#182030` | Nested containers, vector map previews, inactive stat pills |
+| `border` | `#1E293B` | Structural hairline boundaries and dividers |
+| `borderSubtle` | `#162032` | Secondary dividers and non-critical module borders |
+| `accent` | `#2563EB` | **Pacer Blue** — Primary actions, active run paths, player territory |
+| `accentSecondary` | `#38BDF8` | **Sky Blue** — Milestone progress, secondary accents |
+| `textPrimary` | `#F8FAFC` | High-contrast white typography for swift glanceability |
+| `textSecondary` | `#94A3B8` | Slate secondary labels, metrics, and descriptions |
+| `textMuted` | `#64748B` | Subtle timestamps, coordinate labels, and units |
+| `success` | `#10B981` | Loop closure confirmation and completed quests |
+| `warning` | `#F59E0B` | Territory decay warnings and syndicate faction identity |
+| `error` | `#EF4444` | Stop run trigger, hazard warnings, and rival intrusion alerts |
+
+### 3. Component Architecture & Tokens (`lib/ui/`)
+- **Tokens**:
+  - `AppColors`: Centralized, dark-only semantic tokens.
+  - `AppSpacing`: Predictable 8pt grid (`s4`, `s8`, `s12`, `s16`, `s20`, `s24`, `s32`, `s48`) and border radii (`br8`, `br12`, `br16`, `br20`, `brFull`).
+  - `AppElevation`: Strictly neutral shadows (`flat`, `card`, `floating`) with zero colored glow.
+  - `AppText`: High-contrast typography scale with `tabularFigures` support for numbers.
+  - `AppMotion`: Centralized animations and haptic ticks (`lightTick`, `selectionTick`, `successNotification`) with automatic duration collapse when `MediaQuery.disableAnimations` is active.
+- **Shared Primitives** (`lib/ui/widgets/`):
+  - `PrimaryButton`: 48px touch-target height with athletic pacer blue background and tactile spring feedback.
+  - `SecondaryButton`: Dark navy surface with subtle border.
+  - `GhostButton`: Minimal borderless button for tertiary actions.
+  - `TacticalCard`: Consistent rounded container with hairline border.
+  - `TacticalModal` & `TacticalToast`: Cohesive modal sheets and status toasts.
+  - `TacticalHeader`, `TacticalBadge`, `TacticalProgressBar`.
+
+### 4. Accessibility & Responsiveness Guarantee
+- **Reduced Motion**: Automatically collapses all animation durations to zero when requested by the OS.
+- **Touch Target Standard**: All interactive buttons strictly meet or exceed the 48×48 dp minimum touch target guideline.
+- **Narrow Screen Resilience**: Fluid responsive layout validated down to 320px screen width without RenderFlex overflows.
 
 ---
 
@@ -720,7 +753,7 @@ go test -v ./...
 ```
 
 ### Measured Test Verification Metrics (Real Terminal Outputs):
-- **Flutter Test Suite:** **114 passed** across 25+ test suites (0 failures, 0 skipped).
+- **Flutter Test Suite:** **174 passed** across 26 test suites (0 failures, 0 skipped).
 - **Flutter Analyzer:** **0 issues found** (clean static analysis).
 - **Go Test Suite:** **60 unit tests passed** across 9 packages (`anticheat`, `api`, `auth`, `coach`, `geo`, `league`, `notify`, `store`, `ws`) + **11 PostGIS live database integration tests**.
 - **Shared Golden Parity:** **7/7 Golden fixtures** verified in both Dart and Go, agreeing within $<0.5\%$ area tolerance.
@@ -734,8 +767,8 @@ For deep academic and architectural defense, see the comprehensive [🎓 Viva Ex
 | Scenario | Demonstration Trigger | Algorithmic Mechanism | Expected Result |
 | :--- | :--- | :--- | :--- |
 | 🎯 **Lasso Loop Capture** | Run crossing loop | Line-segment intersection snap & tail retention | Loop snaps at intersection, awards area, retains trailing path |
-| 🛡️ **Territory Defense** | Run through own land | `last_defended_at` timestamp renewal | Strength resets to $100\%$, glowing shield HUD badge |
-| 🗺️ **Claim Planner** | Explore Tab $\to$ Area Slider | OSRM loop + Clipper2 net-new area subtraction | Solar orange glowing route preview with net area stats |
+| 🛡️ **Territory Defense** | Run through own land | `last_defended_at` timestamp renewal | Strength resets to $100\%$, shield HUD badge updates |
+| 🗺️ **Claim Planner** | Explore Tab $\to$ Area Slider | OSRM loop + Clipper2 net-new area subtraction | Electric blue tactical route preview with net area stats |
 | ⚔️ **Rival Attack Alert** | Simulate rival cut | WebSocket `territory_under_attack` broadcast + FCM v1 | Victim receives instant amber HUD warning toast & push notification |
 | 🚨 **Spoofing Mitigation** | Inject speed $>25\text{ km/h}$ | Kinematic speed ceiling rule | Permanent rejection ($422$), zero silent retries |
 | 🔋 **Background Tracking** | Lock phone screen during run | `flutter_foreground_task` sticky notification | Continuous GPS points recorded without OS throttling |

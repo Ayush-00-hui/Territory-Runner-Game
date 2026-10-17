@@ -168,20 +168,26 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.shield_rounded, color: AppColors.accent, size: 18),
-                      const SizedBox(width: AppSpacing.s8),
-                      Text(
-                        'Team Standings',
-                        style: AppText.headingSmall.copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                  Expanded(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.shield_rounded, color: AppColors.accent, size: 18),
+                        const SizedBox(width: AppSpacing.s8),
+                        Flexible(
+                          child: Text(
+                            'Team Standings',
+                            style: AppText.headingSmall.copyWith(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.s8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
@@ -232,11 +238,12 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
 
               // Faction Legend
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildFactionLegend('Vanguard', '$vanguardPct%', _formatArea(vanguard.totalAreaSqm), AppColors.accent),
-                  _buildFactionLegend('Syndicate', '$syndicatePct%', _formatArea(syndicate.totalAreaSqm), AppColors.warning),
-                  _buildFactionLegend('Nomads', '$nomadsPct%', _formatArea(nomads.totalAreaSqm), AppColors.info),
+                  Expanded(child: _buildFactionLegend('Vanguard', '$vanguardPct%', _formatArea(vanguard.totalAreaSqm), AppColors.accent)),
+                  const SizedBox(width: 4),
+                  Expanded(child: _buildFactionLegend('Syndicate', '$syndicatePct%', _formatArea(syndicate.totalAreaSqm), AppColors.warning)),
+                  const SizedBox(width: 4),
+                  Expanded(child: _buildFactionLegend('Nomads', '$nomadsPct%', _formatArea(nomads.totalAreaSqm), AppColors.info)),
                 ],
               ),
 
@@ -254,8 +261,11 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
         const SizedBox(height: AppSpacing.s20),
 
         // --- SCOPE SELECTOR ROW ---
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppSpacing.s8,
+          runSpacing: AppSpacing.s8,
           children: [
             Text(
               'Leaderboard',
@@ -266,6 +276,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               ),
             ),
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 _buildScopeChip(LeaderboardScope.global, 'Global'),
                 const SizedBox(width: AppSpacing.s6),
@@ -301,38 +312,47 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            ),
-            const SizedBox(width: 6),
-            Text(
-              name,
-              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              percentage,
-              style: AppText.labelSmall.copyWith(
-                fontSize: 11,
-                color: color,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Text(
+                name,
+                style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                percentage,
+                style: AppText.labelSmall.copyWith(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
         ),
         Padding(
           padding: const EdgeInsets.only(left: 14, top: 2),
-          child: Text(
-            area,
-            style: AppText.bodySmall.copyWith(
-              color: AppColors.textMuted,
-              fontSize: 10,
-              fontFeatures: const [FontFeature.tabularFigures()],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              area,
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 10,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ),
         ),

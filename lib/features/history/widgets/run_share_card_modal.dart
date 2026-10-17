@@ -718,13 +718,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
         color: cardBg,
         borderRadius: AppSpacing.br24,
         border: Border.all(color: borderColor, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: AppElevation.floating,
       ),
       child: ClipRRect(
         borderRadius: AppSpacing.br24,

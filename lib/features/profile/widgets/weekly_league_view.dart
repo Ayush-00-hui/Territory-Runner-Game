@@ -183,39 +183,46 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(AppSpacing.s8),
-                        decoration: BoxDecoration(
-                          color: tierColor.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: tierColor.withValues(alpha: 0.4)),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(AppSpacing.s8),
+                          decoration: BoxDecoration(
+                            color: tierColor.withValues(alpha: 0.15),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: tierColor.withValues(alpha: 0.4)),
+                          ),
+                          child: Icon(tierIcon, color: tierColor, size: 24),
                         ),
-                        child: Icon(tierIcon, color: tierColor, size: 24),
-                      ),
-                      const SizedBox(width: AppSpacing.s12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${standing.tier} Division',
-                            style: AppText.label.copyWith(
-                              color: tierColor,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 13,
-                              letterSpacing: 0.6,
-                            ),
+                        const SizedBox(width: AppSpacing.s12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${standing.tier} Division',
+                                style: AppText.label.copyWith(
+                                  color: tierColor,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                  letterSpacing: 0.6,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Rank #${standing.rank} of ${standing.totalParticipants}',
+                                style: AppText.caption.copyWith(color: AppColors.textSecondary),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Rank #${standing.rank} of ${standing.totalParticipants}',
-                            style: AppText.caption.copyWith(color: AppColors.textSecondary),
-                          ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.s8),
                   // Countdown timer badge
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -249,25 +256,30 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
 
               // Metrics Row
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStatTile(
-                    label: 'Weekly area',
-                    value: '${(standing.weeklyAreaSqm / 1000).toStringAsFixed(1)}k',
-                    unit: 'm²',
+                  Expanded(
+                    child: _buildStatTile(
+                      label: 'Weekly area',
+                      value: '${(standing.weeklyAreaSqm / 1000).toStringAsFixed(1)}k',
+                      unit: 'm²',
+                    ),
                   ),
                   Container(width: 1, height: 32, color: AppColors.border),
-                  _buildStatTile(
-                    label: 'Conquest runs',
-                    value: '${standing.weeklyRuns}',
-                    unit: 'sessions',
+                  Expanded(
+                    child: _buildStatTile(
+                      label: 'Conquest runs',
+                      value: '${standing.weeklyRuns}',
+                      unit: 'sessions',
+                    ),
                   ),
                   Container(width: 1, height: 32, color: AppColors.border),
-                  _buildStatTile(
-                    label: 'League status',
-                    value: _getZoneLabel(standing),
-                    unit: '',
-                    valueColor: _getZoneColor(standing),
+                  Expanded(
+                    child: _buildStatTile(
+                      label: 'League status',
+                      value: _getZoneLabel(standing),
+                      unit: '',
+                      valueColor: _getZoneColor(standing),
+                    ),
                   ),
                 ],
               ),
@@ -281,20 +293,28 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Division standings',
-              style: AppText.label.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.8,
+            Flexible(
+              child: Text(
+                'Division standings',
+                overflow: TextOverflow.ellipsis,
+                style: AppText.label.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
-            Text(
-              'Resets Monday 00:00 UTC',
-              style: AppText.caption.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 10,
+            const SizedBox(width: AppSpacing.s8),
+            Flexible(
+              child: Text(
+                'Resets Monday 00:00 UTC',
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.right,
+                style: AppText.caption.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 10,
+                ),
               ),
             ),
           ],
@@ -406,12 +426,15 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
               children: [
                 Row(
                   children: [
-                    Text(
-                      participant.username,
-                      style: AppText.body.copyWith(
-                        color: isMe ? AppColors.accent : AppColors.textPrimary,
-                        fontWeight: isMe ? FontWeight.w900 : FontWeight.w600,
-                        fontSize: 14,
+                    Flexible(
+                      child: Text(
+                        participant.username,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.body.copyWith(
+                          color: isMe ? AppColors.accent : AppColors.textPrimary,
+                          fontWeight: isMe ? FontWeight.w900 : FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     if (isMe) ...[
@@ -490,31 +513,34 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
           ),
         ),
         const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              value,
-              style: AppText.headingSmall.copyWith(
-                color: valueColor,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-            if (unit.isNotEmpty) ...[
-              const SizedBox(width: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
               Text(
-                unit,
-                style: AppText.caption.copyWith(
-                  color: AppColors.textSecondary,
-                  fontSize: 10,
+                value,
+                style: AppText.headingSmall.copyWith(
+                  color: valueColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
+              if (unit.isNotEmpty) ...[
+                const SizedBox(width: 2),
+                Text(
+                  unit,
+                  style: AppText.caption.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ],
     );

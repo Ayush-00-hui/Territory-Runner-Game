@@ -259,14 +259,18 @@ class HistoryRunCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Closed loop',
-                            style: AppText.headingSmall.copyWith(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
+                          Flexible(
+                            child: Text(
+                              'Closed loop',
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.headingSmall.copyWith(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                           ),
+                          const SizedBox(width: AppSpacing.s4),
                           Text(
                             _formatDate(territory.capturedAt),
                             style: AppText.bodySmall.copyWith(
@@ -277,7 +281,10 @@ class HistoryRunCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: AppSpacing.s6),
-                      Row(
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
@@ -296,7 +303,6 @@ class HistoryRunCard extends StatelessWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.s8),
                           Text(
                             '${estimatedKm.toStringAsFixed(2)} km • ${territory.polygon.length} pts',
                             style: AppText.bodySmall.copyWith(
