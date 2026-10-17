@@ -172,4 +172,16 @@ type Duel struct {
 	CompletedAt        *time.Time `json:"completed_at,omitempty"`
 }
 
+// PrivacyZone represents a user-defined geographic exclusion zone.
+type PrivacyZone struct {
+	ID           string    `json:"id"`
+	UserID       string    `json:"user_id,omitempty"`
+	Name         string    `json:"name"`
+	Latitude     float64   `json:"latitude"`
+	Longitude    float64   `json:"longitude"`
+	RadiusMeters float64   `json:"radius_meters"`
+	IsEnabled    bool      `json:"is_enabled"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
 

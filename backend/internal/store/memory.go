@@ -21,6 +21,7 @@ type MemoryStore struct {
 	deviceTokens map[string][]string
 	friendships  map[string]*Friendship
 	duels        map[string]*Duel
+	privacyZones map[string][]PrivacyZone
 }
 
 // NewMemoryStore initializes an in-memory store.
@@ -33,6 +34,7 @@ func NewMemoryStore() *MemoryStore {
 		deviceTokens: make(map[string][]string),
 		friendships:  make(map[string]*Friendship),
 		duels:        make(map[string]*Duel),
+		privacyZones: make(map[string][]PrivacyZone),
 	}
 }
 
@@ -819,4 +821,39 @@ func (m *MemoryStore) updateDuelProgressLocked(userID string, areaDelta, distanc
 	return nil
 }
 
+// GetPrivacyZones returns all privacy zones configured for a user.
+func (m *MemoryStore) GetPrivacyZones(ctx context.Context, userID string) ([]PrivacyZone, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
+	zones, ok := m.privacyZones[userID]
+	if !ok || len(zones) == 0 {
+		return []PrivacyZone{}, nil
+	}
+	result := make([]PrivacyZone, len(zones))
+	copy(result, zones)
+	return result, nil
+}
+
+// SetPrivacyZones replaces all privacy zones for a user.
+func (m *MemoryStore) SetPrivacyZones(ctx context.Context, userID string, zones []PrivacyZone) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if len(zones) == 0 {
+		delete(m.privacyZones, userID)
+		return nil
+	}
+
+	cloned := make([]PrivacyZone, len(zones))
+	now := time.Now().UTC()
+	for i, z := range zones {
+		if z.CreatedAt.IsZero() {
+			z.CreatedAt = now
+		}
+		z.UserID = userID
+		cloned[i] = z
+	}
+	m.privacyZones[userID] = cloned
+	return nil
+}

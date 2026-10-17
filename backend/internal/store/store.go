@@ -86,6 +86,12 @@ type Store interface {
 	// UpdateDuelProgress increments progress for any active duels involving userID.
 	UpdateDuelProgress(ctx context.Context, userID string, areaDelta, distanceDelta float64) error
 
+	// GetPrivacyZones returns all privacy zones configured for a user.
+	GetPrivacyZones(ctx context.Context, userID string) ([]PrivacyZone, error)
+
+	// SetPrivacyZones replaces all privacy zones for a user.
+	SetPrivacyZones(ctx context.Context, userID string, zones []PrivacyZone) error
+
 	// Ping checks database connectivity.
 	Ping(ctx context.Context) error
 

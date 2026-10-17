@@ -179,6 +179,116 @@ func (a *API) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, u)
 }
 
+// PrivacyZonesPayload encapsulates privacy zones GET/PUT payload.
+type PrivacyZonesPayload struct {
+	PrivacyZones []store.PrivacyZone `json:"privacy_zones"`
+}
+
+// HandleGetPrivacyZones handles GET /v1/me/privacy-zones.
+func (a *API) HandleGetPrivacyZones(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	zones, err := a.store.GetPrivacyZones(r.Context(), uid)
+	if err != nil {
+		a.logger.Error("failed to get privacy zones", "error", err, "uid", uid)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve privacy zones")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, PrivacyZonesPayload{PrivacyZones: zones})
+}
+
+// HandleUpdatePrivacyZones handles PUT /v1/me/privacy-zones.
+func (a *API) HandleUpdatePrivacyZones(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var payload PrivacyZonesPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	// Limit count to prevent abuse (maximum 5 zones per runner)
+	if len(payload.PrivacyZones) > 5 {
+		writeError(w, http.StatusBadRequest, "MAX_ZONES_EXCEEDED", "Maximum 5 privacy zones allowed per user")
+		return
+	}
+
+	cleaned := make([]store.PrivacyZone, 0, len(payload.PrivacyZones))
+	evals := make([]geo.PrivacyZoneEvaluator, 0, len(payload.PrivacyZones))
+	now := time.Now().UTC()
+
+	for _, z := range payload.PrivacyZones {
+		// Enforce reasonable radius boundaries (50m to 2000m)
+		if z.RadiusMeters < 50.0 || z.RadiusMeters > 2000.0 {
+			writeError(w, http.StatusBadRequest, "INVALID_RADIUS", "Privacy zone radius must be between 50m and 2000m")
+			return
+		}
+
+		if z.Latitude < -90.0 || z.Latitude > 90.0 || z.Longitude < -180.0 || z.Longitude > 180.0 {
+			writeError(w, http.StatusBadRequest, "INVALID_COORDINATES", "Coordinates must be valid WGS84 coordinates")
+			return
+		}
+
+		name := strings.TrimSpace(z.Name)
+		if name == "" {
+			name = "Privacy Zone"
+		}
+		if len(name) > 100 {
+			name = name[:100]
+		}
+
+		id := strings.TrimSpace(z.ID)
+		if id == "" {
+			id = "zone_" + uuid.New().String()
+		}
+
+		createdAt := z.CreatedAt
+		if createdAt.IsZero() {
+			createdAt = now
+		}
+
+		zone := store.PrivacyZone{
+			ID:           id,
+			UserID:       uid,
+			Name:         name,
+			Latitude:     z.Latitude,
+			Longitude:    z.Longitude,
+			RadiusMeters: z.RadiusMeters,
+			IsEnabled:    z.IsEnabled,
+			CreatedAt:    createdAt,
+		}
+		cleaned = append(cleaned, zone)
+		evals = append(evals, geo.PrivacyZoneEvaluator{
+			Latitude:     z.Latitude,
+			Longitude:    z.Longitude,
+			RadiusMeters: z.RadiusMeters,
+			IsEnabled:    z.IsEnabled,
+		})
+	}
+
+	if err := a.store.SetPrivacyZones(r.Context(), uid, cleaned); err != nil {
+		a.logger.Error("failed to save privacy zones", "error", err, "uid", uid)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to persist privacy zones")
+		return
+	}
+
+	// Update WebSocket hub exclusion cache
+	if a.wsHub != nil {
+		a.wsHub.UpdateUserPrivacyZones(uid, evals)
+	}
+
+	writeJSON(w, http.StatusOK, PrivacyZonesPayload{PrivacyZones: cleaned})
+}
+
 // SubmitRunRequest defines the payload for POST /v1/runs.
 type SubmitRunRequest struct {
 	IdempotencyKey  string           `json:"idempotency_key"`
@@ -486,6 +596,19 @@ func (a *API) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if u, err := a.store.GetUser(r.Context(), uid); err == nil && u != nil {
 		username = u.Username
 		faction = u.Faction
+	}
+
+	if zones, err := a.store.GetPrivacyZones(r.Context(), uid); err == nil && len(zones) > 0 {
+		evals := make([]geo.PrivacyZoneEvaluator, len(zones))
+		for i, z := range zones {
+			evals[i] = geo.PrivacyZoneEvaluator{
+				Latitude:     z.Latitude,
+				Longitude:    z.Longitude,
+				RadiusMeters: z.RadiusMeters,
+				IsEnabled:    z.IsEnabled,
+			}
+		}
+		a.wsHub.UpdateUserPrivacyZones(uid, evals)
 	}
 
 	a.wsHub.ServeWS(w, r, uid, username, faction)

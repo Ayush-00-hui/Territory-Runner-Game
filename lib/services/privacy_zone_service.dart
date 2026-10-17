@@ -4,9 +4,15 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/privacy_zone.dart';
 import '../models/territory.dart';
+import 'api_client.dart';
 
 /// Service responsible for managing user privacy exclusion zones (Home, Work)
 /// and redacting GPS tracks or territorial claims that touch sensitive locations.
+///
+/// Note: In Territory Runner, territory polygons themselves stay public because
+/// territorial conquest is the core game mechanic. However, raw GPS tracks,
+/// start/end coordinates, and live runner presence inside privacy zones are strictly
+/// suppressed and redacted from rivals and public exports.
 class PrivacyZoneService {
   static final PrivacyZoneService _instance = PrivacyZoneService._internal();
   factory PrivacyZoneService() => _instance;
@@ -15,6 +21,15 @@ class PrivacyZoneService {
 
   static const String _storageKey = 'territory_runner_privacy_zones';
   static const Distance _distanceCalc = Distance();
+
+  /// Maximum allowed privacy exclusion zones per user to prevent performance degradation
+  static const int maxZones = 5;
+
+  /// Minimum allowable radius in meters
+  static const double minRadius = 50.0;
+
+  /// Maximum allowable radius in meters
+  static const double maxRadius = 2000.0;
 
   final List<PrivacyZone> _zones = [];
   bool _isLoaded = false;
@@ -53,37 +68,85 @@ class PrivacyZoneService {
     }
   }
 
+  /// Syncs configured privacy zones with the backend server.
+  /// Supports offline-first: persists locally first; if the server is unreachable,
+  /// the operation completes gracefully and local zones remain active.
+  Future<bool> syncWithServer([ApiClient? apiClient]) async {
+    final client = apiClient ?? ApiClient();
+    try {
+      final success = await client.putPrivacyZones(_zones);
+      if (success) {
+        debugPrint('[PrivacyZoneService] Successfully synchronized ${_zones.length} privacy zones with server');
+        return true;
+      }
+    } catch (e) {
+      debugPrint('[PrivacyZoneService] Server sync skipped or failed (offline-first preserved): $e');
+    }
+    return false;
+  }
+
+  /// Fetches privacy zones from server and merges with local storage.
+  Future<void> fetchAndSyncFromServer([ApiClient? apiClient]) async {
+    final client = apiClient ?? ApiClient();
+    try {
+      final serverZones = await client.getPrivacyZones();
+      if (serverZones.isNotEmpty) {
+        _zones.clear();
+        _zones.addAll(serverZones);
+        await _saveZones();
+        _isLoaded = true;
+      }
+    } catch (e) {
+      debugPrint('[PrivacyZoneService] Failed to fetch privacy zones from server: $e');
+    }
+  }
+
   /// Add a new privacy exclusion zone
-  Future<void> addZone(PrivacyZone zone) async {
+  Future<void> addZone(PrivacyZone zone, {ApiClient? apiClient}) async {
     if (!_isLoaded) await loadZones();
+    if (_zones.length >= maxZones) {
+      throw StateError('Maximum $maxZones privacy zones allowed');
+    }
     _zones.add(zone);
     await _saveZones();
+    if (apiClient != null) {
+      await syncWithServer(apiClient);
+    }
   }
 
   /// Update an existing privacy zone (e.g. adjust radius or rename)
-  Future<void> updateZone(PrivacyZone updatedZone) async {
+  Future<void> updateZone(PrivacyZone updatedZone, {ApiClient? apiClient}) async {
     if (!_isLoaded) await loadZones();
     final idx = _zones.indexWhere((z) => z.id == updatedZone.id);
     if (idx != -1) {
       _zones[idx] = updatedZone;
       await _saveZones();
+      if (apiClient != null) {
+        await syncWithServer(apiClient);
+      }
     }
   }
 
   /// Delete a privacy zone
-  Future<void> deleteZone(String id) async {
+  Future<void> deleteZone(String id, {ApiClient? apiClient}) async {
     if (!_isLoaded) await loadZones();
     _zones.removeWhere((z) => z.id == id);
     await _saveZones();
+    if (apiClient != null) {
+      await syncWithServer(apiClient);
+    }
   }
 
   /// Enable or disable a privacy zone
-  Future<void> toggleZone(String id, bool isEnabled) async {
+  Future<void> toggleZone(String id, bool isEnabled, {ApiClient? apiClient}) async {
     if (!_isLoaded) await loadZones();
     final idx = _zones.indexWhere((z) => z.id == id);
     if (idx != -1) {
       _zones[idx] = _zones[idx].copyWith(isEnabled: isEnabled);
       await _saveZones();
+      if (apiClient != null) {
+        await syncWithServer(apiClient);
+      }
     }
   }
 
@@ -139,11 +202,11 @@ class PrivacyZoneService {
     return insideCount > (polygon.length / 2);
   }
 
-  /// Filters a list of territories, omitting any that fall inside active privacy zones
+  /// Returns territories. Territory polygons themselves stay public on the map
+  /// because territorial conquest is the game.
   List<Territory> filterTerritories(List<Territory> territories) {
-    if (_zones.isEmpty || !_zones.any((z) => z.isEnabled)) {
-      return territories;
-    }
-    return territories.where((t) => !isPolygonInPrivacyZone(t.polygon)).toList();
+    // Territory polygons stay public (they are the game arena)
+    return territories;
   }
 }
+

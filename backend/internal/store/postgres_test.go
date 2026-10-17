@@ -866,3 +866,87 @@ func TestPostgres_WeeklyLeagueQuery(t *testing.T) {
 	assert.Equal(t, "SilverPacer", standings[1].Username)
 }
 
+func TestPostgres_PrivacyZonesPersistence(t *testing.T) {
+	st, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	// Ensure migration 000006 is applied
+	up6, err := readMigration("000006_add_privacy_zones.up.sql")
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx, up6)
+	require.NoError(t, err)
+
+	user := &store.User{
+		ID:       "usr_privacy_tester",
+		Username: "PrivacyRunner",
+		Faction:  "Cyber Vanguard",
+	}
+	require.NoError(t, st.UpsertUser(ctx, user))
+
+	// 1. Initial query returns empty list
+	zones, err := st.GetPrivacyZones(ctx, user.ID)
+	require.NoError(t, err)
+	assert.Empty(t, zones)
+
+	// 2. Set 2 privacy zones
+	inputZones := []store.PrivacyZone{
+		{
+			ID:           "zone_home_1",
+			Name:         "Home Sanctuary",
+			Latitude:     37.7749,
+			Longitude:    -122.4194,
+			RadiusMeters: 200.0,
+			IsEnabled:    true,
+		},
+		{
+			ID:           "zone_office_1",
+			Name:         "Office Campus",
+			Latitude:     37.7833,
+			Longitude:    -122.4167,
+			RadiusMeters: 150.0,
+			IsEnabled:    false,
+		},
+	}
+	err = st.SetPrivacyZones(ctx, user.ID, inputZones)
+	require.NoError(t, err)
+
+	// 3. Retrieve and verify
+	retrieved, err := st.GetPrivacyZones(ctx, user.ID)
+	require.NoError(t, err)
+	require.Len(t, retrieved, 2)
+	assert.Equal(t, "zone_home_1", retrieved[0].ID)
+	assert.Equal(t, "Home Sanctuary", retrieved[0].Name)
+	assert.Equal(t, 200.0, retrieved[0].RadiusMeters)
+	assert.True(t, retrieved[0].IsEnabled)
+	assert.Equal(t, "zone_office_1", retrieved[1].ID)
+	assert.False(t, retrieved[1].IsEnabled)
+
+	// 4. Update (replace with 1 zone)
+	updatedZones := []store.PrivacyZone{
+		{
+			ID:           "zone_new_home",
+			Name:         "New Home Base",
+			Latitude:     37.7750,
+			Longitude:    -122.4190,
+			RadiusMeters: 300.0,
+			IsEnabled:    true,
+		},
+	}
+	err = st.SetPrivacyZones(ctx, user.ID, updatedZones)
+	require.NoError(t, err)
+
+	retrieved2, err := st.GetPrivacyZones(ctx, user.ID)
+	require.NoError(t, err)
+	require.Len(t, retrieved2, 1)
+	assert.Equal(t, "zone_new_home", retrieved2[0].ID)
+	assert.Equal(t, "New Home Base", retrieved2[0].Name)
+
+	// 5. Clear all zones
+	err = st.SetPrivacyZones(ctx, user.ID, []store.PrivacyZone{})
+	require.NoError(t, err)
+
+	retrieved3, err := st.GetPrivacyZones(ctx, user.ID)
+	require.NoError(t, err)
+	assert.Empty(t, retrieved3)
+}
+

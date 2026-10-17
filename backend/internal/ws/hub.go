@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 	"github.com/gorilla/websocket"
 )
 
@@ -36,15 +37,16 @@ func WithAllowedOrigins(allowedOrigins []string) Option {
 
 // Hub manages active WebSocket runner connections and fans out live broadcasts.
 type Hub struct {
-	clients     map[*Client]bool
-	userClients map[string]map[*Client]bool
-	broadcast   chan []byte
-	register    chan *Client
-	unregister  chan *Client
-	mu          sync.RWMutex
-	logger      *slog.Logger
-	stop        chan struct{}
-	upgrader    websocket.Upgrader
+	clients          map[*Client]bool
+	userClients      map[string]map[*Client]bool
+	userPrivacyZones map[string][]geo.PrivacyZoneEvaluator
+	broadcast        chan []byte
+	register         chan *Client
+	unregister       chan *Client
+	mu               sync.RWMutex
+	logger           *slog.Logger
+	stop             chan struct{}
+	upgrader         websocket.Upgrader
 }
 
 // NewHub initializes a new real-time WebSocket hub.
@@ -53,11 +55,12 @@ func NewHub(logger *slog.Logger, opts ...Option) *Hub {
 		logger = slog.Default()
 	}
 	h := &Hub{
-		clients:     make(map[*Client]bool),
-		userClients: make(map[string]map[*Client]bool),
-		broadcast:   make(chan []byte, 256),
-		register:    make(chan *Client),
-		unregister:  make(chan *Client),
+		clients:          make(map[*Client]bool),
+		userClients:      make(map[string]map[*Client]bool),
+		userPrivacyZones: make(map[string][]geo.PrivacyZoneEvaluator),
+		broadcast:        make(chan []byte, 256),
+		register:         make(chan *Client),
+		unregister:       make(chan *Client),
 		logger:      logger,
 		stop:        make(chan struct{}),
 		upgrader: websocket.Upgrader{
@@ -215,6 +218,28 @@ func (h *Hub) BroadcastConquest(attackerID, attackerName string, areaClaimed flo
 		Timestamp:      nowStr,
 	}
 	h.BroadcastJSON(broadcastMsg)
+}
+
+// UpdateUserPrivacyZones caches or updates active privacy zones for a runner.
+func (h *Hub) UpdateUserPrivacyZones(userID string, zones []geo.PrivacyZoneEvaluator) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if len(zones) == 0 {
+		delete(h.userPrivacyZones, userID)
+		return
+	}
+	h.userPrivacyZones[userID] = zones
+}
+
+// IsPointInUserPrivacyZone evaluates whether (lat, lng) lies inside any of the user's active privacy zones.
+func (h *Hub) IsPointInUserPrivacyZone(userID string, lat, lng float64) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	zones, exists := h.userPrivacyZones[userID]
+	if !exists || len(zones) == 0 {
+		return false
+	}
+	return geo.IsPointInAnyZone(lat, lng, zones)
 }
 
 // ActiveClientCount returns the number of currently connected WebSocket runners.

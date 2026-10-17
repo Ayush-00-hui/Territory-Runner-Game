@@ -61,6 +61,12 @@ func (c *Client) readPump() {
 			_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
 
 		case TypePresenceUpdate:
+			// Enforce server-side privacy zones: never broadcast runner presence while user is inside a zone
+			if c.hub.IsPointInUserPrivacyZone(c.userID, inbound.Latitude, inbound.Longitude) {
+				c.logger.Debug("runner presence suppressed due to privacy zone", "user_id", c.userID, "lat", inbound.Latitude, "lng", inbound.Longitude)
+				continue
+			}
+
 			// Broadcast runner kinematic position to peers
 			presence := PresenceMessage{
 				Type:      TypeRunnerPresence,

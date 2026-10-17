@@ -938,5 +938,126 @@ func TestDuelsEndpoints(t *testing.T) {
 	assert.Equal(t, "active", duelsAfter[0].Status)
 }
 
+func TestPrivacyZonesEndpoints(t *testing.T) {
+	router, _ := setupTestServer()
+
+	// 1. GET /v1/me/privacy-zones initially returns empty list
+	req := httptest.NewRequest("GET", "/v1/me/privacy-zones", nil)
+	req.Header.Set("X-Dev-User", "usr_runner_privacy")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var getResp api.PrivacyZonesPayload
+	err := json.Unmarshal(rec.Body.Bytes(), &getResp)
+	require.NoError(t, err)
+	assert.Empty(t, getResp.PrivacyZones)
+
+	// 2. PUT /v1/me/privacy-zones with valid zones
+	putPayload := api.PrivacyZonesPayload{
+		PrivacyZones: []store.PrivacyZone{
+			{
+				Name:         "Home Sanctuary",
+				Latitude:     37.7749,
+				Longitude:    -122.4194,
+				RadiusMeters: 250.0,
+				IsEnabled:    true,
+			},
+			{
+				Name:         "Office Park",
+				Latitude:     37.7833,
+				Longitude:    -122.4167,
+				RadiusMeters: 150.0,
+				IsEnabled:    false,
+			},
+		},
+	}
+	body, _ := json.Marshal(putPayload)
+	req = httptest.NewRequest("PUT", "/v1/me/privacy-zones", bytes.NewReader(body))
+	req.Header.Set("X-Dev-User", "usr_runner_privacy")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var putResp api.PrivacyZonesPayload
+	err = json.Unmarshal(rec.Body.Bytes(), &putResp)
+	require.NoError(t, err)
+	assert.Len(t, putResp.PrivacyZones, 2)
+	assert.Equal(t, "Home Sanctuary", putResp.PrivacyZones[0].Name)
+	assert.Equal(t, 250.0, putResp.PrivacyZones[0].RadiusMeters)
+	assert.NotEmpty(t, putResp.PrivacyZones[0].ID)
+
+	// 3. GET /v1/me/privacy-zones returns the saved zones
+	req = httptest.NewRequest("GET", "/v1/me/privacy-zones", nil)
+	req.Header.Set("X-Dev-User", "usr_runner_privacy")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var verifyResp api.PrivacyZonesPayload
+	err = json.Unmarshal(rec.Body.Bytes(), &verifyResp)
+	require.NoError(t, err)
+	assert.Len(t, verifyResp.PrivacyZones, 2)
+
+	// 4. Reject when count exceeds limit (>5 zones)
+	excessiveZones := make([]store.PrivacyZone, 6)
+	for i := range excessiveZones {
+		excessiveZones[i] = store.PrivacyZone{
+			Name:         "Zone",
+			Latitude:     37.77,
+			Longitude:    -122.41,
+			RadiusMeters: 100.0,
+			IsEnabled:    true,
+		}
+	}
+	body, _ = json.Marshal(api.PrivacyZonesPayload{PrivacyZones: excessiveZones})
+	req = httptest.NewRequest("PUT", "/v1/me/privacy-zones", bytes.NewReader(body))
+	req.Header.Set("X-Dev-User", "usr_runner_privacy")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "MAX_ZONES_EXCEEDED")
+
+	// 5. Reject radius too small (<50m)
+	smallRadiusZone := []store.PrivacyZone{
+		{
+			Name:         "Tiny",
+			Latitude:     37.77,
+			Longitude:    -122.41,
+			RadiusMeters: 20.0, // below 50m
+			IsEnabled:    true,
+		},
+	}
+	body, _ = json.Marshal(api.PrivacyZonesPayload{PrivacyZones: smallRadiusZone})
+	req = httptest.NewRequest("PUT", "/v1/me/privacy-zones", bytes.NewReader(body))
+	req.Header.Set("X-Dev-User", "usr_runner_privacy")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "INVALID_RADIUS")
+
+	// 6. Reject radius too large (>2000m)
+	hugeRadiusZone := []store.PrivacyZone{
+		{
+			Name:         "Huge",
+			Latitude:     37.77,
+			Longitude:    -122.41,
+			RadiusMeters: 5000.0, // above 2000m
+			IsEnabled:    true,
+		},
+	}
+	body, _ = json.Marshal(api.PrivacyZonesPayload{PrivacyZones: hugeRadiusZone})
+	req = httptest.NewRequest("PUT", "/v1/me/privacy-zones", bytes.NewReader(body))
+	req.Header.Set("X-Dev-User", "usr_runner_privacy")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "INVALID_RADIUS")
+}
+
 
 

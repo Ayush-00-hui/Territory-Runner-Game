@@ -9,6 +9,7 @@ import '../models/faction_standing.dart';
 import '../models/friend.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/league_standing.dart';
+import '../models/privacy_zone.dart';
 import '../models/runner_profile.dart';
 import '../models/territory.dart';
 import '../ui/theme/app_colors.dart';
@@ -575,6 +576,38 @@ class ApiClient {
 
     final response = await _executeWithRetry(
       () => _httpClient.put(uri, headers: headers),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Fetches user privacy zones from server (GET /v1/me/privacy-zones)
+  Future<List<PrivacyZone>> getPrivacyZones() async {
+    final uri = Uri.parse('$baseUrl/v1/me/privacy-zones');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      final list = data['privacy_zones'] as List<dynamic>? ?? [];
+      return list.map((e) => PrivacyZone.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  /// Replaces user privacy zones on server (PUT /v1/me/privacy-zones)
+  Future<bool> putPrivacyZones(List<PrivacyZone> zones) async {
+    final uri = Uri.parse('$baseUrl/v1/me/privacy-zones');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({
+      'privacy_zones': zones.map((z) => z.toJson()).toList(),
+    });
+
+    final response = await _executeWithRetry(
+      () => _httpClient.put(uri, headers: headers, body: body),
     );
 
     return response.statusCode == 200;

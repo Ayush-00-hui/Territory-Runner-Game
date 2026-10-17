@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 import '../../../models/privacy_zone.dart';
+import '../../../services/api_client.dart';
 import '../../../services/privacy_zone_service.dart';
 import '../../../ui/ui.dart';
 
@@ -38,6 +39,10 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
 
   Future<void> _loadData() async {
     await _privacyService.loadZones();
+    // Background sync with server (offline-first preserved)
+    _privacyService.fetchAndSyncFromServer(ApiClient()).then((_) {
+      if (mounted) setState(() {});
+    });
     if (mounted) {
       setState(() {
         _isLoading = false;
@@ -69,6 +74,15 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
+    if (_privacyService.zones.length >= PrivacyZoneService.maxZones) {
+      AppToast.show(
+        context,
+        'Maximum ${PrivacyZoneService.maxZones} privacy zones allowed.',
+        type: AppToastType.warning,
+      );
+      return;
+    }
+
     final coords = _selectedCoordinates ?? const LatLng(37.7749, -122.4194);
     final zone = PrivacyZone(
       id: const Uuid().v4(),
@@ -80,7 +94,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
       createdAt: DateTime.now(),
     );
 
-    await _privacyService.addZone(zone);
+    await _privacyService.addZone(zone, apiClient: ApiClient());
     if (mounted) {
       setState(() {
         _isAdding = false;
@@ -89,7 +103,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
       });
       AppToast.show(
         context,
-        'Privacy zone "$name" created. Tracks will be masked.',
+        'Privacy zone "$name" created and synced with server.',
         type: AppToastType.success,
       );
     }
@@ -150,15 +164,23 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                 ),
                 if (!_isAdding)
                   IconButton(
-                    icon: const Icon(Icons.add_circle_rounded, color: AppColors.accent, size: 28),
-                    onPressed: () => setState(() => _isAdding = true),
+                    icon: Icon(
+                      Icons.add_circle_rounded,
+                      color: _privacyService.zones.length >= PrivacyZoneService.maxZones
+                          ? AppColors.disabled
+                          : AppColors.accent,
+                      size: 28,
+                    ),
+                    onPressed: _privacyService.zones.length >= PrivacyZoneService.maxZones
+                        ? () => AppToast.show(context, 'Maximum ${PrivacyZoneService.maxZones} zones reached', type: AppToastType.warning)
+                        : () => setState(() => _isAdding = true),
                   ),
               ],
             ),
 
             const SizedBox(height: AppSpacing.s12),
             Text(
-              'Coordinates and claimed sectors inside enabled privacy zones are automatically redacted from public syncs, social share cards, and GPX/GeoJSON exports.',
+              'Your GPS tracks, start/finish points, and live presence inside privacy zones are strictly hidden from other runners and public exports. Territory polygons remain visible to maintain fair conquest gameplay.',
               style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.35),
             ),
             const SizedBox(height: AppSpacing.s16),
@@ -212,10 +234,10 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                       ],
                     ),
                     Slider(
-                      value: _newRadiusMeters,
-                      min: 100.0,
-                      max: 1000.0,
-                      divisions: 18,
+                      value: _newRadiusMeters.clamp(PrivacyZoneService.minRadius, PrivacyZoneService.maxRadius),
+                      min: PrivacyZoneService.minRadius,
+                      max: PrivacyZoneService.maxRadius,
+                      divisions: 39,
                       activeColor: AppColors.accent,
                       inactiveColor: AppColors.surface2,
                       onChanged: (val) => setState(() => _newRadiusMeters = val),
@@ -359,14 +381,14 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                         activeThumbColor: AppColors.accent,
                         activeTrackColor: AppColors.accentContainer,
                         onChanged: (val) async {
-                          await _privacyService.toggleZone(zone.id, val);
+                          await _privacyService.toggleZone(zone.id, val, apiClient: ApiClient());
                           setState(() {});
                         },
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 20),
                         onPressed: () async {
-                          await _privacyService.deleteZone(zone.id);
+                          await _privacyService.deleteZone(zone.id, apiClient: ApiClient());
                           setState(() {});
                         },
                       ),

@@ -968,3 +968,65 @@ func (s *PostgresStore) UpdateDuelProgress(ctx context.Context, userID string, a
 
 	return nil
 }
+
+// GetPrivacyZones returns all privacy zones configured for a user.
+func (s *PostgresStore) GetPrivacyZones(ctx context.Context, userID string) ([]PrivacyZone, error) {
+	query := `
+		SELECT id, user_id, name, latitude, longitude, radius_meters, is_enabled, created_at
+		FROM privacy_zones
+		WHERE user_id = $1
+		ORDER BY created_at ASC;
+	`
+	rows, err := s.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query privacy zones: %w", err)
+	}
+	defer rows.Close()
+
+	var zones []PrivacyZone
+	for rows.Next() {
+		var z PrivacyZone
+		if err := rows.Scan(&z.ID, &z.UserID, &z.Name, &z.Latitude, &z.Longitude, &z.RadiusMeters, &z.IsEnabled, &z.CreatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan privacy zone: %w", err)
+		}
+		zones = append(zones, z)
+	}
+	if zones == nil {
+		zones = []PrivacyZone{}
+	}
+	return zones, nil
+}
+
+// SetPrivacyZones replaces all privacy zones for a user.
+func (s *PostgresStore) SetPrivacyZones(ctx context.Context, userID string, zones []PrivacyZone) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin tx for privacy zones: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	// Delete existing zones for this user
+	if _, err := tx.Exec(ctx, `DELETE FROM privacy_zones WHERE user_id = $1;`, userID); err != nil {
+		return fmt.Errorf("failed to clear existing privacy zones: %w", err)
+	}
+
+	insertQuery := `
+		INSERT INTO privacy_zones (id, user_id, name, latitude, longitude, radius_meters, is_enabled, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);
+	`
+	now := time.Now().UTC()
+	for _, z := range zones {
+		createdAt := z.CreatedAt
+		if createdAt.IsZero() {
+			createdAt = now
+		}
+		if _, err := tx.Exec(ctx, insertQuery, z.ID, userID, z.Name, z.Latitude, z.Longitude, z.RadiusMeters, z.IsEnabled, createdAt); err != nil {
+			return fmt.Errorf("failed to insert privacy zone %s: %w", z.ID, err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit privacy zones: %w", err)
+	}
+	return nil
+}
