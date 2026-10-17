@@ -71,8 +71,8 @@ class HomeScreen extends StatelessWidget {
 
                     // Recent Activity Header
                     SectionHeader(
-                      title: 'RECENT CONQUESTS',
-                      actionLabel: 'VIEW ALL',
+                      title: 'Recent Conquests',
+                      actionLabel: 'View All',
                       onAction: () {
                         AppMotion.lightTick();
                         Navigator.push(

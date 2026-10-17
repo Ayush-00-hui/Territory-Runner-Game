@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../ui/ui.dart';
 
+/// Performance-first Home Hero Card featuring Today's Goal Ring, GPS Status, and primary Start Run CTA.
 class QuickLaunchHero extends StatefulWidget {
   final VoidCallback? onStartRun;
 
@@ -16,7 +17,7 @@ class QuickLaunchHero extends StatefulWidget {
 }
 
 class _QuickLaunchHeroState extends State<QuickLaunchHero> {
-  String _gpsStatus = 'CHECKING GPS...';
+  String _gpsStatus = 'Checking GPS...';
   bool _isGpsReady = false;
   Timer? _checkTimer;
 
@@ -39,7 +40,7 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
       if (!serviceEnabled) {
         if (mounted) {
           setState(() {
-            _gpsStatus = 'GPS DISABLED';
+            _gpsStatus = 'GPS Disabled';
             _isGpsReady = false;
           });
         }
@@ -50,7 +51,7 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
       if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
         if (mounted) {
           setState(() {
-            _gpsStatus = 'LOCATION DENIED';
+            _gpsStatus = 'Location Denied';
             _isGpsReady = false;
           });
         }
@@ -61,10 +62,10 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
       if (mounted) {
         setState(() {
           if (lastPos != null && lastPos.accuracy < 25) {
-            _gpsStatus = 'GPS READY • ±${lastPos.accuracy.round()}m';
+            _gpsStatus = 'GPS Ready • ±${lastPos.accuracy.round()}m';
             _isGpsReady = true;
           } else {
-            _gpsStatus = 'GPS READY (LOCKING)';
+            _gpsStatus = 'GPS Ready (Locking)';
             _isGpsReady = true;
           }
         });
@@ -72,7 +73,7 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _gpsStatus = 'GPS ACTIVE';
+          _gpsStatus = 'GPS Active';
           _isGpsReady = true;
         });
       }
@@ -81,113 +82,106 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
+    const double goalTargetKm = 5.0;
+    const double currentDayKm = 3.4;
+    final double goalProgress = (currentDayKm / goalTargetKm).clamp(0.0, 1.0);
+
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.s20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppSpacing.br24,
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
       child: Column(
         children: [
-          // GPS Status Pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: (_isGpsReady ? AppColors.accent : AppColors.warning).withValues(alpha: 0.12),
-              borderRadius: AppSpacing.brFull,
-              border: Border.all(
-                color: (_isGpsReady ? AppColors.accent : AppColors.warning).withValues(alpha: 0.4),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isGpsReady ? AppColors.accent : AppColors.warning,
+          Row(
+            children: [
+              // Today's Goal Ring
+              ProgressRing(
+                progress: goalProgress,
+                size: 64,
+                strokeWidth: 6,
+                progressColor: AppColors.accent,
+                trackColor: AppColors.surface2,
+                center: Text(
+                  '${(goalProgress * 100).round()}%',
+                  style: AppText.labelSmall.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.s8),
-                Text(
-                  _gpsStatus,
-                  style: AppText.label.copyWith(
-                    color: _isGpsReady ? AppColors.accent : AppColors.warning,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.s16),
-
-          // Big Bold START RUN Hero Button
-          GestureDetector(
-            onTap: () {
-              AppMotion.heavyBurst();
-              if (widget.onStartRun != null) {
-                widget.onStartRun!();
-              }
-            },
-            child: Container(
-              height: 60,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: AppSpacing.br20,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.35),
-                    blurRadius: 14,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.black,
-                    size: 30,
-                  ),
-                  const SizedBox(width: AppSpacing.s8),
-                  Text(
-                    'START CONQUEST RUN',
-                    style: AppText.headingMedium.copyWith(
-                      color: Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2,
+              const SizedBox(width: AppSpacing.s16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('TODAY\'S TARGET', style: AppText.labelSmall),
+                    const SizedBox(height: AppSpacing.s2),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text('$currentDayKm', style: AppText.displaySmall),
+                        const SizedBox(width: AppSpacing.s4),
+                        Text('/ $goalTargetKm KM', style: AppText.statUnit),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+
+              // GPS Status Pill
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: AppRadius.brFull,
+                  border: Border.all(
+                    color: _isGpsReady ? AppColors.success.withValues(alpha: 0.4) : AppColors.warning.withValues(alpha: 0.4),
+                    width: 1.0,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: _isGpsReady ? AppColors.success : AppColors.warning,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s6),
+                    Text(
+                      _gpsStatus,
+                      style: AppText.labelSmall.copyWith(
+                        color: _isGpsReady ? AppColors.success : AppColors.warning,
+                        fontSize: 9.5,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppSpacing.s20),
+
+          // Primary CTA Button
+          PrimaryButton(
+            label: 'START CONQUEST RUN',
+            icon: Icons.play_arrow_rounded,
+            onPressed: () {
+              AppMotion.heavyBurst();
+              widget.onStartRun?.call();
+            },
           ),
           const SizedBox(height: AppSpacing.s10),
 
           // Subtle motivation subtext
           Text(
-            'Enclose territory loops to claim sovereign grid ground on foot.',
+            'Enclose territory loops to claim sovereign ground on foot.',
             textAlign: TextAlign.center,
-            style: AppText.bodySmall.copyWith(
-              color: AppColors.textMuted,
-              fontSize: 11,
-            ),
+            style: AppText.bodySmall,
           ),
         ],
       ),

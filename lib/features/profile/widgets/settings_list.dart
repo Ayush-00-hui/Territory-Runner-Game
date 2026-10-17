@@ -32,223 +32,274 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      borderRadius: AppSpacing.br20,
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: AppSpacing.br20,
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Column(
-          children: [
-            // Voice Coach Toggle
-            SwitchListTile(
-              secondary: const Icon(Icons.record_voice_over_rounded, color: AppColors.accent, size: 22),
-              title: Text(
-                'Voice Coach Audio Cues',
-                style: AppText.bodyMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              subtitle: Text(
-                'Milestone distance & pace announcements via TTS',
-                style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
-              ),
-              activeThumbColor: AppColors.accent,
-              value: _voiceCoach.isAudioEnabled,
-              onChanged: (val) {
-                AppMotion.lightTick();
-                setState(() {
-                  _voiceCoach.toggleAudio(val);
-                });
-              },
-            ),
-            if (_voiceCoach.isAudioEnabled) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: 4),
-                child: Row(
-                  children: [
-                    const Icon(Icons.volume_up_rounded, color: AppColors.textMuted, size: 18),
-                    const SizedBox(width: 8),
-                    Text('Volume', style: AppText.bodySmall.copyWith(color: AppColors.textMuted)),
-                    Expanded(
-                      child: Slider(
-                        value: _voiceCoach.volume,
-                        activeColor: AppColors.accent,
-                        inactiveColor: AppColors.surface2,
-                        onChanged: (v) {
-                          setState(() {
-                            _voiceCoach.setVolume(v);
-                          });
-                        },
-                      ),
-                    ),
-                    Text('${(_voiceCoach.volume * 100).round()}%', style: AppText.label.copyWith(color: Colors.white70)),
-                  ],
-                ),
-              ),
-            ],
-            const Divider(height: 1, color: AppColors.border),
-
-            // Units Setting (Metric / Imperial)
-            ListTile(
-              leading: const Icon(Icons.straighten_rounded, color: AppColors.accent, size: 22),
-              title: Text(
-                'Measurement Units',
-                style: AppText.bodyMedium.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-              subtitle: Text(
-                _voiceCoach.unit == DistanceUnit.metric ? 'Metric (Kilometers, m²)' : 'Imperial (Miles, Acres)',
-                style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
-              ),
-              trailing: SegmentedButton<DistanceUnit>(
-                segments: const [
-                  ButtonSegment(value: DistanceUnit.metric, label: Text('KM', style: TextStyle(fontSize: 11))),
-                  ButtonSegment(value: DistanceUnit.imperial, label: Text('MI', style: TextStyle(fontSize: 11))),
-                ],
-                selected: {_voiceCoach.unit},
-                style: SegmentedButton.styleFrom(
-                  selectedBackgroundColor: AppColors.accent,
-                  selectedForegroundColor: Colors.black,
-                  foregroundColor: Colors.white70,
-                  backgroundColor: AppColors.surface,
-                ),
-                onSelectionChanged: (Set<DistanceUnit> selected) {
-                  AppMotion.lightTick();
-                  setState(() {
-                    _voiceCoach.setUnit(selected.first);
-                  });
-                },
-              ),
-            ),
-            const Divider(height: 1, color: AppColors.border),
-
-          // Haptics Toggle
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. AUDIO & HAPTICS (Switch 1: Voice Coach, Switch 2: Tactical Haptic Bursts)
+        _buildSectionTitle('Audio & Haptics'),
+        _buildSettingsGroup([
           SwitchListTile(
-            secondary: const Icon(Icons.vibration_rounded, color: AppColors.accent, size: 22),
+            secondary: const Icon(Icons.record_voice_over_rounded, color: AppColors.accent, size: 20),
             title: Text(
-              'Tactical Haptic Bursts',
+              'Voice Coach Audio Cues',
               style: AppText.bodyMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
             ),
             subtitle: Text(
-              'Physical vibration pulses upon loop closure',
-              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
+              'Milestone distance and pace telemetry announcements',
+              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
             ),
             activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accentContainer,
+            value: _voiceCoach.isAudioEnabled,
+            onChanged: (val) {
+              AppMotion.selectionTick();
+              setState(() {
+                _voiceCoach.toggleAudio(val);
+              });
+            },
+          ),
+          if (_voiceCoach.isAudioEnabled) ...[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: 4),
+              child: Row(
+                children: [
+                  const Icon(Icons.volume_up_rounded, color: AppColors.textMuted, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Volume', style: AppText.bodySmall.copyWith(color: AppColors.textMuted)),
+                  Expanded(
+                    child: Slider(
+                      value: _voiceCoach.volume,
+                      activeColor: AppColors.accent,
+                      inactiveColor: AppColors.surface2,
+                      onChanged: (v) {
+                        setState(() {
+                          _voiceCoach.setVolume(v);
+                        });
+                      },
+                    ),
+                  ),
+                  Text(
+                    '${(_voiceCoach.volume * 100).round()}%',
+                    style: AppText.labelSmall.copyWith(color: AppColors.textSecondary),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const Divider(height: 1, color: AppColors.border),
+          SwitchListTile(
+            secondary: const Icon(Icons.vibration_rounded, color: AppColors.accent, size: 20),
+            title: Text(
+              'Tactical Haptic Bursts',
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            subtitle: Text(
+              'Physical vibration pulses upon loop closure and territory claims',
+              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+            ),
+            activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accentContainer,
             value: _voiceCoach.isHapticsEnabled,
             onChanged: (val) {
-              AppMotion.lightTick();
+              AppMotion.selectionTick();
               setState(() {
                 _voiceCoach.toggleHaptics(val);
               });
             },
           ),
-          const Divider(height: 1, color: AppColors.border),
+        ]),
 
-          // Endurance Battery Saver Mode
+        const SizedBox(height: AppSpacing.s16),
+
+        // 2. RUN EXPERIENCE (Switch 3: Battery Saver)
+        _buildSectionTitle('Run Experience'),
+        _buildSettingsGroup([
           SwitchListTile(
-            secondary: const Icon(Icons.battery_saver_rounded, color: AppColors.accent, size: 22),
+            secondary: const Icon(Icons.battery_saver_rounded, color: AppColors.accent, size: 20),
             title: Text(
               'Endurance Battery Saver',
               style: AppText.bodyMedium.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
             ),
             subtitle: Text(
-              'AMOLED black HUD, suppresses map animations & optimizes GPS polling',
-              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
+              'AMOLED dark HUD, reduced map animations & optimized GPS polling',
+              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
             ),
             activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accentContainer,
             value: BatterySaverService().isBatterySaverEnabled,
             onChanged: (val) {
-              AppMotion.lightTick();
+              AppMotion.selectionTick();
               setState(() {
                 BatterySaverService().setBatterySaver(val);
               });
             },
           ),
           const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.notifications_active_rounded,
+            title: 'Tactical Radar Alerts',
+            subtitle: 'Real-time alerts when rival runners contest your territory',
+            onTap: () {
+              AppMotion.selectionTick();
+              NotificationService().showPermissionPrimerIfNeeded(context, force: true);
+            },
+          ),
+        ]),
 
-          // Cloud Sync Option
+        const SizedBox(height: AppSpacing.s16),
+
+        // 3. ACCOUNT
+        _buildSectionTitle('Account'),
+        _buildSettingsGroup([
           ProfileOptionTile(
             icon: Icons.cloud_done_rounded,
             title: widget.firebaseService.isInitialized
                 ? 'Cloud Connected (${widget.firebaseService.currentUsername})'
-                : 'Offline Local Storage (Tap to Sync)',
-            subtitle: 'Secure profile & route cloud backups',
+                : 'Offline Local Storage',
+            subtitle: widget.firebaseService.isInitialized
+                ? 'Telemetry synced to cloud'
+                : 'Tap to connect account & sync runs',
+            trailing: widget.firebaseService.isInitialized
+                ? const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16)
+                : const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 14),
             onTap: widget.onOpenAuth,
           ),
-          const Divider(height: 1, color: AppColors.border),
+        ]),
 
-          // Tactical Radar Push Alerts
-          ProfileOptionTile(
-            icon: Icons.notifications_active_rounded,
-            title: 'Tactical Radar Push Alerts',
-            subtitle: 'Real-time notifications when rival runners carve your sectors',
-            onTap: () {
-              AppMotion.lightTick();
-              NotificationService().showPermissionPrimerIfNeeded(context, force: true);
-            },
+        const SizedBox(height: AppSpacing.s16),
+
+        // 4. UNITS
+        _buildSectionTitle('Measurement Units'),
+        _buildSettingsGroup([
+          ListTile(
+            leading: const Icon(Icons.straighten_rounded, color: AppColors.accent, size: 20),
+            title: Text(
+              'Distance & Pace Units',
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            subtitle: Text(
+              _voiceCoach.unit == DistanceUnit.metric ? 'Metric (Kilometers, m²)' : 'Imperial (Miles, Acres)',
+              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+            ),
+            trailing: SegmentedButton<DistanceUnit>(
+              segments: const [
+                ButtonSegment(value: DistanceUnit.metric, label: Text('KM', style: TextStyle(fontSize: 11))),
+                ButtonSegment(value: DistanceUnit.imperial, label: Text('MI', style: TextStyle(fontSize: 11))),
+              ],
+              selected: {_voiceCoach.unit},
+              style: SegmentedButton.styleFrom(
+                selectedBackgroundColor: AppColors.accent,
+                selectedForegroundColor: AppColors.onAccent,
+                foregroundColor: AppColors.textSecondary,
+                backgroundColor: AppColors.surface2,
+              ),
+              onSelectionChanged: (Set<DistanceUnit> selected) {
+                AppMotion.selectionTick();
+                setState(() {
+                  _voiceCoach.setUnit(selected.first);
+                });
+              },
+            ),
           ),
-          const Divider(height: 1, color: AppColors.border),
+        ]),
 
-          // Privacy Zones & Geo-Masking
+        const SizedBox(height: AppSpacing.s16),
+
+        // 5. PRIVACY & SAFETY
+        _buildSectionTitle('Privacy & Safety'),
+        _buildSettingsGroup([
           ProfileOptionTile(
             icon: Icons.shield_rounded,
             title: 'Privacy Zones & Geo-Masking',
             subtitle: 'Exclude home & workplace tracks from public exports',
             onTap: () {
-              AppMotion.lightTick();
+              AppMotion.selectionTick();
               showPrivacyZonesSheet(context);
             },
           ),
           const Divider(height: 1, color: AppColors.border),
-
-          // Emergency Contact & SOS Beacon
           ProfileOptionTile(
             icon: Icons.emergency_rounded,
             title: 'Emergency Contact & SOS Beacon',
             subtitle: 'Configure distress SMS recipient and safety credentials',
             onTap: () {
-              AppMotion.lightTick();
+              AppMotion.selectionTick();
               showEmergencyContactDialog(context);
             },
           ),
-          const Divider(height: 1, color: AppColors.border),
+        ]),
 
-          // Offline Map Storage & Pre-caching
+        const SizedBox(height: AppSpacing.s16),
+
+        // 6. DATA & OFFLINE
+        _buildSectionTitle('Data & Offline'),
+        _buildSettingsGroup([
           ProfileOptionTile(
             icon: Icons.download_for_offline_rounded,
-            title: 'Offline Map Storage & Pre-caching',
-            subtitle: 'Pre-download sector tiles for zero-signal offline running',
+            title: 'Offline Map Storage',
+            subtitle: 'Pre-download sector tiles for zero-signal running',
             onTap: () {
-              AppMotion.lightTick();
+              AppMotion.selectionTick();
               showOfflineMapsSheet(context);
             },
           ),
-          // Dev Mode entries (Only visible in debug builds)
+        ]),
+
+        const SizedBox(height: AppSpacing.s16),
+
+        // 7. ABOUT & PLATFORM
+        _buildSectionTitle('About'),
+        _buildSettingsGroup([
+          ProfileOptionTile(
+            icon: Icons.info_outline_rounded,
+            title: 'Territory Runner',
+            subtitle: 'v2.4.0 • GPS Territory Conquest',
+            trailing: const Text(
+              'v2.4.0',
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+            ),
+            onTap: null,
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.policy_outlined,
+            title: 'Open Source Licenses',
+            subtitle: 'Software dependencies & attributions',
+            onTap: () {
+              AppMotion.selectionTick();
+              showLicensePage(
+                context: context,
+                applicationName: 'Territory Runner',
+                applicationVersion: '2.4.0',
+                applicationLegalese: 'Crafted with athletic precision.',
+              );
+            },
+          ),
+          // Developer tools (hidden behind kDebugMode)
           if (kDebugMode) ...[
             const Divider(height: 1, color: AppColors.border),
             ProfileOptionTile(
               icon: Icons.palette_rounded,
-              title: 'Design System Gallery (Dev Mode)',
+              title: 'Design System Gallery (Dev)',
               subtitle: 'Inspect Charcoal + Ember tokens and UI components',
               onTap: () {
-                AppMotion.lightTick();
+                AppMotion.selectionTick();
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const DesignGalleryScreen()),
                 );
@@ -257,30 +308,59 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             const Divider(height: 1, color: AppColors.border),
             ProfileOptionTile(
               icon: Icons.refresh_rounded,
-              title: 'Reset Local Territories (Dev Mode)',
+              title: 'Reset Local Territories (Dev)',
               subtitle: 'Clears offline polygons to initial state',
               onTap: () async {
                 AppMotion.mediumTick();
                 await widget.territoryService.resetTerritories();
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Territories reset to initial grid.')),
-                  );
+                  AppToast.show(context, 'Territories reset to initial grid');
                 }
               },
             ),
           ],
-        ],
+        ]),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.s4, bottom: AppSpacing.s8),
+      child: Text(
+        title,
+        style: AppText.labelSmall.copyWith(
+          color: AppColors.textMuted,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+  Widget _buildSettingsGroup(List<Widget> children) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: AppSpacing.br16,
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: AppSpacing.br16,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: children,
+        ),
+      ),
+    );
+  }
 }
 
 class ProfileOptionTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
+  final Widget? trailing;
   final VoidCallback? onTap;
 
   const ProfileOptionTile({
@@ -288,6 +368,7 @@ class ProfileOptionTile extends StatelessWidget {
     required this.icon,
     required this.title,
     this.subtitle,
+    this.trailing,
     this.onTap,
   });
 
@@ -296,26 +377,29 @@ class ProfileOptionTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: ListTile(
-        leading: Icon(icon, color: AppColors.accent, size: 22),
+        leading: Icon(icon, color: AppColors.accent, size: 20),
         title: Text(
           title,
           style: AppText.bodyMedium.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
             fontSize: 13,
           ),
         ),
         subtitle: subtitle != null
             ? Text(
                 subtitle!,
-                style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
+                style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
               )
             : null,
-        trailing: const Icon(
-          Icons.arrow_forward_ios_rounded,
-          size: 14,
-          color: AppColors.textMuted,
-        ),
+        trailing: trailing ??
+            (onTap != null
+                ? const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 13,
+                    color: AppColors.textMuted,
+                  )
+                : null),
         onTap: onTap,
       ),
     );

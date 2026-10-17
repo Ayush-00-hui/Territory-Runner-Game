@@ -51,15 +51,8 @@ class WeeklySummaryCard extends StatelessWidget {
 
     final double maxVolume = dayVolumes.fold(1.0, math.max);
 
-    return Container(
-      width: double.infinity,
+    return AppCard(
       padding: const EdgeInsets.all(AppSpacing.s20),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppSpacing.br24,
-        border: Border.all(color: AppColors.border),
-        boxShadow: AppSpacing.cardShadow,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -68,24 +61,20 @@ class WeeklySummaryCard extends StatelessWidget {
             children: [
               Text(
                 'WEEKLY PERFORMANCE',
-                style: AppText.label.copyWith(
-                  color: AppColors.textMuted,
-                  letterSpacing: 1.3,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppText.labelSmall,
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
-                  borderRadius: AppSpacing.br8,
+                  borderRadius: AppRadius.br8,
+                  border: Border.all(color: AppColors.borderSubtle, width: 1.0),
                 ),
                 child: Text(
                   'LAST 7 DAYS',
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.accent,
                     fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -124,7 +113,7 @@ class WeeklySummaryCard extends StatelessWidget {
 
           const SizedBox(height: AppSpacing.s20),
 
-          // 7-Day CustomPainter Bar Chart
+          // 7-Day Clean Bar Chart (No blur masks or glows)
           SizedBox(
             height: 90,
             width: double.infinity,
@@ -157,31 +146,21 @@ class WeeklySummaryCard extends StatelessWidget {
           children: [
             Text(
               value,
-              style: AppText.statLarge.copyWith(
-                fontSize: 22,
+              style: AppText.titleLarge.copyWith(
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(width: 3),
             Text(
               unit,
-              style: AppText.label.copyWith(
-                color: AppColors.accent,
-                fontSize: 9.5,
-                fontWeight: FontWeight.w800,
-              ),
+              style: AppText.statUnit,
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.s4),
         Text(
           label,
-          style: AppText.label.copyWith(
-            color: AppColors.textMuted,
-            fontSize: 9.5,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-          ),
+          style: AppText.labelSmall,
         ),
       ],
     );
@@ -216,9 +195,9 @@ class _WeeklyBarChartPainter extends CustomPainter {
       ..color = AppColors.accent
       ..style = PaintingStyle.fill;
 
-    final glowPaint = Paint()
-      ..color = AppColors.accent.withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    final pastBarPaint = Paint()
+      ..color = AppColors.accentContainer
+      ..style = PaintingStyle.fill;
 
     for (int i = 0; i < 7; i++) {
       final double x = spacing + i * (barWidth + spacing);
@@ -232,7 +211,7 @@ class _WeeklyBarChartPainter extends CustomPainter {
       );
       canvas.drawRRect(trackRRect, trackPaint);
 
-      // Draw active fill
+      // Draw active fill (crisp, zero blur or glow)
       final double val = dayVolumes[i];
       if (val > 0) {
         final double fillFraction = (val / maxVolume).clamp(0.18, 1.0);
@@ -244,10 +223,8 @@ class _WeeklyBarChartPainter extends CustomPainter {
           const Radius.circular(7),
         );
 
-        if (i == currentDayIndex) {
-          canvas.drawRRect(barRRect, glowPaint);
-        }
-        canvas.drawRRect(barRRect, activeBarPaint);
+        final paint = (i == currentDayIndex) ? activeBarPaint : pastBarPaint;
+        canvas.drawRRect(barRRect, paint);
       }
 
       // Draw day label
@@ -257,8 +234,8 @@ class _WeeklyBarChartPainter extends CustomPainter {
         style: TextStyle(
           color: isToday ? AppColors.accent : AppColors.textMuted,
           fontSize: 10,
-          fontWeight: isToday ? FontWeight.w900 : FontWeight.w700,
-          fontFamily: AppText.bodyFont,
+          fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+          fontFamily: AppText.fontFamily,
         ),
       );
       final textPainter = TextPainter(

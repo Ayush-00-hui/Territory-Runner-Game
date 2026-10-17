@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
 
-class HomeHeader extends StatefulWidget {
+class HomeHeader extends StatelessWidget {
   final RunnerProfile profile;
 
   const HomeHeader({
@@ -10,49 +10,23 @@ class HomeHeader extends StatefulWidget {
     required this.profile,
   });
 
-  @override
-  State<HomeHeader> createState() => _HomeHeaderState();
-}
-
-class _HomeHeaderState extends State<HomeHeader>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-
-    _pulseAnimation = Tween<double>(begin: 0.96, end: 1.06).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
   Color _factionColor(String faction) {
-    if (faction.contains('Solar')) return const Color(0xFFFF9100);
-    if (faction.contains('Quantum')) return const Color(0xFF7058D4);
+    if (faction.contains('Solar')) return AppColors.warning;
+    if (faction.contains('Quantum')) return AppColors.info;
     return AppColors.accent;
+  }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
   @override
   Widget build(BuildContext context) {
-    final factionColor = _factionColor(widget.profile.faction);
-    final callsign = widget.profile.username.isNotEmpty
-        ? widget.profile.username.toUpperCase()
-        : 'RUNNER';
+    final factionColor = _factionColor(profile.faction);
+    final callsign = profile.username.isNotEmpty ? profile.username : 'Runner';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -64,35 +38,34 @@ class _HomeHeaderState extends State<HomeHeader>
           decoration: BoxDecoration(
             color: AppColors.surface,
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.accent, width: 1.8),
-            boxShadow: AppSpacing.subtleElevation,
+            border: Border.all(color: AppColors.accent, width: 1.5),
           ),
           child: Center(
             child: Text(
-              callsign.isNotEmpty ? callsign[0] : 'R',
-              style: AppText.headingMedium.copyWith(
+              callsign.isNotEmpty ? callsign[0].toUpperCase() : 'R',
+              style: AppText.titleLarge.copyWith(
                 color: AppColors.accent,
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
         ),
         const SizedBox(width: AppSpacing.s12),
 
-        // Callsign and Faction / Level badges
+        // Greeting, Callsign and Faction / Level badges
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                callsign,
-                style: AppText.headingMedium.copyWith(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
-                ),
+                _greeting(),
+                style: AppText.labelSmall,
+              ),
+              const SizedBox(height: AppSpacing.s2),
+              Text(
+                callsign.toUpperCase(),
+                style: AppText.titleMedium,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -104,36 +77,35 @@ class _HomeHeaderState extends State<HomeHeader>
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.surface2,
-                      borderRadius: AppSpacing.br8,
-                      border: Border.all(color: AppColors.border),
+                      borderRadius: AppRadius.br8,
+                      border: Border.all(color: AppColors.borderSubtle, width: 1.0),
                     ),
                     child: Text(
-                      'LVL ${widget.profile.level}',
-                      style: AppText.label.copyWith(
+                      'LVL ${profile.level}',
+                      style: AppText.labelSmall.copyWith(
                         color: AppColors.accent,
                         fontSize: 9.5,
-                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
                       ),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.s6),
                   // Faction tag
-                  if (widget.profile.faction.isNotEmpty)
+                  if (profile.faction.isNotEmpty)
                     Flexible(
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                          color: factionColor.withValues(alpha: 0.15),
-                          borderRadius: AppSpacing.br8,
-                          border: Border.all(color: factionColor.withValues(alpha: 0.4)),
+                          color: factionColor.withValues(alpha: 0.12),
+                          borderRadius: AppRadius.br8,
+                          border: Border.all(color: factionColor.withValues(alpha: 0.3)),
                         ),
                         child: Text(
-                          widget.profile.faction.toUpperCase(),
-                          style: AppText.label.copyWith(
+                          profile.faction.toUpperCase(),
+                          style: AppText.labelSmall.copyWith(
                             color: factionColor,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.4,
+                            fontSize: 9.5,
+                            letterSpacing: 0.2,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -148,48 +120,30 @@ class _HomeHeaderState extends State<HomeHeader>
 
         const SizedBox(width: AppSpacing.s8),
 
-        // Streak badge with pulsing fire
-        AnimatedBuilder(
-          animation: _pulseAnimation,
-          builder: (context, child) {
-            return Transform.scale(
-              scale: _pulseAnimation.value,
-              child: child,
-            );
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.rival.withValues(alpha: 0.15),
-              borderRadius: AppSpacing.br14,
-              border: Border.all(color: AppColors.rival.withValues(alpha: 0.4)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
+        // Streak badge with amber flame
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: AppRadius.brFull,
+            border: Border.all(color: AppColors.borderSubtle, width: 1.0),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.local_fire_department_rounded,
+                color: AppColors.warning,
+                size: 16,
+              ),
+              const SizedBox(width: AppSpacing.s4),
+              Text(
+                '${profile.currentStreak}',
+                style: AppText.labelLarge.copyWith(
+                  fontWeight: FontWeight.w700,
                 ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.local_fire_department_rounded,
-                  color: AppColors.rival,
-                  size: 18,
-                ),
-                const SizedBox(width: 3),
-                Text(
-                  '${widget.profile.currentStreak}',
-                  style: AppText.statMedium.copyWith(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
 

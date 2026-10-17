@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../gameplay/territory_service.dart';
 import '../../../models/runner_profile.dart';
 import '../../../services/api_client.dart';
@@ -16,49 +15,72 @@ void showEditCallsignDialog(
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      title: const Row(
+      shape: RoundedRectangleBorder(
+        borderRadius: AppSpacing.br20,
+        side: const BorderSide(color: AppColors.border),
+      ),
+      title: Row(
         children: [
-          Icon(Icons.badge_rounded, color: AppColors.accent, size: 22),
-          SizedBox(width: 8),
-          Text('Edit Athlete Callsign', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+          const Icon(Icons.badge_rounded, color: AppColors.accent, size: 20),
+          const SizedBox(width: AppSpacing.s8),
+          Text(
+            'Edit Callsign',
+            style: AppText.headingSmall.copyWith(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Choose your cyber runner callsign broadcasted to rival factions on the grid:',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
+          Text(
+            'Choose your athlete callsign broadcasted to runner syndicates on the territorial grid:',
+            style: AppText.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppSpacing.s16),
           TextField(
             controller: controller,
-            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: AppText.bodyMedium.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
             maxLength: 20,
             decoration: InputDecoration(
               labelText: 'Callsign / Nickname',
               labelStyle: const TextStyle(color: AppColors.textMuted),
               filled: true,
               fillColor: AppColors.surface2,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
+              border: OutlineInputBorder(
+                borderRadius: AppSpacing.br12,
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: AppSpacing.br12,
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: AppSpacing.br12,
+                borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+              ),
             ),
           ),
         ],
       ),
       actions: [
-        TextButton(
+        SecondaryButton(
+          label: 'Cancel',
           onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accent,
-            foregroundColor: Colors.black,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
+        PrimaryButton(
+          label: 'Save Callsign',
           onPressed: () async {
             final newName = controller.text.trim();
             if (newName.isNotEmpty) {
@@ -69,16 +91,10 @@ void showEditCallsignDialog(
               }
               onUpdated();
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    backgroundColor: AppColors.surface,
-                    content: Text('Callsign updated to "$newName" ⚡', style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
-                  ),
-                );
+                AppToast.show(context, 'Callsign updated to "$newName"');
               }
             }
           },
-          child: const Text('Save Callsign', style: TextStyle(fontWeight: FontWeight.w900)),
         ),
       ],
     ),
@@ -102,70 +118,46 @@ void showFactionSelectionDialog(
     {
       'name': 'Iron Syndicate',
       'tag': 'KINETIC CONQUERORS',
-      'color': const Color(0xFFFF9100),
+      'color': AppColors.warning,
       'icon': Icons.wb_sunny_rounded,
       'perk': 'Kinetic endurance surge & stamina battery efficiency (+15% cadence recharge boost)',
     },
     {
       'name': 'Neon Nomads',
       'tag': 'ANTI-GRAVITY DRIFTERS',
-      'color': const Color(0xFF00E5FF),
+      'color': AppColors.info,
       'icon': Icons.bolt_rounded,
       'perk': 'Zero-G sub-orbital glide thrust & +40% sprint momentum conversion multiplier',
     },
   ];
 
-  showModalBottomSheet(
+  AppSheet.show(
     context: context,
-    backgroundColor: AppColors.bgElevated,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (ctx) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-              ),
+    builder: (ctx) => AppSheet(
+      title: 'Faction Alignment',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Pledge allegiance to a runner syndicate to represent them on the territorial map grid and unlock tactical perks:',
+            style: AppText.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.4,
             ),
-            const SizedBox(height: 16),
-            const Row(
-              children: [
-                Icon(Icons.flag_rounded, color: AppColors.accent, size: 22),
-                SizedBox(width: 8),
-                Text(
-                  'FACTION ALIGNMENT',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Pledge allegiance to a runner syndicate to represent them on the territorial map grid and unlock tactical flight bonuses:',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
-            ),
-            const SizedBox(height: 20),
-            ...factions.map((f) {
-              final isSelected = profile.faction == f['name'];
-              final factionColor = f['color'] as Color;
-              final factionIcon = f['icon'] as IconData;
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          ...factions.map((f) {
+            final isSelected = profile.faction == f['name'];
+            final factionColor = f['color'] as Color;
+            final factionIcon = f['icon'] as IconData;
 
-              return GestureDetector(
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+              child: GestureDetector(
                 onTap: () async {
-                  HapticFeedback.mediumImpact();
+                  AppMotion.mediumTick();
                   profile.faction = f['name'] as String;
                   await territoryService.saveProfile(profile);
                   // Fire-and-forget sync to backend
@@ -175,26 +167,17 @@ void showFactionSelectionDialog(
                   }
                   onUpdated();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: AppColors.surface,
-                        content: Text(
-                          'Aligned with ${f['name']} Syndicate! ⚡',
-                          style: TextStyle(color: factionColor, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    );
+                    AppToast.show(context, 'Aligned with ${f['name']} Syndicate');
                   }
                 },
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.s16),
                   decoration: BoxDecoration(
-                    color: isSelected ? factionColor.withValues(alpha: 0.15) : AppColors.surface,
-                    borderRadius: BorderRadius.circular(18),
+                    color: isSelected ? factionColor.withValues(alpha: 0.12) : AppColors.surface2,
+                    borderRadius: AppSpacing.br16,
                     border: Border.all(
                       color: isSelected ? factionColor : AppColors.border,
-                      width: isSelected ? 1.8 : 1.0,
+                      width: isSelected ? 1.5 : 1.0,
                     ),
                   ),
                   child: Row(
@@ -203,12 +186,12 @@ void showFactionSelectionDialog(
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: factionColor.withValues(alpha: 0.2),
+                          color: factionColor.withValues(alpha: 0.16),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(factionIcon, color: factionColor, size: 22),
+                        child: Icon(factionIcon, color: factionColor, size: 20),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: AppSpacing.s12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,22 +201,26 @@ void showFactionSelectionDialog(
                               children: [
                                 Text(
                                   f['name'] as String,
-                                  style: TextStyle(
-                                    color: isSelected ? factionColor : Colors.white,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 15,
+                                  style: AppText.bodyMedium.copyWith(
+                                    color: isSelected ? factionColor : AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
                                   ),
                                 ),
                                 if (isSelected)
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: factionColor.withValues(alpha: 0.25),
-                                      borderRadius: BorderRadius.circular(8),
+                                      color: factionColor.withValues(alpha: 0.2),
+                                      borderRadius: AppSpacing.br8,
                                     ),
                                     child: Text(
                                       'ACTIVE',
-                                      style: TextStyle(color: factionColor, fontSize: 10, fontWeight: FontWeight.w900),
+                                      style: AppText.labelSmall.copyWith(
+                                        color: factionColor,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                                   ),
                               ],
@@ -241,12 +228,20 @@ void showFactionSelectionDialog(
                             const SizedBox(height: 2),
                             Text(
                               f['tag'] as String,
-                              style: const TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                              style: AppText.labelSmall.copyWith(
+                                color: AppColors.textMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               f['perk'] as String,
-                              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.3),
+                              style: AppText.bodySmall.copyWith(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                height: 1.3,
+                              ),
                             ),
                           ],
                         ),
@@ -254,12 +249,12 @@ void showFactionSelectionDialog(
                     ],
                   ),
                 ),
-              );
-            }),
-          ],
-        ),
-      );
-    },
+              ),
+            );
+          }),
+        ],
+      ),
+    ),
   );
 }
 
@@ -270,50 +265,51 @@ void showStatDetailModal(
   required String description,
   required List<Map<String, String>> metrics,
 }) {
-  showModalBottomSheet(
+  AppSheet.show(
     context: context,
-    backgroundColor: AppColors.bgElevated,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (ctx) => Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+    builder: (ctx) => AppSheet(
+      title: title,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                title,
-                style: const TextStyle(color: AppColors.accent, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.2),
+                'Telemetry Summary',
+                style: AppText.labelSmall.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Text(
                 value,
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                style: AppText.headlineSmall.copyWith(
+                  color: AppColors.accent,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.s12),
           Text(
             description,
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+            style: AppText.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              fontSize: 13,
+              height: 1.4,
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.s16),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.s16),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
+              color: AppColors.surface2,
+              borderRadius: AppSpacing.br16,
               border: Border.all(color: AppColors.border),
             ),
             child: Column(
@@ -323,24 +319,29 @@ void showStatDetailModal(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(m['label'] ?? '', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-                      Text(m['val'] ?? '', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                      Text(
+                        m['label'] ?? '',
+                        style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 12),
+                      ),
+                      Text(
+                        m['val'] ?? '',
+                        style: AppText.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
                     ],
                   ),
                 );
               }).toList(),
             ),
           ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.surface2,
-              foregroundColor: Colors.white,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
+          const SizedBox(height: AppSpacing.s20),
+          PrimaryButton(
+            label: 'Close Telemetry',
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('CLOSE TELEMETRY', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -356,62 +357,63 @@ void showBadgeDetailModal(
   required String criteria,
   required String reward,
 }) {
-  showModalBottomSheet(
+  final Color badgeColor = unlocked ? AppColors.gold : AppColors.disabled;
+
+  AppSheet.show(
     context: context,
-    backgroundColor: AppColors.bgElevated,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-    ),
-    builder: (ctx) => Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+    builder: (ctx) => AppSheet(
+      title: 'Achievement',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
-          const SizedBox(height: 16),
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (unlocked ? AppColors.accent : AppColors.surface2).withValues(alpha: 0.2),
+                  color: badgeColor.withValues(alpha: 0.16),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   unlocked ? Icons.emoji_events_rounded : Icons.lock_outline_rounded,
-                  color: unlocked ? AppColors.accent : Colors.white38,
-                  size: 28,
+                  color: badgeColor,
+                  size: 26,
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpacing.s14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                      style: AppText.headlineMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: (unlocked ? AppColors.accent : Colors.white12).withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
+                        color: unlocked
+                            ? AppColors.gold.withValues(alpha: 0.16)
+                            : AppColors.surface2,
+                        borderRadius: AppSpacing.br8,
+                        border: Border.all(
+                          color: unlocked
+                              ? AppColors.gold.withValues(alpha: 0.3)
+                              : AppColors.border,
+                        ),
                       ),
                       child: Text(
-                        unlocked ? 'STATUS: UNLOCKED 🏆' : 'STATUS: LOCKED 🔒',
-                        style: TextStyle(
-                          color: unlocked ? AppColors.accent : AppColors.textMuted,
+                        unlocked ? 'Unlocked 🏆' : 'Locked',
+                        style: AppText.labelSmall.copyWith(
+                          color: unlocked ? AppColors.gold : AppColors.textMuted,
                           fontSize: 10,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -420,37 +422,59 @@ void showBadgeDetailModal(
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.s16),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(AppSpacing.s16),
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(18),
+              color: AppColors.surface2,
+              borderRadius: AppSpacing.br16,
               border: Border.all(color: AppColors.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('CRITERIA', style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.w800)),
+                Text(
+                  'CRITERIA',
+                  style: AppText.labelSmall.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(criteria, style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.3)),
-                const Divider(color: Colors.white10, height: 20),
-                const Text('CONQUEST REWARD', style: TextStyle(color: AppColors.textMuted, fontSize: 10, fontWeight: FontWeight.w800)),
+                Text(
+                  criteria,
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
+                ),
+                const Divider(color: AppColors.border, height: 20),
+                Text(
+                  'CONQUEST REWARD',
+                  style: AppText.labelSmall.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(reward, style: const TextStyle(color: AppColors.accent, fontSize: 13, fontWeight: FontWeight.w800)),
+                Text(
+                  reward,
+                  style: AppText.bodyMedium.copyWith(
+                    color: AppColors.accent,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: unlocked ? AppColors.accent : AppColors.surface2,
-              foregroundColor: unlocked ? Colors.black : Colors.white70,
-              minimumSize: const Size.fromHeight(48),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
+          const SizedBox(height: AppSpacing.s20),
+          PrimaryButton(
+            label: unlocked ? 'Done' : 'Close',
             onPressed: () => Navigator.pop(ctx),
-            child: Text(unlocked ? 'CLAIM BADGE' : 'CLOSE', style: const TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
       ),

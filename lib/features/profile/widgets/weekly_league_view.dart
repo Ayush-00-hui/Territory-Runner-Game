@@ -233,7 +233,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                         Text(
                           _formatCountdown(_remainingSeconds),
                           style: AppText.caption.copyWith(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontWeight: FontWeight.bold,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
@@ -371,9 +371,19 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
 
   Widget _buildParticipantRow(LeagueParticipant participant) {
     final isMe = participant.isCurrentUser;
+    Color rankColor;
+    if (participant.rank == 1) {
+      rankColor = AppColors.gold;
+    } else if (participant.rank == 2) {
+      rankColor = AppColors.silver;
+    } else if (participant.rank == 3) {
+      rankColor = AppColors.bronze;
+    } else {
+      rankColor = isMe ? AppColors.accent : AppColors.textSecondary;
+    }
 
     return Container(
-      color: isMe ? AppColors.accent.withValues(alpha: 0.06) : Colors.transparent,
+      color: isMe ? AppColors.accentContainer : Colors.transparent,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
       child: Row(
         children: [
@@ -383,8 +393,9 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
             child: Text(
               '#${participant.rank}',
               style: AppText.caption.copyWith(
-                color: isMe ? AppColors.accent : AppColors.textSecondary,
-                fontWeight: isMe ? FontWeight.w900 : FontWeight.bold,
+                color: rankColor,
+                fontWeight: isMe || participant.rank <= 3 ? FontWeight.w900 : FontWeight.bold,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -400,7 +411,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                     Text(
                       participant.username,
                       style: AppText.body.copyWith(
-                        color: isMe ? AppColors.accent : Colors.white,
+                        color: isMe ? AppColors.accent : AppColors.textPrimary,
                         fontWeight: isMe ? FontWeight.w900 : FontWeight.w600,
                         fontSize: 14,
                       ),
@@ -410,13 +421,13 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: AppColors.accent.withValues(alpha: 0.2),
+                          color: AppColors.accent,
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
                           'YOU',
                           style: TextStyle(
-                            color: AppColors.accent,
+                            color: AppColors.onAccent,
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
                           ),
@@ -443,7 +454,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
               Text(
                 '${participant.weeklyAreaSqm.toStringAsFixed(0)} m²',
                 style: AppText.caption.copyWith(
-                  color: isMe ? AppColors.accent : Colors.white,
+                  color: isMe ? AppColors.accent : AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
@@ -453,6 +464,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                 style: AppText.caption.copyWith(
                   color: AppColors.textMuted,
                   fontSize: 10,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ],
@@ -466,7 +478,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
     required String label,
     required String value,
     required String unit,
-    Color valueColor = Colors.white,
+    Color valueColor = AppColors.textPrimary,
   }) {
     return Column(
       children: [

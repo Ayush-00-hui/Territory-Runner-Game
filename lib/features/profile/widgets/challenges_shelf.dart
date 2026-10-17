@@ -26,7 +26,7 @@ class ChallengesShelf extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.s16),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: AppSpacing.br24,
+            borderRadius: AppSpacing.br20,
             border: Border.all(color: AppColors.border),
           ),
           child: Column(
@@ -43,15 +43,21 @@ class ChallengesShelf extends StatelessWidget {
                         'ACTIVE CONQUEST QUESTS',
                         style: AppText.headingSmall.copyWith(
                           fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          letterSpacing: 0.8,
                         ),
                       ),
                     ],
                   ),
                   Text(
                     'RESETS IN 14H',
-                    style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 9.5),
+                    style: AppText.labelSmall.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.6,
+                    ),
                   ),
                 ],
               ),
@@ -99,11 +105,11 @@ class ChallengesShelf extends StatelessWidget {
         // --- TROPHY CASE SECTION HEADER ---
         Text(
           'TROPHY CASE & BADGES',
-          style: AppText.label.copyWith(
-            color: AppColors.textMuted,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
+          style: AppText.headingSmall.copyWith(
+            color: AppColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
           ),
         ),
         const SizedBox(height: AppSpacing.s12),
@@ -131,39 +137,42 @@ class ChallengesShelf extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppText.bodyBold.copyWith(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w800,
-                    color: isCompleted ? AppColors.accent : Colors.white,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppText.bodyMedium.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isCompleted ? AppColors.accent : AppColors.textPrimary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  description,
-                  style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+                  ),
+                ],
+              ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isCompleted ? AppColors.accent : AppColors.surface2,
+                color: isCompleted ? AppColors.accentContainer : AppColors.surface2,
                 borderRadius: AppSpacing.br8,
                 border: Border.all(
                   color: isCompleted ? AppColors.accent : AppColors.border,
                 ),
               ),
               child: Text(
-                isCompleted ? 'CLAIMED' : '+$xpReward XP',
-                style: AppText.label.copyWith(
-                  color: isCompleted ? Colors.black : AppColors.accent,
+                isCompleted ? 'Claimed ✓' : '+$xpReward XP',
+                style: AppText.labelSmall.copyWith(
+                  color: isCompleted ? AppColors.accent : AppColors.textSecondary,
                   fontSize: 10,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ),
@@ -176,7 +185,7 @@ class ChallengesShelf extends StatelessWidget {
             value: progress,
             backgroundColor: AppColors.surface2,
             valueColor: AlwaysStoppedAnimation<Color>(
-              isCompleted ? AppColors.accent : const Color(0xFF00E5FF),
+              isCompleted ? AppColors.accent : AppColors.accent.withValues(alpha: 0.6),
             ),
             minHeight: 6,
           ),
@@ -187,11 +196,19 @@ class ChallengesShelf extends StatelessWidget {
           children: [
             Text(
               '${(progress * 100).round()}% complete',
-              style: AppText.bodySmall.copyWith(fontSize: 10, color: AppColors.textMuted),
+              style: AppText.bodySmall.copyWith(
+                fontSize: 10,
+                color: AppColors.textMuted,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
             Text(
               '${current >= 1000 ? current.toStringAsFixed(0) : current.toStringAsFixed(1)} / ${target >= 1000 ? target.toStringAsFixed(0) : target.toStringAsFixed(1)} $unit',
-              style: AppText.statSmall.copyWith(fontSize: 10, color: Colors.white70),
+              style: AppText.bodySmall.copyWith(
+                fontSize: 10,
+                color: AppColors.textSecondary,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ],
         ),
@@ -247,22 +264,24 @@ class ChallengesShelf extends StatelessWidget {
   }
 
   Widget _buildBadgeCard(BuildContext context, _BadgeDefinition b) {
+    final Color badgeColor = b.unlocked ? AppColors.gold : AppColors.disabled;
+
     return Container(
       decoration: BoxDecoration(
-        color: b.unlocked ? AppColors.accent.withValues(alpha: 0.08) : AppColors.surface,
-        borderRadius: AppSpacing.br20,
+        color: b.unlocked ? AppColors.gold.withValues(alpha: 0.08) : AppColors.surface,
+        borderRadius: AppSpacing.br16,
         border: Border.all(
-          color: b.unlocked ? AppColors.accent.withValues(alpha: 0.5) : AppColors.border,
-          width: b.unlocked ? 1.5 : 1.0,
+          color: b.unlocked ? AppColors.gold.withValues(alpha: 0.3) : AppColors.border,
+          width: 1.0,
         ),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: AppSpacing.br20,
+        borderRadius: AppSpacing.br16,
         child: InkWell(
-          borderRadius: AppSpacing.br20,
+          borderRadius: AppSpacing.br16,
           onTap: () {
-            AppMotion.lightTick();
+            AppMotion.selectionTick();
             showBadgeDetailModal(
               context,
               title: b.name,
@@ -277,19 +296,19 @@ class ChallengesShelf extends StatelessWidget {
             child: Row(
               children: [
                 Container(
-                  height: 42,
-                  width: 42,
+                  height: 40,
+                  width: 40,
                   decoration: BoxDecoration(
-                    color: b.unlocked ? AppColors.accent.withValues(alpha: 0.2) : AppColors.surface2,
+                    color: b.unlocked ? AppColors.gold.withValues(alpha: 0.16) : AppColors.surface2,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: b.unlocked ? AppColors.accent : Colors.white12,
+                      color: b.unlocked ? AppColors.gold.withValues(alpha: 0.4) : AppColors.borderSubtle,
                     ),
                   ),
                   child: Icon(
                     b.unlocked ? b.icon : Icons.lock_outline_rounded,
-                    color: b.unlocked ? AppColors.accent : Colors.white30,
-                    size: 20,
+                    color: badgeColor,
+                    size: 18,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s10),
@@ -300,21 +319,21 @@ class ChallengesShelf extends StatelessWidget {
                     children: [
                       Text(
                         b.name,
-                        style: AppText.bodyBold.copyWith(
+                        style: AppText.bodyMedium.copyWith(
                           fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: b.unlocked ? Colors.white : Colors.white54,
+                          fontWeight: FontWeight.w700,
+                          color: b.unlocked ? AppColors.textPrimary : AppColors.disabled,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        b.unlocked ? 'UNLOCKED ✓' : 'LOCKED',
-                        style: AppText.label.copyWith(
-                          color: b.unlocked ? AppColors.accent : AppColors.textMuted,
+                        b.unlocked ? 'Unlocked 🏆' : 'Locked',
+                        style: AppText.labelSmall.copyWith(
+                          color: b.unlocked ? AppColors.gold : AppColors.textMuted,
                           fontSize: 9,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],

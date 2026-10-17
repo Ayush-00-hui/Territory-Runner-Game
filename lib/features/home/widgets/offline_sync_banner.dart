@@ -31,16 +31,16 @@ class OfflineSyncBanner extends StatelessWidget {
                 vertical: AppSpacing.s12,
               ),
               decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.12),
-                borderRadius: AppSpacing.br16,
-                border: Border.all(color: AppColors.warning.withValues(alpha: 0.4)),
+                color: AppColors.surface2,
+                borderRadius: AppRadius.br16,
+                border: Border.all(color: AppColors.warning.withValues(alpha: 0.3), width: 1.0),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(AppSpacing.s8),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.2),
+                      color: AppColors.warning.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -55,12 +55,9 @@ class OfflineSyncBanner extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isSyncing ? 'SYNCING RUNS...' : '$count PENDING CONQUEST RUN${count > 1 ? 'S' : ''}',
-                          style: AppText.label.copyWith(
+                          isSyncing ? 'Syncing Runs...' : '$count Runs Pending Sync',
+                          style: AppText.labelLarge.copyWith(
                             color: AppColors.warning,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -68,10 +65,7 @@ class OfflineSyncBanner extends StatelessWidget {
                           isSyncing
                               ? 'Uploading GPS coordinates to server...'
                               : 'Waiting to sync with authority server.',
-                          style: AppText.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 11,
-                          ),
+                          style: AppText.bodySmall,
                         ),
                       ],
                     ),
@@ -90,22 +84,21 @@ class OfflineSyncBanner extends StatelessWidget {
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.warning,
-                        foregroundColor: Colors.black,
+                        foregroundColor: AppColors.onAccent,
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: AppSpacing.br10),
+                        shape: RoundedRectangleBorder(borderRadius: AppRadius.br8),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                       onPressed: () {
-                        AppMotion.lightTick();
+                        AppMotion.selectionTick();
                         queue.syncPendingRuns();
                       },
                       child: Text(
-                        'SYNC NOW',
-                        style: AppText.label.copyWith(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 10,
+                        'Sync Now',
+                        style: AppText.labelSmall.copyWith(
+                          color: AppColors.onAccent,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),

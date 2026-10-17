@@ -76,18 +76,17 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         backgroundColor: AppColors.bgDeep,
         elevation: 0,
         title: Text(
-          'ATHLETE HUB',
+          'Athlete Hub',
           style: AppText.headingSmall.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 16,
-            letterSpacing: 1.5,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
           ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.sports_kabaddi_rounded, color: AppColors.secondary),
+            icon: const Icon(Icons.sports_kabaddi_rounded, color: AppColors.textSecondary),
             onPressed: () => showSocialHubSheet(context),
             tooltip: 'Social Syndicate & Duels',
           ),
@@ -206,12 +205,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
 
               // --- METRIC OVERVIEW GRID ---
               Text(
-                'PERFORMANCE TELEMETRY',
-                style: AppText.label.copyWith(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
+                'Performance Telemetry',
+                style: AppText.headingSmall.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: AppSpacing.s12),
@@ -235,11 +233,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               // --- SETTINGS & CONTROLS ---
               Text(
                 'SETTINGS & PLATFORM',
-                style: AppText.label.copyWith(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
+                style: AppText.headingSmall.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
                 ),
               ),
               const SizedBox(height: AppSpacing.s12),
@@ -286,15 +284,15 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         }
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent.withValues(alpha: 0.18) : Colors.transparent,
+          color: isSelected ? AppColors.accentContainer : Colors.transparent,
           borderRadius: AppSpacing.brFull,
           border: Border.all(
             color: isSelected ? AppColors.accent : Colors.transparent,
-            width: 1.2,
+            width: 1.0,
           ),
         ),
         child: Row(
@@ -302,17 +300,16 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           children: [
             Icon(
               icon,
-              size: 15,
+              size: 14,
               color: isSelected ? AppColors.accent : AppColors.textMuted,
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
             Text(
               label,
               style: AppText.label.copyWith(
                 color: isSelected ? AppColors.accent : AppColors.textMuted,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0.6,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ],

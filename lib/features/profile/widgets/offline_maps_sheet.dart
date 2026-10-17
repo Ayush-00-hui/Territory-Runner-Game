@@ -128,7 +128,7 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
             child: Container(
               width: 44,
               height: 4,
-              decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: AppColors.borderSubtle, borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: AppSpacing.s16),
@@ -149,12 +149,16 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'OFFLINE MAP STORAGE',
-                    style: AppText.headingSmall.copyWith(fontSize: 15, fontWeight: FontWeight.w900),
+                    'Offline Map Storage',
+                    style: AppText.headingSmall.copyWith(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   Text(
-                    'ZERO-SIGNAL TACTICAL NAVIGATION',
-                    style: AppText.label.copyWith(color: AppColors.accent, fontSize: 9.5),
+                    'Zero-Signal Tactical Navigation',
+                    style: AppText.labelSmall.copyWith(color: AppColors.accent, fontSize: 10),
                   ),
                 ],
               ),
@@ -164,7 +168,7 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
           const SizedBox(height: AppSpacing.s14),
           Text(
             'Pre-download map sectors to continue claiming territories, viewing boundaries, and navigating when running in dead zones or cellular outages.',
-            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.35),
+            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: AppSpacing.s20),
 
@@ -181,22 +185,32 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
               children: [
                 Column(
                   children: [
-                    Text('CACHED TILES', style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 10)),
+                    Text('Cached Tiles', style: AppText.labelSmall.copyWith(color: AppColors.textMuted, fontSize: 10)),
                     const SizedBox(height: 4),
                     Text(
                       _isLoading ? '...' : '$_tileCount',
-                      style: AppText.statSmall.copyWith(fontSize: 18, color: AppColors.accent, fontWeight: FontWeight.bold),
+                      style: AppText.statSmall.copyWith(
+                        fontSize: 18,
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.bold,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ),
                 Container(width: 1, height: 32, color: AppColors.border),
                 Column(
                   children: [
-                    Text('DISK OCCUPIED', style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 10)),
+                    Text('Disk Occupied', style: AppText.labelSmall.copyWith(color: AppColors.textMuted, fontSize: 10)),
                     const SizedBox(height: 4),
                     Text(
                       _isLoading ? '...' : _formatSize(_cacheSizeBytes),
-                      style: AppText.statSmall.copyWith(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                      style: AppText.statSmall.copyWith(
+                        fontSize: 18,
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
                     ),
                   ],
                 ),
@@ -222,7 +236,7 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
                   value: _totalToDownload > 0 ? (_downloaded / _totalToDownload) : null,
-                  backgroundColor: AppColors.surface,
+                  backgroundColor: AppColors.surface2,
                   color: AppColors.accent,
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(3),
@@ -240,13 +254,13 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.accent,
-                foregroundColor: Colors.black,
+                foregroundColor: AppColors.onAccent,
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
               ),
               icon: const Icon(Icons.download_rounded, size: 20),
               label: const Text(
-                'PRE-CACHE CURRENT SECTOR (1.2 KM)',
-                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
+                'Pre-Cache Current Sector (1.2 km)',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               ),
               onPressed: _isDownloading ? null : _preDownloadCurrentSector,
             ),
@@ -259,14 +273,14 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
             height: 44,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.redAccent,
+                foregroundColor: AppColors.error,
                 side: const BorderSide(color: AppColors.border),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
               ),
               icon: const Icon(Icons.delete_sweep_rounded, size: 18),
               label: const Text(
-                'PURGE OFFLINE MAP CACHE',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5),
+                'Purge Offline Map Cache',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
               ),
               onPressed: (_tileCount == 0 || _isDownloading) ? null : _clearCache,
             ),

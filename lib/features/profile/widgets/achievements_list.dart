@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
 import 'profile_dialogs.dart';
@@ -99,34 +98,38 @@ class ProfileAchievementTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color iconBg = unlocked ? AppColors.accent : AppColors.surface2;
-    final Color iconColor = unlocked ? Colors.black : Colors.white30;
+    final Color badgeColor = unlocked ? AppColors.gold : AppColors.disabled;
 
     return GestureDetector(
       onTap: () {
         if (onTap != null) {
-          HapticFeedback.selectionClick();
+          AppMotion.selectionTick();
           onTap!();
         }
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(AppSpacing.s12),
         decoration: BoxDecoration(
-          color: AppColors.surface2.withValues(alpha: 0.5),
+          color: unlocked ? AppColors.gold.withValues(alpha: 0.06) : AppColors.surface2,
           borderRadius: AppSpacing.br16,
-          border: Border.all(color: unlocked ? AppColors.accent.withValues(alpha: 0.3) : AppColors.border),
+          border: Border.all(
+            color: unlocked ? AppColors.gold.withValues(alpha: 0.3) : AppColors.border,
+          ),
         ),
         child: Row(
           children: [
             Container(
-              height: 44,
-              width: 44,
+              height: 42,
+              width: 42,
               decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(12),
+                color: unlocked ? AppColors.gold.withValues(alpha: 0.16) : AppColors.surface,
+                borderRadius: AppSpacing.br12,
+                border: Border.all(
+                  color: unlocked ? AppColors.gold.withValues(alpha: 0.4) : AppColors.borderSubtle,
+                ),
               ),
-              child: Icon(icon, color: iconColor, size: 22),
+              child: Icon(icon, color: badgeColor, size: 20),
             ),
             const SizedBox(width: AppSpacing.s12),
             Expanded(
@@ -136,8 +139,8 @@ class ProfileAchievementTile extends StatelessWidget {
                   Text(
                     title,
                     style: AppText.bodyMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                      color: unlocked ? AppColors.textPrimary : AppColors.disabled,
+                      fontWeight: FontWeight.w700,
                       fontSize: 14,
                     ),
                   ),
@@ -154,7 +157,7 @@ class ProfileAchievementTile extends StatelessWidget {
             ),
             Icon(
               unlocked ? Icons.check_circle_rounded : Icons.lock_outline_rounded,
-              color: unlocked ? AppColors.accent : Colors.white24,
+              color: badgeColor,
               size: 20,
             ),
           ],

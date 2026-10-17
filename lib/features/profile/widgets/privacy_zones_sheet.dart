@@ -121,7 +121,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
               child: Container(
                 width: 44,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: AppColors.borderSubtle, borderRadius: BorderRadius.circular(2)),
               ),
             ),
             const SizedBox(height: AppSpacing.s16),
@@ -190,13 +190,16 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                     const SizedBox(height: AppSpacing.s8),
                     TextField(
                       controller: _nameController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
                       decoration: InputDecoration(
                         hintText: 'e.g. Home, Work, Gym',
                         hintStyle: const TextStyle(color: AppColors.textMuted),
                         filled: true,
-                        fillColor: AppColors.bgDeep,
-                        border: OutlineInputBorder(borderRadius: AppSpacing.br12, borderSide: BorderSide.none),
+                        fillColor: AppColors.surface2,
+                        border: OutlineInputBorder(
+                          borderRadius: AppSpacing.br12,
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       ),
                     ),
@@ -207,7 +210,13 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('Exclusion Radius', style: AppText.bodySmall.copyWith(color: AppColors.textMuted)),
-                        Text('${_newRadiusMeters.round()} meters', style: AppText.bodyBold.copyWith(color: AppColors.accent)),
+                        Text(
+                          '${_newRadiusMeters.round()} meters',
+                          style: AppText.bodyBold.copyWith(
+                            color: AppColors.accent,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
                       ],
                     ),
                     Slider(
@@ -216,7 +225,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                       max: 1000.0,
                       divisions: 18,
                       activeColor: AppColors.accent,
-                      inactiveColor: Colors.white12,
+                      inactiveColor: AppColors.surface2,
                       onChanged: (val) => setState(() => _newRadiusMeters = val),
                     ),
 
@@ -226,7 +235,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                         Expanded(
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.white,
+                              foregroundColor: AppColors.textPrimary,
                               side: const BorderSide(color: AppColors.border),
                               shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
                             ),
@@ -322,11 +331,11 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: zone.isEnabled ? AppColors.accent.withValues(alpha: 0.15) : Colors.white10,
+                          color: zone.isEnabled ? AppColors.accentContainer : AppColors.surface2,
                         ),
                         child: Icon(
                           Icons.home_rounded,
-                          color: zone.isEnabled ? AppColors.accent : Colors.white54,
+                          color: zone.isEnabled ? AppColors.accent : AppColors.disabled,
                           size: 18,
                         ),
                       ),
@@ -338,13 +347,17 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                             Text(
                               zone.name,
                               style: AppText.bodyBold.copyWith(
-                                color: zone.isEnabled ? Colors.white : AppColors.textMuted,
+                                color: zone.isEnabled ? AppColors.textPrimary : AppColors.textMuted,
                                 fontSize: 13,
                               ),
                             ),
                             Text(
                               '${zone.radiusMeters.round()}m exclusion radius • Lat: ${zone.latitude.toStringAsFixed(3)}, Lng: ${zone.longitude.toStringAsFixed(3)}',
-                              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10),
+                              style: AppText.bodySmall.copyWith(
+                                color: AppColors.textMuted,
+                                fontSize: 10,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
                             ),
                           ],
                         ),
@@ -352,13 +365,14 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                       Switch(
                         value: zone.isEnabled,
                         activeThumbColor: AppColors.accent,
+                        activeTrackColor: AppColors.accentContainer,
                         onChanged: (val) async {
                           await _privacyService.toggleZone(zone.id, val);
                           setState(() {});
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.white54, size: 20),
+                        icon: const Icon(Icons.delete_outline_rounded, color: AppColors.textMuted, size: 20),
                         onPressed: () async {
                           await _privacyService.deleteZone(zone.id);
                           setState(() {});

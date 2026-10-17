@@ -159,7 +159,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
           padding: const EdgeInsets.all(AppSpacing.s16),
           decoration: BoxDecoration(
             color: AppColors.surface,
-            borderRadius: AppSpacing.br24,
+            borderRadius: AppSpacing.br20,
             border: Border.all(color: AppColors.border),
           ),
           child: Column(
@@ -176,8 +176,9 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                         'TURF WAR DOMINANCE',
                         style: AppText.headingSmall.copyWith(
                           fontSize: 14,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          letterSpacing: 0.8,
                         ),
                       ),
                     ],
@@ -185,16 +186,17 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.15),
+                      color: AppColors.accentContainer,
                       borderRadius: AppSpacing.br8,
                       border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       totalAreaSqm > 0 ? 'CONTESTED' : 'UNCLAIMED',
-                      style: AppText.label.copyWith(
+                      style: AppText.labelSmall.copyWith(
                         color: AppColors.accent,
                         fontSize: 9.5,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
                       ),
                     ),
                   ),
@@ -206,7 +208,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               ClipRRect(
                 borderRadius: AppSpacing.br8,
                 child: SizedBox(
-                  height: 12,
+                  height: 10,
                   child: Row(
                     children: [
                       Expanded(
@@ -216,12 +218,12 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                       const SizedBox(width: 2),
                       Expanded(
                         flex: syndicatePct > 0 ? syndicatePct : 1,
-                        child: Container(color: AppColors.rival),
+                        child: Container(color: AppColors.warning),
                       ),
                       const SizedBox(width: 2),
                       Expanded(
                         flex: nomadsPct > 0 ? nomadsPct : 1,
-                        child: Container(color: const Color(0xFF00E5FF)),
+                        child: Container(color: AppColors.info),
                       ),
                     ],
                   ),
@@ -234,8 +236,8 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildFactionLegend('VANGUARD', '$vanguardPct%', _formatArea(vanguard.totalAreaSqm), AppColors.accent),
-                  _buildFactionLegend('SYNDICATE', '$syndicatePct%', _formatArea(syndicate.totalAreaSqm), AppColors.rival),
-                  _buildFactionLegend('NOMADS', '$nomadsPct%', _formatArea(nomads.totalAreaSqm), const Color(0xFF00E5FF)),
+                  _buildFactionLegend('SYNDICATE', '$syndicatePct%', _formatArea(syndicate.totalAreaSqm), AppColors.warning),
+                  _buildFactionLegend('NOMADS', '$nomadsPct%', _formatArea(nomads.totalAreaSqm), AppColors.info),
                 ],
               ),
 
@@ -258,11 +260,11 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
           children: [
             Text(
               'CONQUEROR RANKINGS',
-              style: AppText.label.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.2,
+              style: AppText.headingSmall.copyWith(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
               ),
             ),
             Row(
@@ -311,12 +313,17 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
             const SizedBox(width: 6),
             Text(
               name,
-              style: AppText.label.copyWith(color: Colors.white70, fontSize: 9.5),
+              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
             ),
             const SizedBox(width: 4),
             Text(
               percentage,
-              style: AppText.statSmall.copyWith(fontSize: 11, color: color, fontWeight: FontWeight.w900),
+              style: AppText.labelSmall.copyWith(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
             ),
           ],
         ),
@@ -324,7 +331,11 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
           padding: const EdgeInsets.only(left: 14, top: 2),
           child: Text(
             area,
-            style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 9),
+            style: AppText.bodySmall.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 10,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],
@@ -335,26 +346,26 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     final isSelected = _scope == scope;
     return GestureDetector(
       onTap: () {
-        AppMotion.lightTick();
+        AppMotion.selectionTick();
         setState(() => _scope = scope);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent.withValues(alpha: 0.18) : AppColors.surface,
+          color: isSelected ? AppColors.accentContainer : AppColors.surface,
           borderRadius: AppSpacing.brFull,
           border: Border.all(
             color: isSelected ? AppColors.accent : AppColors.border,
-            width: isSelected ? 1.4 : 1.0,
+            width: 1.0,
           ),
         ),
         child: Text(
           label,
-          style: AppText.label.copyWith(
+          style: AppText.labelSmall.copyWith(
             color: isSelected ? AppColors.accent : AppColors.textMuted,
-            fontSize: 9.5,
-            fontWeight: FontWeight.w900,
+            fontSize: 10,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
       ),
@@ -399,8 +410,8 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
             const Icon(Icons.military_tech_outlined, color: AppColors.textMuted, size: 36),
             const SizedBox(height: AppSpacing.s10),
             Text(
-              'AWAITING CONQUEROR TELEMETRY',
-              style: AppText.headingSmall.copyWith(fontSize: 12, letterSpacing: 1.1),
+              'Awaiting Conqueror Telemetry',
+              style: AppText.headingSmall.copyWith(fontSize: 14, color: AppColors.textPrimary),
             ),
             const SizedBox(height: AppSpacing.s4),
             Text(
@@ -427,19 +438,23 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     Widget rankIcon;
 
     if (entry.rank == 1) {
-      rankColor = const Color(0xFFFFD700); // Gold
-      rankIcon = const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFD700), size: 18);
+      rankColor = AppColors.gold;
+      rankIcon = const Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 18);
     } else if (entry.rank == 2) {
-      rankColor = const Color(0xFFC0C0C0); // Silver
-      rankIcon = const Icon(Icons.emoji_events_rounded, color: Color(0xFFC0C0C0), size: 18);
+      rankColor = AppColors.silver;
+      rankIcon = const Icon(Icons.emoji_events_rounded, color: AppColors.silver, size: 18);
     } else if (entry.rank == 3) {
-      rankColor = const Color(0xFFCD7F32); // Bronze
-      rankIcon = const Icon(Icons.emoji_events_rounded, color: Color(0xFFCD7F32), size: 18);
+      rankColor = AppColors.bronze;
+      rankIcon = const Icon(Icons.emoji_events_rounded, color: AppColors.bronze, size: 18);
     } else {
-      rankColor = Colors.white54;
+      rankColor = AppColors.textMuted;
       rankIcon = Text(
         '#${entry.rank}',
-        style: AppText.statSmall.copyWith(fontSize: 13, color: rankColor),
+        style: AppText.statSmall.copyWith(
+          fontSize: 12,
+          color: rankColor,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ),
       );
     }
 
@@ -447,11 +462,11 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       margin: const EdgeInsets.only(bottom: AppSpacing.s10),
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s14, vertical: AppSpacing.s12),
       decoration: BoxDecoration(
-        color: isUser ? AppColors.accent.withValues(alpha: 0.12) : AppColors.surface,
+        color: isUser ? AppColors.accentContainer : AppColors.surface,
         borderRadius: AppSpacing.br16,
         border: Border.all(
           color: isUser ? AppColors.accent : AppColors.border,
-          width: isUser ? 1.5 : 1.0,
+          width: 1.0,
         ),
       ),
       child: Row(
@@ -479,10 +494,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                     Flexible(
                       child: Text(
                         entry.username,
-                        style: AppText.bodyBold.copyWith(
+                        style: AppText.bodyMedium.copyWith(
                           fontSize: 13,
-                          color: isUser ? AppColors.accent : Colors.white,
-                          fontWeight: FontWeight.w900,
+                          color: isUser ? AppColors.accent : AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -498,7 +513,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                         child: const Text(
                           'YOU',
                           style: TextStyle(
-                            color: Colors.black,
+                            color: AppColors.onAccent,
                             fontSize: 8.5,
                             fontWeight: FontWeight.w900,
                           ),
@@ -512,7 +527,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                   '${entry.faction} • Lvl ${entry.level}',
                   style: AppText.bodySmall.copyWith(
                     color: AppColors.textMuted,
-                    fontSize: 10,
+                    fontSize: 11,
                   ),
                 ),
               ],
@@ -527,14 +542,15 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                 _formatArea(entry.totalAreaSqm),
                 style: AppText.statSmall.copyWith(
                   fontSize: 13,
-                  color: isUser ? AppColors.accent : Colors.white,
-                  fontWeight: FontWeight.w900,
+                  color: isUser ? AppColors.accent : AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                'CONTROLLED',
-                style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 8),
+                'Controlled',
+                style: AppText.labelSmall.copyWith(color: AppColors.textMuted, fontSize: 9),
               ),
             ],
           ),

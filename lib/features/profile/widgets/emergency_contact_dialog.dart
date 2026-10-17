@@ -52,12 +52,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
     );
     if (mounted) {
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: AppColors.surface,
-          content: Text('Emergency contact settings updated! 🛡️', style: TextStyle(color: AppColors.accent)),
-        ),
-      );
+      AppToast.show(context, 'Emergency contact settings updated');
     }
   }
 
@@ -80,21 +75,28 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
 
     return AlertDialog(
       backgroundColor: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br24),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppSpacing.br20,
+        side: const BorderSide(color: AppColors.border),
+      ),
       title: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.redAccent.withValues(alpha: 0.15),
+              color: AppColors.error.withValues(alpha: 0.15),
               borderRadius: AppSpacing.br10,
             ),
-            child: const Icon(Icons.emergency_rounded, color: Colors.redAccent, size: 22),
+            child: const Icon(Icons.emergency_rounded, color: AppColors.error, size: 20),
           ),
           const SizedBox(width: AppSpacing.s10),
           Text(
             'Emergency SOS Contact',
-            style: AppText.headingSmall.copyWith(fontSize: 16, fontWeight: FontWeight.bold),
+            style: AppText.headingSmall.copyWith(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
           ),
         ],
       ),
@@ -105,56 +107,65 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
           children: [
             Text(
               'Set a trusted contact to receive 1-tap distress SMS alerts with your real-time GPS coordinate link during runs:',
-              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.3),
+              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.4),
             ),
             const SizedBox(height: AppSpacing.s16),
 
             // Contact Name
-            Text('CONTACT NAME', style: AppText.label.copyWith(fontSize: 10, color: AppColors.textMuted)),
+            Text('Contact Name', style: AppText.labelSmall.copyWith(fontSize: 11, color: AppColors.textMuted)),
             const SizedBox(height: 4),
             TextField(
               controller: _nameController,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
               decoration: InputDecoration(
                 hintText: 'e.g. Partner, Mom, Roommate',
                 hintStyle: const TextStyle(color: AppColors.textMuted),
                 filled: true,
-                fillColor: AppColors.bgDeep,
-                border: OutlineInputBorder(borderRadius: AppSpacing.br12, borderSide: BorderSide.none),
+                fillColor: AppColors.surface2,
+                border: OutlineInputBorder(
+                  borderRadius: AppSpacing.br12,
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
             ),
             const SizedBox(height: AppSpacing.s12),
 
             // Contact Phone
-            Text('PHONE NUMBER (WITH COUNTRY CODE)', style: AppText.label.copyWith(fontSize: 10, color: AppColors.textMuted)),
+            Text('Phone Number (with Country Code)', style: AppText.labelSmall.copyWith(fontSize: 11, color: AppColors.textMuted)),
             const SizedBox(height: 4),
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              style: const TextStyle(color: Colors.white, fontSize: 13),
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
               decoration: InputDecoration(
                 hintText: 'e.g. +1 555 123 4567',
                 hintStyle: const TextStyle(color: AppColors.textMuted),
                 filled: true,
-                fillColor: AppColors.bgDeep,
-                border: OutlineInputBorder(borderRadius: AppSpacing.br12, borderSide: BorderSide.none),
+                fillColor: AppColors.surface2,
+                border: OutlineInputBorder(
+                  borderRadius: AppSpacing.br12,
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
             ),
             const SizedBox(height: AppSpacing.s12),
 
             // SOS Message template
-            Text('DISTRESS MESSAGE PREVIEW', style: AppText.label.copyWith(fontSize: 10, color: AppColors.textMuted)),
+            Text('Distress Message Preview', style: AppText.labelSmall.copyWith(fontSize: 11, color: AppColors.textMuted)),
             const SizedBox(height: 4),
             TextField(
               controller: _messageController,
               maxLines: 2,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+              style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
               decoration: InputDecoration(
                 filled: true,
-                fillColor: AppColors.bgDeep,
-                border: OutlineInputBorder(borderRadius: AppSpacing.br12, borderSide: BorderSide.none),
+                fillColor: AppColors.surface2,
+                border: OutlineInputBorder(
+                  borderRadius: AppSpacing.br12,
+                  borderSide: const BorderSide(color: AppColors.border),
+                ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
             ),
@@ -162,18 +173,13 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        SecondaryButton(
+          label: 'Cancel',
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('CANCEL', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
         ),
-        FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.redAccent,
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
-          ),
+        PrimaryButton(
+          label: 'Save Settings',
           onPressed: _save,
-          child: const Text('SAVE SETTINGS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
         ),
       ],
     );

@@ -53,19 +53,13 @@ void showRunStartAnimation(BuildContext context) {
     context: context,
     barrierDismissible: true,
     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    barrierColor: Colors.black.withValues(alpha: 0.78),
-    transitionDuration: const Duration(milliseconds: 300),
+    barrierColor: AppColors.scrim,
+    transitionDuration: AppMotion.sheet,
     transitionBuilder: (context, animation, _, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      );
-      return FadeTransition(
-        opacity: curved,
-        child: ScaleTransition(
-          scale: Tween<double>(begin: 0.94, end: 1).animate(curved),
-          child: child,
-        ),
+      return AppMotion.sharedAxisTransition(
+        context: context,
+        animation: animation,
+        child: child,
       );
     },
     pageBuilder: (context, _, _) => const _RunStartOverlay(),
@@ -122,7 +116,7 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
 
     final bob = math.sin(t * math.pi * 2 * 5) * 3.5;
     final angle = math.atan2(tan.vector.dy, tan.vector.dx);
-    final opacity = layer == 0 ? 1.0 : [0.12, 0.22, 0.34][layer - 1];
+    final opacity = layer == 0 ? 1.0 : [0.15, 0.30, 0.50][layer - 1];
     final size = layer == 0 ? 38.0 : 32.0 - layer * 2.0;
 
     return Positioned(
@@ -132,37 +126,11 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
         angle: angle - math.pi / 2,
         child: Opacity(
           opacity: opacity,
-          child: layer == 0
-              ? Stack(
-                  alignment: Alignment.center,
-                  clipBehavior: Clip.none,
-                  children: [
-                    ImageFiltered(
-                      imageFilter: ui.ImageFilter.blur(sigmaX: 14, sigmaY: 14),
-                      child: Icon(
-                        Icons.directions_run_rounded,
-                        size: 44,
-                        color: AppColors.accent.withValues(alpha: 0.45),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.directions_run_rounded,
-                      size: 38,
-                      color: AppColors.accent,
-                      shadows: [
-                        Shadow(
-                          color: AppColors.accent,
-                          blurRadius: 14,
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : Icon(
-                  Icons.directions_run_rounded,
-                  size: size,
-                  color: AppColors.accent,
-                ),
+          child: Icon(
+            Icons.directions_run_rounded,
+            size: size,
+            color: AppColors.accent,
+          ),
         ),
       ),
     );
@@ -176,21 +144,13 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
           color: Colors.transparent,
           child: Container(
             width: 320,
-            margin: const EdgeInsets.symmetric(horizontal: 24),
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s24),
+            padding: const EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s24, AppSpacing.s20, AppSpacing.s20),
             decoration: BoxDecoration(
               color: AppColors.surface,
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: AppColors.border,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.45),
-                  blurRadius: 32,
-                  offset: const Offset(0, 16),
-                ),
-              ],
+              borderRadius: AppRadius.br24,
+              border: Border.all(color: AppColors.borderSubtle, width: 1.0),
+              boxShadow: AppElevation.floating,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -200,22 +160,17 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
                   children: [
                     Text(
                       'START CONQUEST',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 2.0,
-                        color: AppColors.accent,
-                      ),
+                      style: AppText.labelSmall.copyWith(color: AppColors.accent),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, size: 20, color: Colors.white70),
+                      icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
                       onPressed: () => Navigator.of(context).pop(),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.s12),
                 SizedBox(
                   height: 150,
                   width: double.infinity,
@@ -241,38 +196,16 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
                     },
                   ),
                 ),
-                const SizedBox(height: 12),
-                const Text(
+                const SizedBox(height: AppSpacing.s12),
+                Text(
                   'Acquiring GPS lock & starting sector capture...',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.35,
-                    color: AppColors.textSecondary,
-                  ),
+                  style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
                 ),
-                const SizedBox(height: 18),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text(
-                      'Ready • Hit The Grid',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: AppSpacing.s20),
+                PrimaryButton(
+                  label: 'Ready • Hit The Grid',
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
@@ -293,7 +226,7 @@ class _RunOverlayTrackPainter extends CustomPainter {
     final path = _runPreviewPath(size);
 
     final bgPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.08)
+      ..color = AppColors.borderSubtle
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round;
@@ -318,7 +251,7 @@ class _RunOverlayTrackPainter extends CustomPainter {
           ],
         )
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 4.0
+        ..strokeWidth = 3.5
         ..strokeCap = StrokeCap.round;
       canvas.drawPath(seg, trailPaint);
     }
@@ -362,16 +295,7 @@ class _TerritoryAppState extends State<TerritoryApp> {
     return MaterialApp(
       title: 'Territory Runner',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: AppColors.bgDeep,
-        colorScheme: const ColorScheme.dark(
-          primary: AppColors.accent,
-          secondary: AppColors.accentSecondary,
-          surface: AppColors.surface,
-        ),
-      ),
+      theme: AppTheme.darkTheme,
       home: _isAuthenticated
           ? const MainScreen()
           : AuthScreen(
@@ -438,78 +362,186 @@ class _MainScreenState extends State<MainScreen> {
         index: _selectedIndex,
         children: _pages,
       ),
-      bottomNavigationBar: Container(
-        height: 60 + MediaQuery.paddingOf(context).bottom,
-        decoration: BoxDecoration(
-          color: AppColors.bgDeep,
-          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+      bottomNavigationBar: _buildPremiumBottomNav(context),
+    );
+  }
+
+  Widget _buildPremiumBottomNav(BuildContext context) {
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+
+    return Container(
+      height: 64.0 + bottomPad,
+      decoration: const BoxDecoration(
+        color: AppColors.bgElevated,
+        border: Border(
+          top: BorderSide(color: AppColors.borderSubtle, width: 1.0),
         ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(0, Icons.bolt_rounded, 'HOME'),
-                _buildNavItem(1, Icons.map_rounded, 'MAP'),
-                _buildNavItem(2, Icons.person_rounded, 'PROFILE'),
-              ],
-            ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s6),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Home Tab
+              Expanded(
+                child: _buildNavTab(
+                  index: 0,
+                  icon: Icons.bolt_rounded,
+                  label: 'Home',
+                ),
+              ),
+
+              // Prominent Centre Run Action Button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
+                child: Semantics(
+                  button: true,
+                  label: 'Start Run',
+                  child: _CenterRunAction(
+                    isSelected: _selectedIndex == 1,
+                    onTap: () {
+                      AppMotion.heavyBurst();
+                      setState(() {
+                        _selectedIndex = 1;
+                      });
+                    },
+                  ),
+                ),
+              ),
+
+              // Profile Tab
+              Expanded(
+                child: _buildNavTab(
+                  index: 2,
+                  icon: Icons.person_rounded,
+                  label: 'Profile',
+                ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildNavTab({
+    required int index,
+    required IconData icon,
+    required String label,
+  }) {
     final bool isSelected = _selectedIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (_selectedIndex != index) {
-          AppMotion.lightTick();
-          setState(() {
-            _selectedIndex = index;
-          });
-        }
-      },
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 16 : 12,
-          vertical: 6,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.accent.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: AppSpacing.brFull,
-          border: Border.all(
-            color: isSelected ? AppColors.accent.withValues(alpha: 0.35) : Colors.transparent,
-            width: 1.0,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: isSelected ? AppColors.accent : AppColors.textMuted,
+
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: GestureDetector(
+        onTap: () {
+          if (_selectedIndex != index) {
+            AppMotion.selectionTick();
+            setState(() {
+              _selectedIndex = index;
+            });
+          }
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.accentContainer : Colors.transparent,
+            borderRadius: AppRadius.brFull,
+            border: Border.all(
+              color: isSelected ? AppColors.accent.withValues(alpha: 0.3) : Colors.transparent,
+              width: 1.0,
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 6),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isSelected ? AppColors.accent : AppColors.textMuted,
+              ),
+              const SizedBox(width: AppSpacing.s6),
               Text(
                 label,
-                style: AppText.label.copyWith(
-                  color: AppColors.accent,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.8,
+                style: AppText.labelSmall.copyWith(
+                  color: isSelected ? AppColors.accent : AppColors.textMuted,
+                  letterSpacing: 0.2,
                 ),
               ),
             ],
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CenterRunAction extends StatefulWidget {
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _CenterRunAction({
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_CenterRunAction> createState() => _CenterRunActionState();
+}
+
+class _CenterRunActionState extends State<_CenterRunAction> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = _isPressed ? AppMotion.pressScale : 1.0;
+
+    return AnimatedScale(
+      scale: scale,
+      duration: AppMotion.duration(context, AppMotion.fast),
+      curve: AppMotion.easeOut,
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _isPressed = false),
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: AppColors.accent,
+            borderRadius: AppRadius.brFull,
+            border: Border.all(color: AppColors.accent, width: 1.0),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.directions_run_rounded,
+                size: 22,
+                color: AppColors.onAccent,
+              ),
+              const SizedBox(width: AppSpacing.s6),
+              Text(
+                'Run',
+                style: AppText.button.copyWith(
+                  color: AppColors.onAccent,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

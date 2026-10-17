@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../gameplay/territory_service.dart';
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
@@ -20,8 +19,8 @@ class ProfileStatGrid extends StatelessWidget {
     final captured = territoryService.getCapturedTerritoryObjects();
     final double totalAreaM2 = captured.fold(0.0, (sum, t) => sum + t.areaSqMeters);
     final String territoryVal = totalAreaM2 >= 10000
-        ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} KM²'
-        : '${totalAreaM2.toStringAsFixed(0)} M²';
+        ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
+        : '${totalAreaM2.toStringAsFixed(0)} m²';
 
     return GridView.count(
       physics: const NeverScrollableScrollPhysics(),
@@ -33,15 +32,15 @@ class ProfileStatGrid extends StatelessWidget {
       children: [
         ProfileStatCard(
           icon: Icons.route_rounded,
-          title: 'TOTAL DISTANCE',
-          value: '${profile.totalDistanceKm.toStringAsFixed(1)} KM',
+          title: 'Total Distance',
+          value: '${profile.totalDistanceKm.toStringAsFixed(1)} km',
           iconColor: AppColors.accent,
           delay: 0,
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'DISTANCE TELEMETRY',
-              value: '${profile.totalDistanceKm.toStringAsFixed(2)} KM',
+              title: 'Distance Telemetry',
+              value: '${profile.totalDistanceKm.toStringAsFixed(2)} km',
               description: 'Cumulative GPS route distance logged on foot across urban and wilderness sectors.',
               metrics: [
                 {'label': 'Lifetime Distance', 'val': '${profile.totalDistanceKm.toStringAsFixed(2)} km'},
@@ -53,35 +52,35 @@ class ProfileStatGrid extends StatelessWidget {
         ),
         ProfileStatCard(
           icon: Icons.local_fire_department_rounded,
-          title: 'ACTIVE STREAK',
-          value: '${profile.currentStreak} DAYS',
-          iconColor: AppColors.secondary,
+          title: 'Active Streak',
+          value: '${profile.currentStreak} days',
+          iconColor: AppColors.warning,
           delay: 80,
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'STREAK TELEMETRY',
-              value: '${profile.currentStreak} DAYS',
+              title: 'Streak Telemetry',
+              value: '${profile.currentStreak} days',
               description: 'Continuous daily conquest momentum. Running and claiming territory daily keeps your streak active.',
               metrics: [
                 {'label': 'Active Streak Days', 'val': '${profile.currentStreak} days'},
                 {'label': 'Streak Multiplier Bonus', 'val': '+${(profile.currentStreak * 2).clamp(0, 50)}% XP'},
-                {'label': 'Status', 'val': 'Active Momentum 🔥'},
+                {'label': 'Status', 'val': 'Active Momentum'},
               ],
             );
           },
         ),
         ProfileStatCard(
           icon: Icons.terrain_rounded,
-          title: 'TOTAL TERRITORY',
+          title: 'Total Territory',
           value: territoryVal,
           iconColor: AppColors.accent,
           delay: 160,
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'TERRITORY TELEMETRY',
-              value: '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} KM²',
+              title: 'Territory Telemetry',
+              value: '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} km²',
               description: 'Post-union sovereign territory polygons permanently claimed on foot.',
               metrics: [
                 {'label': 'Captured Polygons', 'val': '${captured.length} sectors'},
@@ -93,15 +92,15 @@ class ProfileStatGrid extends StatelessWidget {
         ),
         ProfileStatCard(
           icon: Icons.military_tech_rounded,
-          title: 'ATHLETE TIER',
-          value: 'LVL ${profile.level}',
+          title: 'Athlete Tier',
+          value: 'Lvl ${profile.level}',
           iconColor: AppColors.accent,
           delay: 240,
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'RANK & TIER TELEMETRY',
-              value: 'LEVEL ${profile.level}',
+              title: 'Rank & Tier Telemetry',
+              value: 'Level ${profile.level}',
               description: 'Athlete experience tier. Progressing tiers grants improved sector claim speed and prestige insignia.',
               metrics: [
                 {'label': 'Current Level', 'val': 'Level ${profile.level}'},
@@ -136,62 +135,50 @@ class ProfileStatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.94, end: 1.0),
-      duration: Duration(milliseconds: 400 + delay),
-      curve: Curves.easeOutBack,
-      builder: (context, scale, child) {
-        return Transform.scale(
-          scale: scale,
-          child: child,
-        );
+    return GestureDetector(
+      onTap: () {
+        if (onTap != null) {
+          AppMotion.selectionTick();
+          onTap!();
+        }
       },
-      child: GestureDetector(
-        onTap: () {
-          if (onTap != null) {
-            HapticFeedback.selectionClick();
-            onTap!();
-          }
-        },
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.s16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppSpacing.br20,
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(icon, color: iconColor, size: 22),
-                  const Icon(Icons.info_outline_rounded, color: Colors.white24, size: 14),
-                ],
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.s16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppSpacing.br16,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: iconColor, size: 20),
+                const Icon(Icons.info_outline_rounded, color: AppColors.textMuted, size: 14),
+              ],
+            ),
+            const Spacer(),
+            Text(
+              value,
+              style: AppText.statMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
-              const Spacer(),
-              Text(
-                value,
-                style: AppText.statMedium.copyWith(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.4,
-                ),
+            ),
+            const SizedBox(height: AppSpacing.s4),
+            Text(
+              title,
+              style: AppText.labelSmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: AppSpacing.s4),
-              Text(
-                title,
-                style: AppText.labelSmall.copyWith(
-                  color: AppColors.textMuted,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
