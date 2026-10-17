@@ -193,10 +193,11 @@ void main() {
 
       expect(find.text('Voice Coach Audio Cues'), findsOneWidget);
       expect(find.text('Tactical Haptic Bursts'), findsOneWidget);
+      expect(find.text('Endurance Battery Saver'), findsOneWidget);
 
       // Tap first switch
       final switchTiles = find.byType(Switch);
-      expect(switchTiles, findsNWidgets(2));
+      expect(switchTiles, findsNWidgets(3));
 
       await tester.tap(switchTiles.first);
       await tester.pumpAndSettle();
@@ -223,6 +224,7 @@ void main() {
       expect(find.text('ATHLETE'), findsOneWidget);
       expect(find.text('TURF WAR'), findsOneWidget);
       expect(find.text('LEAGUE'), findsOneWidget);
+      expect(find.text('SQUAD'), findsOneWidget);
 
       // In athlete tab, Hero and Settings are visible
       expect(find.text('KAI_VALKYRIE'), findsOneWidget);

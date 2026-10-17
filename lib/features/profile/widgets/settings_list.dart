@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../coach/voice_coach_service.dart';
 import '../../gameplay/territory_service.dart';
+import '../../../services/battery_saver_service.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../ui/ui.dart';
@@ -150,6 +151,32 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               AppMotion.lightTick();
               setState(() {
                 _voiceCoach.toggleHaptics(val);
+              });
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+
+          // Endurance Battery Saver Mode
+          SwitchListTile(
+            secondary: const Icon(Icons.battery_saver_rounded, color: AppColors.accent, size: 22),
+            title: Text(
+              'Endurance Battery Saver',
+              style: AppText.bodyMedium.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+            subtitle: Text(
+              'AMOLED black HUD, suppresses map animations & optimizes GPS polling',
+              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10.5),
+            ),
+            activeThumbColor: AppColors.accent,
+            value: BatterySaverService().isBatterySaverEnabled,
+            onChanged: (val) {
+              AppMotion.lightTick();
+              setState(() {
+                BatterySaverService().setBatterySaver(val);
               });
             },
           ),

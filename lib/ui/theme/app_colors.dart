@@ -35,7 +35,7 @@ class AppColors {
   // Typography Colors
   static const Color textPrimary = Colors.white;
   static const Color textSecondary = Color(0xFF8E9BAE);
-  static const Color textMuted = Color(0xFF5A6678);
+  static const Color textMuted = Color(0xFF8692A2);
 
   // Podium Trophy Accents
   static const Color gold = Color(0xFFFFD700);

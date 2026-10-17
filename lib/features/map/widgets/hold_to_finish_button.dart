@@ -68,37 +68,44 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
   @override
   Widget build(BuildContext context) {
     if (!widget.isRunActive) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s12),
-        decoration: BoxDecoration(
-          color: AppColors.surface2,
-          borderRadius: AppSpacing.br16,
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.lock_outline_rounded, color: Colors.white38, size: 16),
-            const SizedBox(width: AppSpacing.s4),
-            Text(
-              'LOCKED',
-              style: AppText.label.copyWith(
-                color: Colors.white38,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
+      return Semantics(
+        button: false,
+        label: 'Run tracking inactive. Tap center play button to begin.',
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s12),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: AppSpacing.br16,
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline_rounded, color: Colors.white38, size: 16),
+              const SizedBox(width: AppSpacing.s4),
+              Text(
+                'LOCKED',
+                style: AppText.label.copyWith(
+                  color: Colors.white38,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
-    return Listener(
-      onPointerDown: _onPointerDown,
-      onPointerUp: _onPointerUp,
-      onPointerCancel: _onPointerCancel,
-      behavior: HitTestBehavior.opaque,
+    return Semantics(
+      button: true,
+      label: 'Hold for 1.5 seconds to finish and submit run',
+      child: Listener(
+        onPointerDown: _onPointerDown,
+        onPointerUp: _onPointerUp,
+        onPointerCancel: _onPointerCancel,
+        behavior: HitTestBehavior.opaque,
       child: AnimatedBuilder(
         animation: _holdController,
         builder: (context, child) {
@@ -156,6 +163,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
           );
         },
       ),
-    );
-  }
+    ),
+  );
+}
 }

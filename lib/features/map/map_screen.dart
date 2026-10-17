@@ -26,6 +26,7 @@ import '../../models/run_goal.dart';
 import '../../services/auto_pause_engine.dart';
 import '../../services/firebase_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/battery_saver_service.dart';
 import 'widgets/mode_tabs.dart';
 import 'widgets/run_hud.dart';
 import 'widgets/run_goal_sheet.dart';
@@ -36,6 +37,7 @@ import 'widgets/leaderboard_sheet.dart';
 import 'widgets/loop_celebration_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
+import 'widgets/amoled_battery_saver_overlay.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -56,6 +58,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final ApiClient _apiClient = ApiClient();
   final WebSocketService _wsService = WebSocketService();
   final FirebaseService _firebaseService = FirebaseService();
+  final BatterySaverService _batterySaverService = BatterySaverService();
   Timer? _rivalPollingTimer;
 
   // Real-time WebSocket presence and alert state
@@ -1561,6 +1564,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   _buildFloatingCircleButton(
                     icon: _isCameraFollowLocked ? Icons.gps_fixed_rounded : Icons.pan_tool_rounded,
                     color: _isCameraFollowLocked ? AppColors.accent : Colors.white70,
+                    tooltip: _isCameraFollowLocked ? 'Unlock Camera Pan' : 'Lock Camera Follow',
+                    semanticLabel: 'Toggle camera auto-follow',
                     onTap: () {
                       setState(() {
                         _isCameraFollowLocked = !_isCameraFollowLocked;
@@ -1572,18 +1577,37 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.layers_rounded,
+                    tooltip: 'AI Route & Sector Planner',
+                    semanticLabel: 'Suggest tactical running route',
                     onTap: _suggestAiRoute,
                   ),
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.flag_rounded,
                     color: _activeGoal.isActive ? AppColors.gold : Colors.white70,
+                    tooltip: 'Campaign Goals',
+                    semanticLabel: 'Open conquest goals selector',
                     onTap: _openGoalSelector,
                   ),
+                  if (_batterySaverService.isBatterySaverEnabled && _isRunActive) ...[
+                    const SizedBox(height: 10),
+                    _buildFloatingCircleButton(
+                      icon: Icons.battery_saver_rounded,
+                      color: AppColors.accent,
+                      tooltip: 'AMOLED Low-Power Screen',
+                      semanticLabel: 'Activate AMOLED pure black battery saver screen',
+                      onTap: () {
+                        AppMotion.mediumTick();
+                        _batterySaverService.setAmoledHudActive(true);
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.emergency_rounded,
                     color: Colors.redAccent,
+                    tooltip: 'Emergency SOS Beacon',
+                    semanticLabel: 'Trigger emergency SOS distress beacon',
                     onTap: () {
                       AppMotion.mediumTick();
                       showSosBeaconSheet(context, _currentLocation);
@@ -1592,6 +1616,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.my_location_rounded,
+                    tooltip: 'Recenter Map',
+                    semanticLabel: 'Recenter map to runner position',
                     onTap: _recenter,
                   ),
                 ],
@@ -1664,6 +1690,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 runGoal: _activeGoal,
                 currentAreaSqm: _accumulatedRunPreviewArea,
                 onOpenGoalSelector: _openGoalSelector,
+                isBatterySaverActive: _batterySaverService.isBatterySaverEnabled,
+                onToggleAmoledSaver: () {
+                  AppMotion.mediumTick();
+                  _batterySaverService.setAmoledHudActive(true);
+                },
                 onToggleRun: _toggleRun,
                 onSealShape: _sealCurrentShape,
                 onFinishRun: () {
@@ -1677,6 +1708,22 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 },
               ),
             ),
+
+            // 6. AMOLED Pure Black Low-Power Screen Overlay (when active)
+            ValueListenableBuilder<bool>(
+              valueListenable: _batterySaverService.isAmoledHudActiveNotifier,
+              builder: (context, isAmoledActive, _) {
+                if (!isAmoledActive || !_isRunActive) return const SizedBox.shrink();
+                return AmoledBatterySaverOverlay(
+                  distanceKm: _runDistanceKm,
+                  elapsedSeconds: _elapsedDurationSeconds,
+                  splitPace: _computeCurrentSplitPace(),
+                  currentSpeedKmh: _currentSpeedKmh,
+                  runGoal: _activeGoal,
+                  onWake: () => _batterySaverService.setAmoledHudActive(false),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -1687,25 +1734,34 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     required IconData icon,
     required VoidCallback onTap,
     Color color = Colors.white70,
+    String? tooltip,
+    String? semanticLabel,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        width: 44,
-        decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.92),
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+    return Semantics(
+      button: true,
+      label: semanticLabel ?? tooltip,
+      child: Tooltip(
+        message: tooltip ?? '',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            height: 44,
+            width: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surface.withValues(alpha: 0.92),
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
+            child: Icon(icon, color: color, size: 20),
+          ),
         ),
-        child: Icon(icon, color: color, size: 20),
       ),
     );
   }

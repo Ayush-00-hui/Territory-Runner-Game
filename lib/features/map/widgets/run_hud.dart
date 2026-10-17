@@ -22,6 +22,8 @@ class RunHud extends StatelessWidget {
   final RunGoal? runGoal;
   final double currentAreaSqm;
   final VoidCallback? onOpenGoalSelector;
+  final VoidCallback? onToggleAmoledSaver;
+  final bool isBatterySaverActive;
   final VoidCallback onToggleRun;
   final VoidCallback onSealShape;
   final VoidCallback onFinishRun;
@@ -43,6 +45,8 @@ class RunHud extends StatelessWidget {
     this.runGoal,
     this.currentAreaSqm = 0.0,
     this.onOpenGoalSelector,
+    this.onToggleAmoledSaver,
+    this.isBatterySaverActive = false,
     required this.onToggleRun,
     required this.onSealShape,
     required this.onFinishRun,
@@ -83,99 +87,107 @@ class RunHud extends StatelessWidget {
           children: [
             // Auto-Pause Banner
             if (isAutoPaused && isRunActive) ...[
-              Container(
-                margin: const EdgeInsets.only(bottom: AppSpacing.s10),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s4),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.2),
-                  borderRadius: AppSpacing.brFull,
-                  border: Border.all(color: AppColors.warning, width: 1),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.pause_circle_filled_rounded, color: AppColors.warning, size: 14),
-                    SizedBox(width: AppSpacing.s6),
-                    Text(
-                      'AUTO-PAUSED • MOVING SPEED < 1.8 KM/H',
-                      style: TextStyle(
-                        color: AppColors.warning,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 10,
-                        letterSpacing: 0.8,
+              Semantics(
+                liveRegion: true,
+                label: 'Run tracking auto-paused. Moving speed dropped below 1.8 kilometers per hour.',
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s4),
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withValues(alpha: 0.2),
+                    borderRadius: AppSpacing.brFull,
+                    border: Border.all(color: AppColors.warning, width: 1),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.pause_circle_filled_rounded, color: AppColors.warning, size: 14),
+                      SizedBox(width: AppSpacing.s6),
+                      Text(
+                        'AUTO-PAUSED • MOVING SPEED < 1.8 KM/H',
+                        style: TextStyle(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 10,
+                          letterSpacing: 0.8,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
 
             // Active Campaign Goal Progress Banner
             if (runGoal != null && runGoal!.isActive) ...[
-              GestureDetector(
-                onTap: onOpenGoalSelector,
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: AppSpacing.s10),
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s6),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.12),
-                    borderRadius: AppSpacing.br12,
-                    border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.8),
-                      width: 1.0,
+              Semantics(
+                button: true,
+                label: 'Run conquest goal: ${runGoal!.title}. Tap to configure.',
+                child: GestureDetector(
+                  onTap: onOpenGoalSelector,
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s6),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.12),
+                      borderRadius: AppSpacing.br12,
+                      border: Border.all(
+                        color: AppColors.gold.withValues(alpha: 0.8),
+                        width: 1.0,
+                      ),
                     ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.flag_rounded, color: AppColors.gold, size: 13),
-                              const SizedBox(width: 5),
-                              Text(
-                                runGoal!.title,
-                                style: const TextStyle(
-                                  color: AppColors.gold,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 10,
-                                  letterSpacing: 0.8,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.flag_rounded, color: AppColors.gold, size: 13),
+                                const SizedBox(width: 5),
+                                Text(
+                                  runGoal!.title,
+                                  style: const TextStyle(
+                                    color: AppColors.gold,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 10,
+                                    letterSpacing: 0.8,
+                                  ),
                                 ),
+                              ],
+                            ),
+                            Text(
+                              runGoal!.formatRemaining(
+                                currentDistanceKm: distanceKm,
+                                currentDurationSeconds: movingSeconds > 0 ? movingSeconds : elapsedSeconds,
+                                currentAreaSqm: currentAreaSqm,
                               ),
-                            ],
-                          ),
-                          Text(
-                            runGoal!.formatRemaining(
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 9.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        ClipRRect(
+                          borderRadius: AppSpacing.br8,
+                          child: LinearProgressIndicator(
+                            value: runGoal!.computeProgress(
                               currentDistanceKm: distanceKm,
                               currentDurationSeconds: movingSeconds > 0 ? movingSeconds : elapsedSeconds,
                               currentAreaSqm: currentAreaSqm,
-                            ),
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 9.5,
-                            ),
+                            ).clamp(0.0, 1.0),
+                            minHeight: 4,
+                            backgroundColor: AppColors.surface2,
+                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 5),
-                      ClipRRect(
-                        borderRadius: AppSpacing.br8,
-                        child: LinearProgressIndicator(
-                          value: runGoal!.computeProgress(
-                            currentDistanceKm: distanceKm,
-                            currentDurationSeconds: movingSeconds > 0 ? movingSeconds : elapsedSeconds,
-                            currentAreaSqm: currentAreaSqm,
-                          ).clamp(0.0, 1.0),
-                          minHeight: 4,
-                          backgroundColor: AppColors.surface2,
-                          valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -422,46 +434,50 @@ class RunHud extends StatelessWidget {
               children: [
                 // Left "SEAL SHAPE" manual trigger
                 Flexible(
-                  child: GestureDetector(
-                    onTap: () {
-                      AppMotion.mediumTick();
-                      onSealShape();
-                    },
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: AppSpacing.br16,
-                        border: Border.all(
-                          color: isNearClosure ? AppColors.accent : AppColors.border,
-                          width: 1.2,
+                  child: Semantics(
+                    button: true,
+                    label: 'Seal territory shape',
+                    child: GestureDetector(
+                      onTap: () {
+                        AppMotion.mediumTick();
+                        onSealShape();
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s12),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: AppSpacing.br16,
+                          border: Border.all(
+                            color: isNearClosure ? AppColors.accent : AppColors.border,
+                            width: 1.2,
+                          ),
+                          boxShadow: AppSpacing.subtleElevation,
                         ),
-                        boxShadow: AppSpacing.subtleElevation,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.shield_rounded,
-                            color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
-                            size: 16,
-                          ),
-                          const SizedBox(width: AppSpacing.s4),
-                          const Flexible(
-                            child: Text(
-                              'SEAL SHAPE',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 10,
-                                letterSpacing: 0.6,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.shield_rounded,
+                              color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
+                              size: 16,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: AppSpacing.s4),
+                            const Flexible(
+                              child: Text(
+                                'SEAL SHAPE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 10,
+                                  letterSpacing: 0.6,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -470,31 +486,35 @@ class RunHud extends StatelessWidget {
                 const SizedBox(width: AppSpacing.s8),
 
                 // Center Confident Matte Play/Pause Action Button
-                GestureDetector(
-                  onTap: () {
-                    AppMotion.heavyBurst();
-                    onToggleRun();
-                  },
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    height: 58,
-                    width: 58,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.accent,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+                Semantics(
+                  button: true,
+                  label: isRunActive ? 'Pause run tracking' : 'Start run tracking',
+                  child: GestureDetector(
+                    onTap: () {
+                      AppMotion.heavyBurst();
+                      onToggleRun();
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      height: 58,
+                      width: 58,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.accent,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(
+                          isRunActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          color: Colors.black,
+                          size: 34,
                         ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Icon(
-                        isRunActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
-                        color: Colors.black,
-                        size: 34,
                       ),
                     ),
                   ),
