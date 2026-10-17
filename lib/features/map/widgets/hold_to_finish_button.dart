@@ -114,7 +114,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
                 width: 1.5,
               ),
               boxShadow: _isHolding
-                  ? AppSpacing.neonGlow(AppColors.rival, blur: 14, spread: 2)
+                  ? AppSpacing.subtleElevation
                   : null,
             ),
             child: Row(

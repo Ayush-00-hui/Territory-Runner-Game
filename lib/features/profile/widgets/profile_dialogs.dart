@@ -94,7 +94,7 @@ void showFactionSelectionDialog(
     {
       'name': 'Cyber Vanguard',
       'tag': 'SYSTEM GUARDIANS',
-      'color': const Color(0xFF00E676),
+      'color': AppColors.accent,
       'icon': Icons.security_rounded,
       'perk': 'Precision spatial radar & fast polygon enclosure recognition (+10% base claim speed)',
     },
@@ -108,7 +108,7 @@ void showFactionSelectionDialog(
     {
       'name': 'Quantum Pulse',
       'tag': 'ANTI-GRAVITY DRIFTERS',
-      'color': const Color(0xFF8A2BE2),
+      'color': const Color(0xFF7058D4),
       'icon': Icons.bolt_rounded,
       'perk': 'Zero-G sub-orbital glide thrust & +40% sprint momentum conversion multiplier',
     },

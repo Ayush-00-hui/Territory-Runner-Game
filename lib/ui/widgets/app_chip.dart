@@ -48,7 +48,7 @@ class AppChip extends StatelessWidget {
         borderRadius: AppSpacing.brFull,
         border: Border.all(color: borderColor, width: 1.0),
         boxShadow: isSelected
-            ? AppSpacing.neonGlow(activeColor, blur: 10, spread: 0.5)
+            ? AppSpacing.subtleElevation
             : null,
       ),
       child: Row(

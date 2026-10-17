@@ -6,6 +6,7 @@ import 'package:clipper2/clipper2.dart';
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
 import '../../services/firebase_service.dart';
+import '../../ui/theme/app_colors.dart';
 import 'polygon_enclosure_engine.dart';
 
 class TerritoryService {
@@ -152,7 +153,7 @@ class TerritoryService {
     bool isPendingReview = false,
   }) async {
     final String activeOwner = ownerId ?? _firebaseService.currentUserId;
-    final Color activeColor = color ?? const Color(0xFF00E676);
+    final Color activeColor = color ?? AppColors.accent;
     final newPath64 = latLngsToPath64(polygon);
     final box = _territoryBox;
 
@@ -340,7 +341,7 @@ class TerritoryService {
       polygons: [rivalPolygon],
       areaSqMeters: area,
       capturedAt: DateTime.now(),
-      color: const Color(0xFFFF3366), // Crimson Red
+      color: AppColors.rival, // Muted Crimson
       isPendingReview: false,
     );
 

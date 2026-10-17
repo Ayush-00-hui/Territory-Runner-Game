@@ -68,9 +68,7 @@ class RunHud extends StatelessWidget {
                 : (isNearClosure ? AppColors.accent : AppColors.border),
             width: isNearClosure ? 1.6 : 1.2,
           ),
-          boxShadow: isNearClosure
-              ? AppSpacing.neonGlow(AppColors.accent, blur: 24, spread: 1)
-              : AppSpacing.hudShadow,
+          boxShadow: AppSpacing.hudShadow,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -354,25 +352,30 @@ class RunHud extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s12),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF8A2BE2).withValues(alpha: 0.22),
+                        color: AppColors.surface,
                         borderRadius: AppSpacing.br16,
-                        border: Border.all(color: const Color(0xFF8A2BE2), width: 1.5),
-                        boxShadow: isNearClosure
-                            ? AppSpacing.neonGlow(const Color(0xFF8A2BE2), blur: 14)
-                            : AppSpacing.neonGlow(const Color(0xFF8A2BE2), blur: 8),
+                        border: Border.all(
+                          color: isNearClosure ? AppColors.accent : AppColors.border,
+                          width: 1.2,
+                        ),
+                        boxShadow: AppSpacing.subtleElevation,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.shield_rounded, color: AppColors.info, size: 16),
-                          SizedBox(width: AppSpacing.s4),
-                          Flexible(
+                          Icon(
+                            Icons.shield_rounded,
+                            color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
+                            size: 16,
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          const Flexible(
                             child: Text(
                               'SEAL SHAPE',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w800,
                                 fontSize: 10,
                                 letterSpacing: 0.6,
                               ),
@@ -387,7 +390,7 @@ class RunHud extends StatelessWidget {
 
                 const SizedBox(width: AppSpacing.s8),
 
-                // Center Giant Glowing Play/Pause Action Button
+                // Center Confident Matte Play/Pause Action Button
                 GestureDetector(
                   onTap: () {
                     AppMotion.heavyBurst();
@@ -400,7 +403,13 @@ class RunHud extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: AppColors.accent,
-                      boxShadow: AppSpacing.neonGlow(AppColors.accent, blur: 18, spread: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
                     child: Center(
                       child: Icon(

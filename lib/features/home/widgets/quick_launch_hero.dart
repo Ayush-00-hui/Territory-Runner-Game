@@ -117,10 +117,6 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: _isGpsReady ? AppColors.accent : AppColors.warning,
-                    boxShadow: AppSpacing.neonGlow(
-                      _isGpsReady ? AppColors.accent : AppColors.warning,
-                      blur: 6,
-                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s8),
@@ -154,9 +150,8 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                 borderRadius: AppSpacing.br20,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accent.withValues(alpha: 0.45),
-                    blurRadius: 20,
-                    spreadRadius: 1,
+                    color: Colors.black.withValues(alpha: 0.35),
+                    blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
                 ],

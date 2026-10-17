@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/runner_profile.dart';
 import '../models/territory.dart';
+import '../ui/theme/app_colors.dart';
 import 'firebase_service.dart';
 
 /// Exception thrown when API calls encounter unrecoverable network or server errors.
@@ -281,7 +281,7 @@ class ApiClient {
         }
 
         final isSelf = ownerId == _firebaseService.currentUserId;
-        final color = isSelf ? const Color(0xFF00E676) : const Color(0xFFFF3366);
+        final color = isSelf ? AppColors.accent : AppColors.rival;
 
         territories.add(Territory(
           id: id,

@@ -54,14 +54,15 @@ void main() {
         strength: 40.0,
       );
 
+      final defendTime = DateTime.now();
       final defended = territory.copyWith(
         strength: 100.0,
-        lastDefendedAt: DateTime.now(),
+        lastDefendedAt: defendTime,
       );
 
       expect(defended.strength, equals(100.0));
-      expect(defended.computeCurrentStrength(), equals(100.0));
-      expect(defended.isWeak(), isFalse);
+      expect(defended.computeCurrentStrength(now: defendTime), equals(100.0));
+      expect(defended.isWeak(now: defendTime), isFalse);
     });
 
     test('Backward compatibility: legacy JSON without strength or lastDefendedAt deserializes safely', () {

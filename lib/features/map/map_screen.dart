@@ -164,15 +164,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFF1E1015),
+          backgroundColor: AppColors.bgElevated,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFFFF3366), width: 1.5),
+            side: const BorderSide(color: AppColors.rival, width: 1.5),
           ),
           content: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 28),
+              const Icon(Icons.warning_amber_rounded, color: AppColors.rival, size: 28),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -182,7 +182,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     const Text(
                       'TERRITORY UNDER ATTACK!',
                       style: TextStyle(
-                        color: Color(0xFFFF3366),
+                        color: AppColors.rival,
                         fontWeight: FontWeight.w900,
                         fontSize: 12,
                         letterSpacing: 1.1,
@@ -200,7 +200,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ),
           action: SnackBarAction(
             label: 'DEFEND',
-            textColor: const Color(0xFFFF3366),
+            textColor: AppColors.rival,
             onPressed: _defendWeakestTerritory,
           ),
           duration: const Duration(seconds: 8),
@@ -358,7 +358,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.gps_fixed_rounded, color: Color(0xFF00E676), size: 16),
+                    Icon(Icons.gps_fixed_rounded, color: AppColors.accent, size: 16),
                     SizedBox(width: 8),
                     Text('High-Accuracy GPS (Sub-meter)', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                   ],
@@ -1088,7 +1088,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       const SnackBar(
         backgroundColor: AppColors.surface,
         duration: Duration(seconds: 2),
-        content: Text('⚔️ Rival Crimson Sector #99 spawned! Executing slice conquest loop...', style: TextStyle(color: Color(0xFFFF3366), fontWeight: FontWeight.bold)),
+        content: Text('⚔️ Rival Crimson Sector #99 spawned! Executing slice conquest loop...', style: TextStyle(color: AppColors.rival, fontWeight: FontWeight.bold)),
       ),
     );
 
@@ -1302,9 +1302,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.rival.withValues(alpha: 0.25),
-                              blurRadius: 8,
-                              spreadRadius: 1,
+                              color: Colors.black.withValues(alpha: 0.35),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
@@ -1379,7 +1379,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           : AppColors.border,
                     ),
                     boxShadow: _locationService.pacerMode != VirtualPacerMode.none
-                        ? AppSpacing.neonGlow(AppColors.info, blur: 8)
+                        ? AppSpacing.subtleElevation
                         : null,
                   ),
                   child: Row(
@@ -1510,8 +1510,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       border: Border.all(color: AppColors.rival, width: 1.5),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.rival.withValues(alpha: 0.35),
-                          blurRadius: 10,
+                          color: Colors.black.withValues(alpha: 0.35),
+                          blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
                       ],
@@ -1662,15 +1662,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor: const Color(0xFF1E1015),
+          backgroundColor: AppColors.bgElevated,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: Color(0xFFFF3366), width: 1.5),
+            side: const BorderSide(color: AppColors.rival, width: 1.5),
           ),
           content: const Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: Color(0xFFFF3366), size: 28),
+              Icon(Icons.warning_amber_rounded, color: AppColors.rival, size: 28),
               SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1680,7 +1680,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     Text(
                       'TERRITORY UNDER ATTACK!',
                       style: TextStyle(
-                        color: Color(0xFFFF3366),
+                        color: AppColors.rival,
                         fontWeight: FontWeight.w900,
                         fontSize: 12,
                         letterSpacing: 1.1,
@@ -1698,7 +1698,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ),
           action: SnackBarAction(
             label: 'DEFEND',
-            textColor: const Color(0xFFFF3366),
+            textColor: AppColors.rival,
             onPressed: _defendWeakestTerritory,
           ),
           duration: const Duration(seconds: 8),

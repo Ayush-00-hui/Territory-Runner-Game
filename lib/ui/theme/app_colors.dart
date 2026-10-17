@@ -4,32 +4,32 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Core Surface & Background Palette
-  static const Color bgDeep = Color(0xFF0B0C10);
-  static const Color bgElevated = Color(0xFF14161D);
-  static const Color surface = Color(0xFF161822);
-  static const Color surface2 = Color(0xFF1F2332);
-  static const Color surfaceGlass = Color(0xF014161E);
-  static const Color border = Color(0xFF262A3B);
-  static const Color borderSubtle = Color(0x33262A3B);
+  // Core Surface & Background Palette (Whoop / Oura Calm Obsidian)
+  static const Color bgDeep = Color(0xFF0B0C0E);
+  static const Color bgElevated = Color(0xFF121417);
+  static const Color surface = Color(0xFF16191D);
+  static const Color surface2 = Color(0xFF1F2329);
+  static const Color surfaceGlass = Color(0xF2121417);
+  static const Color border = Color(0xFF2A2E35);
+  static const Color borderSubtle = Color(0x1AFFFFFF);
 
-  // Brand Accent (Nike / Strava / Whoop Athletic Neon Emerald)
-  static const Color accent = Color(0xFF00E676);
-  static const Color accentSecondary = Color(0xFF00F0FF);
-  static const Color secondary = Color(0xFFFF6D00); // Solar Orange
-  static const Color cyanThruster = Color(0xFF00F0FF);
+  // Primary Brand Accent (Whoop Athletic Mint)
+  static const Color accent = Color(0xFF3DDC97);
+  static const Color accentSecondary = Color(0xFF5C85FF); // Calm Slate Blue
+  static const Color secondary = Color(0xFFE5A93C);      // Muted Amber
+  static const Color cyanThruster = Color(0xFF5C85FF);
 
   // Semantic Territory & Feedback Tokens
-  static const Color mine = Color(0xFF00E676);       // Sovereign Territory (Neon Emerald)
-  static const Color rival = Color(0xFFFF3366);      // Contested / Rival Territory (Coral Red)
-  static const Color warning = Color(0xFFFFB300);    // Anomaly / Warning Alert (Amber)
-  static const Color info = Color(0xFF00F0FF);       // Guidance / Telemetry (Cyan)
+  static const Color mine = Color(0xFF3DDC97);          // Sovereign Territory (Mint)
+  static const Color rival = Color(0xFFE05353);         // Contested / Rival Territory (Muted Crimson)
+  static const Color warning = Color(0xFFE5A93C);       // Telemetry / Anomaly Alert (Amber)
+  static const Color info = Color(0xFF5C85FF);          // Guidance / Pacer (Slate Blue)
 
   // Legacy Aliases
-  static const Color accentGlow = Color(0x3300E676);
-  static const Color positiveGreen = Color(0xFF00E676);
-  static const Color actionRed = Color(0xFFFF3366);
-  static const Color amberStreak = Color(0xFFFFB800);
+  static const Color accentGlow = Color(0x1A3DDC97);
+  static const Color positiveGreen = Color(0xFF3DDC97);
+  static const Color actionRed = Color(0xFFE05353);
+  static const Color amberStreak = Color(0xFFE5A93C);
 
   // Typography Colors
   static const Color textPrimary = Colors.white;

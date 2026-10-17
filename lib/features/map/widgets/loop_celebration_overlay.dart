@@ -147,9 +147,9 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                         border: Border.all(color: AppColors.accent, width: 2.0),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.accent.withValues(alpha: 0.6),
-                            blurRadius: 36,
-                            spreadRadius: 4,
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 32,
+                            offset: const Offset(0, 12),
                           ),
                         ],
                       ),
@@ -160,10 +160,16 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                           Container(
                             height: 64,
                             width: 64,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               shape: BoxShape.circle,
                               color: AppColors.accent,
-                              boxShadow: AppSpacing.neonGlow(AppColors.accent, blur: 20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 10,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
                             ),
                             child: const Center(
                               child: Icon(

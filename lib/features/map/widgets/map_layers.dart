@@ -203,8 +203,9 @@ class MapLayers {
               border: Border.all(color: badgeColor.withValues(alpha: 0.8), width: 1.2),
               boxShadow: [
                 BoxShadow(
-                  color: badgeColor.withValues(alpha: 0.25),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 4,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
@@ -339,13 +340,13 @@ class MapLayers {
                 height: 22,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF2979FF),
-                  border: Border.all(color: Colors.white, width: 3.5),
+                  color: AppColors.accent,
+                  border: Border.all(color: Colors.white, width: 3.0),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF2979FF).withValues(alpha: 0.8),
-                      blurRadius: 10,
-                      spreadRadius: 2,
+                      color: Colors.black.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -378,8 +379,9 @@ class MapLayers {
                   border: Border.all(color: rivalColor.withValues(alpha: 0.8), width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: rivalColor.withValues(alpha: 0.3),
-                      blurRadius: 6,
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
                   ],
                 ),

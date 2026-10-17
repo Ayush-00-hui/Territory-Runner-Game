@@ -5,13 +5,13 @@ import 'package:territory_runner/ui/ui.dart';
 void main() {
   group('Territory Runner Design System Tokens', () {
     test('AppColors token palette definitions', () {
-      expect(AppColors.bgDeep, const Color(0xFF0B0C10));
-      expect(AppColors.surface, const Color(0xFF161822));
-      expect(AppColors.accent, const Color(0xFF00E676));
-      expect(AppColors.mine, const Color(0xFF00E676));
-      expect(AppColors.rival, const Color(0xFFFF3366));
-      expect(AppColors.warning, const Color(0xFFFFB300));
-      expect(AppColors.info, const Color(0xFF00F0FF));
+      expect(AppColors.bgDeep, const Color(0xFF0B0C0E));
+      expect(AppColors.surface, const Color(0xFF16191D));
+      expect(AppColors.accent, const Color(0xFF3DDC97));
+      expect(AppColors.mine, const Color(0xFF3DDC97));
+      expect(AppColors.rival, const Color(0xFFE05353));
+      expect(AppColors.warning, const Color(0xFFE5A93C));
+      expect(AppColors.info, const Color(0xFF5C85FF));
     });
 
     test('AppSpacing scale and radii consistency', () {

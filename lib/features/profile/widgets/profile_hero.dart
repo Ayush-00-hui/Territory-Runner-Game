@@ -48,13 +48,14 @@ class ProfileHeroCard extends StatelessWidget {
                 center: Container(
                   height: 56,
                   width: 56,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.accent,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.accent.withValues(alpha: 0.35),
-                        blurRadius: 14,
+                        color: Colors.black26,
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
@@ -129,21 +130,21 @@ class ProfileHeroCard extends StatelessWidget {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF8A2BE2).withValues(alpha: 0.25),
+                              color: AppColors.surface2,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: const Color(0xFF8A2BE2), width: 1.0),
+                              border: Border.all(color: AppColors.border, width: 1.0),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.shield_rounded, color: Color(0xFF00F0FF), size: 11),
+                                const Icon(Icons.shield_rounded, color: AppColors.accent, size: 11),
                                 const SizedBox(width: 4),
                                 Text(
                                   profile.faction.isNotEmpty ? profile.faction : 'FACTION',
                                   style: AppText.labelSmall.copyWith(
-                                    color: const Color(0xFF00F0FF),
+                                    color: AppColors.textPrimary,
                                     fontSize: 9,
-                                    fontWeight: FontWeight.w900,
+                                    fontWeight: FontWeight.w700,
                                     letterSpacing: 0.4,
                                   ),
                                 ),

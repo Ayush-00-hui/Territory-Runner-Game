@@ -112,7 +112,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                 ? Border.all(color: widget.backgroundColor, width: 1.5)
                 : null,
             boxShadow: (!widget.isOutlined && enabled)
-                ? AppSpacing.neonGlow(widget.backgroundColor, blur: 14, spread: 0.5)
+                ? AppSpacing.subtleElevation
                 : null,
           ),
           child: Center(child: content),

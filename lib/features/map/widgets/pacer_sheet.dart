@@ -130,7 +130,7 @@ class VirtualPacerSheet extends StatelessWidget {
                 title: 'Virtual Sprint — 15.0 km/h',
                 subtitle: '4.17 m/s high-velocity athletic charge',
                 icon: Icons.bolt_rounded,
-                color: const Color(0xFF8A2BE2),
+                color: AppColors.accent,
                 setModalState: setModalState,
               ),
               const SizedBox(height: AppSpacing.s16),

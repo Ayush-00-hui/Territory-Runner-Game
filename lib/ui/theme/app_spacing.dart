@@ -48,28 +48,37 @@ class AppSpacing {
   static final Border rivalBorder = Border.all(color: AppColors.rival, width: 1.2);
   static final Border warningBorder = Border.all(color: AppColors.warning, width: 1.2);
 
-  // Elevation Shadows
+  // Elevation Shadows (Calm Matte Ambient Drops — No Colored Halos)
   static final List<BoxShadow> cardShadow = [
     BoxShadow(
       color: Colors.black.withValues(alpha: 0.35),
-      blurRadius: 18,
-      offset: const Offset(0, 8),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
     ),
   ];
 
   static final List<BoxShadow> hudShadow = [
     BoxShadow(
-      color: Colors.black.withValues(alpha: 0.6),
-      blurRadius: 36,
-      offset: const Offset(0, 16),
+      color: Colors.black.withValues(alpha: 0.5),
+      blurRadius: 24,
+      offset: const Offset(0, 8),
     ),
   ];
 
-  static List<BoxShadow> neonGlow(Color color, {double blur = 16.0, double spread = 1.0}) => [
+  /// Calm ambient drop shadow (replaced loud neon halos)
+  static List<BoxShadow> neonGlow(Color color, {double blur = 8.0, double spread = 0.0}) => [
     BoxShadow(
-      color: color.withValues(alpha: 0.45),
+      color: Colors.black.withValues(alpha: 0.25),
       blurRadius: blur,
-      spreadRadius: spread,
+      offset: const Offset(0, 2),
+    ),
+  ];
+
+  static final List<BoxShadow> subtleElevation = [
+    BoxShadow(
+      color: Colors.black.withValues(alpha: 0.25),
+      blurRadius: 8,
+      offset: const Offset(0, 2),
     ),
   ];
 }

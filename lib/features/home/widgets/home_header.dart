@@ -43,7 +43,7 @@ class _HomeHeaderState extends State<HomeHeader>
 
   Color _factionColor(String faction) {
     if (faction.contains('Solar')) return const Color(0xFFFF9100);
-    if (faction.contains('Quantum')) return const Color(0xFF8A2BE2);
+    if (faction.contains('Quantum')) return const Color(0xFF7058D4);
     return AppColors.accent;
   }
 
@@ -65,7 +65,7 @@ class _HomeHeaderState extends State<HomeHeader>
             color: AppColors.surface,
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.accent, width: 1.8),
-            boxShadow: AppSpacing.neonGlow(AppColors.accent, blur: 12, spread: 1),
+            boxShadow: AppSpacing.subtleElevation,
           ),
           child: Center(
             child: Text(
@@ -165,8 +165,9 @@ class _HomeHeaderState extends State<HomeHeader>
               border: Border.all(color: AppColors.rival.withValues(alpha: 0.4)),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.rival.withValues(alpha: 0.25),
-                  blurRadius: 10,
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),

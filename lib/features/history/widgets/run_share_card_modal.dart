@@ -322,9 +322,9 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
         border: Border.all(color: borderColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: accentColor.withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 24,
-            spreadRadius: 2,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
@@ -373,12 +373,6 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                               decoration: BoxDecoration(
                                 color: accentColor,
                                 shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: accentColor,
-                                    blurRadius: 6,
-                                  ),
-                                ],
                               ),
                             ),
                             const SizedBox(width: 6),

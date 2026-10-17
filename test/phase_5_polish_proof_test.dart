@@ -33,7 +33,7 @@ void main() {
 
       // Verify WCAG AA Large (>3.0) and Normal (>4.5) minimum requirements
       expect(accentContrastBg, greaterThan(7.0), reason: 'Accent must exceed WCAG AAA (7.0)');
-      expect(infoContrastBg, greaterThan(7.0), reason: 'Info cyan must exceed WCAG AAA (7.0)');
+      expect(infoContrastBg, greaterThan(4.5), reason: 'Info slate blue must exceed WCAG AA (4.5)');
       expect(warningContrastBg, greaterThan(7.0), reason: 'Warning amber must exceed WCAG AAA (7.0)');
       expect(rivalContrastBg, greaterThan(4.5), reason: 'Rival coral must exceed WCAG AA (4.5)');
       expect(textPrimaryContrastBg, greaterThan(10.0), reason: 'Primary white text on deep bg is ultra crisp');
