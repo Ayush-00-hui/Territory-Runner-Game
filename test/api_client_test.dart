@@ -186,6 +186,68 @@ void main() {
       expect(entries[1].rank, equals(2));
       expect(entries[1].username, equals('ShadowSprint'));
     });
+
+    test('getFactionStandings parses GET /v1/factions/standings payload correctly', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/v1/factions/standings');
+        return http.Response(
+          jsonEncode({
+            'total_area_sqm': 100000.0,
+            'standings': [
+              {
+                'faction': 'Cyber Vanguard',
+                'total_area_sqm': 50000.0,
+                'member_count': 10,
+                'percentage': 50.0,
+              },
+              {
+                'faction': 'Iron Syndicate',
+                'total_area_sqm': 30000.0,
+                'member_count': 6,
+                'percentage': 30.0,
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      final client = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      final standings = await client.getFactionStandings();
+
+      expect(standings, isNotNull);
+      expect(standings!.totalAreaSqm, equals(100000.0));
+      expect(standings.standings.length, equals(2));
+      expect(standings.standings[0].faction, equals('Cyber Vanguard'));
+      expect(standings.standings[0].percentage, equals(50.0));
+    });
+
+    test('updateUserFaction sends PUT /v1/me/faction payload', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/v1/me/faction');
+        expect(request.method, 'PUT');
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['faction'], equals('Neon Nomads'));
+        return http.Response(jsonEncode({'status': 'ok'}), 200);
+      });
+
+      final client = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      final success = await client.updateUserFaction('Neon Nomads');
+      expect(success, isTrue);
+    });
+
+    test('registerDeviceToken sends POST /v1/device-token payload', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/v1/device-token');
+        expect(request.method, 'POST');
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['token'], equals('fcm_mock_device_token_abc123'));
+        return http.Response(jsonEncode({'status': 'registered'}), 200);
+      });
+
+      final client = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      await client.registerDeviceToken('fcm_mock_device_token_abc123');
+    });
   });
 }
 

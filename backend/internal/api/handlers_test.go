@@ -768,4 +768,65 @@ func TestConquestTriggersFCMAlert(t *testing.T) {
 	assert.Equal(t, victimUID, mockNotifier.SentAlerts[0].UserID)
 }
 
+func TestGetFactionStandings(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+	apiHandler := api.NewAPI(memStore, nil, api.WithAuthenticator(authenticator))
+	router := api.SetupRouter(apiHandler, authenticator)
+
+	// Set up users in two factions
+	ctx := context.Background()
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_vanguard", Username: "VanguardLead", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_syndicate", Username: "SyndicateLead", Faction: "Neon Syndicate"})
+
+	// Award territory to vanguard
+	_, _ = memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_van_01",
+		UserID:         "usr_vanguard",
+		IdempotencyKey: "idem_van_01",
+	}, []geo.EnclosedLoop{{AreaSqMeters: 50000.0}}, nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/factions/standings", nil)
+	req.Header.Set("X-Dev-User", "usr_vanguard")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp store.FactionStandingsResponse
+	err := json.Unmarshal(rec.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, 50000.0, resp.TotalAreaSqm)
+	assert.Len(t, resp.Standings, 3) // All 3 canonical factions
+	assert.Equal(t, "Cyber Vanguard", resp.Standings[0].Faction)
+	assert.Equal(t, 100.0, resp.Standings[0].Percentage)
+}
+
+func TestUpdateUserFaction(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+	apiHandler := api.NewAPI(memStore, nil, api.WithAuthenticator(authenticator))
+	router := api.SetupRouter(apiHandler, authenticator)
+
+	ctx := context.Background()
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_nomad", Username: "NomadRunner", Faction: "Cyber Vanguard"})
+
+	body, _ := json.Marshal(map[string]string{"faction": "Solaris Nomads"})
+	req := httptest.NewRequest(http.MethodPut, "/v1/me/faction", bytes.NewReader(body))
+	req.Header.Set("X-Dev-User", "usr_nomad")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify updated in store
+	user, err := memStore.GetUser(ctx, "usr_nomad")
+	assert.NoError(t, err)
+	assert.Equal(t, "Solaris Nomads", user.Faction)
+}
+
+
 

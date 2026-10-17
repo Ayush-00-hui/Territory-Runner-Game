@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../models/faction_standing.dart';
+import '../../../models/leaderboard_entry.dart';
 import '../../../models/runner_profile.dart';
 import '../../../models/territory.dart';
+import '../../../services/api_client.dart';
 import '../../../ui/ui.dart';
 
 enum LeaderboardScope { global, city, local }
@@ -8,11 +11,17 @@ enum LeaderboardScope { global, city, local }
 class FactionLeaderboard extends StatefulWidget {
   final RunnerProfile profile;
   final List<Territory> territories;
+  final ApiClient? apiClient;
+  final FactionStandingsResponse? initialStandings;
+  final List<LeaderboardEntry>? initialLeaderboard;
 
   const FactionLeaderboard({
     super.key,
     required this.profile,
     required this.territories,
+    this.apiClient,
+    this.initialStandings,
+    this.initialLeaderboard,
   });
 
   @override
@@ -21,25 +30,125 @@ class FactionLeaderboard extends StatefulWidget {
 
 class _FactionLeaderboardState extends State<FactionLeaderboard> {
   LeaderboardScope _scope = LeaderboardScope.global;
+  late final ApiClient _apiClient;
+
+  FactionStandingsResponse? _standings;
+  List<LeaderboardEntry> _leaderboard = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _apiClient = widget.apiClient ?? ApiClient();
+
+    if (widget.initialStandings != null || widget.initialLeaderboard != null) {
+      _standings = widget.initialStandings;
+      _leaderboard = widget.initialLeaderboard ?? [];
+      _isLoading = false;
+    } else {
+      _loadData();
+    }
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final results = await Future.wait([
+        _apiClient.getFactionStandings(),
+        _apiClient.getLeaderboard(limit: 50),
+      ]);
+
+      if (!mounted) return;
+      setState(() {
+        _standings = results[0] as FactionStandingsResponse;
+        _leaderboard = results[1] as List<LeaderboardEntry>;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Using local territorial telemetry (offline).';
+      });
+    }
+  }
 
   double _getUserClaimedAreaKm2() {
     final double sqM = widget.territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
     return sqM / 1000000.0;
   }
 
+  String _formatArea(double areaSqm) {
+    if (areaSqm >= 1000000.0) {
+      return '${(areaSqm / 1000000.0).toStringAsFixed(2)} km²';
+    } else if (areaSqm > 0.0) {
+      return '${areaSqm.toStringAsFixed(0)} m²';
+    }
+    return '0 m²';
+  }
+
   @override
   Widget build(BuildContext context) {
     final userAreaKm2 = _getUserClaimedAreaKm2();
+    final userAreaSqm = userAreaKm2 * 1000000.0;
 
-    // Dynamic faction territorial calculations
-    final double vanguardArea = 184.2 + userAreaKm2;
-    const double syndicateArea = 142.5;
-    const double nomadsArea = 98.4;
-    final double totalArea = vanguardArea + syndicateArea + nomadsArea;
+    // Resolve faction stats either from server standings or local fallback
+    FactionStanding vanguard;
+    FactionStanding syndicate;
+    FactionStanding nomads;
 
-    final int vanguardPct = ((vanguardArea / totalArea) * 100).round();
-    final int syndicatePct = ((syndicateArea / totalArea) * 100).round();
-    final int nomadsPct = 100 - vanguardPct - syndicatePct;
+    if (_standings != null && _standings!.standings.isNotEmpty) {
+      vanguard = _standings!.standings.firstWhere(
+        (s) => s.faction.toLowerCase().contains('vanguard'),
+        orElse: () => const FactionStanding(faction: 'Cyber Vanguard', totalAreaSqm: 0, memberCount: 0, percentage: 0),
+      );
+      syndicate = _standings!.standings.firstWhere(
+        (s) => s.faction.toLowerCase().contains('syndicate'),
+        orElse: () => const FactionStanding(faction: 'Iron Syndicate', totalAreaSqm: 0, memberCount: 0, percentage: 0),
+      );
+      nomads = _standings!.standings.firstWhere(
+        (s) => s.faction.toLowerCase().contains('nomad'),
+        orElse: () => const FactionStanding(faction: 'Neon Nomads', totalAreaSqm: 0, memberCount: 0, percentage: 0),
+      );
+    } else {
+      // Local fallback based on verified territories
+      final userFaction = widget.profile.faction.toLowerCase();
+      vanguard = FactionStanding(
+        faction: 'Cyber Vanguard',
+        totalAreaSqm: userFaction.contains('vanguard') ? userAreaSqm : 0,
+        memberCount: userFaction.contains('vanguard') ? 1 : 0,
+        percentage: 0,
+      );
+      syndicate = FactionStanding(
+        faction: 'Iron Syndicate',
+        totalAreaSqm: userFaction.contains('syndicate') ? userAreaSqm : 0,
+        memberCount: userFaction.contains('syndicate') ? 1 : 0,
+        percentage: 0,
+      );
+      nomads = FactionStanding(
+        faction: 'Neon Nomads',
+        totalAreaSqm: userFaction.contains('nomad') ? userAreaSqm : 0,
+        memberCount: userFaction.contains('nomad') ? 1 : 0,
+        percentage: 0,
+      );
+    }
+
+    final double totalAreaSqm = vanguard.totalAreaSqm + syndicate.totalAreaSqm + nomads.totalAreaSqm;
+
+    int vanguardPct = 33;
+    int syndicatePct = 33;
+    int nomadsPct = 34;
+
+    if (totalAreaSqm > 0) {
+      vanguardPct = ((vanguard.totalAreaSqm / totalAreaSqm) * 100).round();
+      syndicatePct = ((syndicate.totalAreaSqm / totalAreaSqm) * 100).round();
+      nomadsPct = (100 - vanguardPct - syndicatePct).clamp(0, 100);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -81,7 +190,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                       border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
                     ),
                     child: Text(
-                      'CONTESTED',
+                      totalAreaSqm > 0 ? 'CONTESTED' : 'UNCLAIMED',
                       style: AppText.label.copyWith(
                         color: AppColors.accent,
                         fontSize: 9.5,
@@ -101,17 +210,17 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                   child: Row(
                     children: [
                       Expanded(
-                        flex: vanguardPct,
+                        flex: vanguardPct > 0 ? vanguardPct : 1,
                         child: Container(color: AppColors.accent),
                       ),
                       const SizedBox(width: 2),
                       Expanded(
-                        flex: syndicatePct,
+                        flex: syndicatePct > 0 ? syndicatePct : 1,
                         child: Container(color: AppColors.rival),
                       ),
                       const SizedBox(width: 2),
                       Expanded(
-                        flex: nomadsPct,
+                        flex: nomadsPct > 0 ? nomadsPct : 1,
                         child: Container(color: const Color(0xFF00E5FF)),
                       ),
                     ],
@@ -124,11 +233,19 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildFactionLegend('VANGUARD', '$vanguardPct%', AppColors.accent),
-                  _buildFactionLegend('SYNDICATE', '$syndicatePct%', AppColors.rival),
-                  _buildFactionLegend('NOMADS', '$nomadsPct%', const Color(0xFF00E5FF)),
+                  _buildFactionLegend('VANGUARD', '$vanguardPct%', _formatArea(vanguard.totalAreaSqm), AppColors.accent),
+                  _buildFactionLegend('SYNDICATE', '$syndicatePct%', _formatArea(syndicate.totalAreaSqm), AppColors.rival),
+                  _buildFactionLegend('NOMADS', '$nomadsPct%', _formatArea(nomads.totalAreaSqm), const Color(0xFF00E5FF)),
                 ],
               ),
+
+              if (_errorMessage != null) ...[
+                const SizedBox(height: AppSpacing.s8),
+                Text(
+                  _errorMessage!,
+                  style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10),
+                ),
+              ],
             ],
           ),
         ),
@@ -163,28 +280,52 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
         const SizedBox(height: AppSpacing.s12),
 
         // --- LEADERBOARD ENTRIES ---
-        _buildLeaderboardList(userAreaKm2),
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.s24),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+              ),
+            ),
+          )
+        else
+          _buildLeaderboardContent(userAreaSqm),
       ],
     );
   }
 
-  Widget _buildFactionLegend(String name, String percentage, Color color) {
-    return Row(
+  Widget _buildFactionLegend(String name, String percentage, String area, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              name,
+              style: AppText.label.copyWith(color: Colors.white70, fontSize: 9.5),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              percentage,
+              style: AppText.statSmall.copyWith(fontSize: 11, color: color, fontWeight: FontWeight.w900),
+            ),
+          ],
         ),
-        const SizedBox(width: 6),
-        Text(
-          name,
-          style: AppText.label.copyWith(color: Colors.white70, fontSize: 9.5),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          percentage,
-          style: AppText.statSmall.copyWith(fontSize: 11, color: color, fontWeight: FontWeight.w900),
+        Padding(
+          padding: const EdgeInsets.only(left: 14, top: 2),
+          child: Text(
+            area,
+            style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 9),
+          ),
         ),
       ],
     );
@@ -220,26 +361,68 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     );
   }
 
-  Widget _buildLeaderboardList(double userAreaKm2) {
+  Widget _buildLeaderboardContent(double userAreaSqm) {
     final currentUsername = widget.profile.username.isNotEmpty ? widget.profile.username.toUpperCase() : 'YOU';
-    final userFormattedArea = userAreaKm2 >= 0.01
-        ? '${userAreaKm2.toStringAsFixed(2)} km²'
-        : '${(userAreaKm2 * 1000000).toStringAsFixed(0)} m²';
 
-    final leaders = [
-      _LeaderboardEntry(rank: 1, callsign: 'KAI_VALKYRIE', faction: 'Cyber Vanguard', area: '184.2 km²', dist: '84.5 km', isUser: false),
-      _LeaderboardEntry(rank: 2, callsign: 'IRON_TITAN', faction: 'Iron Syndicate', area: '142.5 km²', dist: '68.1 km', isUser: false),
-      _LeaderboardEntry(rank: 3, callsign: 'NEON_GHOST', faction: 'Neon Nomads', area: '118.0 km²', dist: '54.4 km', isUser: false),
-      _LeaderboardEntry(rank: 4, callsign: currentUsername, faction: widget.profile.faction, area: userFormattedArea, dist: '${widget.profile.totalDistanceKm.toStringAsFixed(1)} km', isUser: true),
-      _LeaderboardEntry(rank: 5, callsign: 'CIRCUIT_BLUR', faction: 'Cyber Vanguard', area: '94.6 km²', dist: '41.2 km', isUser: false),
-    ];
+    // If server has entries, check if user is in top entries
+    final entries = List<LeaderboardEntry>.from(_leaderboard);
+    final userIdx = entries.indexWhere(
+      (e) => e.userId == widget.profile.id || e.username.toUpperCase() == currentUsername,
+    );
+
+    // If user has local territories and is not in list, add user
+    if (userIdx == -1 && (userAreaSqm > 0 || entries.isEmpty)) {
+      entries.add(
+        LeaderboardEntry(
+          rank: entries.length + 1,
+          userId: widget.profile.id,
+          username: currentUsername,
+          faction: widget.profile.faction,
+          totalAreaSqm: userAreaSqm,
+          level: widget.profile.level,
+          totalRuns: widget.profile.totalHexesClaimed,
+        ),
+      );
+    }
+
+    if (entries.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.s24),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppSpacing.br16,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            const Icon(Icons.military_tech_outlined, color: AppColors.textMuted, size: 36),
+            const SizedBox(height: AppSpacing.s10),
+            Text(
+              'AWAITING CONQUEROR TELEMETRY',
+              style: AppText.headingSmall.copyWith(fontSize: 12, letterSpacing: 1.1),
+            ),
+            const SizedBox(height: AppSpacing.s4),
+            Text(
+              'Claim your first territory to take the #1 pioneer rank on the leaderboard.',
+              textAlign: TextAlign.center,
+              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Column(
-      children: leaders.map((entry) => _buildLeaderCard(entry)).toList(),
+      children: entries.map((entry) {
+        final isUser = entry.userId == widget.profile.id ||
+            entry.username.toUpperCase() == currentUsername;
+        return _buildLeaderCard(entry, isUser);
+      }).toList(),
     );
   }
 
-  Widget _buildLeaderCard(_LeaderboardEntry entry) {
+  Widget _buildLeaderCard(LeaderboardEntry entry, bool isUser) {
     Color rankColor;
     Widget rankIcon;
 
@@ -259,8 +442,6 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
         style: AppText.statSmall.copyWith(fontSize: 13, color: rankColor),
       );
     }
-
-    final isUser = entry.isUser;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s10),
@@ -297,7 +478,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                   children: [
                     Flexible(
                       child: Text(
-                        entry.callsign,
+                        entry.username,
                         style: AppText.bodyBold.copyWith(
                           fontSize: 13,
                           color: isUser ? AppColors.accent : Colors.white,
@@ -328,7 +509,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${entry.faction} • ${entry.dist}',
+                  '${entry.faction} • Lvl ${entry.level}',
                   style: AppText.bodySmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 10,
@@ -343,7 +524,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                entry.area,
+                _formatArea(entry.totalAreaSqm),
                 style: AppText.statSmall.copyWith(
                   fontSize: 13,
                   color: isUser ? AppColors.accent : Colors.white,
@@ -361,22 +542,4 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       ),
     );
   }
-}
-
-class _LeaderboardEntry {
-  final int rank;
-  final String callsign;
-  final String faction;
-  final String area;
-  final String dist;
-  final bool isUser;
-
-  const _LeaderboardEntry({
-    required this.rank,
-    required this.callsign,
-    required this.faction,
-    required this.area,
-    required this.dist,
-    required this.isUser,
-  });
 }

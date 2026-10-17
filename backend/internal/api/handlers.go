@@ -552,6 +552,54 @@ func (a *API) HandleGetCurrentLeague(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, result)
 }
 
+// HandleGetFactionStandings handles GET /v1/factions/standings.
+func (a *API) HandleGetFactionStandings(w http.ResponseWriter, r *http.Request) {
+	standings, err := a.store.GetFactionStandings(r.Context())
+	if err != nil {
+		a.logger.Error("failed to get faction standings", "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve faction standings")
+		return
+	}
+	writeJSON(w, http.StatusOK, standings)
+}
+
+// UpdateFactionRequest payload for PUT /v1/me/faction.
+type UpdateFactionRequest struct {
+	Faction string `json:"faction"`
+}
+
+// HandleUpdateUserFaction handles PUT /v1/me/faction.
+func (a *API) HandleUpdateUserFaction(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	var req UpdateFactionRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Invalid request body")
+		return
+	}
+
+	req.Faction = strings.TrimSpace(req.Faction)
+	if req.Faction == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Faction name cannot be empty")
+		return
+	}
+
+	if err := a.store.UpdateUserFaction(r.Context(), uid, req.Faction); err != nil {
+		a.logger.Error("failed to update user faction", "error", err, "uid", uid, "faction", req.Faction)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update user faction")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status":  "ok",
+		"faction": req.Faction,
+	})
+}
+
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

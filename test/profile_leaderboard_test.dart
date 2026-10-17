@@ -7,6 +7,8 @@ import 'package:territory_runner/features/profile/widgets/challenges_shelf.dart'
 import 'package:territory_runner/features/profile/widgets/faction_leaderboard.dart';
 import 'package:territory_runner/features/profile/widgets/profile_hero.dart';
 import 'package:territory_runner/features/profile/widgets/settings_list.dart';
+import 'package:territory_runner/models/faction_standing.dart';
+import 'package:territory_runner/models/leaderboard_entry.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/models/territory.dart';
 import 'package:territory_runner/profile_page.dart';
@@ -127,11 +129,25 @@ void main() {
               child: FactionLeaderboard(
                 profile: testProfile,
                 territories: testTerritories,
+                initialStandings: const FactionStandingsResponse(
+                  totalAreaSqm: 100000,
+                  standings: [
+                    FactionStanding(faction: 'Cyber Vanguard', totalAreaSqm: 50000, memberCount: 12, percentage: 50.0),
+                    FactionStanding(faction: 'Iron Syndicate', totalAreaSqm: 30000, memberCount: 8, percentage: 30.0),
+                    FactionStanding(faction: 'Neon Nomads', totalAreaSqm: 20000, memberCount: 5, percentage: 20.0),
+                  ],
+                ),
+                initialLeaderboard: const [
+                  LeaderboardEntry(rank: 1, userId: 'u1', username: 'ACE_RUNNER', faction: 'Cyber Vanguard', totalAreaSqm: 50000, level: 10, totalRuns: 25),
+                  LeaderboardEntry(rank: 2, userId: 'u2', username: 'GRID_PHANTOM', faction: 'Iron Syndicate', totalAreaSqm: 30000, level: 8, totalRuns: 19),
+                  LeaderboardEntry(rank: 3, userId: 'athlete_unit_01', username: 'KAI_VALKYRIE', faction: 'Cyber Vanguard', totalAreaSqm: 20000, level: 5, totalRuns: 12),
+                ],
               ),
             ),
           ),
         ),
       );
+      await tester.pumpAndSettle();
 
       // Dominance meter headers
       expect(find.text('TURF WAR DOMINANCE'), findsOneWidget);
@@ -151,8 +167,8 @@ void main() {
 
       // Check leaderboard rankings
       expect(find.text('CONQUEROR RANKINGS'), findsOneWidget);
-      expect(find.text('IRON_TITAN'), findsOneWidget);
-      expect(find.text('NEON_GHOST'), findsOneWidget);
+      expect(find.text('ACE_RUNNER'), findsOneWidget);
+      expect(find.text('GRID_PHANTOM'), findsOneWidget);
     });
 
     testWidgets('ProfileSettingsList toggles voice coach audio and haptics', (tester) async {

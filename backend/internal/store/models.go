@@ -105,3 +105,18 @@ type LeagueParticipant struct {
 	IsCurrentUser bool    `json:"is_current_user"`
 }
 
+// FactionStanding represents aggregate territory dominance for an athletic faction.
+type FactionStanding struct {
+	Faction      string  `json:"faction"`
+	TotalAreaSqm float64 `json:"total_area_sqm"`
+	MemberCount  int     `json:"member_count"`
+	Percentage   float64 `json:"percentage"`
+}
+
+// FactionStandingsResponse encapsulates global turf war statistics.
+type FactionStandingsResponse struct {
+	TotalAreaSqm float64           `json:"total_area_sqm"`
+	Standings    []FactionStanding `json:"standings"`
+}
+
+

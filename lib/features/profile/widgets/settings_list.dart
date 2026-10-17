@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../coach/voice_coach_service.dart';
 import '../../gameplay/territory_service.dart';
 import '../../../services/firebase_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../ui/ui.dart';
 
 class ProfileSettingsList extends StatefulWidget {
@@ -159,6 +160,18 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 : 'Offline Local Storage (Tap to Sync)',
             subtitle: 'Secure profile & route cloud backups',
             onTap: widget.onOpenAuth,
+          ),
+          const Divider(height: 1, color: AppColors.border),
+
+          // Tactical Radar Push Alerts
+          ProfileOptionTile(
+            icon: Icons.notifications_active_rounded,
+            title: 'Tactical Radar Push Alerts',
+            subtitle: 'Real-time notifications when rival runners carve your sectors',
+            onTap: () {
+              AppMotion.lightTick();
+              NotificationService().showPermissionPrimerIfNeeded(context, force: true);
+            },
           ),
           // Reset Dev Mode (Only visible in debug builds)
           if (kDebugMode) ...[

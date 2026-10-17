@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import '../models/faction_standing.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/league_standing.dart';
 import '../models/runner_profile.dart';
@@ -421,5 +422,34 @@ class ApiClient {
     } catch (_) {
       return {'error': 'UNKNOWN', 'detail': body};
     }
+  }
+
+  /// Fetches global turf war standings aggregated by faction (GET /v1/factions/standings)
+  Future<FactionStandingsResponse?> getFactionStandings() async {
+    final uri = Uri.parse('$baseUrl/v1/factions/standings');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return FactionStandingsResponse.fromJson(data);
+    }
+    return null;
+  }
+
+  /// Updates user's chosen athletic faction (PUT /v1/me/faction)
+  Future<bool> updateUserFaction(String faction) async {
+    final uri = Uri.parse('$baseUrl/v1/me/faction');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'faction': faction});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.put(uri, headers: headers, body: body),
+    );
+
+    return response.statusCode == 200;
   }
 }

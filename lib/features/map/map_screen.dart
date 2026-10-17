@@ -23,6 +23,7 @@ import '../../models/ws_events.dart';
 import '../../main.dart'; // For showRunStartAnimation
 import '../../models/territory.dart';
 import '../../services/firebase_service.dart';
+import '../../services/notification_service.dart';
 import 'widgets/mode_tabs.dart';
 import 'widgets/run_hud.dart';
 import 'widgets/map_layers.dart';
@@ -66,6 +67,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
+  StreamSubscription<String>? _notificationSub;
   
   LatLng? _currentLocation;
   bool _isRunActive = false;
@@ -122,6 +124,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
     });
 
+    // Listen for FCM notification deep links (e.g. attacked sector tapped)
+    _notificationSub = NotificationService().onAttackedTerritoryTapped.listen((territoryId) {
+      _focusOnAttackedTerritory(territoryId);
+    });
+
     // Poll rival territories every 20 seconds while map screen is open
     _rivalPollingTimer = Timer.periodic(const Duration(seconds: 20), (_) {
       _fetchVisibleRivals();
@@ -162,7 +169,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
     _wsAlertSub = _wsService.alertStream.listen((alert) {
       if (!mounted) return;
-      _voiceCoach.announceTerritoryUnderAttack(alert.attackerCallsign);
+      _voiceCoach.announceTerritoryUnderAttack(alert.attackerName);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: AppColors.bgElevated,
@@ -243,6 +250,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   @override
   void dispose() {
+    _notificationSub?.cancel();
     _gpsLivenessTimer?.cancel();
     WakelockPlus.disable();
     _rivalSimulationTimer?.cancel();
@@ -1829,5 +1837,32 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         }
       });
     });
+  }
+
+  void _focusOnAttackedTerritory(String territoryId) {
+    if (!mounted) return;
+    final territories = _territoryService.getCapturedTerritoryObjects();
+    final match = territories.where((t) => t.id == territoryId).firstOrNull;
+
+    setState(() {
+      _highlightedTerritoryId = territoryId;
+    });
+
+    if (match != null && match.polygon.isNotEmpty) {
+      final centroid = MapLayers.computeCentroid(match.polygon);
+      _mapController.move(centroid, 17.0);
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: AppColors.surface,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        content: Text(
+          '🚨 SECTOR UNDER ATTACK: Focused on territory $territoryId',
+          style: const TextStyle(color: AppColors.rival, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
   }
 }

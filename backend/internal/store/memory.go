@@ -381,3 +381,79 @@ func (m *MemoryStore) GetWeeklyStandings(ctx context.Context, weekStart time.Tim
 	return participants, nil
 }
 
+// GetFactionStandings returns territory dominance aggregated by athletic faction in MemoryStore.
+func (m *MemoryStore) GetFactionStandings(ctx context.Context) (*FactionStandingsResponse, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	canonical := map[string]*FactionStanding{
+		"Cyber Vanguard": {Faction: "Cyber Vanguard", TotalAreaSqm: 0, MemberCount: 0},
+		"Neon Syndicate": {Faction: "Neon Syndicate", TotalAreaSqm: 0, MemberCount: 0},
+		"Solaris Nomads": {Faction: "Solaris Nomads", TotalAreaSqm: 0, MemberCount: 0},
+	}
+
+	for _, u := range m.users {
+		if u.Faction == "" {
+			continue
+		}
+		st, ok := canonical[u.Faction]
+		if !ok {
+			st = &FactionStanding{Faction: u.Faction, TotalAreaSqm: 0, MemberCount: 0}
+			canonical[u.Faction] = st
+		}
+		st.MemberCount++
+	}
+
+	for _, t := range m.territories {
+		u, ok := m.users[t.OwnerID]
+		if ok && u.Faction != "" {
+			st, exists := canonical[u.Faction]
+			if exists {
+				st.TotalAreaSqm += t.AreaSqm
+			}
+		}
+	}
+
+	var totalArea float64
+	for _, st := range canonical {
+		totalArea += st.TotalAreaSqm
+	}
+
+	var standings []FactionStanding
+	for _, st := range canonical {
+		if totalArea > 0 {
+			st.Percentage = math.Round((st.TotalAreaSqm/totalArea)*1000.0) / 10.0
+		} else {
+			st.Percentage = 33.3
+		}
+		standings = append(standings, *st)
+	}
+
+	sort.Slice(standings, func(i, j int) bool {
+		if standings[i].TotalAreaSqm == standings[j].TotalAreaSqm {
+			return standings[i].MemberCount > standings[j].MemberCount
+		}
+		return standings[i].TotalAreaSqm > standings[j].TotalAreaSqm
+	})
+
+	return &FactionStandingsResponse{
+		TotalAreaSqm: totalArea,
+		Standings:    standings,
+	}, nil
+}
+
+// UpdateUserFaction updates a user's chosen athletic faction in MemoryStore.
+func (m *MemoryStore) UpdateUserFaction(ctx context.Context, userID, faction string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	u, ok := m.users[userID]
+	if !ok {
+		return fmt.Errorf("user not found: %s", userID)
+	}
+	u.Faction = faction
+	u.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+

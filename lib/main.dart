@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import 'features/map/map_screen.dart';
 import 'models/territory.dart';
 import 'models/runner_profile.dart';
 import 'services/firebase_service.dart';
+import 'services/notification_service.dart';
 import 'features/home/home_screen.dart';
 import 'ui/ui.dart';
 export 'ui/ui.dart';
@@ -21,6 +23,7 @@ void main() async {
   await Hive.openBox<RunnerProfile>('profile');
   await Hive.openBox<String>('active_run_recovery');
   await FirebaseService().initialize();
+  await NotificationService().initialize();
   runApp(const TerritoryApp());
 }
 
@@ -391,6 +394,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  StreamSubscription<String>? _notificationSub;
 
   late final List<Widget> _pages = [
     HomeScreen(
@@ -403,6 +407,28 @@ class _MainScreenState extends State<MainScreen> {
     const MapScreenFeature(),
     const ProfilePage(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _notificationSub = NotificationService().onAttackedTerritoryTapped.listen((_) {
+      if (mounted) {
+        setState(() {
+          _selectedIndex = 1;
+        });
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().showPermissionPrimerIfNeeded(context);
+    });
+  }
+
+  @override
+  void dispose() {
+    _notificationSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

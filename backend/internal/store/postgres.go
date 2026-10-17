@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
@@ -506,6 +507,87 @@ func (s *PostgresStore) GetWeeklyStandings(ctx context.Context, weekStart time.T
 		standings = append(standings, p)
 	}
 	return standings, nil
+}
+
+// GetFactionStandings aggregates territory dominance by athletic faction in PostgreSQL.
+func (s *PostgresStore) GetFactionStandings(ctx context.Context) (*FactionStandingsResponse, error) {
+	query := `
+		SELECT 
+			u.faction, 
+			COALESCE(SUM(t.area_sqm), 0.0) AS total_area, 
+			COUNT(DISTINCT u.id) AS member_count
+		FROM users u
+		LEFT JOIN territories t ON t.owner_id = u.id
+		WHERE u.faction IS NOT NULL AND u.faction != ''
+		GROUP BY u.faction
+		ORDER BY total_area DESC, member_count DESC;
+	`
+	rows, err := s.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query faction standings: %w", err)
+	}
+	defer rows.Close()
+
+	canonicalFactions := map[string]FactionStanding{
+		"Cyber Vanguard": {Faction: "Cyber Vanguard", TotalAreaSqm: 0, MemberCount: 0},
+		"Neon Syndicate": {Faction: "Neon Syndicate", TotalAreaSqm: 0, MemberCount: 0},
+		"Solaris Nomads": {Faction: "Solaris Nomads", TotalAreaSqm: 0, MemberCount: 0},
+	}
+
+	var totalGlobalArea float64
+	for rows.Next() {
+		var faction string
+		var area float64
+		var members int
+		if err := rows.Scan(&faction, &area, &members); err != nil {
+			return nil, fmt.Errorf("failed to scan faction row: %w", err)
+		}
+		canonicalFactions[faction] = FactionStanding{
+			Faction:      faction,
+			TotalAreaSqm: area,
+			MemberCount:  members,
+		}
+		totalGlobalArea += area
+	}
+
+	var standings []FactionStanding
+	for _, standing := range canonicalFactions {
+		if totalGlobalArea > 0 {
+			standing.Percentage = math.Round((standing.TotalAreaSqm/totalGlobalArea)*1000.0) / 10.0
+		} else {
+			standing.Percentage = 33.3
+		}
+		standings = append(standings, standing)
+	}
+
+	sort.Slice(standings, func(i, j int) bool {
+		if standings[i].TotalAreaSqm == standings[j].TotalAreaSqm {
+			return standings[i].MemberCount > standings[j].MemberCount
+		}
+		return standings[i].TotalAreaSqm > standings[j].TotalAreaSqm
+	})
+
+	return &FactionStandingsResponse{
+		TotalAreaSqm: totalGlobalArea,
+		Standings:    standings,
+	}, nil
+}
+
+// UpdateUserFaction updates a user's chosen athletic faction in PostgreSQL.
+func (s *PostgresStore) UpdateUserFaction(ctx context.Context, userID, faction string) error {
+	query := `
+		UPDATE users
+		SET faction = $1, updated_at = NOW()
+		WHERE id = $2;
+	`
+	cmd, err := s.pool.Exec(ctx, query, faction, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update user faction: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("user not found: %s", userID)
+	}
+	return nil
 }
 
 func polygonToWKT(ring []geo.LatLng) string {

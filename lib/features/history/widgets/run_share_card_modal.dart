@@ -306,9 +306,11 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
 
       // Open system share sheet
       final xFile = XFile(filePath, mimeType: 'image/png');
-      await Share.shareXFiles(
-        [xFile],
-        text: 'Claimed ${widget.callsign}\'s territory on Territory Runner! #TerritoryRunner',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [xFile],
+          text: 'Claimed ${widget.callsign}\'s territory on Territory Runner! #TerritoryRunner',
+        ),
       );
 
       if (mounted) {

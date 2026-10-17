@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../gameplay/territory_service.dart';
 import '../../../models/runner_profile.dart';
+import '../../../services/api_client.dart';
 import '../../../ui/ui.dart';
 
 void showEditCallsignDialog(
@@ -99,16 +100,16 @@ void showFactionSelectionDialog(
       'perk': 'Precision spatial radar & fast polygon enclosure recognition (+10% base claim speed)',
     },
     {
-      'name': 'Solar Syndicate',
+      'name': 'Iron Syndicate',
       'tag': 'KINETIC CONQUERORS',
       'color': const Color(0xFFFF9100),
       'icon': Icons.wb_sunny_rounded,
-      'perk': 'Solar endurance surge & stamina battery efficiency (+15% cadence recharge boost)',
+      'perk': 'Kinetic endurance surge & stamina battery efficiency (+15% cadence recharge boost)',
     },
     {
-      'name': 'Quantum Pulse',
+      'name': 'Neon Nomads',
       'tag': 'ANTI-GRAVITY DRIFTERS',
-      'color': const Color(0xFF7058D4),
+      'color': const Color(0xFF00E5FF),
       'icon': Icons.bolt_rounded,
       'perk': 'Zero-G sub-orbital glide thrust & +40% sprint momentum conversion multiplier',
     },
@@ -167,6 +168,8 @@ void showFactionSelectionDialog(
                   HapticFeedback.mediumImpact();
                   profile.faction = f['name'] as String;
                   await territoryService.saveProfile(profile);
+                  // Fire-and-forget sync to backend
+                  ApiClient().updateUserFaction(profile.faction).catchError((_) => false);
                   if (ctx.mounted) {
                     Navigator.pop(ctx);
                   }

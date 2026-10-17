@@ -53,6 +53,12 @@ type Store interface {
 	// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart.
 	GetWeeklyStandings(ctx context.Context, weekStart time.Time) ([]WeeklyParticipant, error)
 
+	// GetFactionStandings returns territory dominance aggregated by athletic faction.
+	GetFactionStandings(ctx context.Context) (*FactionStandingsResponse, error)
+
+	// UpdateUserFaction updates a user's chosen athletic faction.
+	UpdateUserFaction(ctx context.Context, userID, faction string) error
+
 	// Ping checks database connectivity.
 	Ping(ctx context.Context) error
 
