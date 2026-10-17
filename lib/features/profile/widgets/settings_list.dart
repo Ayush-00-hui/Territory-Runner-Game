@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../coach/voice_coach_service.dart';
 import '../../gameplay/territory_service.dart';
+import '../../../services/app_preferences.dart';
 import '../../../services/battery_saver_service.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/notification_service.dart';
@@ -30,6 +31,7 @@ class ProfileSettingsList extends StatefulWidget {
 
 class _ProfileSettingsListState extends State<ProfileSettingsList> {
   final VoiceCoachService _voiceCoach = VoiceCoachService();
+  final AppPreferences _appPrefs = AppPreferences();
 
   @override
   Widget build(BuildContext context) {
@@ -108,11 +110,11 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             ),
             activeThumbColor: AppColors.accent,
             activeTrackColor: AppColors.accentContainer,
-            value: _voiceCoach.isHapticsEnabled,
+            value: _appPrefs.isHapticsEnabled,
             onChanged: (val) {
               AppMotion.selectionTick();
               setState(() {
-                _voiceCoach.toggleHaptics(val);
+                _appPrefs.toggleHaptics(val);
               });
             },
           ),
@@ -205,7 +207,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               ),
             ),
             subtitle: Text(
-              _voiceCoach.unit == DistanceUnit.metric ? 'Metric (Kilometers, m²)' : 'Imperial (Miles, Acres)',
+              _appPrefs.unit == DistanceUnit.metric ? 'Metric (Kilometers, m²)' : 'Imperial (Miles, Acres)',
               style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
             ),
             trailing: SegmentedButton<DistanceUnit>(
@@ -213,7 +215,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 ButtonSegment(value: DistanceUnit.metric, label: Text('KM', style: TextStyle(fontSize: 11))),
                 ButtonSegment(value: DistanceUnit.imperial, label: Text('MI', style: TextStyle(fontSize: 11))),
               ],
-              selected: {_voiceCoach.unit},
+              selected: {_appPrefs.unit},
               style: SegmentedButton.styleFrom(
                 selectedBackgroundColor: AppColors.accent,
                 selectedForegroundColor: AppColors.onAccent,
@@ -223,7 +225,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               onSelectionChanged: (Set<DistanceUnit> selected) {
                 AppMotion.selectionTick();
                 setState(() {
-                  _voiceCoach.setUnit(selected.first);
+                  _appPrefs.setUnit(selected.first);
                 });
               },
             ),

@@ -3,12 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
+import '../../services/app_preferences.dart';
 
-/// Supported distance and area measurement systems
-enum DistanceUnit {
-  metric,
-  imperial,
-}
+export '../../services/app_preferences.dart' show DistanceUnit;
 
 /// Event types for real-time running voice & audio/haptic feedback cues
 enum VoiceCoachCueType {
@@ -28,23 +25,21 @@ class VoiceCoachService {
   factory VoiceCoachService() => _instance;
 
   static const String _prefAudioKey = 'pref_voice_coach_audio_enabled';
-  static const String _prefHapticsKey = 'pref_voice_coach_haptics_enabled';
   static const String _prefVolumeKey = 'pref_voice_coach_volume';
-  static const String _prefUnitKey = 'pref_distance_unit';
 
   final FlutterTts _tts = FlutterTts();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
   bool _isAudioEnabled = true;
-  bool _isHapticsEnabled = true;
   double _volume = 0.8;
-  DistanceUnit _unit = DistanceUnit.metric;
   bool _isInitialized = false;
 
   bool get isAudioEnabled => _isAudioEnabled;
-  bool get isHapticsEnabled => _isHapticsEnabled;
+  bool get isHapticsEnabled => AppPreferences().isHapticsEnabled;
+  bool get _isHapticsEnabled => AppPreferences().isHapticsEnabled;
   double get volume => _volume;
-  DistanceUnit get unit => _unit;
+  DistanceUnit get unit => AppPreferences().unit;
+  DistanceUnit get _unit => AppPreferences().unit;
 
   VoiceCoachService._internal() {
     _init();
@@ -55,10 +50,7 @@ class VoiceCoachService {
     try {
       final prefs = await SharedPreferences.getInstance();
       _isAudioEnabled = prefs.getBool(_prefAudioKey) ?? true;
-      _isHapticsEnabled = prefs.getBool(_prefHapticsKey) ?? true;
       _volume = prefs.getDouble(_prefVolumeKey) ?? 0.8;
-      final unitStr = prefs.getString(_prefUnitKey) ?? 'metric';
-      _unit = unitStr == 'imperial' ? DistanceUnit.imperial : DistanceUnit.metric;
 
       // Configure TTS
       await _tts.setVolume(_volume);
@@ -80,11 +72,7 @@ class VoiceCoachService {
   }
 
   Future<void> toggleHaptics(bool enabled) async {
-    _isHapticsEnabled = enabled;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_prefHapticsKey, enabled);
-    } catch (_) {}
+    await AppPreferences().toggleHaptics(enabled);
   }
 
   Future<void> setVolume(double vol) async {
@@ -98,11 +86,7 @@ class VoiceCoachService {
   }
 
   Future<void> setUnit(DistanceUnit unit) async {
-    _unit = unit;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefUnitKey, unit == DistanceUnit.imperial ? 'imperial' : 'metric');
-    } catch (_) {}
+    await AppPreferences().setUnit(unit);
   }
 
   /// Announces run start with tactical chime and spoken directive
