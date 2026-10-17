@@ -77,6 +77,17 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 		v1.Get("/league/current", api.HandleGetCurrentLeague)
 		v1.Get("/factions/standings", api.HandleGetFactionStandings)
 		v1.Put("/me/faction", api.HandleUpdateUserFaction)
+
+		// Social: Friends & Head-to-Head Duels
+		v1.Get("/friends", api.HandleGetFriends)
+		v1.Get("/friends/requests", api.HandleGetFriendRequests)
+		v1.Post("/friends/request", api.HandleSendFriendRequest)
+		v1.Put("/friends/request/{id}", api.HandleRespondFriendRequest)
+
+		v1.Get("/duels", api.HandleGetDuels)
+		v1.Post("/duels", api.HandleCreateDuel)
+		v1.Put("/duels/{id}/accept", api.HandleAcceptDuel)
+		v1.Put("/duels/{id}/decline", api.HandleDeclineDuel)
 	})
 
 	return r

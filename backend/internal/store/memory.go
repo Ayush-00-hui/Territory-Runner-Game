@@ -19,6 +19,8 @@ type MemoryStore struct {
 	runsByOrder  []string
 	territories  map[string]*Territory
 	deviceTokens map[string][]string
+	friendships  map[string]*Friendship
+	duels        map[string]*Duel
 }
 
 // NewMemoryStore initializes an in-memory store.
@@ -29,6 +31,8 @@ func NewMemoryStore() *MemoryStore {
 		runsByOrder:  make([]string, 0),
 		territories:  make(map[string]*Territory),
 		deviceTokens: make(map[string][]string),
+		friendships:  make(map[string]*Friendship),
+		duels:        make(map[string]*Duel),
 	}
 }
 
@@ -202,6 +206,8 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 			}
 		}
 	}
+
+	m.updateDuelProgressLocked(run.UserID, areaClaimed, run.DistanceMeters)
 
 	return &CaptureResult{
 		RunID:              run.ID,
@@ -453,6 +459,363 @@ func (m *MemoryStore) UpdateUserFaction(ctx context.Context, userID, faction str
 	}
 	u.Faction = faction
 	u.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// SendFriendRequest creates a new pending friendship request from requesterID to addresseeID.
+func (m *MemoryStore) SendFriendRequest(ctx context.Context, requesterID, addresseeID string) (*Friendship, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if requesterID == addresseeID {
+		return nil, fmt.Errorf("cannot send friend request to yourself")
+	}
+
+	_, reqExists := m.users[requesterID]
+	if !reqExists {
+		return nil, fmt.Errorf("requester not found: %s", requesterID)
+	}
+	_, addExists := m.users[addresseeID]
+	if !addExists {
+		return nil, fmt.Errorf("addressee not found: %s", addresseeID)
+	}
+
+	for _, f := range m.friendships {
+		if (f.RequesterID == requesterID && f.AddresseeID == addresseeID) ||
+			(f.RequesterID == addresseeID && f.AddresseeID == requesterID) {
+			if f.Status == "accepted" {
+				return nil, fmt.Errorf("already friends")
+			}
+			if f.Status == "pending" {
+				return nil, fmt.Errorf("friend request already pending")
+			}
+		}
+	}
+
+	id := fmt.Sprintf("friendship_%d", time.Now().UnixNano())
+	now := time.Now().UTC()
+	f := &Friendship{
+		ID:          id,
+		RequesterID: requesterID,
+		AddresseeID: addresseeID,
+		Status:      "pending",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	m.friendships[id] = f
+	cpy := *f
+	return &cpy, nil
+}
+
+// RespondFriendRequest accepts or declines a pending friend request.
+func (m *MemoryStore) RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	f, ok := m.friendships[friendshipID]
+	if !ok {
+		return fmt.Errorf("friend request not found: %s", friendshipID)
+	}
+
+	if f.AddresseeID != userID {
+		return fmt.Errorf("unauthorized: only recipient can respond to friend request")
+	}
+
+	if f.Status != "pending" {
+		return fmt.Errorf("request already %s", f.Status)
+	}
+
+	if action != "accept" && action != "decline" {
+		return fmt.Errorf("invalid action: %s (must be 'accept' or 'decline')", action)
+	}
+
+	if action == "accept" {
+		f.Status = "accepted"
+	} else {
+		f.Status = "declined"
+	}
+	f.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// GetFriends returns all accepted friends of the given user.
+func (m *MemoryStore) GetFriends(ctx context.Context, userID string) ([]FriendUser, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var friends []FriendUser
+	for _, f := range m.friendships {
+		if f.Status != "accepted" {
+			continue
+		}
+		var otherID string
+		if f.RequesterID == userID {
+			otherID = f.AddresseeID
+		} else if f.AddresseeID == userID {
+			otherID = f.RequesterID
+		} else {
+			continue
+		}
+
+		u, ok := m.users[otherID]
+		if ok {
+			friends = append(friends, FriendUser{
+				ID:           u.ID,
+				Username:     u.Username,
+				Faction:      u.Faction,
+				TotalAreaSqm: u.TotalAreaSqm,
+				Level:        u.Level,
+				XP:           u.XP,
+				TotalRuns:    u.TotalRuns,
+			})
+		}
+	}
+
+	sort.Slice(friends, func(i, j int) bool {
+		return friends[i].TotalAreaSqm > friends[j].TotalAreaSqm
+	})
+
+	return friends, nil
+}
+
+// GetFriendRequests returns all pending friend requests involving the user.
+func (m *MemoryStore) GetFriendRequests(ctx context.Context, userID string) ([]FriendRequestDetail, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var details []FriendRequestDetail
+	for _, f := range m.friendships {
+		if f.Status != "pending" {
+			continue
+		}
+		if f.RequesterID != userID && f.AddresseeID != userID {
+			continue
+		}
+
+		reqUser := m.users[f.RequesterID]
+		addUser := m.users[f.AddresseeID]
+
+		reqName := f.RequesterID
+		reqFaction := "Cyber Vanguard"
+		if reqUser != nil {
+			reqName = reqUser.Username
+			reqFaction = reqUser.Faction
+		}
+
+		addName := f.AddresseeID
+		if addUser != nil {
+			addName = addUser.Username
+		}
+
+		details = append(details, FriendRequestDetail{
+			ID:               f.ID,
+			RequesterID:      f.RequesterID,
+			RequesterName:    reqName,
+			RequesterFaction: reqFaction,
+			AddresseeID:      f.AddresseeID,
+			AddresseeName:    addName,
+			Status:           f.Status,
+			CreatedAt:        f.CreatedAt,
+			IsIncoming:       (f.AddresseeID == userID),
+		})
+	}
+
+	sort.Slice(details, func(i, j int) bool {
+		return details[i].CreatedAt.After(details[j].CreatedAt)
+	})
+
+	return details, nil
+}
+
+// CreateDuel initiates a new head-to-head duel challenge.
+func (m *MemoryStore) CreateDuel(ctx context.Context, d *Duel) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if d.ChallengerID == d.OpponentID {
+		return fmt.Errorf("cannot challenge yourself to a duel")
+	}
+
+	challenger, ok := m.users[d.ChallengerID]
+	if !ok {
+		return fmt.Errorf("challenger not found: %s", d.ChallengerID)
+	}
+	opponent, ok := m.users[d.OpponentID]
+	if !ok {
+		return fmt.Errorf("opponent not found: %s", d.OpponentID)
+	}
+
+	d.ChallengerUsername = challenger.Username
+	d.OpponentUsername = opponent.Username
+
+	if d.ID == "" {
+		d.ID = fmt.Sprintf("duel_%d", time.Now().UnixNano())
+	}
+	d.Status = "pending"
+	d.CreatedAt = time.Now().UTC()
+	if d.ExpiresAt.IsZero() {
+		d.ExpiresAt = d.CreatedAt.Add(24 * time.Hour)
+	}
+	if d.XpStake <= 0 {
+		d.XpStake = 100
+	}
+	if d.TargetValue <= 0 {
+		if d.TargetType == "distance" {
+			d.TargetValue = 5.0 // 5 km
+		} else {
+			d.TargetValue = 10000.0 // 10k m²
+		}
+	}
+
+	cpy := *d
+	m.duels[d.ID] = &cpy
+	return nil
+}
+
+// GetDuelsByUser retrieves active, pending, and recent duels involving the user.
+func (m *MemoryStore) GetDuelsByUser(ctx context.Context, userID string) ([]Duel, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now := time.Now().UTC()
+	var duels []Duel
+
+	for _, d := range m.duels {
+		if d.ChallengerID != userID && d.OpponentID != userID {
+			continue
+		}
+
+		// Check expiration for active or pending duels
+		if (d.Status == "active" || d.Status == "pending") && now.After(d.ExpiresAt) {
+			if d.Status == "active" {
+				if d.ChallengerProgress > d.OpponentProgress {
+					d.WinnerID = d.ChallengerID
+					d.Status = "completed"
+				} else if d.OpponentProgress > d.ChallengerProgress {
+					d.WinnerID = d.OpponentID
+					d.Status = "completed"
+				} else {
+					d.Status = "expired"
+				}
+				completedTime := d.ExpiresAt
+				d.CompletedAt = &completedTime
+			} else {
+				d.Status = "expired"
+			}
+		}
+
+		duels = append(duels, *d)
+	}
+
+	sort.Slice(duels, func(i, j int) bool {
+		return duels[i].CreatedAt.After(duels[j].CreatedAt)
+	})
+
+	return duels, nil
+}
+
+// AcceptDuel transitions a pending duel to active.
+func (m *MemoryStore) AcceptDuel(ctx context.Context, duelID, userID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	d, ok := m.duels[duelID]
+	if !ok {
+		return fmt.Errorf("duel not found: %s", duelID)
+	}
+
+	if d.OpponentID != userID {
+		return fmt.Errorf("unauthorized: only challenged opponent can accept duel")
+	}
+
+	if d.Status != "pending" {
+		return fmt.Errorf("duel is %s (must be pending to accept)", d.Status)
+	}
+
+	d.Status = "active"
+	d.ExpiresAt = time.Now().UTC().Add(24 * time.Hour) // 24 hours from acceptance
+	return nil
+}
+
+// DeclineDuel marks a pending duel as declined.
+func (m *MemoryStore) DeclineDuel(ctx context.Context, duelID, userID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	d, ok := m.duels[duelID]
+	if !ok {
+		return fmt.Errorf("duel not found: %s", duelID)
+	}
+
+	if d.OpponentID != userID {
+		return fmt.Errorf("unauthorized: only challenged opponent can decline duel")
+	}
+
+	if d.Status != "pending" {
+		return fmt.Errorf("duel is %s (must be pending to decline)", d.Status)
+	}
+
+	d.Status = "declined"
+	return nil
+}
+
+// UpdateDuelProgress increments progress for any active duels involving userID.
+func (m *MemoryStore) UpdateDuelProgress(ctx context.Context, userID string, areaDelta, distanceDelta float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.updateDuelProgressLocked(userID, areaDelta, distanceDelta)
+}
+
+func (m *MemoryStore) updateDuelProgressLocked(userID string, areaDelta, distanceDelta float64) error {
+	now := time.Now().UTC()
+
+	for _, d := range m.duels {
+		if d.Status != "active" {
+			continue
+		}
+		if now.After(d.ExpiresAt) {
+			continue
+		}
+
+		var progressIncrement float64
+		if d.TargetType == "distance" {
+			progressIncrement = distanceDelta / 1000.0 // in km
+		} else {
+			progressIncrement = areaDelta // in m²
+		}
+
+		if progressIncrement <= 0 {
+			continue
+		}
+
+		if d.ChallengerID == userID {
+			d.ChallengerProgress += progressIncrement
+		} else if d.OpponentID == userID {
+			d.OpponentProgress += progressIncrement
+		} else {
+			continue
+		}
+
+		// Check if target achieved
+		if d.ChallengerProgress >= d.TargetValue {
+			d.Status = "completed"
+			d.WinnerID = d.ChallengerID
+			completedAt := now
+			d.CompletedAt = &completedAt
+			if chUser, ok := m.users[d.ChallengerID]; ok {
+				chUser.XP += int64(d.XpStake)
+			}
+		} else if d.OpponentProgress >= d.TargetValue {
+			d.Status = "completed"
+			d.WinnerID = d.OpponentID
+			completedAt := now
+			d.CompletedAt = &completedAt
+			if opUser, ok := m.users[d.OpponentID]; ok {
+				opUser.XP += int64(d.XpStake)
+			}
+		}
+	}
+
 	return nil
 }
 

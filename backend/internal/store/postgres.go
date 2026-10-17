@@ -336,6 +336,8 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		return nil, fmt.Errorf("failed to commit capture transaction: %w", err)
 	}
 
+	_ = s.UpdateDuelProgress(ctx, run.UserID, areaClaimed, run.DistanceMeters)
+
 	return &CaptureResult{
 		RunID:              run.ID,
 		IdempotencyKey:     run.IdempotencyKey,
@@ -620,4 +622,349 @@ func lineStringToWKT(points []geo.TrackPoint) string {
 	}
 	sb.WriteString(")")
 	return sb.String()
+}
+
+// SendFriendRequest creates a new pending friendship request from requesterID to addresseeID.
+func (s *PostgresStore) SendFriendRequest(ctx context.Context, requesterID, addresseeID string) (*Friendship, error) {
+	if requesterID == addresseeID {
+		return nil, fmt.Errorf("cannot send friend request to yourself")
+	}
+
+	var existingStatus string
+	checkQuery := `
+		SELECT status FROM friendships
+		WHERE (requester_id = $1 AND addressee_id = $2)
+		   OR (requester_id = $2 AND addressee_id = $1)
+		LIMIT 1;
+	`
+	err := s.pool.QueryRow(ctx, checkQuery, requesterID, addresseeID).Scan(&existingStatus)
+	if err == nil {
+		if existingStatus == "accepted" {
+			return nil, fmt.Errorf("already friends")
+		}
+		if existingStatus == "pending" {
+			return nil, fmt.Errorf("friend request already pending")
+		}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, fmt.Errorf("failed to check existing friendship: %w", err)
+	}
+
+	id := fmt.Sprintf("friendship_%d", time.Now().UnixNano())
+	insertQuery := `
+		INSERT INTO friendships (id, requester_id, addressee_id, status, created_at, updated_at)
+		VALUES ($1, $2, $3, 'pending', NOW(), NOW())
+		RETURNING id, requester_id, addressee_id, status, created_at, updated_at;
+	`
+	var f Friendship
+	err = s.pool.QueryRow(ctx, insertQuery, id, requesterID, addresseeID).Scan(
+		&f.ID, &f.RequesterID, &f.AddresseeID, &f.Status, &f.CreatedAt, &f.UpdatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert friend request: %w", err)
+	}
+	return &f, nil
+}
+
+// RespondFriendRequest accepts or declines a pending friend request.
+func (s *PostgresStore) RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) error {
+	if action != "accept" && action != "decline" {
+		return fmt.Errorf("invalid action: %s (must be 'accept' or 'decline')", action)
+	}
+
+	newStatus := "accepted"
+	if action == "decline" {
+		newStatus = "declined"
+	}
+
+	query := `
+		UPDATE friendships
+		SET status = $1, updated_at = NOW()
+		WHERE id = $2 AND addressee_id = $3 AND status = 'pending';
+	`
+	cmd, err := s.pool.Exec(ctx, query, newStatus, friendshipID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to respond to friend request: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("pending request not found or unauthorized")
+	}
+	return nil
+}
+
+// GetFriends returns all accepted friends of the given user.
+func (s *PostgresStore) GetFriends(ctx context.Context, userID string) ([]FriendUser, error) {
+	query := `
+		SELECT u.id, u.username, u.faction, u.total_area_sqm, u.level, u.xp, u.total_runs
+		FROM users u
+		JOIN friendships f ON (
+			(f.requester_id = u.id AND f.addressee_id = $1) OR
+			(f.addressee_id = u.id AND f.requester_id = $1)
+		)
+		WHERE f.status = 'accepted'
+		ORDER BY u.total_area_sqm DESC;
+	`
+	rows, err := s.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query friends: %w", err)
+	}
+	defer rows.Close()
+
+	var friends []FriendUser
+	for rows.Next() {
+		var u FriendUser
+		if err := rows.Scan(&u.ID, &u.Username, &u.Faction, &u.TotalAreaSqm, &u.Level, &u.XP, &u.TotalRuns); err != nil {
+			return nil, fmt.Errorf("failed to scan friend row: %w", err)
+		}
+		friends = append(friends, u)
+	}
+	return friends, nil
+}
+
+// GetFriendRequests returns all pending friend requests involving the user.
+func (s *PostgresStore) GetFriendRequests(ctx context.Context, userID string) ([]FriendRequestDetail, error) {
+	query := `
+		SELECT 
+			f.id, f.requester_id, req.username, req.faction,
+			f.addressee_id, addr.username, f.status, f.created_at,
+			(f.addressee_id = $1) AS is_incoming
+		FROM friendships f
+		JOIN users req ON req.id = f.requester_id
+		JOIN users addr ON addr.id = f.addressee_id
+		WHERE (f.requester_id = $1 OR f.addressee_id = $1) AND f.status = 'pending'
+		ORDER BY f.created_at DESC;
+	`
+	rows, err := s.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query friend requests: %w", err)
+	}
+	defer rows.Close()
+
+	var details []FriendRequestDetail
+	for rows.Next() {
+		var d FriendRequestDetail
+		if err := rows.Scan(
+			&d.ID, &d.RequesterID, &d.RequesterName, &d.RequesterFaction,
+			&d.AddresseeID, &d.AddresseeName, &d.Status, &d.CreatedAt, &d.IsIncoming,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan friend request row: %w", err)
+		}
+		details = append(details, d)
+	}
+	return details, nil
+}
+
+// CreateDuel initiates a new head-to-head duel challenge.
+func (s *PostgresStore) CreateDuel(ctx context.Context, d *Duel) error {
+	if d.ChallengerID == d.OpponentID {
+		return fmt.Errorf("cannot challenge yourself to a duel")
+	}
+
+	if d.ID == "" {
+		d.ID = fmt.Sprintf("duel_%d", time.Now().UnixNano())
+	}
+	if d.XpStake <= 0 {
+		d.XpStake = 100
+	}
+	if d.TargetValue <= 0 {
+		if d.TargetType == "distance" {
+			d.TargetValue = 5.0 // 5 km
+		} else {
+			d.TargetValue = 10000.0 // 10k m²
+		}
+	}
+	if d.ExpiresAt.IsZero() {
+		d.ExpiresAt = time.Now().UTC().Add(24 * time.Hour)
+	}
+
+	query := `
+		INSERT INTO duels (id, challenger_id, opponent_id, target_type, target_value, status, challenger_progress, opponent_progress, xp_stake, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, 'pending', 0.0, 0.0, $6, $7, NOW());
+	`
+	_, err := s.pool.Exec(ctx, query, d.ID, d.ChallengerID, d.OpponentID, d.TargetType, d.TargetValue, d.XpStake, d.ExpiresAt)
+	if err != nil {
+		return fmt.Errorf("failed to insert duel: %w", err)
+	}
+	return nil
+}
+
+// GetDuelsByUser retrieves active, pending, and recent duels involving the user.
+func (s *PostgresStore) GetDuelsByUser(ctx context.Context, userID string) ([]Duel, error) {
+	query := `
+		SELECT 
+			d.id, d.challenger_id, ch.username, d.opponent_id, op.username,
+			d.target_type, d.target_value, d.status, d.challenger_progress, d.opponent_progress,
+			COALESCE(d.winner_id, ''), d.xp_stake, d.expires_at, d.created_at, d.completed_at
+		FROM duels d
+		JOIN users ch ON ch.id = d.challenger_id
+		JOIN users op ON op.id = d.opponent_id
+		WHERE d.challenger_id = $1 OR d.opponent_id = $1
+		ORDER BY d.created_at DESC;
+	`
+	rows, err := s.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query duels: %w", err)
+	}
+	defer rows.Close()
+
+	now := time.Now().UTC()
+	var duels []Duel
+	for rows.Next() {
+		var d Duel
+		if err := rows.Scan(
+			&d.ID, &d.ChallengerID, &d.ChallengerUsername, &d.OpponentID, &d.OpponentUsername,
+			&d.TargetType, &d.TargetValue, &d.Status, &d.ChallengerProgress, &d.OpponentProgress,
+			&d.WinnerID, &d.XpStake, &d.ExpiresAt, &d.CreatedAt, &d.CompletedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan duel row: %w", err)
+		}
+
+		// Check expiration
+		if (d.Status == "active" || d.Status == "pending") && now.After(d.ExpiresAt) {
+			if d.Status == "active" {
+				if d.ChallengerProgress > d.OpponentProgress {
+					d.WinnerID = d.ChallengerID
+					d.Status = "completed"
+				} else if d.OpponentProgress > d.ChallengerProgress {
+					d.WinnerID = d.OpponentID
+					d.Status = "completed"
+				} else {
+					d.Status = "expired"
+				}
+				completedTime := d.ExpiresAt
+				d.CompletedAt = &completedTime
+			} else {
+				d.Status = "expired"
+			}
+			// Asynchronously update expired status in DB
+			go func(dID, status, winner string) {
+				_, _ = s.pool.Exec(context.Background(), `UPDATE duels SET status = $1, winner_id = NULLIF($2, ''), completed_at = NOW() WHERE id = $3;`, status, winner, dID)
+			}(d.ID, d.Status, d.WinnerID)
+		}
+
+		duels = append(duels, d)
+	}
+	return duels, nil
+}
+
+// AcceptDuel transitions a pending duel to active.
+func (s *PostgresStore) AcceptDuel(ctx context.Context, duelID, userID string) error {
+	query := `
+		UPDATE duels
+		SET status = 'active', expires_at = NOW() + INTERVAL '24 hours'
+		WHERE id = $1 AND opponent_id = $2 AND status = 'pending';
+	`
+	cmd, err := s.pool.Exec(ctx, query, duelID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to accept duel: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("pending duel not found or unauthorized")
+	}
+	return nil
+}
+
+// DeclineDuel marks a pending duel as declined.
+func (s *PostgresStore) DeclineDuel(ctx context.Context, duelID, userID string) error {
+	query := `
+		UPDATE duels
+		SET status = 'declined'
+		WHERE id = $1 AND opponent_id = $2 AND status = 'pending';
+	`
+	cmd, err := s.pool.Exec(ctx, query, duelID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to decline duel: %w", err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return fmt.Errorf("pending duel not found or unauthorized")
+	}
+	return nil
+}
+
+// UpdateDuelProgress increments progress for any active duels involving userID.
+func (s *PostgresStore) UpdateDuelProgress(ctx context.Context, userID string, areaDelta, distanceDelta float64) error {
+	query := `
+		SELECT id, challenger_id, opponent_id, target_type, target_value, challenger_progress, opponent_progress, xp_stake
+		FROM duels
+		WHERE status = 'active' AND expires_at > NOW() AND (challenger_id = $1 OR opponent_id = $1);
+	`
+	rows, err := s.pool.Query(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to query active duels for progress: %w", err)
+	}
+	defer rows.Close()
+
+	type duelUpdate struct {
+		id          string
+		newChProg   float64
+		newOpProg   float64
+		isCompleted bool
+		winnerID    string
+		xpStake     int
+	}
+
+	var updates []duelUpdate
+	for rows.Next() {
+		var id, chID, opID, targetType string
+		var targetValue, chProg, opProg float64
+		var xpStake int
+		if err := rows.Scan(&id, &chID, &opID, &targetType, &targetValue, &chProg, &opProg, &xpStake); err != nil {
+			continue
+		}
+
+		var increment float64
+		if targetType == "distance" {
+			increment = distanceDelta / 1000.0 // in km
+		} else {
+			increment = areaDelta // in m²
+		}
+		if increment <= 0 {
+			continue
+		}
+
+		if chID == userID {
+			chProg += increment
+		} else if opID == userID {
+			opProg += increment
+		}
+
+		isCompleted := false
+		winnerID := ""
+		if chProg >= targetValue {
+			isCompleted = true
+			winnerID = chID
+		} else if opProg >= targetValue {
+			isCompleted = true
+			winnerID = opID
+		}
+
+		updates = append(updates, duelUpdate{
+			id:          id,
+			newChProg:   chProg,
+			newOpProg:   opProg,
+			isCompleted: isCompleted,
+			winnerID:    winnerID,
+			xpStake:     xpStake,
+		})
+	}
+
+	for _, u := range updates {
+		if u.isCompleted {
+			_, _ = s.pool.Exec(ctx, `
+				UPDATE duels
+				SET challenger_progress = $1, opponent_progress = $2, status = 'completed', winner_id = $3, completed_at = NOW()
+				WHERE id = $4;
+			`, u.newChProg, u.newOpProg, u.winnerID, u.id)
+			if u.winnerID != "" {
+				_, _ = s.pool.Exec(ctx, `UPDATE users SET xp = xp + $1 WHERE id = $2;`, u.xpStake, u.winnerID)
+			}
+		} else {
+			_, _ = s.pool.Exec(ctx, `
+				UPDATE duels
+				SET challenger_progress = $1, opponent_progress = $2
+				WHERE id = $3;
+			`, u.newChProg, u.newOpProg, u.id)
+		}
+	}
+
+	return nil
 }

@@ -600,6 +600,243 @@ func (a *API) HandleUpdateUserFaction(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// SendFriendRequestBody carries target user identifier.
+type SendFriendRequestBody struct {
+	TargetUserID string `json:"target_user_id"`
+}
+
+// RespondFriendRequestBody carries action to accept or decline.
+type RespondFriendRequestBody struct {
+	Action string `json:"action"` // "accept" or "decline"
+}
+
+// CreateDuelRequest carries configuration for a head-to-head challenge.
+type CreateDuelRequest struct {
+	OpponentID  string  `json:"opponent_id"`
+	TargetType  string  `json:"target_type"` // "area" or "distance"
+	TargetValue float64 `json:"target_value"`
+	XpStake     int     `json:"xp_stake"`
+}
+
+// HandleGetFriends handles GET /v1/friends.
+func (a *API) HandleGetFriends(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	friends, err := a.store.GetFriends(r.Context(), uid)
+	if err != nil {
+		a.logger.Error("failed to get friends", "error", err, "uid", uid)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve friends")
+		return
+	}
+	if friends == nil {
+		friends = []store.FriendUser{}
+	}
+
+	writeJSON(w, http.StatusOK, friends)
+}
+
+// HandleGetFriendRequests handles GET /v1/friends/requests.
+func (a *API) HandleGetFriendRequests(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	reqs, err := a.store.GetFriendRequests(r.Context(), uid)
+	if err != nil {
+		a.logger.Error("failed to get friend requests", "error", err, "uid", uid)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve friend requests")
+		return
+	}
+	if reqs == nil {
+		reqs = []store.FriendRequestDetail{}
+	}
+
+	writeJSON(w, http.StatusOK, reqs)
+}
+
+// HandleSendFriendRequest handles POST /v1/friends/request.
+func (a *API) HandleSendFriendRequest(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	var req SendFriendRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Invalid request body")
+		return
+	}
+
+	req.TargetUserID = strings.TrimSpace(req.TargetUserID)
+	if req.TargetUserID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Target user ID cannot be empty")
+		return
+	}
+
+	friendship, err := a.store.SendFriendRequest(r.Context(), uid, req.TargetUserID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "FRIEND_REQUEST_ERROR", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, friendship)
+}
+
+// HandleRespondFriendRequest handles PUT /v1/friends/request/{id}.
+func (a *API) HandleRespondFriendRequest(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing request ID")
+		return
+	}
+
+	var req RespondFriendRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Invalid request body")
+		return
+	}
+
+	req.Action = strings.ToLower(strings.TrimSpace(req.Action))
+	if req.Action != "accept" && req.Action != "decline" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Action must be 'accept' or 'decline'")
+		return
+	}
+
+	if err := a.store.RespondFriendRequest(r.Context(), id, uid, req.Action); err != nil {
+		writeError(w, http.StatusBadRequest, "RESPOND_ERROR", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status": "ok",
+		"action": req.Action,
+	})
+}
+
+// HandleGetDuels handles GET /v1/duels.
+func (a *API) HandleGetDuels(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	duels, err := a.store.GetDuelsByUser(r.Context(), uid)
+	if err != nil {
+		a.logger.Error("failed to get duels", "error", err, "uid", uid)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve duels")
+		return
+	}
+	if duels == nil {
+		duels = []store.Duel{}
+	}
+
+	writeJSON(w, http.StatusOK, duels)
+}
+
+// HandleCreateDuel handles POST /v1/duels.
+func (a *API) HandleCreateDuel(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	var req CreateDuelRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Invalid request body")
+		return
+	}
+
+	req.OpponentID = strings.TrimSpace(req.OpponentID)
+	if req.OpponentID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Opponent ID cannot be empty")
+		return
+	}
+
+	if req.TargetType != "distance" {
+		req.TargetType = "area"
+	}
+
+	duel := &store.Duel{
+		ChallengerID: uid,
+		OpponentID:   req.OpponentID,
+		TargetType:   req.TargetType,
+		TargetValue:  req.TargetValue,
+		XpStake:      req.XpStake,
+	}
+
+	if err := a.store.CreateDuel(r.Context(), duel); err != nil {
+		writeError(w, http.StatusBadRequest, "CREATE_DUEL_ERROR", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, duel)
+}
+
+// HandleAcceptDuel handles PUT /v1/duels/{id}/accept.
+func (a *API) HandleAcceptDuel(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing duel ID")
+		return
+	}
+
+	if err := a.store.AcceptDuel(r.Context(), id, uid); err != nil {
+		writeError(w, http.StatusBadRequest, "ACCEPT_DUEL_ERROR", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status": "ok",
+		"action": "accepted",
+	})
+}
+
+// HandleDeclineDuel handles PUT /v1/duels/{id}/decline.
+func (a *API) HandleDeclineDuel(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing duel ID")
+		return
+	}
+
+	if err := a.store.DeclineDuel(r.Context(), id, uid); err != nil {
+		writeError(w, http.StatusBadRequest, "DECLINE_DUEL_ERROR", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status": "ok",
+		"action": "declined",
+	})
+}
+
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

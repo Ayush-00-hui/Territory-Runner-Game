@@ -119,4 +119,57 @@ type FactionStandingsResponse struct {
 	Standings    []FactionStanding `json:"standings"`
 }
 
+// Friendship represents a friend connection between two runners.
+type Friendship struct {
+	ID          string    `json:"id"`
+	RequesterID string    `json:"requester_id"`
+	AddresseeID string    `json:"addressee_id"`
+	Status      string    `json:"status"` // "pending", "accepted", "declined"
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// FriendUser represents a friend with their current athlete telemetry.
+type FriendUser struct {
+	ID           string  `json:"id"`
+	Username     string  `json:"username"`
+	Faction      string  `json:"faction"`
+	TotalAreaSqm float64 `json:"total_area_sqm"`
+	Level        int     `json:"level"`
+	XP           int64   `json:"xp"`
+	TotalRuns    int     `json:"total_runs"`
+}
+
+// FriendRequestDetail encapsulates a pending incoming/outgoing friend request.
+type FriendRequestDetail struct {
+	ID               string    `json:"id"`
+	RequesterID      string    `json:"requester_id"`
+	RequesterName    string    `json:"requester_name"`
+	RequesterFaction string    `json:"requester_faction"`
+	AddresseeID      string    `json:"addressee_id"`
+	AddresseeName    string    `json:"addressee_name"`
+	Status           string    `json:"status"`
+	CreatedAt        time.Time `json:"created_at"`
+	IsIncoming       bool      `json:"is_incoming"`
+}
+
+// Duel represents a head-to-head athletic territorial battle between two runners.
+type Duel struct {
+	ID                 string     `json:"id"`
+	ChallengerID       string     `json:"challenger_id"`
+	ChallengerUsername string     `json:"challenger_username"`
+	OpponentID         string     `json:"opponent_id"`
+	OpponentUsername   string     `json:"opponent_username"`
+	TargetType         string     `json:"target_type"` // "area", "distance"
+	TargetValue        float64    `json:"target_value"`
+	Status             string     `json:"status"` // "pending", "active", "completed", "declined", "expired"
+	ChallengerProgress float64    `json:"challenger_progress"`
+	OpponentProgress   float64    `json:"opponent_progress"`
+	WinnerID           string     `json:"winner_id,omitempty"`
+	XpStake            int        `json:"xp_stake"`
+	ExpiresAt          time.Time  `json:"expires_at"`
+	CreatedAt          time.Time  `json:"created_at"`
+	CompletedAt        *time.Time `json:"completed_at,omitempty"`
+}
+
 

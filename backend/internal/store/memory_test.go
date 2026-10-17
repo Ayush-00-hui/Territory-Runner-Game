@@ -175,3 +175,128 @@ func TestCaptureSetsTerritoryStrengthAndLastDefendedAt(t *testing.T) {
 	assert.True(t, territories[0].LastDefendedAt.After(before) || territories[0].LastDefendedAt.Equal(before))
 }
 
+func TestFriendshipFlow(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// Seed 2 users
+	u1 := &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard", TotalAreaSqm: 50000.0}
+	u2 := &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion", TotalAreaSqm: 35000.0}
+	require.NoError(t, memStore.UpsertUser(ctx, u1))
+	require.NoError(t, memStore.UpsertUser(ctx, u2))
+
+	// Self-request fails
+	_, err := memStore.SendFriendRequest(ctx, "usr_alice", "usr_alice")
+	assert.Error(t, err)
+
+	// Send request: Alice -> Bob
+	req, err := memStore.SendFriendRequest(ctx, "usr_alice", "usr_bob")
+	require.NoError(t, err)
+	assert.Equal(t, "pending", req.Status)
+
+	// Duplicate fails
+	_, err = memStore.SendFriendRequest(ctx, "usr_alice", "usr_bob")
+	assert.Error(t, err)
+
+	// Check pending requests for Bob (incoming)
+	bobRequests, err := memStore.GetFriendRequests(ctx, "usr_bob")
+	require.NoError(t, err)
+	require.Len(t, bobRequests, 1)
+	assert.True(t, bobRequests[0].IsIncoming)
+	assert.Equal(t, "Alice", bobRequests[0].RequesterName)
+
+	// Check pending requests for Alice (outgoing)
+	aliceRequests, err := memStore.GetFriendRequests(ctx, "usr_alice")
+	require.NoError(t, err)
+	require.Len(t, aliceRequests, 1)
+	assert.False(t, aliceRequests[0].IsIncoming)
+
+	// Alice cannot accept her own request
+	err = memStore.RespondFriendRequest(ctx, req.ID, "usr_alice", "accept")
+	assert.Error(t, err)
+
+	// Bob accepts
+	err = memStore.RespondFriendRequest(ctx, req.ID, "usr_bob", "accept")
+	require.NoError(t, err)
+
+	// Bob's friends list contains Alice
+	bobFriends, err := memStore.GetFriends(ctx, "usr_bob")
+	require.NoError(t, err)
+	require.Len(t, bobFriends, 1)
+	assert.Equal(t, "Alice", bobFriends[0].Username)
+	assert.Equal(t, 50000.0, bobFriends[0].TotalAreaSqm)
+
+	// Alice's friends list contains Bob
+	aliceFriends, err := memStore.GetFriends(ctx, "usr_alice")
+	require.NoError(t, err)
+	require.Len(t, aliceFriends, 1)
+	assert.Equal(t, "Bob", aliceFriends[0].Username)
+
+	// No more pending requests
+	pending, err := memStore.GetFriendRequests(ctx, "usr_bob")
+	require.NoError(t, err)
+	assert.Empty(t, pending)
+}
+
+func TestDuelFlow(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	u1 := &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard", XP: 500}
+	u2 := &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion", XP: 300}
+	require.NoError(t, memStore.UpsertUser(ctx, u1))
+	require.NoError(t, memStore.UpsertUser(ctx, u2))
+
+	duel := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "area",
+		TargetValue:  10000.0,
+		XpStake:      250,
+	}
+
+	// Create duel
+	err := memStore.CreateDuel(ctx, duel)
+	require.NoError(t, err)
+
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_bob")
+	require.NoError(t, err)
+	require.Len(t, duels, 1)
+	assert.Equal(t, "pending", duels[0].Status)
+	assert.Equal(t, "Alice", duels[0].ChallengerUsername)
+	assert.Equal(t, "Bob", duels[0].OpponentUsername)
+
+	// Bob accepts duel
+	err = memStore.AcceptDuel(ctx, duel.ID, "usr_bob")
+	require.NoError(t, err)
+
+	// Progress duel: Alice runs and claims 6,000 m²
+	err = memStore.UpdateDuelProgress(ctx, "usr_alice", 6000.0, 1200.0)
+	require.NoError(t, err)
+
+	duels, err = memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	assert.Equal(t, "active", duels[0].Status)
+	assert.Equal(t, 6000.0, duels[0].ChallengerProgress)
+	assert.Equal(t, 0.0, duels[0].OpponentProgress)
+
+	// Bob runs and claims 4,000 m²
+	err = memStore.UpdateDuelProgress(ctx, "usr_bob", 4000.0, 1000.0)
+	require.NoError(t, err)
+
+	// Alice runs again and claims 5,000 m² (Total: 11,000 >= 10,000 target!)
+	err = memStore.UpdateDuelProgress(ctx, "usr_alice", 5000.0, 1100.0)
+	require.NoError(t, err)
+
+	duels, err = memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	assert.Equal(t, "completed", duels[0].Status)
+	assert.Equal(t, "usr_alice", duels[0].WinnerID)
+	assert.NotNil(t, duels[0].CompletedAt)
+
+	// Alice awarded XP stake
+	aliceAfter, err := memStore.GetUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	assert.Equal(t, int64(750), aliceAfter.XP) // 500 + 250
+}
+

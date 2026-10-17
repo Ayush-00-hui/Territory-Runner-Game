@@ -59,6 +59,33 @@ type Store interface {
 	// UpdateUserFaction updates a user's chosen athletic faction.
 	UpdateUserFaction(ctx context.Context, userID, faction string) error
 
+	// SendFriendRequest creates a new pending friendship request from requesterID to addresseeID.
+	SendFriendRequest(ctx context.Context, requesterID, addresseeID string) (*Friendship, error)
+
+	// RespondFriendRequest accepts or declines a pending friend request.
+	RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) error
+
+	// GetFriends returns all accepted friends of the given user.
+	GetFriends(ctx context.Context, userID string) ([]FriendUser, error)
+
+	// GetFriendRequests returns all pending friend requests involving the user.
+	GetFriendRequests(ctx context.Context, userID string) ([]FriendRequestDetail, error)
+
+	// CreateDuel initiates a new head-to-head duel challenge.
+	CreateDuel(ctx context.Context, d *Duel) error
+
+	// GetDuelsByUser retrieves active, pending, and recent duels involving the user.
+	GetDuelsByUser(ctx context.Context, userID string) ([]Duel, error)
+
+	// AcceptDuel transitions a pending duel to active.
+	AcceptDuel(ctx context.Context, duelID, userID string) error
+
+	// DeclineDuel marks a pending duel as declined.
+	DeclineDuel(ctx context.Context, duelID, userID string) error
+
+	// UpdateDuelProgress increments progress for any active duels involving userID.
+	UpdateDuelProgress(ctx context.Context, userID string, areaDelta, distanceDelta float64) error
+
 	// Ping checks database connectivity.
 	Ping(ctx context.Context) error
 

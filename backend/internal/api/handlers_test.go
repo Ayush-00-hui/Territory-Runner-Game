@@ -828,5 +828,115 @@ func TestUpdateUserFaction(t *testing.T) {
 	assert.Equal(t, "Solaris Nomads", user.Faction)
 }
 
+func TestFriendsEndpoints(t *testing.T) {
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard", TotalAreaSqm: 40000.0})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion", TotalAreaSqm: 25000.0})
+
+	// 1. Send friend request: Alice -> Bob
+	body, _ := json.Marshal(map[string]string{"target_user_id": "usr_bob"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/friends/request", bytes.NewReader(body))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	var f store.Friendship
+	err := json.Unmarshal(rec.Body.Bytes(), &f)
+	require.NoError(t, err)
+	assert.Equal(t, "pending", f.Status)
+
+	// 2. Bob gets requests
+	req = httptest.NewRequest(http.MethodGet, "/v1/friends/requests", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var reqs []store.FriendRequestDetail
+	err = json.Unmarshal(rec.Body.Bytes(), &reqs)
+	require.NoError(t, err)
+	require.Len(t, reqs, 1)
+	assert.True(t, reqs[0].IsIncoming)
+	assert.Equal(t, "Alice", reqs[0].RequesterName)
+
+	// 3. Bob accepts request
+	actionBody, _ := json.Marshal(map[string]string{"action": "accept"})
+	req = httptest.NewRequest(http.MethodPut, "/v1/friends/request/"+f.ID, bytes.NewReader(actionBody))
+	req.Header.Set("X-Dev-User", "usr_bob")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// 4. Alice gets friends
+	req = httptest.NewRequest(http.MethodGet, "/v1/friends", nil)
+	req.Header.Set("X-Dev-User", "usr_alice")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var friends []store.FriendUser
+	err = json.Unmarshal(rec.Body.Bytes(), &friends)
+	require.NoError(t, err)
+	require.Len(t, friends, 1)
+	assert.Equal(t, "Bob", friends[0].Username)
+}
+
+func TestDuelsEndpoints(t *testing.T) {
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion"})
+
+	// 1. Alice creates duel challenge against Bob
+	duelBody, _ := json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_bob",
+		"target_type":  "area",
+		"target_value": 20000.0,
+		"xp_stake":     300,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	var duel store.Duel
+	err := json.Unmarshal(rec.Body.Bytes(), &duel)
+	require.NoError(t, err)
+	assert.Equal(t, "pending", duel.Status)
+	assert.Equal(t, 20000.0, duel.TargetValue)
+
+	// 2. Bob lists duels
+	req = httptest.NewRequest(http.MethodGet, "/v1/duels", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var duels []store.Duel
+	err = json.Unmarshal(rec.Body.Bytes(), &duels)
+	require.NoError(t, err)
+	require.Len(t, duels, 1)
+
+	// 3. Bob accepts duel
+	req = httptest.NewRequest(http.MethodPut, "/v1/duels/"+duel.ID+"/accept", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Verify duel is active
+	duelsAfter, err := memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	assert.Equal(t, "active", duelsAfter[0].Status)
+}
+
 
 

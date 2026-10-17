@@ -4,7 +4,9 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import '../models/duel.dart';
 import '../models/faction_standing.dart';
+import '../models/friend.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/league_standing.dart';
 import '../models/runner_profile.dart';
@@ -448,6 +450,131 @@ class ApiClient {
 
     final response = await _executeWithRetry(
       () => _httpClient.put(uri, headers: headers, body: body),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Fetches confirmed friends list (GET /v1/friends)
+  Future<List<FriendUser>> getFriends() async {
+    final uri = Uri.parse('$baseUrl/v1/friends');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((e) => FriendUser.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  /// Fetches pending friend requests (GET /v1/friends/requests)
+  Future<List<FriendRequestDetail>> getFriendRequests() async {
+    final uri = Uri.parse('$baseUrl/v1/friends/requests');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((e) => FriendRequestDetail.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  /// Sends a friend request to a target runner (POST /v1/friends/request)
+  Future<bool> sendFriendRequest(String targetUserId) async {
+    final uri = Uri.parse('$baseUrl/v1/friends/request');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'target_user_id': targetUserId});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+    );
+
+    return response.statusCode == 200 || response.statusCode == 201;
+  }
+
+  /// Responds to a friend request (PUT /v1/friends/request/{id})
+  Future<bool> respondFriendRequest(String requestId, String action) async {
+    final uri = Uri.parse('$baseUrl/v1/friends/request/$requestId');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'action': action});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.put(uri, headers: headers, body: body),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Fetches duels for the current user (GET /v1/duels)
+  Future<List<Duel>> getDuels() async {
+    final uri = Uri.parse('$baseUrl/v1/duels');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data.map((e) => Duel.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [];
+  }
+
+  /// Initiates a head-to-head duel (POST /v1/duels)
+  Future<Duel?> createDuel({
+    required String opponentId,
+    required String targetType,
+    required double targetValue,
+    int xpStake = 500,
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/duels');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({
+      'opponent_id': opponentId,
+      'target_type': targetType,
+      'target_value': targetValue,
+      'xp_stake': xpStake,
+    });
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return Duel.fromJson(data);
+    }
+    return null;
+  }
+
+  /// Accepts an incoming duel challenge (PUT /v1/duels/{id}/accept)
+  Future<bool> acceptDuel(String duelId) async {
+    final uri = Uri.parse('$baseUrl/v1/duels/$duelId/accept');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.put(uri, headers: headers),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Declines an incoming duel challenge (PUT /v1/duels/{id}/decline)
+  Future<bool> declineDuel(String duelId) async {
+    final uri = Uri.parse('$baseUrl/v1/duels/$duelId/decline');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.put(uri, headers: headers),
     );
 
     return response.statusCode == 200;

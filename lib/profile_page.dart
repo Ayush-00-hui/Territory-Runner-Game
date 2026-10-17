@@ -9,12 +9,13 @@ import 'features/profile/widgets/profile_hero.dart';
 import 'features/profile/widgets/settings_list.dart';
 import 'features/profile/widgets/stat_grid.dart';
 import 'features/profile/widgets/weekly_league_view.dart';
+import 'features/social/widgets/social_hub_sheet.dart';
 import 'models/runner_profile.dart';
 import 'models/territory.dart';
 import 'services/firebase_service.dart';
 import 'ui/ui.dart';
 
-enum ProfileTab { athlete, turfWar, league }
+enum ProfileTab { athlete, turfWar, league, squad }
 
 class ProfilePage extends StatefulWidget {
   final RunnerProfile? initialProfile;
@@ -85,6 +86,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.sports_kabaddi_rounded, color: AppColors.secondary),
+            onPressed: () => showSocialHubSheet(context),
+            tooltip: 'Social Syndicate & Duels',
+          ),
           IconButton(
             icon: const Icon(Icons.cloud_sync_outlined, color: AppColors.accent),
             onPressed: _openAuthDialog,
@@ -159,6 +165,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                       tab: ProfileTab.league,
                       label: 'LEAGUE',
                       icon: Icons.leaderboard_rounded,
+                    ),
+                  ),
+                  Expanded(
+                    child: _buildSegmentButton(
+                      tab: ProfileTab.squad,
+                      label: 'SQUAD',
+                      icon: Icons.groups_rounded,
                     ),
                   ),
                 ],
@@ -242,9 +255,15 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 profile: profile,
                 territories: territories,
               ),
-            ] else ...[
+            ] else if (_activeTab == ProfileTab.league) ...[
               // --- WEEKLY LEAGUE STANDINGS & CUTOFFS ---
               const WeeklyLeagueView(),
+            ] else ...[
+              // --- SQUAD & DUELS HUB ---
+              const SizedBox(
+                height: 600,
+                child: SocialHubView(),
+              ),
             ],
           ],
         ),

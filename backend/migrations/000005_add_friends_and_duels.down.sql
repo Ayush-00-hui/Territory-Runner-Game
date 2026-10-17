@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS duels;
+DROP TABLE IF EXISTS friendships;
