@@ -656,6 +656,19 @@ func (s *PostgresStore) SendFriendRequest(ctx context.Context, requesterID, addr
 		return nil, fmt.Errorf("failed to check existing friendship: %w", err)
 	}
 
+	// Anti-abuse: check pending limits
+	var pendingSent int
+	_ = s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM friendships WHERE requester_id = $1 AND status = 'pending';`, requesterID).Scan(&pendingSent)
+	if pendingSent >= 25 {
+		return nil, fmt.Errorf("maximum pending friend request limit (25) reached")
+	}
+
+	var pendingReceived int
+	_ = s.pool.QueryRow(ctx, `SELECT COUNT(*) FROM friendships WHERE addressee_id = $1 AND status = 'pending';`, addresseeID).Scan(&pendingReceived)
+	if pendingReceived >= 50 {
+		return nil, fmt.Errorf("target runner has reached maximum pending friend requests limit (50)")
+	}
+
 	id := fmt.Sprintf("friendship_%d", time.Now().UnixNano())
 	insertQuery := `
 		INSERT INTO friendships (id, requester_id, addressee_id, status, created_at, updated_at)
@@ -765,19 +778,100 @@ func (s *PostgresStore) CreateDuel(ctx context.Context, d *Duel) error {
 	if d.ChallengerID == d.OpponentID {
 		return fmt.Errorf("cannot challenge yourself to a duel")
 	}
+	if strings.TrimSpace(d.OpponentID) == "" {
+		return fmt.Errorf("opponent ID cannot be empty")
+	}
+
+	// Validate XP Stake
+	if d.XpStake < 0 || d.XpStake > 1000 {
+		return fmt.Errorf("xp stake must be between 0 and 1000")
+	}
+	if d.XpStake == 0 {
+		d.XpStake = 100
+	}
+
+	// Validate Target Type and Value
+	if d.TargetType != "distance" {
+		d.TargetType = "area"
+	}
+	if d.TargetType == "area" {
+		if d.TargetValue <= 0 {
+			d.TargetValue = 10000.0
+		} else if d.TargetValue < 500.0 || d.TargetValue > 500000.0 {
+			return fmt.Errorf("target value for area duel must be between 500 and 500,000 sqm")
+		}
+	} else {
+		if d.TargetValue <= 0 {
+			d.TargetValue = 5.0
+		} else if d.TargetValue >= 100.0 {
+			if d.TargetValue < 500.0 || d.TargetValue > 50000.0 {
+				return fmt.Errorf("distance duel target must be between 500m (0.5km) and 50,000m (50km)")
+			}
+			d.TargetValue = d.TargetValue / 1000.0
+		} else {
+			if d.TargetValue < 0.5 || d.TargetValue > 50.0 {
+				return fmt.Errorf("distance duel target must be between 0.5 and 50.0 km")
+			}
+		}
+	}
+
+	// Check if opponent exists
+	var opponentExists bool
+	_ = s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1);`, d.OpponentID).Scan(&opponentExists)
+	if !opponentExists {
+		return fmt.Errorf("opponent not found: %s", d.OpponentID)
+	}
+
+	// Anti-abuse: Check duplicate active/pending duel between these two runners
+	var existingDuels int
+	err := s.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM duels
+		WHERE ((challenger_id = $1 AND opponent_id = $2) OR (challenger_id = $2 AND opponent_id = $1))
+		  AND status IN ('pending', 'active')
+		  AND expires_at > NOW();
+	`, d.ChallengerID, d.OpponentID).Scan(&existingDuels)
+	if err == nil && existingDuels > 0 {
+		return fmt.Errorf("an active or pending duel already exists between these runners")
+	}
+
+	// Anti-abuse: Check concurrent active duels limit (max 5 active per runner)
+	var activeCount int
+	_ = s.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM duels
+		WHERE (challenger_id = $1 OR opponent_id = $1)
+		  AND status = 'active'
+		  AND expires_at > NOW();
+	`, d.ChallengerID).Scan(&activeCount)
+	if activeCount >= 5 {
+		return fmt.Errorf("maximum active duel limit (5) reached")
+	}
+
+	// Anti-abuse: Check pending challenges limit (max 10 pending created)
+	var pendingCreated int
+	_ = s.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM duels
+		WHERE challenger_id = $1
+		  AND status = 'pending'
+		  AND expires_at > NOW();
+	`, d.ChallengerID).Scan(&pendingCreated)
+	if pendingCreated >= 10 {
+		return fmt.Errorf("maximum pending duel challenge limit (10) reached")
+	}
+
+	// Anti-abuse: Check opponent pending challenges limit (max 10 pending received)
+	var opponentPending int
+	_ = s.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM duels
+		WHERE opponent_id = $1
+		  AND status = 'pending'
+		  AND expires_at > NOW();
+	`, d.OpponentID).Scan(&opponentPending)
+	if opponentPending >= 10 {
+		return fmt.Errorf("opponent has reached maximum pending duel challenges (10)")
+	}
 
 	if d.ID == "" {
 		d.ID = fmt.Sprintf("duel_%d", time.Now().UnixNano())
-	}
-	if d.XpStake <= 0 {
-		d.XpStake = 100
-	}
-	if d.TargetValue <= 0 {
-		if d.TargetType == "distance" {
-			d.TargetValue = 5.0 // 5 km
-		} else {
-			d.TargetValue = 10000.0 // 10k m²
-		}
 	}
 	if d.ExpiresAt.IsZero() {
 		d.ExpiresAt = time.Now().UTC().Add(24 * time.Hour)
@@ -787,7 +881,7 @@ func (s *PostgresStore) CreateDuel(ctx context.Context, d *Duel) error {
 		INSERT INTO duels (id, challenger_id, opponent_id, target_type, target_value, status, challenger_progress, opponent_progress, xp_stake, expires_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, 'pending', 0.0, 0.0, $6, $7, NOW());
 	`
-	_, err := s.pool.Exec(ctx, query, d.ID, d.ChallengerID, d.OpponentID, d.TargetType, d.TargetValue, d.XpStake, d.ExpiresAt)
+	_, err = s.pool.Exec(ctx, query, d.ID, d.ChallengerID, d.OpponentID, d.TargetType, d.TargetValue, d.XpStake, d.ExpiresAt)
 	if err != nil {
 		return fmt.Errorf("failed to insert duel: %w", err)
 	}
@@ -842,10 +936,13 @@ func (s *PostgresStore) GetDuelsByUser(ctx context.Context, userID string) ([]Du
 			} else {
 				d.Status = "expired"
 			}
-			// Asynchronously update expired status in DB
-			go func(dID, status, winner string) {
+			// Asynchronously update expired status in DB and award XP if winner
+			go func(dID, status, winner string, xp int) {
 				_, _ = s.pool.Exec(context.Background(), `UPDATE duels SET status = $1, winner_id = NULLIF($2, ''), completed_at = NOW() WHERE id = $3;`, status, winner, dID)
-			}(d.ID, d.Status, d.WinnerID)
+				if winner != "" && xp > 0 {
+					_, _ = s.pool.Exec(context.Background(), `UPDATE users SET xp = xp + $1 WHERE id = $2;`, xp, winner)
+				}
+			}(d.ID, d.Status, d.WinnerID, d.XpStake)
 		}
 
 		duels = append(duels, d)
@@ -858,14 +955,14 @@ func (s *PostgresStore) AcceptDuel(ctx context.Context, duelID, userID string) e
 	query := `
 		UPDATE duels
 		SET status = 'active', expires_at = NOW() + INTERVAL '24 hours'
-		WHERE id = $1 AND opponent_id = $2 AND status = 'pending';
+		WHERE id = $1 AND opponent_id = $2 AND status = 'pending' AND expires_at > NOW();
 	`
 	cmd, err := s.pool.Exec(ctx, query, duelID, userID)
 	if err != nil {
 		return fmt.Errorf("failed to accept duel: %w", err)
 	}
 	if cmd.RowsAffected() == 0 {
-		return fmt.Errorf("pending duel not found or unauthorized")
+		return fmt.Errorf("pending duel not found, expired, or unauthorized")
 	}
 	return nil
 }

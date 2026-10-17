@@ -938,6 +938,120 @@ func TestDuelsEndpoints(t *testing.T) {
 	assert.Equal(t, "active", duelsAfter[0].Status)
 }
 
+func TestFriendsAndDuelsAntiAbuseEndpoints(t *testing.T) {
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion"})
+
+	// 1. Self-friend rejection
+	body, _ := json.Marshal(map[string]string{"target_user_id": "usr_alice"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/friends/request", bytes.NewReader(body))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	var errResp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "CANNOT_FRIEND_SELF", errResp["error"])
+
+	// 2. Self-duel rejection
+	duelBody, _ := json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_alice",
+		"target_type":  "area",
+		"target_value": 10000.0,
+		"xp_stake":     100,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "CANNOT_DUEL_SELF", errResp["error"])
+
+	// 3. Invalid XP stake rejection
+	duelBody, _ = json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_bob",
+		"target_type":  "area",
+		"target_value": 10000.0,
+		"xp_stake":     2500, // exceeds 1000
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "INVALID_XP_STAKE", errResp["error"])
+
+	// 4. Invalid target value (area < 500)
+	duelBody, _ = json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_bob",
+		"target_type":  "area",
+		"target_value": 200.0,
+		"xp_stake":     100,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "INVALID_TARGET_VALUE", errResp["error"])
+
+	// 5. Opponent not found
+	duelBody, _ = json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_nonexistent",
+		"target_type":  "area",
+		"target_value": 5000.0,
+		"xp_stake":     100,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "OPPONENT_NOT_FOUND", errResp["error"])
+
+	// 6. Valid duel creation
+	duelBody, _ = json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_bob",
+		"target_type":  "area",
+		"target_value": 5000.0,
+		"xp_stake":     200,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	// 7. Duplicate duel rejection
+	duelBody, _ = json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_bob",
+		"target_type":  "distance",
+		"target_value": 5.0,
+		"xp_stake":     200,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	_ = json.Unmarshal(rec.Body.Bytes(), &errResp)
+	assert.Equal(t, "DUEL_ALREADY_EXISTS", errResp["error"])
+}
+
 func TestPrivacyZonesEndpoints(t *testing.T) {
 	router, _ := setupTestServer()
 

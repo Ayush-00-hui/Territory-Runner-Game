@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -487,6 +488,7 @@ func (m *MemoryStore) SendFriendRequest(ctx context.Context, requesterID, addres
 		return nil, fmt.Errorf("addressee not found: %s", addresseeID)
 	}
 
+	var pendingSent, pendingReceived int
 	for _, f := range m.friendships {
 		if (f.RequesterID == requesterID && f.AddresseeID == addresseeID) ||
 			(f.RequesterID == addresseeID && f.AddresseeID == requesterID) {
@@ -497,6 +499,21 @@ func (m *MemoryStore) SendFriendRequest(ctx context.Context, requesterID, addres
 				return nil, fmt.Errorf("friend request already pending")
 			}
 		}
+		if f.Status == "pending" {
+			if f.RequesterID == requesterID {
+				pendingSent++
+			}
+			if f.AddresseeID == addresseeID {
+				pendingReceived++
+			}
+		}
+	}
+
+	if pendingSent >= 25 {
+		return nil, fmt.Errorf("maximum pending friend request limit (25) reached")
+	}
+	if pendingReceived >= 50 {
+		return nil, fmt.Errorf("target runner has reached maximum pending friend requests limit (50)")
 	}
 
 	id := fmt.Sprintf("friendship_%d", time.Now().UnixNano())
@@ -642,6 +659,9 @@ func (m *MemoryStore) CreateDuel(ctx context.Context, d *Duel) error {
 	if d.ChallengerID == d.OpponentID {
 		return fmt.Errorf("cannot challenge yourself to a duel")
 	}
+	if strings.TrimSpace(d.OpponentID) == "" {
+		return fmt.Errorf("opponent ID cannot be empty")
+	}
 
 	challenger, ok := m.users[d.ChallengerID]
 	if !ok {
@@ -652,6 +672,72 @@ func (m *MemoryStore) CreateDuel(ctx context.Context, d *Duel) error {
 		return fmt.Errorf("opponent not found: %s", d.OpponentID)
 	}
 
+	// Validate XP Stake
+	if d.XpStake < 0 || d.XpStake > 1000 {
+		return fmt.Errorf("xp stake must be between 0 and 1000")
+	}
+	if d.XpStake == 0 {
+		d.XpStake = 100
+	}
+
+	// Validate Target Type and Value
+	if d.TargetType != "distance" {
+		d.TargetType = "area"
+	}
+	if d.TargetType == "area" {
+		if d.TargetValue <= 0 {
+			d.TargetValue = 10000.0
+		} else if d.TargetValue < 500.0 || d.TargetValue > 500000.0 {
+			return fmt.Errorf("target value for area duel must be between 500 and 500,000 sqm")
+		}
+	} else {
+		if d.TargetValue <= 0 {
+			d.TargetValue = 5.0
+		} else if d.TargetValue >= 100.0 {
+			if d.TargetValue < 500.0 || d.TargetValue > 50000.0 {
+				return fmt.Errorf("distance duel target must be between 500m (0.5km) and 50,000m (50km)")
+			}
+			d.TargetValue = d.TargetValue / 1000.0
+		} else {
+			if d.TargetValue < 0.5 || d.TargetValue > 50.0 {
+				return fmt.Errorf("distance duel target must be between 0.5 and 50.0 km")
+			}
+		}
+	}
+
+	now := time.Now().UTC()
+	var challengerActiveCount, challengerPendingCount, opponentPendingCount int
+	for _, existing := range m.duels {
+		isActive := existing.Status == "active" && !now.After(existing.ExpiresAt)
+		isPending := existing.Status == "pending" && !now.After(existing.ExpiresAt)
+
+		if (isActive || isPending) &&
+			((existing.ChallengerID == d.ChallengerID && existing.OpponentID == d.OpponentID) ||
+				(existing.ChallengerID == d.OpponentID && existing.OpponentID == d.ChallengerID)) {
+			return fmt.Errorf("an active or pending duel already exists between these runners")
+		}
+
+		if isActive && (existing.ChallengerID == d.ChallengerID || existing.OpponentID == d.ChallengerID) {
+			challengerActiveCount++
+		}
+		if isPending && existing.ChallengerID == d.ChallengerID {
+			challengerPendingCount++
+		}
+		if isPending && existing.OpponentID == d.OpponentID {
+			opponentPendingCount++
+		}
+	}
+
+	if challengerActiveCount >= 5 {
+		return fmt.Errorf("maximum active duel limit (5) reached")
+	}
+	if challengerPendingCount >= 10 {
+		return fmt.Errorf("maximum pending duel challenge limit (10) reached")
+	}
+	if opponentPendingCount >= 10 {
+		return fmt.Errorf("opponent has reached maximum pending duel challenges (10)")
+	}
+
 	d.ChallengerUsername = challenger.Username
 	d.OpponentUsername = opponent.Username
 
@@ -659,19 +745,9 @@ func (m *MemoryStore) CreateDuel(ctx context.Context, d *Duel) error {
 		d.ID = fmt.Sprintf("duel_%d", time.Now().UnixNano())
 	}
 	d.Status = "pending"
-	d.CreatedAt = time.Now().UTC()
+	d.CreatedAt = now
 	if d.ExpiresAt.IsZero() {
 		d.ExpiresAt = d.CreatedAt.Add(24 * time.Hour)
-	}
-	if d.XpStake <= 0 {
-		d.XpStake = 100
-	}
-	if d.TargetValue <= 0 {
-		if d.TargetType == "distance" {
-			d.TargetValue = 5.0 // 5 km
-		} else {
-			d.TargetValue = 10000.0 // 10k m²
-		}
 	}
 
 	cpy := *d
@@ -698,9 +774,15 @@ func (m *MemoryStore) GetDuelsByUser(ctx context.Context, userID string) ([]Duel
 				if d.ChallengerProgress > d.OpponentProgress {
 					d.WinnerID = d.ChallengerID
 					d.Status = "completed"
+					if chUser, ok := m.users[d.ChallengerID]; ok {
+						chUser.XP += int64(d.XpStake)
+					}
 				} else if d.OpponentProgress > d.ChallengerProgress {
 					d.WinnerID = d.OpponentID
 					d.Status = "completed"
+					if opUser, ok := m.users[d.OpponentID]; ok {
+						opUser.XP += int64(d.XpStake)
+					}
 				} else {
 					d.Status = "expired"
 				}
@@ -739,6 +821,11 @@ func (m *MemoryStore) AcceptDuel(ctx context.Context, duelID, userID string) err
 		return fmt.Errorf("duel is %s (must be pending to accept)", d.Status)
 	}
 
+	if time.Now().UTC().After(d.ExpiresAt) {
+		d.Status = "expired"
+		return fmt.Errorf("duel invitation has expired")
+	}
+
 	d.Status = "active"
 	d.ExpiresAt = time.Now().UTC().Add(24 * time.Hour) // 24 hours from acceptance
 	return nil
@@ -764,6 +851,15 @@ func (m *MemoryStore) DeclineDuel(ctx context.Context, duelID, userID string) er
 
 	d.Status = "declined"
 	return nil
+}
+
+// SetDuelExpiresAtForTest updates a duel's expiration time for testing.
+func (m *MemoryStore) SetDuelExpiresAtForTest(duelID string, expiresAt time.Time) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if d, ok := m.duels[duelID]; ok {
+		d.ExpiresAt = expiresAt
+	}
 }
 
 // UpdateDuelProgress increments progress for any active duels involving userID.

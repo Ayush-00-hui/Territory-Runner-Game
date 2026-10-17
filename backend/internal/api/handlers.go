@@ -814,9 +814,27 @@ func (a *API) HandleSendFriendRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.TargetUserID == uid {
+		writeError(w, http.StatusBadRequest, "CANNOT_FRIEND_SELF", "Cannot send friend request to yourself")
+		return
+	}
+
 	friendship, err := a.store.SendFriendRequest(r.Context(), uid, req.TargetUserID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "FRIEND_REQUEST_ERROR", err.Error())
+		errStr := err.Error()
+		if strings.Contains(errStr, "yourself") {
+			writeError(w, http.StatusBadRequest, "CANNOT_FRIEND_SELF", errStr)
+			return
+		}
+		if strings.Contains(errStr, "limit") {
+			writeError(w, http.StatusBadRequest, "FRIEND_REQUEST_LIMIT_EXCEEDED", errStr)
+			return
+		}
+		if strings.Contains(errStr, "already") {
+			writeError(w, http.StatusBadRequest, "FRIEND_REQUEST_ALREADY_EXISTS", errStr)
+			return
+		}
+		writeError(w, http.StatusBadRequest, "FRIEND_REQUEST_ERROR", errStr)
 		return
 	}
 
@@ -901,8 +919,42 @@ func (a *API) HandleCreateDuel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.OpponentID == uid {
+		writeError(w, http.StatusBadRequest, "CANNOT_DUEL_SELF", "Cannot challenge yourself to a duel")
+		return
+	}
+
+	// Validate XP Stake bounds
+	if req.XpStake < 0 || req.XpStake > 1000 {
+		writeError(w, http.StatusBadRequest, "INVALID_XP_STAKE", "XP stake must be between 0 and 1000")
+		return
+	}
+
+	// Validate Target Type and Value bounds
 	if req.TargetType != "distance" {
 		req.TargetType = "area"
+	}
+
+	if req.TargetType == "area" {
+		if req.TargetValue <= 0 {
+			req.TargetValue = 10000.0 // Default 10,000 sqm
+		} else if req.TargetValue < 500.0 || req.TargetValue > 500000.0 {
+			writeError(w, http.StatusBadRequest, "INVALID_TARGET_VALUE", "Area duel target must be between 500 and 500,000 sqm")
+			return
+		}
+	} else if req.TargetType == "distance" {
+		if req.TargetValue <= 0 {
+			req.TargetValue = 5.0 // Default 5 km
+		} else if req.TargetValue >= 100.0 {
+			if req.TargetValue < 500.0 || req.TargetValue > 50000.0 {
+				writeError(w, http.StatusBadRequest, "INVALID_TARGET_VALUE", "Distance duel target must be between 500m (0.5km) and 50,000m (50km)")
+				return
+			}
+			req.TargetValue = req.TargetValue / 1000.0
+		} else if req.TargetValue < 0.5 || req.TargetValue > 50.0 {
+			writeError(w, http.StatusBadRequest, "INVALID_TARGET_VALUE", "Distance duel target must be between 0.5 and 50.0 km")
+			return
+		}
 	}
 
 	duel := &store.Duel{
@@ -914,7 +966,32 @@ func (a *API) HandleCreateDuel(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := a.store.CreateDuel(r.Context(), duel); err != nil {
-		writeError(w, http.StatusBadRequest, "CREATE_DUEL_ERROR", err.Error())
+		errStr := err.Error()
+		if strings.Contains(errStr, "yourself") {
+			writeError(w, http.StatusBadRequest, "CANNOT_DUEL_SELF", errStr)
+			return
+		}
+		if strings.Contains(errStr, "already exists") {
+			writeError(w, http.StatusBadRequest, "DUEL_ALREADY_EXISTS", errStr)
+			return
+		}
+		if strings.Contains(errStr, "limit") || strings.Contains(errStr, "reached") {
+			writeError(w, http.StatusBadRequest, "DUEL_LIMIT_EXCEEDED", errStr)
+			return
+		}
+		if strings.Contains(errStr, "target") {
+			writeError(w, http.StatusBadRequest, "INVALID_TARGET_VALUE", errStr)
+			return
+		}
+		if strings.Contains(errStr, "xp stake") {
+			writeError(w, http.StatusBadRequest, "INVALID_XP_STAKE", errStr)
+			return
+		}
+		if strings.Contains(errStr, "not found") {
+			writeError(w, http.StatusBadRequest, "OPPONENT_NOT_FOUND", errStr)
+			return
+		}
+		writeError(w, http.StatusBadRequest, "CREATE_DUEL_ERROR", errStr)
 		return
 	}
 

@@ -300,3 +300,98 @@ func TestDuelFlow(t *testing.T) {
 	assert.Equal(t, int64(750), aliceAfter.XP) // 500 + 250
 }
 
+func TestFriendsAndDuelsAntiAbuse(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_charlie", Username: "Charlie", Faction: "Neon Syndicate"})
+
+	// 1. Self-friending prevention
+	_, err := memStore.SendFriendRequest(ctx, "usr_alice", "usr_alice")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot send friend request to yourself")
+
+	// 2. Self-dueling prevention
+	err = memStore.CreateDuel(ctx, &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_alice",
+		TargetType:   "area",
+		TargetValue:  10000.0,
+		XpStake:      100,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot challenge yourself")
+
+	// 3. XP stake bounds
+	err = memStore.CreateDuel(ctx, &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "area",
+		TargetValue:  10000.0,
+		XpStake:      1500, // exceeds 1000
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "xp stake must be between 0 and 1000")
+
+	// 4. Target bounds (area and distance)
+	err = memStore.CreateDuel(ctx, &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "area",
+		TargetValue:  100.0, // too small (< 500)
+		XpStake:      100,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "target value for area duel must be between 500 and 500,000")
+
+	err = memStore.CreateDuel(ctx, &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "distance",
+		TargetValue:  0.1, // too small (< 0.5 km)
+		XpStake:      100,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "distance duel target")
+
+	// 5. Valid duel creation
+	validDuel := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "area",
+		TargetValue:  5000.0,
+		XpStake:      250,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, validDuel))
+
+	// 6. Duplicate duel rejection (pending)
+	err = memStore.CreateDuel(ctx, &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "distance",
+		TargetValue:  5.0,
+		XpStake:      100,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists")
+
+	// Reverse direction duplicate rejection (Bob challenges Alice)
+	err = memStore.CreateDuel(ctx, &store.Duel{
+		ChallengerID: "usr_bob",
+		OpponentID:   "usr_alice",
+		TargetType:   "area",
+		TargetValue:  10000.0,
+		XpStake:      100,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "already exists")
+
+	// 7. Expired duel acceptance rejection
+	memStore.SetDuelExpiresAtForTest(validDuel.ID, time.Now().UTC().Add(-1*time.Hour))
+	err = memStore.AcceptDuel(ctx, validDuel.ID, "usr_bob")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "expired")
+}
+
