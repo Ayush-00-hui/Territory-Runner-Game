@@ -5,6 +5,8 @@ import '../../gameplay/territory_service.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../ui/ui.dart';
+import 'emergency_contact_dialog.dart';
+import 'privacy_zones_sheet.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -171,6 +173,30 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             onTap: () {
               AppMotion.lightTick();
               NotificationService().showPermissionPrimerIfNeeded(context, force: true);
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+
+          // Privacy Zones & Geo-Masking
+          ProfileOptionTile(
+            icon: Icons.shield_rounded,
+            title: 'Privacy Zones & Geo-Masking',
+            subtitle: 'Exclude home & workplace tracks from public exports',
+            onTap: () {
+              AppMotion.lightTick();
+              showPrivacyZonesSheet(context);
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+
+          // Emergency Contact & SOS Beacon
+          ProfileOptionTile(
+            icon: Icons.emergency_rounded,
+            title: 'Emergency Contact & SOS Beacon',
+            subtitle: 'Configure distress SMS recipient and safety credentials',
+            onTap: () {
+              AppMotion.lightTick();
+              showEmergencyContactDialog(context);
             },
           ),
           // Reset Dev Mode (Only visible in debug builds)

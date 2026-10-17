@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import '../../../models/runner_profile.dart';
+import '../../../models/territory.dart';
+import '../../../services/export_service.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../../ui/ui.dart';
 import '../../history/widgets/run_share_card_modal.dart';
@@ -412,6 +414,61 @@ class SummarySheet extends StatelessWidget {
                   onPressed: () {
                     AppMotion.heavyBurst();
                     Navigator.pop(context);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s10),
+
+          // Secondary Data Export Row (GPX for Strava/Garmin, GeoJSON)
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: const BorderSide(color: AppColors.border),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                  ),
+                  icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.accent),
+                  label: const Text('EXPORT GPX', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  onPressed: () async {
+                    AppMotion.lightTick();
+                    await ExportService().exportAndShareGpx(
+                      runTitle: 'Territory Run - ${profile.username}',
+                      coordinates: effectivePoints,
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
+                    side: const BorderSide(color: AppColors.border),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                  ),
+                  icon: const Icon(Icons.polyline_rounded, size: 16, color: Color(0xFF00E5FF)),
+                  label: const Text('EXPORT GEOJSON', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  onPressed: () async {
+                    AppMotion.lightTick();
+                    await ExportService().exportAndShareGeoJson(
+                      territories: [
+                        Territory(
+                          id: 'run_${DateTime.now().millisecondsSinceEpoch}',
+                          ownerId: profile.id,
+                          polygon: effectivePoints,
+                          capturedAt: DateTime.now(),
+                          color: AppColors.accent,
+                          areaSqMeters: effectiveArea,
+                        ),
+                      ],
+                      runTrack: effectivePoints,
+                    );
                   },
                 ),
               ),

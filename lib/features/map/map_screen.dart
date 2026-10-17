@@ -32,6 +32,7 @@ import 'widgets/summary_sheet.dart';
 import 'widgets/leaderboard_sheet.dart';
 import 'widgets/loop_celebration_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
+import 'widgets/sos_beacon_sheet.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -1492,6 +1493,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   _buildFloatingCircleButton(
                     icon: Icons.layers_rounded,
                     onTap: _suggestAiRoute,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFloatingCircleButton(
+                    icon: Icons.emergency_rounded,
+                    color: Colors.redAccent,
+                    onTap: () {
+                      AppMotion.mediumTick();
+                      showSosBeaconSheet(context, _currentLocation);
+                    },
                   ),
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(

@@ -1,0 +1,376 @@
+import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:uuid/uuid.dart';
+import '../../../models/privacy_zone.dart';
+import '../../../services/privacy_zone_service.dart';
+import '../../../ui/ui.dart';
+
+void showPrivacyZonesSheet(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: AppColors.bgElevated,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (ctx) => const _PrivacyZonesSheet(),
+  );
+}
+
+class _PrivacyZonesSheet extends StatefulWidget {
+  const _PrivacyZonesSheet();
+
+  @override
+  State<_PrivacyZonesSheet> createState() => _PrivacyZonesSheetState();
+}
+
+class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
+  final PrivacyZoneService _privacyService = PrivacyZoneService();
+  bool _isLoading = true;
+  bool _isAdding = false;
+
+  final TextEditingController _nameController = TextEditingController(text: 'Home Base');
+  double _newRadiusMeters = 200.0;
+  LatLng? _selectedCoordinates;
+  bool _isLocating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await _privacyService.loadZones();
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _fetchCurrentLocation() async {
+    setState(() => _isLocating = true);
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      if (mounted) {
+        setState(() {
+          _selectedCoordinates = LatLng(pos.latitude, pos.longitude);
+          _isLocating = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLocating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to acquire GPS location: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveNewZone() async {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) return;
+
+    final coords = _selectedCoordinates ?? const LatLng(37.7749, -122.4194);
+    final zone = PrivacyZone(
+      id: const Uuid().v4(),
+      name: name,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      radiusMeters: _newRadiusMeters,
+      isEnabled: true,
+      createdAt: DateTime.now(),
+    );
+
+    await _privacyService.addZone(zone);
+    if (mounted) {
+      setState(() {
+        _isAdding = false;
+        _nameController.text = 'Office';
+        _selectedCoordinates = null;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppColors.surface,
+          content: Text('Privacy zone "$name" created. Tracks will be masked.', style: const TextStyle(color: AppColors.accent)),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.accent.withValues(alpha: 0.15),
+                        borderRadius: AppSpacing.br10,
+                      ),
+                      child: const Icon(Icons.shield_rounded, color: AppColors.accent, size: 22),
+                    ),
+                    const SizedBox(width: AppSpacing.s10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'PRIVACY ZONES',
+                          style: AppText.headingSmall.copyWith(fontSize: 15, fontWeight: FontWeight.w900),
+                        ),
+                        Text(
+                          'GEO-MASKING EXCLUSION RADAR',
+                          style: AppText.label.copyWith(color: AppColors.accent, fontSize: 9.5),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                if (!_isAdding)
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_rounded, color: AppColors.accent, size: 28),
+                    onPressed: () => setState(() => _isAdding = true),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: AppSpacing.s12),
+            Text(
+              'Coordinates and claimed sectors inside enabled privacy zones are automatically redacted from public syncs, social share cards, and GPX/GeoJSON exports.',
+              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.35),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+
+            // Add Zone Form
+            if (_isAdding) ...[
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.s16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppSpacing.br16,
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.4), width: 1.2),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'NEW PRIVACY ZONE',
+                      style: AppText.label.copyWith(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: AppSpacing.s8),
+                    TextField(
+                      controller: _nameController,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      decoration: InputDecoration(
+                        hintText: 'e.g. Home, Work, Gym',
+                        hintStyle: const TextStyle(color: AppColors.textMuted),
+                        filled: true,
+                        fillColor: AppColors.bgDeep,
+                        border: OutlineInputBorder(borderRadius: AppSpacing.br12, borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s12),
+
+                    // Radius Slider
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Exclusion Radius', style: AppText.bodySmall.copyWith(color: AppColors.textMuted)),
+                        Text('${_newRadiusMeters.round()} meters', style: AppText.bodyBold.copyWith(color: AppColors.accent)),
+                      ],
+                    ),
+                    Slider(
+                      value: _newRadiusMeters,
+                      min: 100.0,
+                      max: 1000.0,
+                      divisions: 18,
+                      activeColor: AppColors.accent,
+                      inactiveColor: Colors.white12,
+                      onChanged: (val) => setState(() => _newRadiusMeters = val),
+                    ),
+
+                    // Coordinate Pinning
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.white,
+                              side: const BorderSide(color: AppColors.border),
+                              shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
+                            ),
+                            icon: _isLocating
+                                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent))
+                                : const Icon(Icons.my_location_rounded, size: 16, color: AppColors.accent),
+                            label: Text(
+                              _selectedCoordinates == null
+                                  ? 'Pin Current Location'
+                                  : 'Pinned (${_selectedCoordinates!.latitude.toStringAsFixed(3)}, ${_selectedCoordinates!.longitude.toStringAsFixed(3)})',
+                              style: const TextStyle(fontSize: 11),
+                            ),
+                            onPressed: _fetchCurrentLocation,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: AppSpacing.s12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => setState(() => _isAdding = false),
+                            child: const Text('CANCEL', style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s8),
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.accent,
+                              foregroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
+                            ),
+                            onPressed: _saveNewZone,
+                            child: const Text('SAVE ZONE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s16),
+            ],
+
+            // Zones List
+            if (_isLoading)
+              const Center(child: CircularProgressIndicator(color: AppColors.accent))
+            else if (_privacyService.zones.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.s20),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppSpacing.br16,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(Icons.location_off_rounded, color: AppColors.textMuted, size: 32),
+                    const SizedBox(height: AppSpacing.s8),
+                    Text(
+                      'NO PRIVACY ZONES DEFINED',
+                      style: AppText.headingSmall.copyWith(fontSize: 12, letterSpacing: 1.1),
+                    ),
+                    const SizedBox(height: AppSpacing.s4),
+                    Text(
+                      'Tap + above to mask your home or workplace coordinates.',
+                      textAlign: TextAlign.center,
+                      style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ..._privacyService.zones.map((zone) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s14, vertical: AppSpacing.s10),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: AppSpacing.br16,
+                    border: Border.all(
+                      color: zone.isEnabled ? AppColors.accent.withValues(alpha: 0.3) : AppColors.border,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: zone.isEnabled ? AppColors.accent.withValues(alpha: 0.15) : Colors.white10,
+                        ),
+                        child: Icon(
+                          Icons.home_rounded,
+                          color: zone.isEnabled ? AppColors.accent : Colors.white54,
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              zone.name,
+                              style: AppText.bodyBold.copyWith(
+                                color: zone.isEnabled ? Colors.white : AppColors.textMuted,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              '${zone.radiusMeters.round()}m exclusion radius • Lat: ${zone.latitude.toStringAsFixed(3)}, Lng: ${zone.longitude.toStringAsFixed(3)}',
+                              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Switch(
+                        value: zone.isEnabled,
+                        activeThumbColor: AppColors.accent,
+                        onChanged: (val) async {
+                          await _privacyService.toggleZone(zone.id, val);
+                          setState(() {});
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.white54, size: 20),
+                        onPressed: () async {
+                          await _privacyService.deleteZone(zone.id);
+                          setState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../models/territory.dart';
+import '../../../services/export_service.dart';
 import '../../../ui/ui.dart';
 
 enum ShareCardTheme {
@@ -537,6 +539,61 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                       ),
                     ),
                     onPressed: _isExporting ? null : _saveCardToDevice,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s10),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
+                    ),
+                    icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.accent),
+                    label: const Text('EXPORT GPX', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                    onPressed: () async {
+                      await ExportService().exportAndShareGpx(
+                        runTitle: 'Territory Run - ${widget.callsign}',
+                        coordinates: widget.points,
+                      );
+                    },
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s10),
+              Expanded(
+                child: SizedBox(
+                  height: 42,
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white70,
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
+                    ),
+                    icon: const Icon(Icons.polyline_rounded, size: 16, color: Color(0xFF00E5FF)),
+                    label: const Text('EXPORT GEOJSON', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                    onPressed: () async {
+                      await ExportService().exportAndShareGeoJson(
+                        territories: [
+                          Territory(
+                            id: 'run_share_${DateTime.now().millisecondsSinceEpoch}',
+                            ownerId: widget.callsign,
+                            polygon: widget.points,
+                            capturedAt: widget.capturedAt,
+                            color: AppColors.accent,
+                            areaSqMeters: widget.areaSqMeters,
+                          ),
+                        ],
+                        runTrack: widget.points,
+                      );
+                    },
                   ),
                 ),
               ),
