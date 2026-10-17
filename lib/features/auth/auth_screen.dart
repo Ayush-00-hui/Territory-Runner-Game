@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../services/firebase_service.dart';
 import '../gameplay/territory_service.dart';
-import '../../main.dart'; // For AppColors
+import '../../ui/ui.dart';
 
+/// Redesigned Athlete Authentication Screen with Charcoal + Ember aesthetic.
+/// Supports Google One-Tap, Email & Password, Phone SMS OTP, and Instant Guest Access.
 class AuthScreen extends StatefulWidget {
   final VoidCallback onAuthenticated;
 
@@ -17,7 +18,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final FirebaseService _firebaseService = FirebaseService();
   final TerritoryService _territoryService = TerritoryService();
 
-  int _selectedTab = 0; // 0 = Google / Quick, 1 = Email, 2 = Phone OTP
+  int _selectedTab = 0; // 0 = Google / One-Tap, 1 = Email, 2 = Phone OTP
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -26,6 +27,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   bool _isSignUp = false;
+  bool _obscurePassword = true;
 
   // Phone controllers
   final TextEditingController _phoneController = TextEditingController();
@@ -43,13 +45,36 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  void _finishAuth(String displayName) async {
-    final profile = _territoryService.getProfile();
+  void _finishAuth(String displayName) {
     if (displayName.isNotEmpty) {
-      profile.username = displayName;
-      await _territoryService.saveProfile(profile);
+      try {
+        final profile = _territoryService.getProfile();
+        profile.username = displayName;
+        _territoryService.saveProfile(profile);
+      } catch (e) {
+        debugPrint('[AuthScreen] Notice saving profile: $e');
+      }
     }
     widget.onAuthenticated();
+    if (!mounted) return;
+    AppToast.show(
+      context,
+      'Welcome to the Grid, $displayName!',
+      type: AppToastType.success,
+      icon: Icons.check_circle_rounded,
+    );
+  }
+
+  void _showError(String message) {
+    setState(() => _errorMessage = message);
+    if (mounted) {
+      AppToast.show(
+        context,
+        message,
+        type: AppToastType.error,
+        icon: Icons.error_outline_rounded,
+      );
+    }
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -65,9 +90,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _finishAuth(name);
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Google Sign-In notice: $e\n\n(Tip: Ensure SHA-1 is added in Firebase Console)';
-      });
+      _showError('Google Sign-In notice: $e\n\n(Tip: Ensure SHA-1 is added in Firebase Console)');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -81,11 +104,11 @@ class _AuthScreenState extends State<AuthScreen> {
     final name = _nameController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter both email and password.');
+      _showError('Please enter both email and password.');
       return;
     }
     if (password.length < 6) {
-      setState(() => _errorMessage = 'Password must be at least 6 characters.');
+      _showError('Password must be at least 6 characters.');
       return;
     }
 
@@ -111,9 +134,7 @@ class _AuthScreenState extends State<AuthScreen> {
         }
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Auth failed: $e';
-      });
+      _showError('Authentication failed: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -124,7 +145,7 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> _sendPhoneOtp() async {
     String phone = _phoneController.text.trim();
     if (phone.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a valid phone number.');
+      _showError('Please enter a valid phone number.');
       return;
     }
     if (!phone.startsWith('+')) {
@@ -146,14 +167,17 @@ class _AuthScreenState extends State<AuthScreen> {
               _codeSent = true;
               _isLoading = false;
             });
+            AppToast.show(
+              context,
+              'SMS verification code sent to $phone',
+              type: AppToastType.info,
+            );
           }
         },
         onVerificationFailed: (e) {
           if (mounted) {
-            setState(() {
-              _isLoading = false;
-              _errorMessage = 'Phone verification failed: ${e.message ?? e.code}\n\n(Ensure Phone Auth is enabled in Firebase Console)';
-            });
+            setState(() => _isLoading = false);
+            _showError('Phone verification failed: ${e.message ?? e.code}');
           }
         },
         onVerificationCompleted: (cred) async {
@@ -164,17 +188,15 @@ class _AuthScreenState extends State<AuthScreen> {
         },
       );
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Error sending OTP: $e';
-      });
+      setState(() => _isLoading = false);
+      _showError('Error sending OTP: $e');
     }
   }
 
   Future<void> _verifyPhoneOtp() async {
     final code = _otpController.text.trim();
     if (code.length < 6 || _verificationId == null) {
-      setState(() => _errorMessage = 'Please enter the 6-digit OTP code.');
+      _showError('Please enter the 6-digit OTP code.');
       return;
     }
 
@@ -189,9 +211,7 @@ class _AuthScreenState extends State<AuthScreen> {
         _finishAuth(_phoneController.text.trim());
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Invalid OTP code: $e';
-      });
+      _showError('Invalid OTP code: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -200,7 +220,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _handleGuestContinue() {
-    HapticFeedback.lightImpact();
+    AppMotion.selectionTick();
     _finishAuth('Athlete');
   }
 
@@ -212,50 +232,58 @@ class _AuthScreenState extends State<AuthScreen> {
       backgroundColor: AppColors.bgDeep,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(24, topPad > 0 ? 12 : 24, 24, 24),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.s24,
+            topPad > 0 ? AppSpacing.s12 : AppSpacing.s24,
+            AppSpacing.s24,
+            AppSpacing.s24,
+          ),
           physics: const BouncingScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- APP LOGO & HEADER ---
+              // --- APP LOGO & BRAND HEADER ---
               Row(
                 children: [
                   Container(
                     height: 48,
                     width: 48,
                     decoration: BoxDecoration(
-                      color: AppColors.accent.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.accent, width: 1.5),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      color: AppColors.accentContainer,
+                      borderRadius: AppRadius.br16,
+                      border: Border.all(
+                        color: AppColors.accent.withValues(alpha: 0.6),
+                        width: 1.5,
+                      ),
+                      boxShadow: AppElevation.floating,
                     ),
-                    child: const Icon(Icons.terrain_rounded, color: AppColors.accent, size: 26),
+                    child: const Icon(
+                      Icons.terrain_rounded,
+                      color: AppColors.accent,
+                      size: 26,
+                    ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: AppSpacing.s14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
                         'TERRITORY RUNNER',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
+                        style: AppText.headingSmall.copyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5,
+                          letterSpacing: 1.4,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
-                        'Conquer Real-World Territory On Foot',
-                        style: TextStyle(
+                        'CONQUER REAL-WORLD TERRITORY ON FOOT',
+                        style: AppText.label.copyWith(
                           color: AppColors.textSecondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
                         ),
                       ),
                     ],
@@ -263,209 +291,214 @@ class _AuthScreenState extends State<AuthScreen> {
                 ],
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: AppSpacing.s32),
 
-              // Title
-              const Text(
-                'Sign In to Start',
-                style: TextStyle(
-                  color: Colors.white,
+              // Title & Subtitle
+              Text(
+                'Athlete Access',
+                style: AppText.headingLarge.copyWith(
+                  color: AppColors.textPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   letterSpacing: -0.5,
                 ),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'Sync your conquered territories, leaderboard stats, and badges across devices.',
-                style: TextStyle(
+              const SizedBox(height: AppSpacing.s6),
+              Text(
+                'Sync your conquered territories, weekly league standing, and badges across devices.',
+                style: AppText.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                   fontSize: 13,
                   height: 1.4,
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.s24),
 
-              // --- TAB SELECTOR (Google / Phone / Email) ---
+              // --- TAB SELECTOR (Google / Email / Phone) ---
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+                  borderRadius: AppRadius.br16,
+                  border: Border.all(color: AppColors.borderSubtle),
                 ),
                 child: Row(
                   children: [
-                    _buildTabPill(0, '🚀 Google'),
-                    _buildTabPill(1, '✉️ Email'),
-                    _buildTabPill(2, '📱 Phone'),
+                    _buildTabPill(0, Icons.bolt_rounded, 'One-Tap'),
+                    _buildTabPill(1, Icons.mail_outline_rounded, 'Email'),
+                    _buildTabPill(2, Icons.phone_android_rounded, 'Phone OTP'),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.s20),
 
-              // Error Banner if any
+              // Error Banner if present
               if (_errorMessage != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(AppSpacing.s12),
                   decoration: BoxDecoration(
-                    color: Colors.redAccent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
+                    color: AppColors.error.withValues(alpha: 0.12),
+                    borderRadius: AppRadius.br12,
+                    border: Border.all(
+                      color: AppColors.error.withValues(alpha: 0.35),
+                    ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline_rounded, color: Colors.redAccent, size: 20),
-                      const SizedBox(width: 10),
+                      const Icon(
+                        Icons.info_outline_rounded,
+                        color: AppColors.error,
+                        size: 18,
+                      ),
+                      const SizedBox(width: AppSpacing.s10),
                       Expanded(
                         child: Text(
                           _errorMessage!,
-                          style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.3),
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.s16),
               ],
 
               // --- TAB CONTENT ---
               if (_selectedTab == 0) ...[
                 // --- GOOGLE SIGN IN TAB ---
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.border),
-                  ),
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.s20),
                   child: Column(
                     children: [
-                      const Icon(Icons.account_circle_outlined, color: AppColors.accent, size: 48),
-                      const SizedBox(height: 14),
-                      const Text(
-                        'One-Tap Google Authentication',
-                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface2,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.accent.withValues(alpha: 0.3),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.account_circle_outlined,
+                          color: AppColors.accent,
+                          size: 32,
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Securely sign in with your verified Google account to claim athlete identity instantly.',
+                      const SizedBox(height: AppSpacing.s14),
+                      Text(
+                        'Instant Google Sign-In',
+                        style: AppText.headingSmall.copyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s6),
+                      Text(
+                        'Authenticate securely with your verified Google account to claim your runner callsign instantly.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+                        style: AppText.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          height: 1.45,
+                        ),
                       ),
-                      const SizedBox(height: 20),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
-                          minimumSize: const Size.fromHeight(52),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          elevation: 2,
-                        ),
-                        onPressed: _isLoading ? null : _handleGoogleSignIn,
-                        icon: _isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
-                              )
-                            : const Icon(Icons.g_mobiledata_rounded, size: 28, color: Colors.blue),
-                        label: const Text(
-                          'Continue with Google',
-                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
-                        ),
+                      const SizedBox(height: AppSpacing.s20),
+                      PrimaryButton(
+                        label: 'Continue with Google',
+                        icon: Icons.login_rounded,
+                        isLoading: _isLoading,
+                        onPressed: _handleGoogleSignIn,
                       ),
                     ],
                   ),
                 ),
               ] else if (_selectedTab == 1) ...[
                 // --- EMAIL & PASSWORD TAB ---
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.border),
-                  ),
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.s20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (_isSignUp) ...[
-                        TextField(
+                        _buildInputField(
                           controller: _nameController,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: 'Athlete Name / Callsign',
-                            labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                            prefixIcon: const Icon(Icons.person_outline_rounded, color: AppColors.accent),
-                            filled: true,
-                            fillColor: AppColors.surface2,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
-                          ),
+                          label: 'Athlete Callsign / Name',
+                          hintText: 'e.g. ApexStrider',
+                          icon: Icons.person_outline_rounded,
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: AppSpacing.s14),
                       ],
-                      TextField(
+                      _buildInputField(
                         controller: _emailController,
+                        label: 'Email Address',
+                        hintText: 'runner@domain.com',
+                        icon: Icons.alternate_email_rounded,
                         keyboardType: TextInputType.emailAddress,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Email Address',
-                          labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                          prefixIcon: const Icon(Icons.alternate_email_rounded, color: AppColors.accent),
-                          filled: true,
-                          fillColor: AppColors.surface2,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
-                        ),
                       ),
-                      const SizedBox(height: 14),
-                      TextField(
+                      const SizedBox(height: AppSpacing.s14),
+                      _buildInputField(
                         controller: _passwordController,
-                        obscureText: true,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: InputDecoration(
-                          labelText: 'Password (min 6 characters)',
-                          labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                          prefixIcon: const Icon(Icons.lock_outline_rounded, color: AppColors.accent),
-                          filled: true,
-                          fillColor: AppColors.surface2,
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: Colors.black,
-                          minimumSize: const Size.fromHeight(52),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        onPressed: _isLoading ? null : _handleEmailAuth,
-                        child: _isLoading
-                            ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                            : Text(
-                                _isSignUp ? 'Create Athlete Account' : 'Log In with Email',
-                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
-                              ),
-                      ),
-                      const SizedBox(height: 10),
-                      Center(
-                        child: TextButton(
+                        label: 'Password (min 6 characters)',
+                        hintText: '••••••••',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _obscurePassword,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 18,
+                            color: AppColors.textMuted,
+                          ),
                           onPressed: () {
+                            setState(() => _obscurePassword = !_obscurePassword);
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s20),
+                      PrimaryButton(
+                        label: _isSignUp ? 'Create Athlete Account' : 'Log In with Email',
+                        icon: _isSignUp ? Icons.person_add_alt_1_rounded : Icons.login_rounded,
+                        isLoading: _isLoading,
+                        onPressed: _handleEmailAuth,
+                      ),
+                      const SizedBox(height: AppSpacing.s12),
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            AppMotion.selectionTick();
                             setState(() {
                               _isSignUp = !_isSignUp;
                               _errorMessage = null;
                             });
                           },
-                          child: Text(
-                            _isSignUp ? 'Already registered? Log In' : 'New to Territory Runner? Create Account',
-                            style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 12),
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.s12,
+                              vertical: AppSpacing.s6,
+                            ),
+                            child: Text(
+                              _isSignUp
+                                  ? 'Already registered? Log In'
+                                  : 'New to Territory Runner? Create Account',
+                              style: AppText.label.copyWith(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -474,89 +507,107 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ] else ...[
                 // --- PHONE OTP TAB ---
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: AppColors.border),
-                  ),
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.s20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (!_codeSent) ...[
-                        const Text(
+                        Text(
                           'Enter mobile number with country code (e.g. +91 98765 43210):',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 12.5,
+                          ),
                         ),
-                        const SizedBox(height: 14),
-                        TextField(
+                        const SizedBox(height: AppSpacing.s14),
+                        _buildInputField(
                           controller: _phoneController,
+                          label: 'Phone Number',
+                          hintText: '+91 98765 43210',
+                          icon: Icons.phone_iphone_rounded,
                           keyboardType: TextInputType.phone,
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          decoration: InputDecoration(
-                            labelText: 'Phone Number (+91...)',
-                            labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
-                            prefixIcon: const Icon(Icons.phone_iphone_rounded, color: AppColors.accent),
-                            filled: true,
-                            fillColor: AppColors.surface2,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
-                          ),
                         ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: Colors.black,
-                            minimumSize: const Size.fromHeight(52),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          onPressed: _isLoading ? null : _sendPhoneOtp,
-                          child: _isLoading
-                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                              : const Text('Send SMS OTP Code', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: AppSpacing.s20),
+                        PrimaryButton(
+                          label: 'Send SMS OTP Code',
+                          icon: Icons.sms_rounded,
+                          isLoading: _isLoading,
+                          onPressed: _sendPhoneOtp,
                         ),
                       ] else ...[
                         Text(
-                          'Enter 6-digit OTP sent to ${_phoneController.text}:',
-                          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                          'Enter 6-digit OTP code sent to ${_phoneController.text}:',
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 12.5,
+                          ),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: AppSpacing.s14),
                         TextField(
                           controller: _otpController,
                           keyboardType: TextInputType.number,
                           maxLength: 6,
                           textAlign: TextAlign.center,
-                          style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w900),
+                          style: AppText.headingMedium.copyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: 24,
+                            letterSpacing: 8,
+                            fontWeight: FontWeight.w900,
+                          ),
                           decoration: InputDecoration(
                             counterText: '',
                             hintText: '••••••',
-                            hintStyle: const TextStyle(color: Colors.white24),
+                            hintStyle: TextStyle(
+                              color: AppColors.textMuted.withValues(alpha: 0.5),
+                              letterSpacing: 8,
+                            ),
                             filled: true,
                             fillColor: AppColors.surface2,
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.border)),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.accent, width: 1.5)),
+                            contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.s16),
+                            border: OutlineInputBorder(
+                              borderRadius: AppRadius.br12,
+                              borderSide: const BorderSide(color: AppColors.borderSubtle),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: AppRadius.br12,
+                              borderSide: const BorderSide(color: AppColors.borderSubtle),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: AppRadius.br12,
+                              borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accent,
-                            foregroundColor: Colors.black,
-                            minimumSize: const Size.fromHeight(52),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                          onPressed: _isLoading ? null : _verifyPhoneOtp,
-                          child: _isLoading
-                              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black))
-                              : const Text('Verify & Enter Grid', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: AppSpacing.s20),
+                        PrimaryButton(
+                          label: 'Verify & Enter Grid',
+                          icon: Icons.check_circle_outline_rounded,
+                          isLoading: _isLoading,
+                          onPressed: _verifyPhoneOtp,
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: AppSpacing.s12),
                         Center(
-                          child: TextButton(
-                            onPressed: () => setState(() => _codeSent = false),
-                            child: const Text('Change Phone Number', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+                          child: GestureDetector(
+                            onTap: () {
+                              AppMotion.selectionTick();
+                              setState(() => _codeSent = false);
+                            },
+                            behavior: HitTestBehavior.opaque,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.s12,
+                                vertical: AppSpacing.s6,
+                              ),
+                              child: Text(
+                                'Change Phone Number',
+                                style: AppText.label.copyWith(
+                                  color: AppColors.accent,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -565,31 +616,34 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ],
 
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacing.s24),
 
               // --- QUICK START / GUEST FALLBACK ---
               Center(
                 child: Column(
                   children: [
-                    const Text(
-                      'OR',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1.5),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider(color: AppColors.borderSubtle, height: 1)),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
+                          child: Text(
+                            'OR',
+                            style: AppText.labelSmall.copyWith(
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider(color: AppColors.borderSubtle, height: 1)),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.border),
-                        foregroundColor: Colors.white70,
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        backgroundColor: AppColors.surface,
-                      ),
+                    const SizedBox(height: AppSpacing.s16),
+                    SecondaryButton(
+                      label: 'Continue as Guest (Instant Play)',
+                      icon: Icons.directions_run_rounded,
                       onPressed: _handleGuestContinue,
-                      icon: const Icon(Icons.directions_run_rounded, color: AppColors.accent),
-                      label: const Text(
-                        'Continue as Guest (Instant Play)',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
-                      ),
                     ),
                   ],
                 ),
@@ -601,32 +655,107 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  Widget _buildTabPill(int index, String label) {
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hintText,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppText.labelSmall.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s6),
+        TextField(
+          controller: controller,
+          keyboardType: keyboardType,
+          obscureText: obscureText,
+          style: AppText.bodyMedium.copyWith(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: AppText.bodyMedium.copyWith(
+              color: AppColors.textMuted.withValues(alpha: 0.6),
+            ),
+            prefixIcon: Icon(icon, color: AppColors.accent, size: 20),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: AppColors.surface2,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s16,
+              vertical: AppSpacing.s14,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: AppRadius.br12,
+              borderSide: const BorderSide(color: AppColors.borderSubtle),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: AppRadius.br12,
+              borderSide: const BorderSide(color: AppColors.borderSubtle),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: AppRadius.br12,
+              borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabPill(int index, IconData icon, String label) {
     final isSelected = _selectedTab == index;
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          AppMotion.selectionTick();
           setState(() {
             _selectedTab = index;
             _errorMessage = null;
           });
         },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s10),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.surface2 : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-            border: isSelected ? Border.all(color: AppColors.accent.withValues(alpha: 0.5), width: 1.0) : null,
+            borderRadius: AppRadius.br12,
+            border: isSelected
+                ? Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.6),
+                    width: 1.0,
+                  )
+                : null,
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.textMuted,
-                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                fontSize: 12,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: isSelected ? AppColors.accent : AppColors.textMuted,
               ),
-            ),
+              const SizedBox(width: AppSpacing.s6),
+              Text(
+                label,
+                style: AppText.label.copyWith(
+                  color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                  fontSize: 11.5,
+                ),
+              ),
+            ],
           ),
         ),
       ),

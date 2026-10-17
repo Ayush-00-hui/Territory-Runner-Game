@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'features/onboarding/onboarding_screen.dart';
 import 'features/auth/auth_screen.dart';
 import 'profile_page.dart';
 import 'features/map/map_screen.dart';
@@ -271,6 +273,7 @@ class TerritoryApp extends StatefulWidget {
 
 class _TerritoryAppState extends State<TerritoryApp> {
   bool _isAuthenticated = false;
+  bool _hasCompletedOnboarding = true;
 
   @override
   void initState() {
@@ -288,23 +291,46 @@ class _TerritoryAppState extends State<TerritoryApp> {
         _isAuthenticated = true;
       }
     }
+
+    // Check onboarding completion for unauthenticated runners
+    SharedPreferences.getInstance().then((prefs) {
+      final completed = prefs.getBool(OnboardingScreen.prefsKeyCompleted) ?? false;
+      if (mounted && !completed && !_isAuthenticated) {
+        setState(() {
+          _hasCompletedOnboarding = false;
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    Widget homeWidget;
+    if (_isAuthenticated) {
+      homeWidget = const MainScreen();
+    } else if (!_hasCompletedOnboarding) {
+      homeWidget = OnboardingScreen(
+        onCompleted: () {
+          setState(() {
+            _hasCompletedOnboarding = true;
+          });
+        },
+      );
+    } else {
+      homeWidget = AuthScreen(
+        onAuthenticated: () {
+          setState(() {
+            _isAuthenticated = true;
+          });
+        },
+      );
+    }
+
     return MaterialApp(
       title: 'Territory Runner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: _isAuthenticated
-          ? const MainScreen()
-          : AuthScreen(
-              onAuthenticated: () {
-                setState(() {
-                  _isAuthenticated = true;
-                });
-              },
-            ),
+      home: homeWidget,
     );
   }
 }

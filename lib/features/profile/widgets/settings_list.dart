@@ -10,6 +10,7 @@ import 'emergency_contact_dialog.dart';
 import 'offline_maps_sheet.dart';
 import 'privacy_zones_sheet.dart';
 import '../../gallery/design_gallery_screen.dart';
+import '../../onboarding/onboarding_screen.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -156,6 +157,16 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               NotificationService().showPermissionPrimerIfNeeded(context, force: true);
             },
           ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.gps_fixed_rounded,
+            title: 'GPS & Telemetry Primer',
+            subtitle: 'Review satellite precision & background location permissions',
+            onTap: () {
+              AppMotion.selectionTick();
+              PermissionPrimerSheet.show(context, type: PermissionPrimerType.location);
+            },
+          ),
         ]),
 
         const SizedBox(height: AppSpacing.s16),
@@ -288,6 +299,22 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 applicationName: 'Territory Runner',
                 applicationVersion: '2.4.0',
                 applicationLegalese: 'Crafted with athletic precision.',
+              );
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.explore_rounded,
+            title: 'Replay Onboarding Guide',
+            subtitle: '3-slide introduction to loop claiming and attack radar',
+            onTap: () {
+              AppMotion.selectionTick();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => OnboardingScreen(
+                    onCompleted: () => Navigator.of(context).pop(),
+                  ),
+                ),
               );
             },
           ),
