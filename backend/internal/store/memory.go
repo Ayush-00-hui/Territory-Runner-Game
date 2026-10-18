@@ -140,7 +140,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		}, nil
 	}
 
-	var areaClaimed float64
+	var areaClaimed float64 = run.AreaClaimed
 	var xpAwarded int
 	var playerTotalArea float64
 	var geojson string
@@ -161,9 +161,11 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	}
 
 	if len(loops) > 0 {
+		var loopArea float64
 		for _, loop := range loops {
-			areaClaimed += loop.AreaSqMeters
+			loopArea += loop.AreaSqMeters
 		}
+		areaClaimed = loopArea
 		xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
 		user.TotalAreaSqm += areaClaimed
 		user.XP += int64(xpAwarded)
@@ -186,6 +188,11 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 			UpdatedAt:      time.Now().UTC(),
 		}
 	} else {
+		if areaClaimed > 0 {
+			user.TotalAreaSqm += areaClaimed
+			xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
+			user.XP += int64(xpAwarded)
+		}
 		user.TotalRuns++
 		user.UpdatedAt = time.Now().UTC()
 		playerTotalArea = user.TotalAreaSqm
@@ -214,7 +221,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		}
 	}
 
-	m.updateDuelProgressLocked(run.UserID, areaClaimed, run.DistanceMeters)
+	m.updateDuelProgressLocked(run.UserID, runCopy.ActivityType, areaClaimed, run.DistanceMeters)
 
 	return &CaptureResult{
 		RunID:              run.ID,
@@ -232,34 +239,60 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	}, nil
 }
 
-func (m *MemoryStore) GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error) {
+func (m *MemoryStore) GetLeaderboard(ctx context.Context, limit int, activityType string) ([]LeaderboardEntry, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if limit <= 0 {
 		limit = 50
 	}
-	var usersList []*User
-	for _, u := range m.users {
-		usersList = append(usersList, u)
+	activityType = strings.ToLower(strings.TrimSpace(activityType))
+
+	type userAgg struct {
+		u    *User
+		area float64
+		runs int
 	}
 
-	sort.Slice(usersList, func(i, j int) bool {
-		return usersList[i].TotalAreaSqm > usersList[j].TotalAreaSqm
+	var list []userAgg
+	for _, u := range m.users {
+		if activityType != "" && activityType != "all" {
+			var actArea float64
+			var actRuns int
+			for _, r := range m.runs {
+				if r.UserID == u.ID && r.Status == "accepted" {
+					rAct := strings.ToLower(strings.TrimSpace(r.ActivityType))
+					if rAct == "" {
+						rAct = "running"
+					}
+					if rAct == activityType {
+						actArea += r.AreaClaimed
+						actRuns++
+					}
+				}
+			}
+			list = append(list, userAgg{u: u, area: actArea, runs: actRuns})
+		} else {
+			list = append(list, userAgg{u: u, area: u.TotalAreaSqm, runs: u.TotalRuns})
+		}
+	}
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].area > list[j].area
 	})
 
 	var res []LeaderboardEntry
-	for i, u := range usersList {
+	for i, item := range list {
 		if i >= limit {
 			break
 		}
 		res = append(res, LeaderboardEntry{
 			Rank:         i + 1,
-			UserID:       u.ID,
-			Username:     u.Username,
-			Faction:      u.Faction,
-			TotalAreaSqm: u.TotalAreaSqm,
-			Level:        u.Level,
-			TotalRuns:    u.TotalRuns,
+			UserID:       item.u.ID,
+			Username:     item.u.Username,
+			Faction:      item.u.Faction,
+			TotalAreaSqm: item.area,
+			Level:        item.u.Level,
+			TotalRuns:    item.runs,
 		})
 	}
 	return res, nil
@@ -345,10 +378,12 @@ func (m *MemoryStore) GetDeviceTokens(ctx context.Context, userID string) ([]str
 	return copied, nil
 }
 
-// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart.
-func (m *MemoryStore) GetWeeklyStandings(ctx context.Context, weekStart time.Time) ([]WeeklyParticipant, error) {
+// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart, optionally filtered by activity.
+func (m *MemoryStore) GetWeeklyStandings(ctx context.Context, weekStart time.Time, activityType string) ([]WeeklyParticipant, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	activityType = strings.ToLower(strings.TrimSpace(activityType))
 
 	type stats struct {
 		area float64
@@ -358,6 +393,15 @@ func (m *MemoryStore) GetWeeklyStandings(ctx context.Context, weekStart time.Tim
 
 	for _, r := range m.runs {
 		if r.Status == "accepted" && (r.CreatedAt.Equal(weekStart) || r.CreatedAt.After(weekStart)) {
+			if activityType != "" && activityType != "all" {
+				rAct := strings.ToLower(strings.TrimSpace(r.ActivityType))
+				if rAct == "" {
+					rAct = "running"
+				}
+				if rAct != activityType {
+					continue
+				}
+			}
 			s, exists := userStats[r.UserID]
 			if !exists {
 				s = &stats{}
@@ -672,6 +716,14 @@ func (m *MemoryStore) CreateDuel(ctx context.Context, d *Duel) error {
 		return fmt.Errorf("opponent not found: %s", d.OpponentID)
 	}
 
+	if d.ActivityType == "" {
+		d.ActivityType = "running"
+	}
+	d.ActivityType = strings.ToLower(strings.TrimSpace(d.ActivityType))
+	if d.ActivityType != "running" && d.ActivityType != "walking" && d.ActivityType != "cycling" {
+		return fmt.Errorf("invalid activity type: %s", d.ActivityType)
+	}
+
 	// Validate XP Stake
 	if d.XpStake < 0 || d.XpStake > 1000 {
 		return fmt.Errorf("xp stake must be between 0 and 1000")
@@ -862,21 +914,32 @@ func (m *MemoryStore) SetDuelExpiresAtForTest(duelID string, expiresAt time.Time
 	}
 }
 
-// UpdateDuelProgress increments progress for any active duels involving userID.
-func (m *MemoryStore) UpdateDuelProgress(ctx context.Context, userID string, areaDelta, distanceDelta float64) error {
+// UpdateDuelProgress increments progress for any active duels involving userID matching the run's activity type.
+func (m *MemoryStore) UpdateDuelProgress(ctx context.Context, userID, activityType string, areaDelta, distanceDelta float64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.updateDuelProgressLocked(userID, areaDelta, distanceDelta)
+	return m.updateDuelProgressLocked(userID, activityType, areaDelta, distanceDelta)
 }
 
-func (m *MemoryStore) updateDuelProgressLocked(userID string, areaDelta, distanceDelta float64) error {
+func (m *MemoryStore) updateDuelProgressLocked(userID, activityType string, areaDelta, distanceDelta float64) error {
 	now := time.Now().UTC()
+	activityType = strings.ToLower(strings.TrimSpace(activityType))
+	if activityType == "" {
+		activityType = "running"
+	}
 
 	for _, d := range m.duels {
 		if d.Status != "active" {
 			continue
 		}
 		if now.After(d.ExpiresAt) {
+			continue
+		}
+		dAct := strings.ToLower(strings.TrimSpace(d.ActivityType))
+		if dAct == "" {
+			dAct = "running"
+		}
+		if dAct != activityType {
 			continue
 		}
 

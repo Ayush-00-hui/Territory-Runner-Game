@@ -394,14 +394,39 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Reject non-monotonic timestamps
-	for i := 1; i < len(req.Points); i++ {
-		if !req.Points[i].Timestamp.IsZero() && !req.Points[i-1].Timestamp.IsZero() {
-			if req.Points[i].Timestamp.Before(req.Points[i-1].Timestamp) {
+	// 4. Server timestamp hygiene & track integrity validation
+	now := time.Now().UTC()
+	for i := 0; i < len(req.Points); i++ {
+		ts := req.Points[i].Timestamp
+		if !ts.IsZero() {
+			if ts.After(now.Add(10 * time.Minute)) {
+				writeError(w, http.StatusBadRequest, "FUTURE_TIMESTAMPS", "Track point timestamp is in the future")
+				return
+			}
+			if ts.Before(now.Add(-14 * 24 * time.Hour)) {
+				writeError(w, http.StatusBadRequest, "EXPIRED_RUN", "Track point timestamps exceed maximum allowed offline buffering age of 14 days")
+				return
+			}
+		}
+		if i > 0 && !ts.IsZero() && !req.Points[i-1].Timestamp.IsZero() {
+			if ts.Before(req.Points[i-1].Timestamp) {
 				writeError(w, http.StatusBadRequest, "NON_MONOTONIC_TIMESTAMPS", "Track points must have monotonically non-decreasing timestamps")
 				return
 			}
 		}
+	}
+
+	// Reject tracks that consist entirely of duplicate coordinates (zero displacement)
+	allIdenticalCoords := true
+	for i := 1; i < len(req.Points); i++ {
+		if req.Points[i].Latitude != req.Points[0].Latitude || req.Points[i].Longitude != req.Points[0].Longitude {
+			allIdenticalCoords = false
+			break
+		}
+	}
+	if allIdenticalCoords {
+		writeError(w, http.StatusBadRequest, "DUPLICATE_POINTS", "Track consists entirely of duplicate or zero-displacement points")
+		return
 	}
 
 	// 5. Fast-path: Check for idempotent replay
@@ -412,7 +437,7 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Anti-cheat / GPS Anomaly Detection & Spoofing Mitigation (activity-aware)
+	// 6. Anti-cheat / GPS Anomaly Detection & Spoofing Mitigation (activity-aware)
 	anomalyRes := a.detector.EvaluateTrackWithActivity(req.Points, activityType)
 	if anomalyRes.IsAnomaly && anomalyRes.Score >= 50.0 {
 		a.logger.Warn("run rejected due to critical anomaly", "score", anomalyRes.Score, "reasons", anomalyRes.Reasons, "activity_type", activityType)
@@ -420,8 +445,8 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Spatial loop enclosure detection using exact Dart engine rules
-	loops, err := a.geoEng.ProcessTrack(req.Points)
+	// 7. Spatial loop enclosure detection using activity-aware kinematics
+	loops, err := geo.ProcessTrackWithActivity(req.Points, activityType)
 	if err != nil {
 		if errors.Is(err, geo.ErrLoopSelfIntersecting) {
 			writeError(w, http.StatusBadRequest, "INVALID_LOOP", "Loop crossed itself — try again")
@@ -575,8 +600,9 @@ func (a *API) HandleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
 			limit = parsed
 		}
 	}
+	activityType := r.URL.Query().Get("activity_type")
 
-	lb, err := a.store.GetLeaderboard(r.Context(), limit)
+	lb, err := a.store.GetLeaderboard(r.Context(), limit, activityType)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to load leaderboard")
 		return
@@ -700,10 +726,15 @@ func (a *API) HandleGetCurrentLeague(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	activityType := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("activity_type")))
+	if activityType == "" {
+		activityType = "running"
+	}
+
 	now := time.Now().UTC()
 	weekStart := league.CurrentWeekStart(now)
 
-	standings, err := a.store.GetWeeklyStandings(r.Context(), weekStart)
+	standings, err := a.store.GetWeeklyStandings(r.Context(), weekStart, activityType)
 	if err != nil {
 		a.logger.Error("failed to query weekly standings", "error", err)
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve weekly standings")
@@ -776,10 +807,11 @@ type RespondFriendRequestBody struct {
 
 // CreateDuelRequest carries configuration for a head-to-head challenge.
 type CreateDuelRequest struct {
-	OpponentID  string  `json:"opponent_id"`
-	TargetType  string  `json:"target_type"` // "area" or "distance"
-	TargetValue float64 `json:"target_value"`
-	XpStake     int     `json:"xp_stake"`
+	OpponentID   string  `json:"opponent_id"`
+	ActivityType string  `json:"activity_type,omitempty"`
+	TargetType   string  `json:"target_type"` // "area" or "distance"
+	TargetValue  float64 `json:"target_value"`
+	XpStake      int     `json:"xp_stake"`
 }
 
 // HandleGetFriends handles GET /v1/friends.
@@ -987,9 +1019,19 @@ func (a *API) HandleCreateDuel(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	activityType := strings.ToLower(strings.TrimSpace(req.ActivityType))
+	if activityType == "" {
+		activityType = "running"
+	}
+	if activityType != "running" && activityType != "walking" && activityType != "cycling" {
+		writeError(w, http.StatusBadRequest, "INVALID_ACTIVITY_TYPE", "Activity type must be 'running', 'walking', or 'cycling'")
+		return
+	}
+
 	duel := &store.Duel{
 		ChallengerID: uid,
 		OpponentID:   req.OpponentID,
+		ActivityType: activityType,
 		TargetType:   req.TargetType,
 		TargetValue:  req.TargetValue,
 		XpStake:      req.XpStake,

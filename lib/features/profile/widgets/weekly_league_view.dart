@@ -7,11 +7,13 @@ import '../../../ui/ui.dart';
 class WeeklyLeagueView extends StatefulWidget {
   final ApiClient? apiClient;
   final LeagueStanding? initialStanding;
+  final String activityType;
 
   const WeeklyLeagueView({
     super.key,
     this.apiClient,
     this.initialStanding,
+    this.activityType = 'running',
   });
 
   @override
@@ -64,7 +66,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
     });
 
     try {
-      final standing = await _apiClient.getCurrentLeague();
+      final standing = await _apiClient.getCurrentLeague(activityType: widget.activityType);
       if (!mounted) return;
       setState(() {
         _standing = standing;
@@ -92,6 +94,15 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
       return '${days}d ${hours}h ${minutes}m';
     }
     return '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  String _formatResetLocal(DateTime resetAt) {
+    final local = resetAt.toLocal();
+    final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final weekday = weekdays[local.weekday - 1];
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$weekday $hour:$minute';
   }
 
   Color _getTierColor(String tier) {
@@ -223,29 +234,42 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.s8),
-                  // Countdown timer badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppColors.bgDeep,
-                      borderRadius: AppSpacing.brFull,
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.timer_outlined, color: AppColors.accent, size: 14),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatCountdown(_remainingSeconds),
-                          style: AppText.caption.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                  // Countdown timer badge & Local reset time
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.bgDeep,
+                          borderRadius: AppSpacing.brFull,
+                          border: Border.all(color: AppColors.border),
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.timer_outlined, color: AppColors.accent, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              _formatCountdown(_remainingSeconds),
+                              style: AppText.caption.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontFeatures: const [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Ends ${_formatResetLocal(standing.resetAt)}',
+                        style: AppText.caption.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

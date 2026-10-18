@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:territory_runner/features/gameplay/polygon_enclosure_engine.dart';
+import 'package:territory_runner/models/activity_type.dart';
 
 void main() {
   group('Shared Golden Test Fixtures Tests (Dart Engine)', () {
@@ -172,6 +173,69 @@ void main() {
 
       expect(percentDiff, lessThanOrEqualTo(tolerance),
           reason: 'Total area $totalArea m² must match $expectedArea m² within $tolerance%');
+    });
+
+    test('golden_cycling_valid_loop.json is rejected in running mode but accepted in cycling mode', () {
+      final file = File('test_fixtures/golden_cycling_valid_loop.json');
+      expect(file.existsSync(), isTrue);
+      final data = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+
+      final rawPoints = data['points'] as List<dynamic>;
+
+      // 1. Under running mode: 40 km/h is rejected as outlier jump (> 35 km/h)
+      final runningEngine = PolygonEnclosureEngine(
+        activityType: ExerciseActivityType.running,
+      );
+      EnclosedLoopEvent? runningEvent;
+      for (final p in rawPoints) {
+        final pt = LatLng((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble());
+        final ts = DateTime.parse(p['timestamp'] as String);
+        final ev = runningEngine.addPosition(pt, ts);
+        if (ev != null) runningEvent = ev;
+      }
+      expect(runningEvent, isNull, reason: '40 km/h cycling track must be rejected under running outlier filter');
+
+      // 2. Under cycling mode: 40 km/h is accepted (<= 60 km/h)
+      final cyclingEngine = PolygonEnclosureEngine(
+        activityType: ExerciseActivityType.cycling,
+      );
+      EnclosedLoopEvent? cyclingEvent;
+      for (final p in rawPoints) {
+        final pt = LatLng((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble());
+        final ts = DateTime.parse(p['timestamp'] as String);
+        final ev = cyclingEngine.addPosition(pt, ts);
+        if (ev != null) cyclingEvent = ev;
+      }
+      expect(cyclingEvent, isNotNull, reason: '40 km/h cycling track must be accepted under cycling mode');
+      final double expectedArea = (data['expected_area_sqm'] as num).toDouble();
+      final double tolerance = (data['area_tolerance_percent'] as num).toDouble();
+      final double delta = (cyclingEvent!.areaSqMeters - expectedArea).abs();
+      final double percentDiff = (delta / expectedArea) * 100.0;
+      expect(percentDiff, lessThanOrEqualTo(tolerance));
+    });
+
+    test('golden_walking_valid_loop.json closes successfully under walking mode', () {
+      final file = File('test_fixtures/golden_walking_valid_loop.json');
+      expect(file.existsSync(), isTrue);
+      final data = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+
+      final rawPoints = data['points'] as List<dynamic>;
+      final walkingEngine = PolygonEnclosureEngine(
+        activityType: ExerciseActivityType.walking,
+      );
+      EnclosedLoopEvent? walkingEvent;
+      for (final p in rawPoints) {
+        final pt = LatLng((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble());
+        final ts = DateTime.parse(p['timestamp'] as String);
+        final ev = walkingEngine.addPosition(pt, ts);
+        if (ev != null) walkingEvent = ev;
+      }
+      expect(walkingEvent, isNotNull);
+      final double expectedArea = (data['expected_area_sqm'] as num).toDouble();
+      final double tolerance = (data['area_tolerance_percent'] as num).toDouble();
+      final double delta = (walkingEvent!.areaSqMeters - expectedArea).abs();
+      final double percentDiff = (delta / expectedArea) * 100.0;
+      expect(percentDiff, lessThanOrEqualTo(tolerance));
     });
   });
 }

@@ -261,3 +261,59 @@ func TestGoldenTwoLoops(t *testing.T) {
 		"Total 2-loop area (%.2f m²) must match expected (%.2f m²) within %.2f%% tolerance",
 		totalArea, expected, fixture.AreaTolerancePercent)
 }
+
+func TestGoldenCyclingValidLoop(t *testing.T) {
+	fixture := loadFixture(t, "golden_cycling_valid_loop.json")
+	require.True(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	// 1. Under running mode (outlier 35 km/h): rejected because points are ~42 km/h
+	runningEngine := geo.NewEngine(geo.ConfigForActivity("running"))
+	runningLoops, _ := runningEngine.ProcessTrack(trackPoints)
+	assert.Empty(t, runningLoops, "40 km/h cycling track must produce 0 loops under running outlier filter")
+
+	// 2. Under cycling mode (outlier 60 km/h): accepted
+	cyclingEngine := geo.NewEngine(geo.ConfigForActivity("cycling"))
+	cyclingLoops, err := cyclingEngine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, cyclingLoops, 1, "Must detect valid enclosed loop under cycling configuration")
+
+	expected := fixture.ExpectedAreaSqM
+	delta := math.Abs(cyclingLoops[0].AreaSqMeters - expected)
+	diffPercent := (delta / expected) * 100.0
+	assert.LessOrEqual(t, diffPercent, fixture.AreaTolerancePercent,
+		"Cycling loop area (%.2f m²) must match expected (%.2f m²) within %.2f%% tolerance",
+		cyclingLoops[0].AreaSqMeters, expected, fixture.AreaTolerancePercent)
+}
+
+func TestGoldenWalkingValidLoop(t *testing.T) {
+	fixture := loadFixture(t, "golden_walking_valid_loop.json")
+	require.True(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	walkingEngine := geo.NewEngine(geo.ConfigForActivity("walking"))
+	walkingLoops, err := walkingEngine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, walkingLoops, 1)
+
+	expected := fixture.ExpectedAreaSqM
+	delta := math.Abs(walkingLoops[0].AreaSqMeters - expected)
+	diffPercent := (delta / expected) * 100.0
+	assert.LessOrEqual(t, diffPercent, fixture.AreaTolerancePercent)
+}

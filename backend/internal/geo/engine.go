@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"strings"
 	"time"
 )
 
@@ -40,12 +41,30 @@ func DefaultConfig() Config {
 	}
 }
 
+// ConfigForActivity returns kinematics thresholds calibrated specifically to the exercise modality.
+func ConfigForActivity(activity string) Config {
+	cfg := DefaultConfig()
+	switch strings.ToLower(strings.TrimSpace(activity)) {
+	case "walking":
+		cfg.MaxSpeedKmhOutlier = 15.0
+	case "cycling":
+		cfg.MaxSpeedKmhOutlier = 60.0
+	case "running":
+		fallthrough
+	default:
+		cfg.MaxSpeedKmhOutlier = 35.0
+	}
+	return cfg
+}
+
 // Engine implements server-side GPS breadcrumb tracking and sovereign loop enclosure.
 type Engine struct {
-	cfg            Config
-	path           []LatLng
-	timestamps     []time.Time
-	lastInvalidErr error
+	cfg              Config
+	path             []LatLng
+	timestamps       []time.Time
+	lastReceivedPos  *LatLng
+	lastReceivedTime *time.Time
+	lastInvalidErr   error
 }
 
 // NewEngine creates an enclosure engine with the provided or default configuration.
@@ -65,6 +84,8 @@ func NewEngine(cfg ...Config) *Engine {
 func (e *Engine) Clear() {
 	e.path = e.path[:0]
 	e.timestamps = e.timestamps[:0]
+	e.lastReceivedPos = nil
+	e.lastReceivedTime = nil
 	e.lastInvalidErr = nil
 }
 
@@ -81,6 +102,22 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 		now = time.Now().UTC()
 	}
 
+	// 1. Discard satellite multipath outlier jumps against immediately preceding sample
+	if e.lastReceivedPos != nil && e.lastReceivedTime != nil {
+		dtSec := math.Abs(now.Sub(*e.lastReceivedTime).Seconds())
+		if dtSec >= 0.5 && dtSec <= 5.0 {
+			stepDist := HaversineDistanceMeters(*e.lastReceivedPos, pos)
+			speedKmh := (stepDist / dtSec) * 3.6
+			if speedKmh > e.cfg.MaxSpeedKmhOutlier {
+				e.lastReceivedPos = &pos
+				e.lastReceivedTime = &now
+				return nil, nil
+			}
+		}
+	}
+	e.lastReceivedPos = &pos
+	e.lastReceivedTime = &now
+
 	if len(e.path) > 0 {
 		lastPoint := e.path[len(e.path)-1]
 		distFromLast := HaversineDistanceMeters(lastPoint, pos)
@@ -88,17 +125,6 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 		// Filter out stationary jitter (< 1.8m)
 		if distFromLast < e.cfg.MinStationaryDistanceMeters {
 			return nil, nil
-		}
-
-		// Discard satellite multipath outlier jumps (> 35 km/h)
-		if len(e.timestamps) > 0 {
-			dtSec := math.Abs(now.Sub(e.timestamps[len(e.timestamps)-1]).Seconds())
-			if dtSec >= 0.5 && dtSec <= 5.0 {
-				speedKmh := (distFromLast / dtSec) * 3.6
-				if speedKmh > e.cfg.MaxSpeedKmhOutlier {
-					return nil, nil
-				}
-			}
 		}
 	}
 
@@ -240,6 +266,12 @@ func (e *Engine) ProcessTrack(points []TrackPoint) ([]EnclosedLoop, error) {
 	}
 
 	return loops, nil
+}
+
+// ProcessTrackWithActivity processes an entire GPS sequence using the specified activity's kinematics constraints.
+func ProcessTrackWithActivity(points []TrackPoint, activity string) ([]EnclosedLoop, error) {
+	eng := NewEngine(ConfigForActivity(activity))
+	return eng.ProcessTrack(points)
 }
 
 // ValidateLoop verifies that a closed loop satisfies all geometrical integrity rules.

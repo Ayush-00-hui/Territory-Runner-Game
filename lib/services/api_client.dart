@@ -313,8 +313,12 @@ class ApiClient {
   }
 
   /// Fetches global leaderboard ranked by total captured territory area (GET /v1/leaderboard)
-  Future<List<LeaderboardEntry>> getLeaderboard({int limit = 50}) async {
-    final uri = Uri.parse('$baseUrl/v1/leaderboard?limit=$limit');
+  Future<List<LeaderboardEntry>> getLeaderboard({int limit = 50, String? activityType}) async {
+    final queryParams = <String, String>{'limit': limit.toString()};
+    if (activityType != null && activityType.isNotEmpty) {
+      queryParams['activity_type'] = activityType;
+    }
+    final uri = Uri.parse('$baseUrl/v1/leaderboard').replace(queryParameters: queryParams);
     final headers = await _buildHeaders();
 
     final response = await _executeWithRetry(
@@ -359,8 +363,11 @@ class ApiClient {
   }
 
   /// Fetches active weekly league standing and tier thresholds (GET /v1/league/current)
-  Future<LeagueStanding> getCurrentLeague() async {
-    final uri = Uri.parse('$baseUrl/v1/league/current');
+  Future<LeagueStanding> getCurrentLeague({String? activityType}) async {
+    var uri = Uri.parse('$baseUrl/v1/league/current');
+    if (activityType != null && activityType.isNotEmpty) {
+      uri = uri.replace(queryParameters: {'activity_type': activityType});
+    }
     final headers = await _buildHeaders();
 
     final response = await _executeWithRetry(
@@ -538,6 +545,7 @@ class ApiClient {
     required String opponentId,
     required String targetType,
     required double targetValue,
+    String activityType = 'running',
     int xpStake = 500,
   }) async {
     final uri = Uri.parse('$baseUrl/v1/duels');
@@ -546,6 +554,7 @@ class ApiClient {
       'opponent_id': opponentId,
       'target_type': targetType,
       'target_value': targetValue,
+      'activity_type': activityType,
       'xp_stake': xpStake,
     });
 

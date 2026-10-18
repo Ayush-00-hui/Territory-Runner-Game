@@ -342,7 +342,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		return nil, fmt.Errorf("failed to commit capture transaction: %w", err)
 	}
 
-	_ = s.UpdateDuelProgress(ctx, run.UserID, areaClaimed, run.DistanceMeters)
+	_ = s.UpdateDuelProgress(ctx, run.UserID, activityType, areaClaimed, run.DistanceMeters)
 
 	return &CaptureResult{
 		RunID:              run.ID,
@@ -360,18 +360,36 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	}, nil
 }
 
-// GetLeaderboard fetches the top users ranked by claimed surface area.
-func (s *PostgresStore) GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error) {
+// GetLeaderboard fetches the top users ranked by claimed surface area, optionally filtered by activity type.
+func (s *PostgresStore) GetLeaderboard(ctx context.Context, limit int, activityType string) ([]LeaderboardEntry, error) {
 	if limit <= 0 {
 		limit = 50
 	}
-	query := `
-		SELECT id, username, faction, total_area_sqm, level, total_runs
-		FROM users
-		ORDER BY total_area_sqm DESC
-		LIMIT $1;
-	`
-	rows, err := s.pool.Query(ctx, query, limit)
+	activityType = strings.ToLower(strings.TrimSpace(activityType))
+	var query string
+	var args []interface{}
+
+	if activityType != "" && activityType != "all" {
+		query = `
+			SELECT u.id, u.username, u.faction, COALESCE(SUM(r.area_claimed), 0.0) AS total_area_sqm, u.level, COUNT(r.id) AS total_runs
+			FROM users u
+			JOIN runs r ON u.id = r.user_id AND r.status = 'accepted' AND r.activity_type = $1
+			GROUP BY u.id, u.username, u.faction, u.level
+			ORDER BY total_area_sqm DESC
+			LIMIT $2;
+		`
+		args = []interface{}{activityType, limit}
+	} else {
+		query = `
+			SELECT id, username, faction, total_area_sqm, level, total_runs
+			FROM users
+			ORDER BY total_area_sqm DESC
+			LIMIT $1;
+		`
+		args = []interface{}{limit}
+	}
+
+	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -490,18 +508,38 @@ func (s *PostgresStore) GetDeviceTokens(ctx context.Context, userID string) ([]s
 	return tokens, nil
 }
 
-// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart.
-func (s *PostgresStore) GetWeeklyStandings(ctx context.Context, weekStart time.Time) ([]WeeklyParticipant, error) {
-	query := `
-		SELECT r.user_id, u.username, u.faction, COALESCE(SUM(r.area_claimed), 0.0) AS weekly_area, COUNT(r.id) AS weekly_runs
-		FROM runs r
-		JOIN users u ON u.id = r.user_id
-		WHERE r.created_at >= $1
-		  AND r.status = 'accepted'
-		GROUP BY r.user_id, u.username, u.faction
-		ORDER BY weekly_area DESC, weekly_runs DESC;
-	`
-	rows, err := s.pool.Query(ctx, query, weekStart)
+// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart, optionally filtered by activity.
+func (s *PostgresStore) GetWeeklyStandings(ctx context.Context, weekStart time.Time, activityType string) ([]WeeklyParticipant, error) {
+	activityType = strings.ToLower(strings.TrimSpace(activityType))
+	var query string
+	var args []interface{}
+
+	if activityType != "" && activityType != "all" {
+		query = `
+			SELECT r.user_id, u.username, u.faction, COALESCE(SUM(r.area_claimed), 0.0) AS weekly_area, COUNT(r.id) AS weekly_runs
+			FROM runs r
+			JOIN users u ON u.id = r.user_id
+			WHERE r.created_at >= $1
+			  AND r.status = 'accepted'
+			  AND r.activity_type = $2
+			GROUP BY r.user_id, u.username, u.faction
+			ORDER BY weekly_area DESC, weekly_runs DESC;
+		`
+		args = []interface{}{weekStart, activityType}
+	} else {
+		query = `
+			SELECT r.user_id, u.username, u.faction, COALESCE(SUM(r.area_claimed), 0.0) AS weekly_area, COUNT(r.id) AS weekly_runs
+			FROM runs r
+			JOIN users u ON u.id = r.user_id
+			WHERE r.created_at >= $1
+			  AND r.status = 'accepted'
+			GROUP BY r.user_id, u.username, u.faction
+			ORDER BY weekly_area DESC, weekly_runs DESC;
+		`
+		args = []interface{}{weekStart}
+	}
+
+	rows, err := s.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -876,12 +914,15 @@ func (s *PostgresStore) CreateDuel(ctx context.Context, d *Duel) error {
 	if d.ExpiresAt.IsZero() {
 		d.ExpiresAt = time.Now().UTC().Add(24 * time.Hour)
 	}
+	if d.ActivityType == "" {
+		d.ActivityType = "running"
+	}
 
 	query := `
-		INSERT INTO duels (id, challenger_id, opponent_id, target_type, target_value, status, challenger_progress, opponent_progress, xp_stake, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, 'pending', 0.0, 0.0, $6, $7, NOW());
+		INSERT INTO duels (id, challenger_id, opponent_id, activity_type, target_type, target_value, status, challenger_progress, opponent_progress, xp_stake, expires_at, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', 0.0, 0.0, $7, $8, NOW());
 	`
-	_, err = s.pool.Exec(ctx, query, d.ID, d.ChallengerID, d.OpponentID, d.TargetType, d.TargetValue, d.XpStake, d.ExpiresAt)
+	_, err = s.pool.Exec(ctx, query, d.ID, d.ChallengerID, d.OpponentID, d.ActivityType, d.TargetType, d.TargetValue, d.XpStake, d.ExpiresAt)
 	if err != nil {
 		return fmt.Errorf("failed to insert duel: %w", err)
 	}
@@ -893,7 +934,7 @@ func (s *PostgresStore) GetDuelsByUser(ctx context.Context, userID string) ([]Du
 	query := `
 		SELECT 
 			d.id, d.challenger_id, ch.username, d.opponent_id, op.username,
-			d.target_type, d.target_value, d.status, d.challenger_progress, d.opponent_progress,
+			COALESCE(d.activity_type, 'running'), d.target_type, d.target_value, d.status, d.challenger_progress, d.opponent_progress,
 			COALESCE(d.winner_id, ''), d.xp_stake, d.expires_at, d.created_at, d.completed_at
 		FROM duels d
 		JOIN users ch ON ch.id = d.challenger_id
@@ -913,7 +954,7 @@ func (s *PostgresStore) GetDuelsByUser(ctx context.Context, userID string) ([]Du
 		var d Duel
 		if err := rows.Scan(
 			&d.ID, &d.ChallengerID, &d.ChallengerUsername, &d.OpponentID, &d.OpponentUsername,
-			&d.TargetType, &d.TargetValue, &d.Status, &d.ChallengerProgress, &d.OpponentProgress,
+			&d.ActivityType, &d.TargetType, &d.TargetValue, &d.Status, &d.ChallengerProgress, &d.OpponentProgress,
 			&d.WinnerID, &d.XpStake, &d.ExpiresAt, &d.CreatedAt, &d.CompletedAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan duel row: %w", err)
@@ -984,14 +1025,18 @@ func (s *PostgresStore) DeclineDuel(ctx context.Context, duelID, userID string) 
 	return nil
 }
 
-// UpdateDuelProgress increments progress for any active duels involving userID.
-func (s *PostgresStore) UpdateDuelProgress(ctx context.Context, userID string, areaDelta, distanceDelta float64) error {
+// UpdateDuelProgress increments progress for any active duels involving userID matching the run's activity type.
+func (s *PostgresStore) UpdateDuelProgress(ctx context.Context, userID, activityType string, areaDelta, distanceDelta float64) error {
+	activityType = strings.ToLower(strings.TrimSpace(activityType))
+	if activityType == "" {
+		activityType = "running"
+	}
 	query := `
 		SELECT id, challenger_id, opponent_id, target_type, target_value, challenger_progress, opponent_progress, xp_stake
 		FROM duels
-		WHERE status = 'active' AND expires_at > NOW() AND (challenger_id = $1 OR opponent_id = $1);
+		WHERE status = 'active' AND expires_at > NOW() AND (challenger_id = $1 OR opponent_id = $1) AND activity_type = $2;
 	`
-	rows, err := s.pool.Query(ctx, query, userID)
+	rows, err := s.pool.Query(ctx, query, userID, activityType)
 	if err != nil {
 		return fmt.Errorf("failed to query active duels for progress: %w", err)
 	}

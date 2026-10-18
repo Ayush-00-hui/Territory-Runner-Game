@@ -4,6 +4,7 @@ class Duel {
   final String challengerUsername;
   final String opponentId;
   final String opponentUsername;
+  final String activityType; // 'running', 'walking', 'cycling'
   final String targetType; // 'area' or 'distance'
   final double targetValue; // sqm or meters
   final String status; // 'pending', 'active', 'completed', 'declined', 'expired'
@@ -21,6 +22,7 @@ class Duel {
     required this.challengerUsername,
     required this.opponentId,
     required this.opponentUsername,
+    this.activityType = 'running',
     required this.targetType,
     required this.targetValue,
     required this.status,
@@ -40,6 +42,7 @@ class Duel {
       challengerUsername: json['challenger_username'] as String? ?? 'Runner',
       opponentId: json['opponent_id'] as String? ?? '',
       opponentUsername: json['opponent_username'] as String? ?? 'Runner',
+      activityType: json['activity_type'] as String? ?? 'running',
       targetType: json['target_type'] as String? ?? 'area',
       targetValue: (json['target_value'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] as String? ?? 'pending',
@@ -65,6 +68,7 @@ class Duel {
     'challenger_username': challengerUsername,
     'opponent_id': opponentId,
     'opponent_username': opponentUsername,
+    'activity_type': activityType,
     'target_type': targetType,
     'target_value': targetValue,
     'status': status,

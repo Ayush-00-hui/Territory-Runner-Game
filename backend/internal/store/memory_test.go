@@ -123,7 +123,7 @@ func TestLeaderboardOrdering(t *testing.T) {
 	_ = memStore.UpsertUser(ctx, &store.User{ID: "u2", Username: "Runner2", TotalAreaSqm: 15000.0})
 	_ = memStore.UpsertUser(ctx, &store.User{ID: "u3", Username: "Runner3", TotalAreaSqm: 8000.0})
 
-	lb, err := memStore.GetLeaderboard(ctx, 10)
+	lb, err := memStore.GetLeaderboard(ctx, 10, "")
 	require.NoError(t, err)
 	require.Len(t, lb, 3)
 
@@ -271,7 +271,7 @@ func TestDuelFlow(t *testing.T) {
 	require.NoError(t, err)
 
 	// Progress duel: Alice runs and claims 6,000 m²
-	err = memStore.UpdateDuelProgress(ctx, "usr_alice", 6000.0, 1200.0)
+	err = memStore.UpdateDuelProgress(ctx, "usr_alice", "running", 6000.0, 1200.0)
 	require.NoError(t, err)
 
 	duels, err = memStore.GetDuelsByUser(ctx, "usr_alice")
@@ -281,11 +281,11 @@ func TestDuelFlow(t *testing.T) {
 	assert.Equal(t, 0.0, duels[0].OpponentProgress)
 
 	// Bob runs and claims 4,000 m²
-	err = memStore.UpdateDuelProgress(ctx, "usr_bob", 4000.0, 1000.0)
+	err = memStore.UpdateDuelProgress(ctx, "usr_bob", "running", 4000.0, 1000.0)
 	require.NoError(t, err)
 
 	// Alice runs again and claims 5,000 m² (Total: 11,000 >= 10,000 target!)
-	err = memStore.UpdateDuelProgress(ctx, "usr_alice", 5000.0, 1100.0)
+	err = memStore.UpdateDuelProgress(ctx, "usr_alice", "running", 5000.0, 1100.0)
 	require.NoError(t, err)
 
 	duels, err = memStore.GetDuelsByUser(ctx, "usr_alice")

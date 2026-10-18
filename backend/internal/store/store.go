@@ -41,8 +41,8 @@ type Store interface {
 	// GetTerritoryByID retrieves a territory by its unique ID.
 	GetTerritoryByID(ctx context.Context, id string) (*Territory, error)
 
-	// GetLeaderboard returns runners ordered descending by total claimed sovereign area.
-	GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error)
+	// GetLeaderboard returns runners ordered descending by total claimed sovereign area, optionally filtered by activity type.
+	GetLeaderboard(ctx context.Context, limit int, activityType string) ([]LeaderboardEntry, error)
 
 	// SaveDeviceToken persists or updates an FCM registration token for a user.
 	SaveDeviceToken(ctx context.Context, userID, token string) error
@@ -50,8 +50,8 @@ type Store interface {
 	// GetDeviceTokens returns all active FCM device tokens registered for a user.
 	GetDeviceTokens(ctx context.Context, userID string) ([]string, error)
 
-	// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart.
-	GetWeeklyStandings(ctx context.Context, weekStart time.Time) ([]WeeklyParticipant, error)
+	// GetWeeklyStandings returns aggregated runner stats for runs submitted since weekStart, optionally filtered by activity type.
+	GetWeeklyStandings(ctx context.Context, weekStart time.Time, activityType string) ([]WeeklyParticipant, error)
 
 	// GetFactionStandings returns territory dominance aggregated by athletic faction.
 	GetFactionStandings(ctx context.Context) (*FactionStandingsResponse, error)
@@ -83,8 +83,8 @@ type Store interface {
 	// DeclineDuel marks a pending duel as declined.
 	DeclineDuel(ctx context.Context, duelID, userID string) error
 
-	// UpdateDuelProgress increments progress for any active duels involving userID.
-	UpdateDuelProgress(ctx context.Context, userID string, areaDelta, distanceDelta float64) error
+	// UpdateDuelProgress increments progress for any active duels involving userID matching the run's activity type.
+	UpdateDuelProgress(ctx context.Context, userID, activityType string, areaDelta, distanceDelta float64) error
 
 	// GetPrivacyZones returns all privacy zones configured for a user.
 	GetPrivacyZones(ctx context.Context, userID string) ([]PrivacyZone, error)

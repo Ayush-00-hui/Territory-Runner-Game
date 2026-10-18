@@ -127,6 +127,57 @@ void main() {
       expect(league.weeklyAreaSqm, 32000.0);
       expect(league.standings.first.isCurrentUser, isTrue);
     });
+
+    test('getCurrentLeague passes activity_type query parameter', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/v1/league/current');
+        expect(request.url.queryParameters['activity_type'], 'cycling');
+        return http.Response(jsonEncode({
+          'user_id': 'usr_cyclist',
+          'tier': 'Gold',
+          'rank': 1,
+          'total_participants': 2,
+          'weekly_area_sqm': 45000.0,
+          'weekly_runs': 3,
+          'promotion_rank_cutoff': 0,
+          'relegation_rank_cutoff': 1,
+          'reset_at': '2026-10-26T00:00:00.000Z',
+          'seconds_until_reset': 3600,
+          'standings': [],
+        }), 200);
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient);
+      final league = await apiClient.getCurrentLeague(activityType: 'cycling');
+      expect(league.tier, 'Gold');
+      expect(league.weeklyAreaSqm, 45000.0);
+    });
+
+    test('getLeaderboard passes activity_type and limit query parameters', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/v1/leaderboard');
+        expect(request.url.queryParameters['activity_type'], 'walking');
+        expect(request.url.queryParameters['limit'], '25');
+        return http.Response(jsonEncode({
+          'leaderboard': [
+            {
+              'rank': 1,
+              'user_id': 'usr_walker',
+              'username': 'CityWalker',
+              'faction': 'Cyber Vanguard',
+              'total_area_sqm': 12000.0,
+              'level': 3,
+              'total_runs': 5,
+            }
+          ],
+        }), 200);
+      });
+
+      final apiClient = ApiClient(httpClient: mockClient);
+      final leaderboard = await apiClient.getLeaderboard(limit: 25, activityType: 'walking');
+      expect(leaderboard.length, 1);
+      expect(leaderboard.first.username, 'CityWalker');
+    });
   });
 
   group('WeeklyLeagueView Widget Tests', () {
@@ -233,6 +284,9 @@ void main() {
       expect(find.text('Overlord'), findsOneWidget);
       expect(find.text('ShadowRacer'), findsOneWidget);
       expect(find.text('You'), findsOneWidget);
+
+      // Local reset time badge
+      expect(find.textContaining('Ends '), findsOneWidget);
     });
 
     testWidgets('WeeklyLeagueView renders offline error state with retry button when API fails', (tester) async {

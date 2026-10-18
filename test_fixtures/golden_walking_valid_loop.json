@@ -1,0 +1,19 @@
+{
+  "name": "golden_walking_valid_loop",
+  "description": "Standard 100m x 100m walking loop at ~5 km/h. Valid under walking, running, and cycling modes",
+  "activity_type": "walking",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 40.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": true,
+  "expected_area_sqm": 9179.8,
+  "area_tolerance_percent": 0.5,
+  "points": [
+    { "latitude": 51.5000, "longitude": -0.1200, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.5009, "longitude": -0.1200, "timestamp": "2026-10-13T10:01:12Z" },
+    { "latitude": 51.5009, "longitude": -0.1214, "timestamp": "2026-10-13T10:02:24Z" },
+    { "latitude": 51.5000, "longitude": -0.1214, "timestamp": "2026-10-13T10:03:36Z" },
+    { "latitude": 51.5001, "longitude": -0.1201, "timestamp": "2026-10-13T10:04:48Z" }
+  ]
+}

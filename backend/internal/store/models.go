@@ -162,6 +162,7 @@ type Duel struct {
 	ChallengerUsername string     `json:"challenger_username"`
 	OpponentID         string     `json:"opponent_id"`
 	OpponentUsername   string     `json:"opponent_username"`
+	ActivityType       string     `json:"activity_type,omitempty"`
 	TargetType         string     `json:"target_type"` // "area", "distance"
 	TargetValue        float64    `json:"target_value"`
 	Status             string     `json:"status"` // "pending", "active", "completed", "declined", "expired"

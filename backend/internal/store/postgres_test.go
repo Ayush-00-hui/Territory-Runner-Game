@@ -45,6 +45,7 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000009_add_duel_activity_type.down.sql",
 		"000008_add_friends_duels_constraints.down.sql",
 		"000007_add_activity_type.down.sql",
 		"000006_add_privacy_zones.down.sql",
@@ -71,6 +72,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000006_add_privacy_zones.up.sql",
 		"000007_add_activity_type.up.sql",
 		"000008_add_friends_duels_constraints.up.sql",
+		"000009_add_duel_activity_type.up.sql",
 	}
 
 	for _, uf := range upFiles {
@@ -736,7 +738,7 @@ func TestPostgres_LeaderboardOrdering(t *testing.T) {
 		require.NoError(t, st.UpsertUser(ctx, u))
 	}
 
-	leaderboard, err := st.GetLeaderboard(ctx, 10)
+	leaderboard, err := st.GetLeaderboard(ctx, 10, "")
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(leaderboard), 4)
 
@@ -859,7 +861,7 @@ func TestPostgres_WeeklyLeagueQuery(t *testing.T) {
 	}, loopOld, nil)
 	require.NoError(t, err)
 
-	standings, err := st.GetWeeklyStandings(ctx, weekStart)
+	standings, err := st.GetWeeklyStandings(ctx, weekStart, "")
 	require.NoError(t, err)
 	require.Len(t, standings, 2, "Only users with runs in active week should be included")
 

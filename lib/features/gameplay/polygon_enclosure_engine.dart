@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:latlong2/latlong.dart';
 import '../../core/logging/app_logger.dart';
+import '../../models/activity_type.dart';
 
 /// Event dispatched when a runner closes an arbitrary GPS loop
 class EnclosedLoopEvent {
@@ -21,11 +22,13 @@ class EnclosedLoopEvent {
 
 /// Arbitrary Shape Polygon Territory Enclosure Engine
 /// Continuously tracks GPS breadcrumbs, detects loop closures (<= 35m),
-/// filters satellite multipath outliers (> 35 km/h), and computes accurate
-/// geodesic surface area via the Shoelace Formula on a local equirectangular tangent plane.
+/// filters satellite multipath outliers (> 35 km/h for running, 60 km/h for cycling, 15 km/h for walking),
+/// and computes accurate geodesic surface area via the Shoelace Formula on a local equirectangular tangent plane.
 class PolygonEnclosureEngine {
   final List<LatLng> _path = [];
   final List<DateTime> _timestamps = [];
+  LatLng? _lastReceivedPosition;
+  DateTime? _lastReceivedTimestamp;
   String? _lastInvalidReason;
   
   // Enclosure configuration parameters
@@ -33,6 +36,8 @@ class PolygonEnclosureEngine {
   final int minPointsRequired; // Minimum path nodes for a valid loop
   final double minLoopDistanceMeters; // Minimum loop perimeter
   final double maxLoopAreaSqMeters; // Maximum single-loop area (matches Go server: 5,000,000 m²)
+  final double? maxSpeedKmhOutlier; // Explicit outlier ceiling override
+  ExerciseActivityType? activityType; // Activity mode calibrating outlier ceilings
 
   /// Rejection message used when a loop exceeds [maxLoopAreaSqMeters].
   /// Kept identical to the Go backend's ErrLoopAreaTooLarge text.
@@ -44,7 +49,26 @@ class PolygonEnclosureEngine {
     this.minPointsRequired = 4,
     this.minLoopDistanceMeters = 40.0,
     this.maxLoopAreaSqMeters = 5000000.0,
+    this.maxSpeedKmhOutlier,
+    this.activityType,
   });
+
+  void setActivityType(ExerciseActivityType type) {
+    activityType = type;
+  }
+
+  /// Authoritative kinematic outlier filter ceiling (km/h) for the active exercise modality.
+  double get effectiveMaxSpeedOutlier {
+    if (maxSpeedKmhOutlier != null) return maxSpeedKmhOutlier!;
+    switch (activityType ?? ExerciseActivityType.running) {
+      case ExerciseActivityType.walking:
+        return 15.0;
+      case ExerciseActivityType.cycling:
+        return 60.0;
+      case ExerciseActivityType.running:
+        return 35.0;
+    }
+  }
 
   List<LatLng> get currentPath => List.unmodifiable(_path);
   int get pointCount => _path.length;
@@ -53,6 +77,8 @@ class PolygonEnclosureEngine {
   void clear() {
     _path.clear();
     _timestamps.clear();
+    _lastReceivedPosition = null;
+    _lastReceivedTimestamp = null;
     _lastInvalidReason = null;
   }
 
@@ -114,6 +140,23 @@ class PolygonEnclosureEngine {
     _lastInvalidReason = null;
     final now = timestamp ?? DateTime.now();
 
+    // 1. Discard satellite multipath outlier jumps against immediately preceding sample
+    if (_lastReceivedTimestamp != null && _lastReceivedPosition != null) {
+      final double dtSec = (now.difference(_lastReceivedTimestamp!).inMilliseconds / 1000.0).abs();
+      if (dtSec >= 0.5 && dtSec <= 5.0) {
+        final double stepDist = haversineDistanceMeters(_lastReceivedPosition!, position);
+        final double speedKmh = (stepDist / dtSec) * 3.6;
+        if (speedKmh > effectiveMaxSpeedOutlier) {
+          _lastReceivedPosition = position;
+          _lastReceivedTimestamp = now;
+          AppLogger.debug('Jitter outlier rejected: ${speedKmh.toStringAsFixed(1)} km/h (ceiling: $effectiveMaxSpeedOutlier km/h)', tag: 'PolygonEnclosureEngine');
+          return null;
+        }
+      }
+    }
+    _lastReceivedPosition = position;
+    _lastReceivedTimestamp = now;
+
     if (_path.isNotEmpty) {
       final lastPoint = _path.last;
       final distFromLast = haversineDistanceMeters(lastPoint, position);
@@ -121,18 +164,6 @@ class PolygonEnclosureEngine {
       // Filter out stationary noise (< 1.8 meters)
       if (distFromLast < 1.8) {
         return null;
-      }
-
-      // Discard satellite multipath outlier jumps (> 35 km/h)
-      if (_timestamps.isNotEmpty) {
-        final double dtSec = (now.difference(_timestamps.last).inMilliseconds / 1000.0).abs();
-        if (dtSec >= 0.5 && dtSec <= 5.0) {
-          final double speedKmh = (distFromLast / dtSec) * 3.6;
-          if (speedKmh > 35.0) {
-            AppLogger.debug('Jitter outlier rejected: ${speedKmh.toStringAsFixed(1)} km/h', tag: 'PolygonEnclosureEngine');
-            return null;
-          }
-        }
       }
     }
 

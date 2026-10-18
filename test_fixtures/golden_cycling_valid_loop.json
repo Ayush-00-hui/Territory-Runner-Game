@@ -1,0 +1,23 @@
+{
+  "name": "golden_cycling_valid_loop",
+  "description": "High-speed 100m x 100m cycling loop at ~42 km/h (4s dt, ~48m jumps). Valid under cycling (ceiling 60 km/h), rejected as jitter under running (ceiling 35 km/h)",
+  "activity_type": "cycling",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 40.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": true,
+  "expected_area_sqm": 9449.8,
+  "area_tolerance_percent": 0.5,
+  "points": [
+    { "latitude": 51.50000, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.50045, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:04Z" },
+    { "latitude": 51.50090, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:08Z" },
+    { "latitude": 51.50090, "longitude": -0.12070, "timestamp": "2026-10-13T10:00:12Z" },
+    { "latitude": 51.50090, "longitude": -0.12140, "timestamp": "2026-10-13T10:00:16Z" },
+    { "latitude": 51.50045, "longitude": -0.12140, "timestamp": "2026-10-13T10:00:20Z" },
+    { "latitude": 51.50000, "longitude": -0.12140, "timestamp": "2026-10-13T10:00:24Z" },
+    { "latitude": 51.50000, "longitude": -0.12070, "timestamp": "2026-10-13T10:00:28Z" },
+    { "latitude": 51.50010, "longitude": -0.12010, "timestamp": "2026-10-13T10:00:32Z" }
+  ]
+}

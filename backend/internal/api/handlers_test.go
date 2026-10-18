@@ -1270,5 +1270,239 @@ func TestSubmitRunActivityTypeValidationAndSpeedCeiling(t *testing.T) {
 	assert.Equal(t, "running", normalRes.ActivityType)
 }
 
+func TestServerTimestampHygiene(t *testing.T) {
+	router, st := setupTestServer()
+	_ = st
+
+	validPoints := []geo.TrackPoint{
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-60 * time.Second)},
+		{Latitude: 51.5005, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-30 * time.Second)},
+		{Latitude: 51.5005, Longitude: -0.1205, Timestamp: time.Now().UTC()},
+	}
+
+	// 1. Reject future timestamps (> 10m in the future)
+	futurePoints := []geo.TrackPoint{
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-60 * time.Second)},
+		{Latitude: 51.5005, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(30 * time.Minute)}, // +30 mins
+		{Latitude: 51.5005, Longitude: -0.1205, Timestamp: time.Now().UTC().Add(31 * time.Minute)},
+	}
+	body, _ := json.Marshal(api.SubmitRunRequest{
+		IdempotencyKey:  "hygiene_future_run",
+		DurationSeconds: 60,
+		DistanceMeters:  200.0,
+		Points:          futurePoints,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "hygiene_user_1")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "FUTURE_TIMESTAMPS")
+
+	// 2. Reject expired timestamps (> 14 days in the past)
+	expiredPoints := []geo.TrackPoint{
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-15 * 24 * time.Hour)}, // 15 days ago
+		{Latitude: 51.5005, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-15 * 24 * time.Hour).Add(30 * time.Second)},
+		{Latitude: 51.5005, Longitude: -0.1205, Timestamp: time.Now().UTC().Add(-15 * 24 * time.Hour).Add(60 * time.Second)},
+	}
+	body, _ = json.Marshal(api.SubmitRunRequest{
+		IdempotencyKey:  "hygiene_expired_run",
+		DurationSeconds: 60,
+		DistanceMeters:  200.0,
+		Points:          expiredPoints,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "hygiene_user_1")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "EXPIRED_RUN")
+
+	// 3. Reject non-monotonic timestamps
+	nonMonoPoints := []geo.TrackPoint{
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-30 * time.Second)},
+		{Latitude: 51.5005, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-60 * time.Second)}, // time traveled backwards!
+		{Latitude: 51.5005, Longitude: -0.1205, Timestamp: time.Now().UTC()},
+	}
+	body, _ = json.Marshal(api.SubmitRunRequest{
+		IdempotencyKey:  "hygiene_non_mono_run",
+		DurationSeconds: 60,
+		DistanceMeters:  200.0,
+		Points:          nonMonoPoints,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "hygiene_user_1")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "NON_MONOTONIC_TIMESTAMPS")
+
+	// 4. Reject zero-displacement duplicate coordinate track
+	duplicatePoints := []geo.TrackPoint{
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-60 * time.Second)},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-30 * time.Second)},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC()},
+	}
+	body, _ = json.Marshal(api.SubmitRunRequest{
+		IdempotencyKey:  "hygiene_duplicate_points_run",
+		DurationSeconds: 60,
+		DistanceMeters:  0.0,
+		Points:          duplicatePoints,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "hygiene_user_1")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "DUPLICATE_POINTS")
+
+	// 5. Accept valid track and verify idempotency
+	body, _ = json.Marshal(api.SubmitRunRequest{
+		IdempotencyKey:  "hygiene_valid_run_idempotent",
+		DurationSeconds: 60,
+		DistanceMeters:  200.0,
+		Points:          validPoints,
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "hygiene_user_1")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	// Idempotent replay
+	reqReplay := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	reqReplay.Header.Set("Content-Type", "application/json")
+	reqReplay.Header.Set("X-Dev-User", "hygiene_user_1")
+	recReplay := httptest.NewRecorder()
+	router.ServeHTTP(recReplay, reqReplay)
+	assert.Equal(t, http.StatusOK, recReplay.Code)
+}
+
+func TestActivitySegregatedLeaderboardAndLeague(t *testing.T) {
+	router, st := setupTestServer()
+	ctx := context.Background()
+
+	u1 := &store.User{ID: "usr_act_runner", Username: "SpeedyRunner", Faction: "Cyber Vanguard", TotalAreaSqm: 10000.0}
+	u2 := &store.User{ID: "usr_act_cyclist", Username: "FastCyclist", Faction: "Neon Syndicate", TotalAreaSqm: 50000.0}
+	require.NoError(t, st.UpsertUser(ctx, u1))
+	require.NoError(t, st.UpsertUser(ctx, u2))
+
+	now := time.Now().UTC()
+	// Record a running run for Runner
+	_, err := st.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_act_run_1",
+		UserID:         u1.ID,
+		IdempotencyKey: "idem_act_run_1",
+		ActivityType:   "running",
+		AreaClaimed:    10000.0,
+		Status:         "accepted",
+		CreatedAt:      now,
+	}, nil, nil)
+	require.NoError(t, err)
+
+	// Record a cycling run for Cyclist
+	_, err = st.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_act_cyc_1",
+		UserID:         u2.ID,
+		IdempotencyKey: "idem_act_cyc_1",
+		ActivityType:   "cycling",
+		AreaClaimed:    50000.0,
+		Status:         "accepted",
+		CreatedAt:      now,
+	}, nil, nil)
+	require.NoError(t, err)
+
+	// 1. Leaderboard for running: only Runner has running area
+	req := httptest.NewRequest(http.MethodGet, "/v1/leaderboard?activity_type=running", nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var lbRunning struct {
+		Leaderboard []store.LeaderboardEntry `json:"leaderboard"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &lbRunning))
+	require.NotEmpty(t, lbRunning.Leaderboard)
+	assert.Equal(t, u1.ID, lbRunning.Leaderboard[0].UserID)
+	assert.Equal(t, 10000.0, lbRunning.Leaderboard[0].TotalAreaSqm)
+
+	// 2. Leaderboard for cycling: Cyclist is ranked #1 with 50,000 sqm
+	req = httptest.NewRequest(http.MethodGet, "/v1/leaderboard?activity_type=cycling", nil)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var lbCycling struct {
+		Leaderboard []store.LeaderboardEntry `json:"leaderboard"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &lbCycling))
+	require.NotEmpty(t, lbCycling.Leaderboard)
+	assert.Equal(t, u2.ID, lbCycling.Leaderboard[0].UserID)
+	assert.Equal(t, 50000.0, lbCycling.Leaderboard[0].TotalAreaSqm)
+
+	// 3. Weekly League for running: standing reflects running participants only
+	req = httptest.NewRequest(http.MethodGet, "/v1/league/current?activity_type=running", nil)
+	req.Header.Set("X-Dev-User", u1.ID)
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var leagueRunning store.LeagueStanding
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &leagueRunning))
+	assert.Equal(t, 1, leagueRunning.WeeklyRuns)
+	assert.Equal(t, 10000.0, leagueRunning.WeeklyAreaSqm)
+}
+
+func TestActivitySegregatedDuels(t *testing.T) {
+	router, st := setupTestServer()
+	ctx := context.Background()
+
+	u1 := &store.User{ID: "usr_duel_runner_1", Username: "RunnerOne", Faction: "Cyber Vanguard"}
+	u2 := &store.User{ID: "usr_duel_runner_2", Username: "RunnerTwo", Faction: "Neon Syndicate"}
+	require.NoError(t, st.UpsertUser(ctx, u1))
+	require.NoError(t, st.UpsertUser(ctx, u2))
+
+	// Create running duel
+	body, _ := json.Marshal(api.CreateDuelRequest{
+		OpponentID:   u2.ID,
+		ActivityType: "running",
+		TargetType:   "area",
+		TargetValue:  10000.0,
+		XpStake:      100,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", u1.ID)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+	var createdDuel store.Duel
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &createdDuel))
+	assert.Equal(t, "running", createdDuel.ActivityType)
+
+	// Opponent accepts
+	require.NoError(t, st.AcceptDuel(ctx, createdDuel.ID, u2.ID))
+
+	// Opponent records a CYCLING run -> should NOT advance the running duel!
+	err := st.UpdateDuelProgress(ctx, u2.ID, "cycling", 5000.0, 1000.0)
+	require.NoError(t, err)
+
+	duels, err := st.GetDuelsByUser(ctx, u2.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, duels)
+	assert.Equal(t, 0.0, duels[0].OpponentProgress, "Cycling run must not advance progress in a running duel")
+
+	// Opponent records a RUNNING run -> advances progress!
+	err = st.UpdateDuelProgress(ctx, u2.ID, "running", 5000.0, 1000.0)
+	require.NoError(t, err)
+
+	duels, err = st.GetDuelsByUser(ctx, u2.ID)
+	require.NoError(t, err)
+	require.NotEmpty(t, duels)
+	assert.Equal(t, 5000.0, duels[0].OpponentProgress, "Running run must advance progress in running duel")
+}
+
 
 

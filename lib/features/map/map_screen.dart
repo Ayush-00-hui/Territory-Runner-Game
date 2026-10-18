@@ -886,12 +886,17 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     if (!_isRunActive) {
       // START RUN
       _polygonEngine.clear();
+      _polygonEngine.setActivityType(_selectedActivity);
       _runCoordinates.clear();
       _rollingPaceWindow.clear();
       _runPathUpdateNotifier.value++;
       _telemetryNotifier.reset();
       _telemetryNotifier.setRunActive(true);
-      _locationService.setTrackingMode(GpsTrackingMode.activeRun, liveStatusText: "Run in progress...");
+      _locationService.setTrackingMode(
+        GpsTrackingMode.activeRun,
+        liveStatusText: "${_selectedActivity.displayName} in progress...",
+        activityType: _selectedActivity,
+      );
 
       setState(() {
         _isRunActive = true;
