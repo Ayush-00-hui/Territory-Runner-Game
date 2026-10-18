@@ -2,14 +2,25 @@ name: CI
 
 on:
   push:
-    branches: [ main, feature/go-backend, feature/mechanics-v2, feature/hardening-v3, feature/complete-v4, ui-premium-v2 ]
+    branches:
+      - main
+      - industry-level
+      - 'release/**'
+      - 'feature/**'
   pull_request:
-    branches: [ main, feature/go-backend, feature/mechanics-v2, feature/hardening-v3, feature/complete-v4, ui-premium-v2 ]
+    branches:
+      - main
+      - industry-level
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  flutter_test:
+  flutter_quality:
+    name: Flutter Analyze & Test
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout Repository
@@ -25,20 +36,25 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          cache: false
+          cache: true
+          cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
 
-      - name: Install Dependencies
+      - name: Display Flutter Environment
+        run: flutter --version
+
+      - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Run Static Analysis
-        run: flutter analyze
+      - name: Run Static Code Analysis
+        run: flutter analyze --fatal-infos --fatal-warnings
 
-      - name: Run Unit & Benchmark Tests
-        run: flutter test --timeout 60s
+      - name: Run Flutter Unit, Widget & Golden Tests
+        run: flutter test --coverage --timeout 120s
 
-  go_backend_test:
+  go_backend:
+    name: Go Backend Quality & PostGIS Parity
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     services:
       postgis:
@@ -63,14 +79,18 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
+          cache-dependency-path: backend/go.sum
 
-      - name: Run Static Code Analysis (go vet)
+      - name: Display Go Environment
+        run: go version
+
+      - name: Run Go Static Code Analysis (go vet)
         working-directory: backend
         run: go vet ./...
 
-      - name: Run Go Unit Tests & Benchmarks
+      - name: Run Go Unit Tests & Race Detection
         working-directory: backend
-        run: go test -v -race ./...
+        run: go test -v -race -cover ./...
 
       - name: Run PostGIS Integration Tests
         working-directory: backend
@@ -79,8 +99,10 @@ jobs:
         run: go test -v -race -tags=integration ./internal/store/...
 
   docker_build:
+    name: Backend Docker Container Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: [go_backend]
 
     steps:
       - name: Checkout Repository
@@ -91,4 +113,3 @@ jobs:
 
       - name: Build Go Backend Container
         run: docker build -t territory-runner-backend:latest ./backend
-

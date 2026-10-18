@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+*~
 .DS_Store
 .env
 *.env
@@ -14,16 +15,12 @@
 .swiftpm/
 migrate_working_dir/
 
-# IntelliJ related
+# IntelliJ & IDE related
 *.iml
 *.ipr
 *.iws
 .idea/
-
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -35,21 +32,42 @@ migrate_working_dir/
 /build/
 /coverage/
 
-# Symbolication related
+# Symbolication & Obfuscation related
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
+*.symbols
+mapping.txt
 
-# Android Studio will place build artifacts here
+# Android Studio & Gradle
 /android/app/debug
 /android/app/profile
 /android/app/release
+.gradle/
+**/android/.gradle/
+**/android/local.properties
+**/android/captures/
 android/app/google-services.json
-ios/Runner/GoogleService-Info.plist
 **/key.properties
 *.keystore
 *.jks
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# iOS / CocoaPods related
+ios/Runner/GoogleService-Info.plist
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+*.ipa
+*.dSYM.zip
+*.dSYM
 
 # Widget Preview related
 .widget_preview/
@@ -63,3 +81,7 @@ test_hive*/
 # Go Backend Artifacts
 backend/bin/
 backend/*.exe
+backend/*.test
+backend/coverage.out
+backend/coverage.html
+backend/server

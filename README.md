@@ -18,10 +18,10 @@
 
 <br>
 
-[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/Ayush-00-hui/Territory-Runner-Game/ci.yml?branch=main&style=for-the-badge&label=CI%20Pipeline&logo=githubactions&logoColor=white)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-184%2F184_Passing-4C8DFF.svg?style=for-the-badge&logo=flutter&logoColor=white)](test/)
-[![Go Tests](https://img.shields.io/badge/Go_Backend-80_Passing_(9_Packages)-00ADD8.svg?style=for-the-badge&logo=go&logoColor=white)](backend/)
-[![Golden Parity](https://img.shields.io/badge/Golden_Parity-7%2F7_Fixtures_%3C0.5%25_Delta-success.svg?style=for-the-badge)](test_fixtures/)
+[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/Ayush-00-hui/Territory-Runner-Game/ci.yml?branch=industry-level&style=for-the-badge&label=CI%20Pipeline&logo=githubactions&logoColor=white)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-208%2F208_Passing-4C8DFF.svg?style=for-the-badge&logo=flutter&logoColor=white)](test/)
+[![Go Tests](https://img.shields.io/badge/Go_Backend-9_Packages_Passing-00ADD8.svg?style=for-the-badge&logo=go&logoColor=white)](backend/)
+[![Golden Parity](https://img.shields.io/badge/Golden_Parity-Walking_%2F_Running_%2F_Cycling-success.svg?style=for-the-badge)](test_fixtures/)
 [![Design System](https://img.shields.io/badge/Palette-Ink_%26_Pacer_Blue_%23090B0F-12151B?style=for-the-badge&logo=materialdesign&logoColor=4C8DFF)](lib/ui/)
 
 <br>
@@ -38,7 +38,7 @@
 
 <br>
 
-[🌟 Overview](#-executive-overview) • [💡 The "Why"](#-why-territory-runner) • [🏗️ Architecture](#%EF%B8%8F-system-architecture) • [📊 Verification Matrix](#-honest-feature-verification-matrix) • [🚀 Quickstart](#-getting-started--local-development) • [📡 API Reference](#-rest--websocket-api-reference) • [🧮 Core Algorithms](#-core-mechanics--algorithmic-parity) • [🎓 Viva Defense](docs/VIVA.md) • [🚢 Deployment](docs/DEPLOYMENT.md)
+[🌟 Overview](#-executive-overview) • [💡 The "Why"](#-why-territory-runner) • [🏗️ Architecture](#%EF%B8%8F-system-architecture) • [📊 Verification Matrix](#-honest-feature-verification-matrix) • [🚀 Quickstart](#-getting-started--local-development) • [📡 API Reference](#-rest--websocket-api-reference) • [🧮 Core Algorithms](#-core-mechanics--algorithmic-parity) • [🎓 Viva Defense](docs/VIVA.md) • [🤝 Contributing](CONTRIBUTING.md) • [🔒 Security](SECURITY.md) • [🕒 Timezones](docs/TIMEZONE_RULES.md) • [⚖️ Fairness](docs/ACTIVITY_FAIRNESS.md)
 
 </div>
 

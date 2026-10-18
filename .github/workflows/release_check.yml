@@ -1,0 +1,66 @@
+name: Release Verification
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'android/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/release_check.yml'
+
+jobs:
+  release_readiness:
+    name: Verify Release & Store Integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Validate pubspec.yaml Semver Format
+        run: |
+          VERSION=$(grep '^version: ' pubspec.yaml | sed 's/version: //')
+          echo "Detected version: $VERSION"
+          if [[ ! $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+$ ]]; then
+            echo "ERROR: Version does not match Semver 'X.Y.Z+build' format: $VERSION"
+            exit 1
+          fi
+
+      - name: Validate Android R8 & ProGuard Configuration
+        run: |
+          BUILD_GRADLE="android/app/build.gradle.kts"
+          if ! grep -q "isMinifyEnabled = true" "$BUILD_GRADLE"; then
+            echo "ERROR: isMinifyEnabled is not enabled in $BUILD_GRADLE"
+            exit 1
+          fi
+          if ! grep -q "isShrinkResources = true" "$BUILD_GRADLE"; then
+            echo "ERROR: isShrinkResources is not enabled in $BUILD_GRADLE"
+            exit 1
+          fi
+          if [ ! -f "android/app/proguard-rules.pro" ]; then
+            echo "ERROR: android/app/proguard-rules.pro is missing"
+            exit 1
+          fi
+          echo "Release R8 and ProGuard configuration verified."
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Android App Bundle Dry-Run / Test
+        run: flutter test
