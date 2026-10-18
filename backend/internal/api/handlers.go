@@ -37,6 +37,7 @@ type API struct {
 	maxRunDurationSec int
 	runsLimiter       *RateLimiter
 	coachLimiter      *RateLimiter
+	metrics           *MetricsCollector
 }
 
 // Option configures API dependencies.
@@ -96,6 +97,15 @@ func WithRateLimiters(runsLimiter, coachLimiter *RateLimiter) Option {
 	}
 }
 
+// WithMetrics configures a custom metrics collector.
+func WithMetrics(m *MetricsCollector) Option {
+	return func(a *API) {
+		if m != nil {
+			a.metrics = m
+		}
+	}
+}
+
 // RunsLimiter returns the runs endpoint rate limiter.
 func (a *API) RunsLimiter() *RateLimiter {
 	return a.runsLimiter
@@ -123,6 +133,7 @@ func NewAPI(s store.Store, logger *slog.Logger, opts ...Option) *API {
 		runsLimiter: NewRateLimiter(0.5, 10),
 		// Coach rate limit: 5 burst, refill 0.2/sec (1 token per 5 sec)
 		coachLimiter: NewRateLimiter(0.2, 5),
+		metrics:      NewMetricsCollector(),
 	}
 	for _, opt := range opts {
 		opt(a)
@@ -141,6 +152,25 @@ func (a *API) HandleHealthz(w http.ResponseWriter, r *http.Request) {
 		"status":   "ok",
 		"database": dbStatus,
 		"time":     time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+// HandleReadyz handles GET /readyz readiness checks verifying database connectivity.
+func (a *API) HandleReadyz(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := a.store.Ping(ctx); err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status": "unhealthy",
+			"error":  err.Error(),
+		})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status":   "ready",
+		"database": "connected",
 	})
 }
 
@@ -1055,10 +1085,14 @@ func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 }
 
 func writeError(w http.ResponseWriter, status int, code, detail string) {
-	writeJSON(w, status, map[string]string{
+	resp := map[string]string{
 		"error":  code,
 		"detail": detail,
-	})
+	}
+	if reqID := w.Header().Get("X-Request-Id"); reqID != "" {
+		resp["request_id"] = reqID
+	}
+	writeJSON(w, status, resp)
 }
 
 func min(a, b int) int {

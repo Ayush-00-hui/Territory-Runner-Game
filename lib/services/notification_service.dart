@@ -10,7 +10,7 @@ import 'app_preferences.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Background push alert received (FCM HTTP v1 payload)
-  debugPrint('[NotificationService] Background message received: ${message.messageId} - ${message.data}');
+  AppLogger.info('Background message received: ${message.messageId} - ${message.data}', tag: 'NotificationService');
 }
 
 /// Service managing FCM HTTP v1 push notifications, permission primer UI,
@@ -44,7 +44,7 @@ class NotificationService {
     _apiClient = apiClient ?? ApiClient();
 
     if (!isFirebaseAvailable) {
-      debugPrint('[NotificationService] Firebase not initialized; push notification service running in local fallback mode.');
+      AppLogger.info('Firebase not initialized; push notification service running in local fallback mode.', tag: 'NotificationService');
       _isInitialized = true;
       return;
     }
@@ -54,7 +54,7 @@ class NotificationService {
 
       // Handle foreground notifications
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        debugPrint('[NotificationService] Foreground message received: ${message.data}');
+        AppLogger.info('Foreground message received: ${message.data}', tag: 'NotificationService');
         final type = message.data['type'];
         if (type == 'territory_carved') {
           final rival = message.data['rival_name'] as String? ?? 'Rival';
@@ -80,7 +80,7 @@ class NotificationService {
 
       // Handle device token rotation
       FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-        debugPrint('[NotificationService] FCM device token refreshed.');
+        AppLogger.info('FCM device token refreshed.', tag: 'NotificationService');
         _registerToken(newToken);
       });
 
@@ -95,9 +95,9 @@ class NotificationService {
       }
 
       _isInitialized = true;
-      debugPrint('[NotificationService] FCM notification service successfully initialized.');
+      AppLogger.info('FCM notification service successfully initialized.', tag: 'NotificationService');
     } catch (e) {
-      debugPrint('[NotificationService] Failed to initialize FirebaseMessaging: $e');
+      AppLogger.warning('Failed to initialize FirebaseMessaging: $e', tag: 'NotificationService', error: e);
       _isInitialized = true; // Fallback mode active
     }
   }
@@ -105,7 +105,7 @@ class NotificationService {
   void _handleMessagePayload(Map<String, dynamic> data) {
     final territoryId = data['territory_id'] as String?;
     if (territoryId != null && territoryId.isNotEmpty) {
-      debugPrint('[NotificationService] Navigating to attacked territory: $territoryId');
+      AppLogger.info('Navigating to attacked territory: $territoryId', tag: 'NotificationService');
       _attackedTerritoryController.add(territoryId);
     }
   }
@@ -114,9 +114,9 @@ class NotificationService {
     try {
       final client = _apiClient ?? ApiClient();
       await client.registerDeviceToken(token);
-      debugPrint('[NotificationService] Successfully registered FCM device token with backend.');
+      AppLogger.debug('Successfully registered FCM device token with backend.', tag: 'NotificationService');
     } catch (e) {
-      debugPrint('[NotificationService] Error registering device token with backend: $e');
+      AppLogger.error('Error registering device token with backend: $e', tag: 'NotificationService', error: e);
     }
   }
 
@@ -152,7 +152,7 @@ class NotificationService {
   /// Requests system notification permissions and registers the FCM device token
   Future<bool> requestNotificationPermission() async {
     if (!isFirebaseAvailable) {
-      debugPrint('[NotificationService] Firebase not configured; simulated permission granted.');
+      AppLogger.info('Firebase not configured; simulated permission granted.', tag: 'NotificationService');
       return true;
     }
 
@@ -179,7 +179,7 @@ class NotificationService {
       }
       return false;
     } catch (e) {
-      debugPrint('[NotificationService] Error requesting notification permissions: $e');
+      AppLogger.error('Error requesting notification permissions: $e', tag: 'NotificationService', error: e);
       return false;
     }
   }
@@ -189,9 +189,9 @@ class NotificationService {
     if (!isFirebaseAvailable) return;
     try {
       await FirebaseMessaging.instance.deleteToken();
-      debugPrint('[NotificationService] FCM device token deleted from device.');
+      AppLogger.info('FCM device token deleted from device.', tag: 'NotificationService');
     } catch (e) {
-      debugPrint('[NotificationService] Error deleting FCM token: $e');
+      AppLogger.error('Error deleting FCM token: $e', tag: 'NotificationService', error: e);
     }
   }
 }

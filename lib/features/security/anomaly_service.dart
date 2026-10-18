@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:geolocator/geolocator.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Result of anomaly scoring on a trajectory window
 class AnomalyResult {
@@ -77,9 +77,9 @@ class AnomalyService {
         }
       }
       _isConfigLoaded = true;
-      debugPrint('[AnomalyService] Statistical anomaly detector configured from $assetPath');
+      AppLogger.info('Statistical anomaly detector configured from $assetPath', tag: 'AnomalyService');
     } catch (e) {
-      debugPrint('[AnomalyService] Using calibrated in-memory baseline parameters (asset load deferred): $e');
+      AppLogger.debug('Using calibrated in-memory baseline parameters (asset load deferred): $e', tag: 'AnomalyService');
     }
   }
 
@@ -92,7 +92,7 @@ class AnomalyService {
     
     // Check 1: Android/iOS isMocked ground-truth indicator
     if (latest.isMocked) {
-      debugPrint('[AnomalyService] CHEAT DETECTED: Device reported isMocked=true');
+      AppLogger.warning('CHEAT DETECTED: Device reported isMocked=true', tag: 'AnomalyService');
       return const AnomalyResult(
         isAnomaly: true,
         anomalyScore: 99.0,
@@ -104,7 +104,7 @@ class AnomalyService {
     // Check 2: Instantaneous human speed ceiling (> 25 km/h is impossible for recreational runners)
     final double instantSpeedKmh = latest.speed * 3.6;
     if (instantSpeedKmh > _maxHumanSpeedKmh) {
-      debugPrint('[AnomalyService] CHEAT DETECTED: Instant speed ${instantSpeedKmh.toStringAsFixed(1)} km/h exceeds human limits');
+      AppLogger.warning('CHEAT DETECTED: Instant speed ${instantSpeedKmh.toStringAsFixed(1)} km/h exceeds human limits', tag: 'AnomalyService');
       return AnomalyResult(
         isAnomaly: true,
         anomalyScore: 10.0 + (instantSpeedKmh - _maxHumanSpeedKmh),
@@ -126,7 +126,7 @@ class AnomalyService {
         );
         final double stepSpeedKmh = (distMeters / dtSeconds) * 3.6;
         if (stepSpeedKmh > 35.0 || (distMeters > 50.0 && dtSeconds <= 1.0)) {
-          debugPrint('[AnomalyService] CHEAT DETECTED: Teleport jump of ${distMeters.toStringAsFixed(1)}m in ${dtSeconds}s ($stepSpeedKmh km/h)');
+          AppLogger.warning('CHEAT DETECTED: Teleport jump of ${distMeters.toStringAsFixed(1)}m in ${dtSeconds}s ($stepSpeedKmh km/h)', tag: 'AnomalyService');
           return AnomalyResult(
             isAnomaly: true,
             anomalyScore: 15.0,
@@ -164,7 +164,7 @@ class AnomalyService {
         : 'Genuine running gait';
 
     if (isAnomaly) {
-      debugPrint('[AnomalyService] Suspicious telemetry segment scored: ${normalizedScore.toStringAsFixed(2)} > $_anomalyThreshold');
+      AppLogger.warning('Suspicious telemetry segment scored: ${normalizedScore.toStringAsFixed(2)} > $_anomalyThreshold', tag: 'AnomalyService');
     }
 
     return AnomalyResult(

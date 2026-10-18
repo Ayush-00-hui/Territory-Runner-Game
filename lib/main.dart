@@ -12,43 +12,85 @@ import 'models/territory.dart';
 import 'models/runner_profile.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
+import 'package:flutter/foundation.dart';
 import 'features/home/home_screen.dart';
 import 'ui/ui.dart';
 export 'ui/ui.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
-  if (!Hive.isAdapterRegistered(0)) {
-    Hive.registerAdapter(TerritoryAdapter());
-  }
-  if (!Hive.isAdapterRegistered(1)) {
-    Hive.registerAdapter(RunnerProfileAdapter());
-  }
-  await Hive.openBox<Territory>('territories_v3');
-  await Hive.openBox<RunnerProfile>('profile');
-  await Hive.openBox<String>('active_run_recovery');
+void main() {
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Load package metadata
-  unawaited(AppVersion.init());
+    // 1. Intercept Flutter framework rendering and layout errors
+    FlutterError.onError = (FlutterErrorDetails details) {
+      AppLogger.error(
+        'FlutterError: ${details.exceptionAsString()}',
+        tag: 'FlutterError',
+        error: details.exception,
+        stackTrace: details.stack,
+      );
+      if (kDebugMode) {
+        FlutterError.dumpErrorToConsole(details);
+      }
+    };
 
-  // Immediately render UI — zero splash screen blocking!
-  runApp(const TerritoryApp());
+    // 2. Present calm, non-red fallback screen
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      return CalmErrorScreen(details: details);
+    };
 
-  // Initialize Firebase and push notifications asynchronously in background
-  _initServicesAsync();
+    // 3. Intercept uncaught platform and asynchronous dispatcher errors
+    PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+      AppLogger.error(
+        'PlatformDispatcher unhandled error: $error',
+        tag: 'PlatformDispatcher',
+        error: error,
+        stackTrace: stack,
+      );
+      return true; // Marked as handled
+    };
+
+    await Hive.initFlutter();
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(TerritoryAdapter());
+    }
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(RunnerProfileAdapter());
+    }
+    await Hive.openBox<Territory>('territories_v3');
+    await Hive.openBox<RunnerProfile>('profile');
+    await Hive.openBox<String>('active_run_recovery');
+
+    // Load package metadata
+    unawaited(AppVersion.init());
+
+    // Immediately render UI — zero splash screen blocking!
+    runApp(const TerritoryApp());
+
+    // Initialize Firebase and push notifications asynchronously in background
+    _initServicesAsync();
+  }, (Object error, StackTrace stack) {
+    AppLogger.error(
+      'Zone-level unhandled exception: $error',
+      tag: 'ZoneGuard',
+      error: error,
+      stackTrace: stack,
+    );
+  });
 }
 
 void _initServicesAsync() async {
   try {
     await FirebaseService().initialize().timeout(const Duration(seconds: 3));
-  } catch (e) {
-    debugPrint('[main] Firebase init skipped/timed out: $e');
+    // Enable Crashlytics in production when Firebase is initialized
+    AppLogger.setCrashlyticsEnabled(true);
+  } catch (e, st) {
+    AppLogger.warning('Firebase init skipped/timed out: $e', tag: 'main', error: e, stackTrace: st);
   }
   try {
     await NotificationService().initialize().timeout(const Duration(seconds: 3));
-  } catch (e) {
-    debugPrint('[main] NotificationService init skipped/timed out: $e');
+  } catch (e, st) {
+    AppLogger.warning('NotificationService init skipped/timed out: $e', tag: 'main', error: e, stackTrace: st);
   }
 }
 

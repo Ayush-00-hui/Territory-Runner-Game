@@ -52,7 +52,7 @@ class _AuthScreenState extends State<AuthScreen> {
         profile.username = displayName;
         _territoryService.saveProfile(profile);
       } catch (e) {
-        debugPrint('[AuthScreen] Notice saving profile: $e');
+        AppLogger.warning('Notice saving profile: $e', tag: 'AuthScreen');
       }
     }
     widget.onAuthenticated();

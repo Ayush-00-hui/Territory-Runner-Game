@@ -7,6 +7,7 @@ import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
 import '../../services/firebase_service.dart';
 import '../../ui/theme/app_colors.dart';
+import '../../core/logging/app_logger.dart';
 import 'polygon_enclosure_engine.dart';
 
 class TerritoryService {
@@ -237,7 +238,7 @@ class TerritoryService {
           if (box != null) {
             await box.delete(rival.id);
           }
-          debugPrint('[TerritoryService] Rival territory ${rival.id} completely conquered by $activeOwner');
+          AppLogger.info('Rival territory ${rival.id} completely conquered by $activeOwner', tag: 'TerritoryService');
         } else {
           final List<List<LatLng>> clippedMultiPolys = clippedRivalPaths.map(path64ToLatLngs).toList();
           final double remainingArea = _netAreaOf(clippedMultiPolys);
@@ -258,7 +259,7 @@ class TerritoryService {
             if (box != null) {
               await box.delete(rival.id);
             }
-            debugPrint('[TerritoryService] Weak rival territory ${rival.id} completely collapsed (<50m²)');
+            AppLogger.info('Weak rival territory ${rival.id} completely collapsed (<50m²)', tag: 'TerritoryService');
           } else {
             final double currentRivalStrength = rival.computeCurrentStrength();
             final updatedRival = rival.copyWith(
@@ -271,7 +272,7 @@ class TerritoryService {
             if (box != null) {
               await box.put(rival.id, updatedRival);
             }
-            debugPrint('[TerritoryService] Rival territory ${rival.id} clipped to ${remainingArea.toStringAsFixed(1)} m² (strength: ${updatedRival.strength.toStringAsFixed(0)}%)');
+            AppLogger.debug('Rival territory ${rival.id} clipped to ${remainingArea.toStringAsFixed(1)} m² (strength: ${updatedRival.strength.toStringAsFixed(0)}%)', tag: 'TerritoryService');
           }
         }
       }
@@ -292,8 +293,9 @@ class TerritoryService {
     lastCaptureNetAreaSqM = netGainedSqM;
     lastCaptureStolenAreaSqM = stolenAreaSqM;
 
-    debugPrint(
-      '[TerritoryService] Polygon claimed! Player total territory area: ${totalUnifiedAreaSqM.toStringAsFixed(1)}m², XP: +$gainedXp',
+    AppLogger.info(
+      'Polygon claimed! Player total territory area: ${totalUnifiedAreaSqM.toStringAsFixed(1)}m², XP: +$gainedXp',
+      tag: 'TerritoryService',
     );
 
     // Emit live capture event
@@ -369,7 +371,7 @@ class TerritoryService {
       await box.put(territoryId, defended);
       _captureEventController.add(defended);
       unawaited(_firebaseService.syncTerritoryToCloud(defended));
-      debugPrint('[TerritoryService] Territory $territoryId fortified to 100% defense!');
+      AppLogger.info('Territory $territoryId fortified to 100% defense!', tag: 'TerritoryService');
       return defended;
     }
     return null;
@@ -388,7 +390,7 @@ class TerritoryService {
       );
       await box.put(territoryId, decayed);
       _captureEventController.add(decayed);
-      debugPrint('[TerritoryService] Territory $territoryId simulated decay: $targetStrength% (defended $daysAgo days ago)');
+      AppLogger.debug('Territory $territoryId simulated decay: $targetStrength% (defended $daysAgo days ago)', tag: 'TerritoryService');
       return decayed;
     }
     return null;

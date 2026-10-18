@@ -7,6 +7,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
+import '../core/logging/app_logger.dart';
 
 /// Offline map tile caching engine providing slippy tile coordinate calculations,
 /// proactive bounding box pre-downloading, disk size monitoring, and offline-first tile serving.
@@ -56,8 +57,8 @@ class TileCacheService {
       final file = await getTileFile(z, x, y);
       await file.parent.create(recursive: true);
       await file.writeAsBytes(bytes, flush: true);
-    } catch (e) {
-      debugPrint('[TileCacheService] Error saving tile $z/$x/$y: $e');
+    } catch (e, st) {
+      AppLogger.error('Error saving tile $z/$x/$y', error: e, stackTrace: st, tag: 'TileCacheService');
     }
   }
 
@@ -168,8 +169,8 @@ class TileCacheService {
         await dir.delete(recursive: true);
         await dir.create(recursive: true);
       }
-    } catch (e) {
-      debugPrint('[TileCacheService] Error clearing cache: $e');
+    } catch (e, st) {
+      AppLogger.error('Error clearing cache', error: e, stackTrace: st, tag: 'TileCacheService');
     }
   }
 }

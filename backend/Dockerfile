@@ -21,14 +21,20 @@ FROM alpine:3.20
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY --from=builder /app/server /app/server
 COPY migrations /app/migrations
 
+RUN chown -R appuser:appgroup /app
+
+USER appuser
+
 EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:8080/healthz || exit 1
+  CMD wget --quiet --tries=1 --spider http://localhost:8080/readyz || exit 1
 
 ENTRYPOINT ["/app/server"]
+

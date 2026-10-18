@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:clipper2/clipper2.dart';
+import '../../core/logging/app_logger.dart';
 import '../gameplay/territory_service.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
 
@@ -132,7 +132,7 @@ class RouteService {
       }
       return math.max(0.0, netArea.abs());
     } catch (e) {
-      debugPrint('[RouteService] Net area clipping error: $e');
+      AppLogger.warning('Net area clipping error: $e', tag: 'RouteService');
       return rawArea;
     }
   }
@@ -172,7 +172,7 @@ class RouteService {
         return osrmRoute;
       }
     } catch (e) {
-      debugPrint('[RouteService] OSRM query failed or offline ($e). Falling back to synthetic geodesic loop.');
+      AppLogger.info('OSRM query failed or offline ($e). Falling back to synthetic geodesic loop.', tag: 'RouteService');
     }
 
     // 2. Offline Fallback: Geodesic loop synthesis
@@ -260,7 +260,7 @@ class RouteService {
           final double netAreaSqM = computeNetNewArea(osrmPolyline);
           final double totalKm = distanceMeters / 1000.0;
 
-          debugPrint('[RouteService] OSRM street route synthesized: ${totalKm.toStringAsFixed(2)}km with ${osrmPolyline.length} street vertices');
+          AppLogger.debug('OSRM street route synthesized: ${totalKm.toStringAsFixed(2)}km with ${osrmPolyline.length} street vertices', tag: 'RouteService');
 
           return SuggestedRoute(
             polyline: osrmPolyline,

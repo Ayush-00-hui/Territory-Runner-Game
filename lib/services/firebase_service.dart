@@ -2,8 +2,8 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../core/logging/app_logger.dart';
 import '../models/runner_profile.dart';
 import '../models/territory.dart';
 
@@ -18,19 +18,25 @@ class FirebaseService {
   FirebaseFirestore? _firestore;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
+  FirebaseAuth? get auth => _auth;
+  FirebaseFirestore? get firestore => _firestore;
+
   FirebaseService._internal();
 
-  /// Initialize Firebase safely (handles offline or missing config gracefully)
+  /// Whether a user is currently signed in
+  bool get isSignedIn => _isInitialized && _auth?.currentUser != null;
+
+  /// Asynchronously initializes Firebase
   Future<void> initialize() async {
     try {
       await Firebase.initializeApp();
       _auth = FirebaseAuth.instance;
       _firestore = FirebaseFirestore.instance;
       _isInitialized = true;
-      debugPrint('[FirebaseService] Firebase initialized successfully.');
+      AppLogger.info('Firebase initialized successfully.', tag: 'FirebaseService');
     } catch (e) {
       _isInitialized = false;
-      debugPrint('[FirebaseService] Running in local offline mode (Firebase init skipped/failed: $e)');
+      AppLogger.warning('Running in local offline mode (Firebase init skipped/failed: $e)', tag: 'FirebaseService');
     }
   }
 
@@ -43,27 +49,36 @@ class FirebaseService {
   }
 
   /// Current user display name or phone/email
-  String get currentUsername {
+  String get currentUserName {
     if (_isInitialized && _auth?.currentUser != null) {
       return _auth!.currentUser!.displayName ??
+          _auth!.currentUser!.email ??
           _auth!.currentUser!.phoneNumber ??
-          _auth!.currentUser!.email?.split('@').first ??
-          'CyberRunner';
+          'Athlete';
     }
-    return 'CyberRunner';
+    return 'Solo Runner';
   }
 
-  User? get currentUser => _auth?.currentUser;
-  bool get isSignedIn => _auth?.currentUser != null;
+  /// Alias for currentUserName for compatibility across modules
+  String get currentUsername => currentUserName;
 
-  /// User auth state changes stream
-  Stream<User?>? get authStateChanges => _isInitialized ? _auth?.authStateChanges() : null;
-
-  /// Sign in with Google
-  Future<UserCredential?> signInWithGoogle() async {
-    if (!_isInitialized || _auth == null) {
-      throw Exception('Firebase is not initialized. Please ensure google-services.json is configured.');
+  /// Current user avatar URL
+  String? get currentUserPhotoUrl {
+    if (_isInitialized && _auth?.currentUser != null) {
+      return _auth!.currentUser!.photoURL;
     }
+    return null;
+  }
+
+  /// User auth state stream
+  Stream<User?> get authStateChanges =>
+      _isInitialized && _auth != null ? _auth!.authStateChanges() : const Stream.empty();
+
+  User? get currentUser => _isInitialized ? _auth?.currentUser : null;
+
+  /// Google Sign-In with Tactical Auth Credential Handling
+  Future<UserCredential?> signInWithGoogle() async {
+    if (!_isInitialized || _auth == null) return null;
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
@@ -77,7 +92,7 @@ class FirebaseService {
       );
       return await _auth!.signInWithCredential(credential);
     } catch (e) {
-      debugPrint('[FirebaseService] Google Sign-In failed: $e');
+      AppLogger.warning('Google Sign-In failed: $e', tag: 'FirebaseService', error: e);
       rethrow;
     }
   }
@@ -88,7 +103,7 @@ class FirebaseService {
     try {
       return await _auth!.signInAnonymously();
     } catch (e) {
-      debugPrint('[FirebaseService] Anonymous sign-in failed: $e');
+      AppLogger.warning('Anonymous sign-in failed: $e', tag: 'FirebaseService', error: e);
       return null;
     }
   }
@@ -126,7 +141,7 @@ class FirebaseService {
       );
       return await _auth!.signInWithCredential(credential);
     } catch (e) {
-      debugPrint('[FirebaseService] Phone OTP sign-in failed: $e');
+      AppLogger.warning('Phone OTP sign-in failed: $e', tag: 'FirebaseService', error: e);
       rethrow;
     }
   }
@@ -139,7 +154,7 @@ class FirebaseService {
       await cred.user?.updateDisplayName(username);
       return cred;
     } catch (e) {
-      debugPrint('[FirebaseService] Email sign-up failed: $e');
+      AppLogger.warning('Email sign-up failed: $e', tag: 'FirebaseService', error: e);
       rethrow;
     }
   }
@@ -150,7 +165,7 @@ class FirebaseService {
     try {
       return await _auth!.signInWithEmailAndPassword(email: email, password: password);
     } catch (e) {
-      debugPrint('[FirebaseService] Email sign-in failed: $e');
+      AppLogger.warning('Email sign-in failed: $e', tag: 'FirebaseService', error: e);
       rethrow;
     }
   }
@@ -176,7 +191,7 @@ class FirebaseService {
         final data = doc.data();
         final cloudTimestamp = (data?['serverTimestamp'] as Timestamp?)?.toDate();
         if (cloudTimestamp != null && cloudTimestamp.isAfter(territory.capturedAt)) {
-          debugPrint('[FirebaseService] Conflict: Cloud territory timestamp is newer. Skipping overwrite.');
+          AppLogger.debug('Conflict: Cloud territory timestamp is newer. Skipping overwrite.', tag: 'FirebaseService');
           return;
         }
       }
@@ -185,9 +200,9 @@ class FirebaseService {
         ...territory.toJson(),
         'serverTimestamp': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('[FirebaseService] Territory ${territory.id} synced to cloud.');
+      AppLogger.debug('Territory ${territory.id} synced to cloud.', tag: 'FirebaseService');
     } catch (e) {
-      debugPrint('[FirebaseService] Error syncing territory: $e');
+      AppLogger.error('Error syncing territory: $e', tag: 'FirebaseService', error: e);
     }
   }
 
@@ -199,9 +214,9 @@ class FirebaseService {
         ...profile.toJson(),
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      debugPrint('[FirebaseService] Profile ${profile.id} synced to cloud.');
+      AppLogger.debug('Profile ${profile.id} synced to cloud.', tag: 'FirebaseService');
     } catch (e) {
-      debugPrint('[FirebaseService] Error syncing profile: $e');
+      AppLogger.error('Error syncing profile: $e', tag: 'FirebaseService', error: e);
     }
   }
 
@@ -217,7 +232,7 @@ class FirebaseService {
 
       return snapshot.docs.map((doc) => doc.data()).toList();
     } catch (e) {
-      debugPrint('[FirebaseService] Leaderboard fetch error: $e');
+      AppLogger.error('Leaderboard fetch error: $e', tag: 'FirebaseService', error: e);
       return [];
     }
   }

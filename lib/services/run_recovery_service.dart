@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:latlong2/latlong.dart';
+import '../core/logging/app_logger.dart';
 
 /// Represents a persisted snapshot of an in-progress athletic run session.
 class ActiveRunSnapshot {
@@ -151,7 +151,7 @@ class RunRecoveryService {
       final jsonStr = jsonEncode(snapshot.toMap());
       await _safeBox.put(activeKey, jsonStr);
     } catch (e) {
-      debugPrint('[RunRecoveryService] Failed to persist active run: $e');
+      AppLogger.error('Failed to persist active run: $e', tag: 'RunRecoveryService', error: e);
     }
   }
 
@@ -172,7 +172,7 @@ class RunRecoveryService {
       }
       return snapshot.coordinates.length >= 2;
     } catch (e) {
-      debugPrint('[RunRecoveryService] Error checking recoverable run: $e');
+      AppLogger.error('Error checking recoverable run: $e', tag: 'RunRecoveryService', error: e);
       return false;
     }
   }
@@ -186,7 +186,7 @@ class RunRecoveryService {
       final map = jsonDecode(raw) as Map<String, dynamic>;
       return ActiveRunSnapshot.fromMap(map);
     } catch (e) {
-      debugPrint('[RunRecoveryService] Error retrieving recoverable run: $e');
+      AppLogger.error('Error retrieving recoverable run: $e', tag: 'RunRecoveryService', error: e);
       return null;
     }
   }
@@ -196,7 +196,7 @@ class RunRecoveryService {
     try {
       await _safeBox.delete(activeKey);
     } catch (e) {
-      debugPrint('[RunRecoveryService] Error clearing recovery: $e');
+      AppLogger.error('Error clearing recovery: $e', tag: 'RunRecoveryService', error: e);
     }
   }
 }

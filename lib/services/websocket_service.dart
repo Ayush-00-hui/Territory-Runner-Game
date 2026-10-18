@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import '../core/logging/app_logger.dart';
 import '../models/ws_events.dart';
 import 'api_client.dart';
 import 'firebase_service.dart';
@@ -62,23 +63,23 @@ class WebSocketService {
       _isConnected = true;
       _reconnectAttempts = 0;
       _connectionStateController.add(true);
-      debugPrint('[WebSocketService] Connected to real-time hub: $wsUri');
+      AppLogger.info('Connected to real-time hub: $wsUri', tag: 'WebSocketService');
 
       _startHeartbeat();
 
       _subscription = _channel!.stream.listen(
         _onMessageReceived,
         onError: (err) {
-          debugPrint('[WebSocketService] WebSocket error: $err');
+          AppLogger.warning('WebSocket error: $err', tag: 'WebSocketService');
           _handleDisconnect();
         },
         onDone: () {
-          debugPrint('[WebSocketService] WebSocket connection closed by server');
+          AppLogger.info('WebSocket connection closed by server', tag: 'WebSocketService');
           _handleDisconnect();
         },
       );
     } catch (e) {
-      debugPrint('[WebSocketService] Failed to initiate WebSocket connection: $e');
+      AppLogger.warning('Failed to initiate WebSocket connection: $e', tag: 'WebSocketService');
       _handleDisconnect();
     }
   }
@@ -115,8 +116,8 @@ class WebSocketService {
           _broadcastController.add(bcast);
           break;
       }
-    } catch (e) {
-      debugPrint('[WebSocketService] Error parsing inbound WebSocket packet: $e');
+    } catch (e, st) {
+      AppLogger.error('Error parsing inbound WebSocket packet', error: e, stackTrace: st, tag: 'WebSocketService');
     }
   }
 
@@ -140,7 +141,7 @@ class WebSocketService {
     try {
       _channel!.sink.add(jsonEncode(packet));
     } catch (e) {
-      debugPrint('[WebSocketService] Failed to send presence update: $e');
+      AppLogger.warning('Failed to send presence update: $e', tag: 'WebSocketService');
     }
   }
 
@@ -173,7 +174,7 @@ class WebSocketService {
     final jitterMs = math.Random().nextInt(1000);
     final delay = Duration(seconds: backoffSec, milliseconds: jitterMs);
 
-    debugPrint('[WebSocketService] Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts)...');
+    AppLogger.debug('Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts)...', tag: 'WebSocketService');
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, connect);
   }

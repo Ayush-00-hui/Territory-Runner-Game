@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import '../../models/runner_profile.dart';
 import '../../services/api_client.dart';
+import '../../core/logging/app_logger.dart';
 
 enum CoachMood { celebratory, encouraging, analytical }
 
@@ -87,7 +87,7 @@ class LLMCoachService {
         return CoachInsight(summary: summary, tip: tip, moodTag: mood);
       }
     } catch (e) {
-      debugPrint('[LLMCoachService] Backend coach proxy unavailable ($e); using smart on-device coaching heuristic.');
+      AppLogger.info('Backend coach proxy unavailable ($e); using smart on-device coaching heuristic.', tag: 'LLMCoachService');
     }
 
     return CoachInsight.fallback(

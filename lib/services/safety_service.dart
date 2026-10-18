@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+import '../core/logging/app_logger.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -50,7 +50,7 @@ class SafetyService {
           'EMERGENCY: I am running and need assistance. My current GPS coordinates are:';
       _isLoaded = true;
     } catch (e) {
-      debugPrint('[SafetyService] Error loading safety settings: $e');
+      AppLogger.error('Error loading safety settings: $e', tag: 'SafetyService', error: e);
     }
   }
 
@@ -72,7 +72,7 @@ class SafetyService {
       await prefs.setString(_prefContactPhone, _contactPhone);
       await prefs.setString(_prefCustomMessage, _customMessage);
     } catch (e) {
-      debugPrint('[SafetyService] Error saving safety settings: $e');
+      AppLogger.error('Error saving safety settings: $e', tag: 'SafetyService', error: e);
     }
   }
 
@@ -84,7 +84,7 @@ class SafetyService {
         return await launchUrl(uri);
       }
     } catch (e) {
-      debugPrint('[SafetyService] Failed to dial emergency services: $e');
+      AppLogger.error('Failed to dial emergency services: $e', tag: 'SafetyService', error: e);
     }
     return false;
   }
@@ -105,7 +105,7 @@ class SafetyService {
         return await launchUrl(uri);
       }
     } catch (e) {
-      debugPrint('[SafetyService] Failed to launch SMS composer: $e');
+      AppLogger.error('Failed to launch SMS composer: $e', tag: 'SafetyService', error: e);
     }
     return false;
   }
@@ -136,7 +136,7 @@ class SafetyService {
       await _sirenPlayer!.setVolume(1.0);
       await _sirenPlayer!.play(AssetSource('audio/sos_siren.wav'));
     } catch (e) {
-      debugPrint('[SafetyService] Error playing tactical siren: $e');
+      AppLogger.error('Error playing tactical siren: $e', tag: 'SafetyService', error: e);
     }
   }
 
@@ -148,7 +148,7 @@ class SafetyService {
         await _sirenPlayer!.stop();
       }
     } catch (e) {
-      debugPrint('[SafetyService] Error stopping tactical siren: $e');
+      AppLogger.error('Error stopping tactical siren: $e', tag: 'SafetyService', error: e);
     }
   }
 }

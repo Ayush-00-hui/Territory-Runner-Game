@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import '../core/logging/app_logger.dart';
 import '../models/duel.dart';
 import '../models/faction_standing.dart';
 import '../models/friend.dart';
@@ -100,7 +101,7 @@ class ApiClient {
         }
       }
     } catch (e) {
-      debugPrint('[ApiClient] Error fetching auth token: $e');
+      AppLogger.warning('Error fetching auth token: $e', tag: 'ApiClient', error: e);
     }
 
     // Include dev user header for local Go testing in AUTH_MODE=dev
@@ -127,16 +128,16 @@ class ApiClient {
         final response = await requestFn().timeout(timeout);
         // Only retry on transient 5xx server errors
         if (response.statusCode >= 500 && attempts <= retries) {
-          debugPrint('[ApiClient] Server error ${response.statusCode}, retry $attempts/$retries');
+          AppLogger.warning('Server error ${response.statusCode}, retry $attempts/$retries', tag: 'ApiClient');
         } else {
           return response;
         }
       } on Exception catch (e) {
         if (attempts > retries) {
-          debugPrint('[ApiClient] Request failed after $attempts attempts: $e');
+          AppLogger.error('Request failed after $attempts attempts: $e', tag: 'ApiClient', error: e);
           rethrow;
         }
-        debugPrint('[ApiClient] Transient failure ($e), retrying $attempts/$retries in ${delay.inMilliseconds}ms');
+        AppLogger.debug('Transient failure ($e), retrying $attempts/$retries in ${delay.inMilliseconds}ms', tag: 'ApiClient');
       }
 
       // Exponential backoff with jitter

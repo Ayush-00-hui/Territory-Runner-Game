@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
+import '../core/logging/app_logger.dart';
 import '../models/territory.dart';
 import '../features/gameplay/territory_service.dart';
 import 'api_client.dart';
@@ -307,7 +308,7 @@ class SyncQueueService {
         final decoded = jsonDecode(val) as Map<String, dynamic>;
         pending.add(QueuedRun.fromJson(decoded));
       } catch (e) {
-        debugPrint('[SyncQueueService] Corrupted queue entry: $e');
+        AppLogger.warning('Corrupted queue entry: $e', tag: 'SyncQueueService');
       }
     }
     pending.sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -326,7 +327,7 @@ class SyncQueueService {
           clientPreviewXp: run.clientPreviewXp,
         );
 
-        debugPrint('[SyncQueueService] Run ${run.idempotencyKey} successfully synced with backend!');
+        AppLogger.info('Run ${run.idempotencyKey} successfully synced with backend!', tag: 'SyncQueueService');
 
         // Authoritative Server Reconciliation:
         // Replace optimistic local Clipper2 territory with authoritative PostGIS MultiPolygon
@@ -338,7 +339,7 @@ class SyncQueueService {
         if (isPermanentFailure(e)) {
           final apiErr = e as ApiException;
           final humanMsg = formatRejectionReason(apiErr.code, apiErr.message);
-          debugPrint('[SyncQueueService] Run ${run.idempotencyKey} permanently rejected (${apiErr.code}): $humanMsg');
+          AppLogger.warning('Run ${run.idempotencyKey} permanently rejected (${apiErr.code}): $humanMsg', tag: 'SyncQueueService');
 
           final rejectedRun = RejectedRun(
             run: run,
@@ -354,7 +355,7 @@ class SyncQueueService {
           lastRejectionNotifier.value = rejectedRun;
           // Continue processing subsequent runs in queue
         } else {
-          debugPrint('[SyncQueueService] Transient sync failure for ${run.idempotencyKey}: $e');
+          AppLogger.warning('Transient sync failure for ${run.idempotencyKey}: $e', tag: 'SyncQueueService');
           allSucceeded = false;
 
           // Increment retry count
@@ -456,12 +457,12 @@ class SyncQueueService {
             );
 
             await _territoryService.saveTerritory(authoritativeTerritory);
-            debugPrint('[SyncQueueService] Local territory reconciled to server authoritative MultiPolygon (${authoritativeTerritory.areaSqMeters.toStringAsFixed(1)} m²)');
+            AppLogger.info('Local territory reconciled to server authoritative MultiPolygon (${authoritativeTerritory.areaSqMeters.toStringAsFixed(1)} m²)', tag: 'SyncQueueService');
           }
         }
       }
     } catch (e) {
-      debugPrint('[SyncQueueService] Reconciliation error: $e');
+      AppLogger.error('Reconciliation error: $e', tag: 'SyncQueueService', error: e);
     }
   }
 
@@ -480,7 +481,7 @@ class SyncQueueService {
       final box = await _getRejectedBox();
       await box.put(rejected.run.idempotencyKey, jsonEncode(rejected.toJson()));
     } catch (e) {
-      debugPrint('[SyncQueueService] Could not persist rejected run: $e');
+      AppLogger.error('Could not persist rejected run: $e', tag: 'SyncQueueService', error: e);
     }
   }
 

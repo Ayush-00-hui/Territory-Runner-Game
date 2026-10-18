@@ -555,7 +555,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           final newCoord = LatLng(pos.latitude, pos.longitude);
           final deltaSec = (now.difference(_lastGpsFixTime!).inMilliseconds / 1000.0).abs();
           if (GpsQualityService.isUnrealisticJump(lastCoord, newCoord, deltaSec)) {
-            debugPrint('[GPS] Suppressed unrealistic gap jump across signal loss');
+            AppLogger.info('Suppressed unrealistic gap jump across signal loss', tag: 'MapScreen');
             _lastGpsFixTime = now;
             return;
           }
@@ -1050,7 +1050,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
       if (mounted) setState(() {});
     } catch (e) {
-      debugPrint('[MapScreen] Error polling rival territories: $e');
+      AppLogger.warning('Error polling rival territories: $e', tag: 'MapScreen');
     }
   }
 

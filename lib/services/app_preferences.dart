@@ -1,6 +1,6 @@
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
+import '../core/logging/app_logger.dart';
 
 /// Supported distance and area measurement systems
 enum DistanceUnit {
@@ -41,7 +41,7 @@ class AppPreferences {
       _unit = unitStr == 'imperial' ? DistanceUnit.imperial : DistanceUnit.metric;
       _isInitialized = true;
     } catch (e) {
-      debugPrint('[AppPreferences] Init note: $e');
+      AppLogger.debug('Init note: $e', tag: 'AppPreferences');
     }
   }
 
@@ -123,7 +123,7 @@ class AppPreferences {
         Vibration.vibrate(pattern: pattern);
       }
     } catch (e) {
-      debugPrint('[AppPreferences] Haptic vibration error: $e');
+      AppLogger.warning('Haptic vibration error: $e', tag: 'AppPreferences', error: e);
     }
   }
 

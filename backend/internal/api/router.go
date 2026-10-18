@@ -18,6 +18,7 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(api.MetricsMiddleware)
 
 	origins := allowedOrigins
 	if len(origins) == 0 {
@@ -37,14 +38,16 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   origins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Dev-User", "Idempotency-Key"},
-		ExposedHeaders:   []string{"Link", "Retry-After"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Dev-User", "Idempotency-Key", "X-Request-Id"},
+		ExposedHeaders:   []string{"Link", "Retry-After", "X-Request-Id"},
 		AllowCredentials: allowCredentials,
 		MaxAge:           300,
 	}))
 
-	// Public Health Endpoint
+	// Public Health, Readiness, and Observability Endpoints
 	r.Get("/healthz", api.HandleHealthz)
+	r.Get("/readyz", api.HandleReadyz)
+	r.Get("/metrics", api.HandleMetrics)
 
 	// Real-Time WebSocket Route
 	r.Get("/v1/ws", api.HandleWebSocket)

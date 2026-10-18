@@ -1,6 +1,6 @@
 import 'dart:math' as math;
-import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+import '../../core/logging/app_logger.dart';
 
 /// Event dispatched when a runner closes an arbitrary GPS loop
 class EnclosedLoopEvent {
@@ -72,7 +72,7 @@ class PolygonEnclosureEngine {
 
     if (hasSelfIntersection(closedPoints)) {
       _lastInvalidReason = 'Loop crossed itself — try again';
-      debugPrint('[PolygonEnclosureEngine] ❌ Manual seal rejected: $_lastInvalidReason');
+      AppLogger.debug('Manual seal rejected: $_lastInvalidReason', tag: 'PolygonEnclosureEngine');
       return null;
     }
 
@@ -82,7 +82,7 @@ class PolygonEnclosureEngine {
 
     if (areaSqM > maxLoopAreaSqMeters) {
       _lastInvalidReason = loopTooLargeReason;
-      debugPrint('[PolygonEnclosureEngine] ❌ Manual seal rejected: $_lastInvalidReason');
+      AppLogger.debug('Manual seal rejected: $_lastInvalidReason', tag: 'PolygonEnclosureEngine');
       return null;
     }
 
@@ -94,8 +94,9 @@ class PolygonEnclosureEngine {
       closedAt: now,
     );
 
-    debugPrint(
-      '[PolygonEnclosureEngine] ⚡ Manually SEALED current shape! Points: ${closedPoints.length}, Perimeter: ${loopLength.toStringAsFixed(1)}m, Area: ${areaSqM.toStringAsFixed(1)}m²',
+    AppLogger.info(
+      'Manually SEALED current shape! Points: ${closedPoints.length}, Perimeter: ${loopLength.toStringAsFixed(1)}m, Area: ${areaSqM.toStringAsFixed(1)}m²',
+      tag: 'PolygonEnclosureEngine',
     );
 
     final lastPos = _path.last;
@@ -128,7 +129,7 @@ class PolygonEnclosureEngine {
         if (dtSec >= 0.5 && dtSec <= 5.0) {
           final double speedKmh = (distFromLast / dtSec) * 3.6;
           if (speedKmh > 35.0) {
-            debugPrint('[PolygonEnclosureEngine] Jitter outlier rejected: ${speedKmh.toStringAsFixed(1)} km/h');
+            AppLogger.debug('Jitter outlier rejected: ${speedKmh.toStringAsFixed(1)} km/h', tag: 'PolygonEnclosureEngine');
             return null;
           }
         }
@@ -193,8 +194,9 @@ class PolygonEnclosureEngine {
       }
 
       if (bestLassoEvent != null && bestLassoJ != null && bestLassoIntersection != null) {
-        debugPrint(
-          '[PolygonEnclosureEngine] 🪢 Lasso loop closed at intersection! Points: ${bestLassoEvent.polygon.length}, Perimeter: ${bestLassoEvent.loopDistanceMeters.toStringAsFixed(1)}m, Area: ${bestLassoEvent.areaSqMeters.toStringAsFixed(1)}m²',
+        AppLogger.info(
+          'Lasso loop closed at intersection! Points: ${bestLassoEvent.polygon.length}, Perimeter: ${bestLassoEvent.loopDistanceMeters.toStringAsFixed(1)}m, Area: ${bestLassoEvent.areaSqMeters.toStringAsFixed(1)}m²',
+          tag: 'PolygonEnclosureEngine',
         );
 
         // Keep the tail before the crossing as the remaining path
@@ -267,8 +269,9 @@ class PolygonEnclosureEngine {
     }
 
     if (bestProximityEvent != null) {
-      debugPrint(
-        '[PolygonEnclosureEngine] 🏁 Closed loop detected! Points: ${bestProximityEvent.polygon.length}, Perimeter: ${bestProximityEvent.loopDistanceMeters.toStringAsFixed(1)}m, Area: ${bestProximityEvent.areaSqMeters.toStringAsFixed(1)}m²',
+      AppLogger.info(
+        'Closed loop detected! Points: ${bestProximityEvent.polygon.length}, Perimeter: ${bestProximityEvent.loopDistanceMeters.toStringAsFixed(1)}m, Area: ${bestProximityEvent.areaSqMeters.toStringAsFixed(1)}m²',
+        tag: 'PolygonEnclosureEngine',
       );
 
       _path.clear();
