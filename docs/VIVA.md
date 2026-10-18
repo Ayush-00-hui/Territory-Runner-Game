@@ -12,6 +12,7 @@ This document is the definitive technical examination guide for **Territory Runn
 5. [Push Notification Infrastructure & Weekly League](#5-push-notification-infrastructure--weekly-league)
 6. [Offline-First Architecture & Sync Reconciliation](#6-offline-first-architecture--sync-reconciliation)
 7. [Privacy, Head-to-Head Duels & Battery Longevity](#7-privacy-head-to-head-duels--battery-longevity)
+8. [Known Technical Limitations](#8-known-technical-limitations)
 
 ---
 
@@ -97,8 +98,8 @@ This document is the definitive technical examination guide for **Territory Runn
 **Defense:**
 - Standard background timers in mobile runtimes are suspended within 30 seconds of screen lock or app backgrounding.
 - **Android Hardening:**
-  1. Configured an Android Foreground Service using `flutter_foreground_task` with `FOREGROUND_SERVICE_LOCATION` permission.
-  2. Renders an ongoing sticky notification displaying real-time workout metrics (distance, elapsed time, current territory claimed).
+  1. Configured an Android Foreground Service using `geolocator` with `ForegroundNotificationConfig` under Android's `FOREGROUND_SERVICE_LOCATION` permission.
+  2. Renders an ongoing sticky notification displaying real-time workout metrics (activity name, status, live location state).
   3. Acquires an Android CPU WakeLock (`wakelock_plus`) when tracking starts, preventing system CPU sleep while keeping the display off.
 - **iOS Hardening:**
   1. Configured `UIBackgroundModes: location` and `allowsBackgroundLocationUpdates: true`.
@@ -235,3 +236,21 @@ This document is the definitive technical examination guide for **Territory Runn
   2. **Animation Suppression:** `BatterySaverService.shouldDisableAnimations` completely suspends 60 FPS map tile repaints, territory pulse shaders, and camera matrix recalculations while running.
   3. **GPS Duty-Cycling:** Relaxes GPS polling from 1 Hz (1,000ms, 2m filter) to 0.33 Hz (3,000ms, 8m filter), preserving over $60\%$ battery life during 2+ hour marathon endurance training.
   4. **Low-Latency Wake:** Double-tap gesture resolution wakes the full tactical map instantaneously without interrupting foreground location tracking.
+
+---
+
+## 8. Known Technical Limitations
+
+1. **Global Territory Mutation Lock**:
+   - `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` in `backend/internal/store/postgres.go` serializes all run territory mutations worldwide into a single queue. While eliminating spatial race conditions, it represents a known vertical scaling ceiling under high global concurrent write throughput.
+2. **Territory Strength Decay Scheduling**:
+   - `ApplyTerritoryDecay` is implemented in the `Store` interface, `PostgresStore`, and `MemoryStore`, but is currently triggered only via unit tests (`postgres_test.go`). It is not yet scheduled by an in-process cron or background worker in `backend/cmd/server/main.go`.
+3. **Live Presence Distribution**:
+   - The WebSocket hub broadcasts active runner presence (`lat`, `lng`, `speed`, `heading`) globally to all connected clients. Proximity bucketing (e.g. Geohash/grid cell), opt-in sharing toggles, and per-client presence rate limits are slated for implementation in Phase 3.
+4. **Tile Server Usage Policy Compliance**:
+   - Pre-downloading bounding box map tiles from public `tile.openstreetmap.org` is not permitted under OSM's Tile Usage Policy. Map tile hosts must be configurable with commercial or self-hosted tile servers and appropriate caching headers (Phase 2).
+5. **No Signal Gap Dead-Reckoning**:
+   - The engine does not perform linear dead-reckoning or Kalman dead-reckoning across signal dropouts. Coordinates received after a gap are processed directly without synthetic interpolation.
+6. **Per-Activity Enclosure Floor**:
+   - While max speed outliers are separated by sport (15 km/h walking, 35 km/h running, 60 km/h cycling), the minimum loop perimeter remains universally set at 40 meters. Activity-specific area and perimeter thresholds are queued for Phase 5.
+

@@ -7,8 +7,10 @@ Territory Runner segregates movement kinematics across three distinct athletic c
 | Parameter | Walking | Running (Default) | Cycling |
 | :--- | :--- | :--- | :--- |
 | **Max Outlier Speed** | 15 km/h (4.17 m/s) | 35 km/h (9.72 m/s) | 60 km/h (16.67 m/s) |
-| **Min Loop Enclosure Area** | 100 m² | 400 m² | 2,500 m² |
+| **Min Perimeter** | 40 m | 40 m | 40 m |
 | **Target Movement Cadence** | Pedestrian / Stroll | Sprint / Jog | Velocipede / Road / Gravel |
+
+*Note on Minimum Enclosure Area*: The current codebase enforces a universal 40-meter minimum perimeter and 4-node floor. Activity-specific area and perimeter floors are specified for implementation in Phase 5.
 
 ### Rationale
 - **Walking (15 km/h)**: Human fast-walking world records reach ~14-15 km/h. Filtering above 15 km/h prevents runners or cyclists from claiming walking leaderboards.

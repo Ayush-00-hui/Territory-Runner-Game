@@ -18,11 +18,9 @@
 
 <br>
 
-[![CI Pipeline](https://img.shields.io/github/actions/workflow/status/Ayush-00-hui/Territory-Runner-Game/ci.yml?branch=industry-level&style=for-the-badge&label=CI%20Pipeline&logo=githubactions&logoColor=white)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-208%2F208_Passing-4C8DFF.svg?style=for-the-badge&logo=flutter&logoColor=white)](test/)
-[![Go Tests](https://img.shields.io/badge/Go_Backend-9_Packages_Passing-00ADD8.svg?style=for-the-badge&logo=go&logoColor=white)](backend/)
-[![Golden Parity](https://img.shields.io/badge/Golden_Parity-Walking_%2F_Running_%2F_Cycling-success.svg?style=for-the-badge)](test_fixtures/)
-[![Design System](https://img.shields.io/badge/Palette-Ink_%26_Pacer_Blue_%23090B0F-12151B?style=for-the-badge&logo=materialdesign&logoColor=4C8DFF)](lib/ui/)
+[![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
+[![Verification Record](https://img.shields.io/badge/Verification-docs%2FVERIFICATION.md-00ADD8.svg)](docs/VERIFICATION.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 <br>
 
@@ -38,7 +36,7 @@
 
 <br>
 
-[🌟 Overview](#-executive-overview) • [💡 The "Why"](#-why-territory-runner) • [🏗️ Architecture](#%EF%B8%8F-system-architecture) • [📊 Verification Matrix](#-honest-feature-verification-matrix) • [🚀 Quickstart](#-getting-started--local-development) • [📡 API Reference](#-rest--websocket-api-reference) • [🧮 Core Algorithms](#-core-mechanics--algorithmic-parity) • [🎓 Viva Defense](docs/VIVA.md) • [🤝 Contributing](CONTRIBUTING.md) • [🔒 Security](SECURITY.md) • [🕒 Timezones](docs/TIMEZONE_RULES.md) • [⚖️ Fairness](docs/ACTIVITY_FAIRNESS.md)
+[🌟 Overview](#-executive-overview) • [💡 The "Why"](#-why-territory-runner) • [🏗️ Architecture](#%EF%B8%8F-system-architecture) • [📊 Verification Matrix](#-honest-feature-verification-matrix) • [🚀 Quickstart](#-getting-started--local-development) • [📡 API Reference](#-rest--websocket-api-reference) • [🧮 Core Algorithms](#-core-mechanics--algorithmic-parity) • [🎓 Viva Defense](docs/VIVA.md) • [📋 Verification](docs/VERIFICATION.md) • [🤝 Contributing](CONTRIBUTING.md) • [🔒 Security](SECURITY.md) • [🕒 Timezones](docs/TIMEZONE_RULES.md) • [⚖️ Fairness](docs/ACTIVITY_FAIRNESS.md)
 
 </div>
 
@@ -98,8 +96,8 @@ Traditional fitness trackers record passive linear polylines. **Territory Runner
 - 🟢 **No Rigid Grids:** Claim arbitrary organic loop polygons around city blocks, parks, or tracks.
 - 📐 **Dual-Engine Geometric Parity:** Client-side Dart engine (Clipper2) and server-side Go engine (PostGIS) share identical thresholds and 7 golden fixtures to guarantee $<0.5\%$ area discrepancy.
 - 🛡️ **Server-Authoritative Conquest:** Runs are validated and committed inside transaction-scoped PostgreSQL advisory locks (`pg_advisory_xact_lock`) to guarantee atomic, concurrent, race-free territory mutations.
-- 🔋 **Real-World GPS & Screen Lock Persistence:** Foreground location services (`flutter_foreground_task`) with a persistent sticky notification and wake locks ensure unthrottled tracking while running with screen locked or app backgrounded.
-- 💾 **Crash Recovery Safety Box:** Active track waypoints persist continuously to Hive storage (`running_session_box`); unexpected OS terminations prompt seamless session restoration upon relaunch.
+- 🔋 **Real-World GPS & Screen Lock Persistence:** Foreground location services via `geolocator`'s persistent notification config and CPU wake locks (`wakelock_plus`) ensure unthrottled tracking while running with screen locked or app backgrounded.
+- 💾 **Crash Recovery Safety Box:** Active track waypoints persist continuously to Hive storage (`active_run_recovery`); unexpected OS terminations prompt seamless session restoration upon relaunch.
 - ⚡ **Offline-First Resilience:** Local Clipper2 generates instant optimistic previews. Runs queue in persistent Hive boxes and sync seamlessly with server reconciliation toasts upon reconnection.
 - 🎨 **Ink + Pacer Blue Athletic Aesthetic:** Built upon deep ink canvas (`#090B0F`), dark elevated slate (`#12151B`), and crisp Pacer Blue (`#4C8DFF`) with coral rival indicators (`#FF7A59`) for high sunlight readability and zero visual clutter.
 - 📲 **Modern FCM HTTP v1 Alerts:** Asynchronous, non-blocking rival conquest push alerts powered by server-side Google OAuth2 RS256 JWT assertion signing.
@@ -225,7 +223,7 @@ sequenceDiagram
 
     Athlete->>GPS: Starts Outdoor Workout Session
     GPS->>Client: Continuous GPS Point Stream (1 Hz)
-    Client->>Hive: Flushes point to running_session_box (Crash Recovery)
+    Client->>Hive: Flushes point to active_run_recovery (Crash Recovery)
     Athlete->>GPS: Crosses Previous Track (Lasso Closure)
     Client->>Client: Detects Loop Closure & Computes Clipper2 Optimistic Area
     Client->>UI: Renders Instant Optimistic Sector on Map
@@ -316,9 +314,9 @@ This matrix documents actual tested reality versus theoretical claims:
 | :--- | :--- | :--- | :--- |
 | **Authentication Security** | RS256 JWT verification against Google x509 certs; audience & issuer checked; dev mode bypass enabled only when `AUTH_MODE=dev`. | `cd backend; go test -v ./internal/auth` | **PASS (8 tests)**. Zero arbitrary token acceptance in production. |
 | **DoS & Abuse Limits** | `http.MaxBytesReader` (1 MB max payload), 10,000 points cap, 12h duration cap, token bucket rate limiter (100 global, 5 on `/v1/runs`, 10 on `/coach`). | `cd backend; go test -v ./internal/api -run "TestSubmitRun_PayloadTooLarge\|RateLimiting"` | **PASS**. Rejecting 413 and 429 status codes under test. |
-| **Background GPS Tracking** | `flutter_foreground_task` with sticky ongoing notification, `wakelock_plus`, Android `FOREGROUND_SERVICE_LOCATION`, iOS `UIBackgroundModes location`. | Static AndroidManifest.xml & Info.plist inspection; widget tests. | **PASS**. App continues sampling GPS when screen locks or app is backgrounded. |
-| **Crash Recovery Box** | Active track points flushed continuously to Hive `running_session_box`; restored on restart via dialog. | `flutter test test/tracking_crash_recovery_test.dart` | **PASS (6 tests)**. Simulated kill restored points, elapsed time, and distance. |
-| **Signal Gap Interpolation** | Linear dead-reckoning and speed estimation across GPS tunnel dropouts $>5\text{ s}$ and $<120\text{ s}$. | `flutter test test/tracking_crash_recovery_test.dart` | **PASS**. Smooth trajectory continuity without false teleport anomaly triggers. |
+| **Background GPS Tracking** | `geolocator` Foreground Notification Config, `wakelock_plus`, Android `FOREGROUND_SERVICE_LOCATION`, iOS `UIBackgroundModes location`. | Static AndroidManifest.xml & Info.plist inspection; widget tests. | **PASS**. App continues sampling GPS when screen locks or app is backgrounded. |
+| **Crash Recovery Box** | Active track points flushed continuously to Hive `active_run_recovery`; restored on restart via dialog. | `flutter test test/tracking_crash_recovery_test.dart` | **PASS (6 tests)**. Simulated kill restored points, elapsed time, and distance. |
+| **GPS Gap Handling** | Raw coordinates tracked sequentially without synthetic dead-reckoning; consecutive-sample kinematic checks applied upon recovery. | `flutter test test/tracking_crash_recovery_test.dart` | **PASS**. Preserves raw sensor integrity across pauses. |
 | **PostGIS Spatial Mutations** | `ST_MakeValid`, `ST_Union`, `ST_Difference`, transaction-scoped `pg_advisory_xact_lock`, GiST index. | `cd backend; go test -v ./internal/store -run TestPostgres` | **PASS (11 integration tests)**. Concurrent runs serialize safely; invalid self-touching rings auto-heal. |
 | **Faction Global Dominance** | Real-time aggregate territory dominance via PostGIS SQL aggregation (`GET /v1/factions/standings` & `PUT /v1/me/faction`). | `cd backend; go test -v ./internal/api -run TestFactionStandings` | **PASS**. Live sector dominance metrics. |
 | **True 1080p Share Card** | Multi-theme athletic card generator (`1080x1920` render) with instant native system sharing via `share_plus` and `path_provider`. | `flutter test test/run_summary_share_history_test.dart` | **PASS**. Writes temporary PNG and delegates to Android/iOS share sheet. |
@@ -822,8 +820,8 @@ For deep academic and architectural defense, see the comprehensive [🎓 Viva Ex
 | 🚨 **Speed Ceiling Anomaly** | Submit cycling speeds as run | Activity-specific kinematic speed ceiling ($25\text{ km/h}$) | Permanent rejection ($422\text{ Unprocessable Entity}$), anomaly score $\ge 55$ |
 | 🔒 **Privacy Masking** | Enter privacy zone during run | Server geodesic suppression in `ws/hub.go` | Location redacted from rival map stream and excluded from public export |
 | 👥 **Anti-Abuse Duel Guard** | Attempt duplicate or self-duel | Symmetric partial unique index `uq_duels_active_pair` | Immediate $400\text{ Bad Request}$ (`DUEL_ALREADY_EXISTS` / `CANNOT_DUEL_SELF`) |
-| 🔋 **Background Tracking** | Lock phone screen during run | `flutter_foreground_task` sticky notification | Continuous GPS points recorded without OS throttling |
-| 💾 **Crash Recovery** | Force-kill app during run | Hive `running_session_box` restoration | Recovery modal appears on relaunch to resume workout |
+| 🔋 **Background Tracking** | Lock phone screen during run | `geolocator` Foreground Notification Config | Continuous GPS points recorded without OS throttling |
+| 💾 **Crash Recovery** | Force-kill app during run | Hive `active_run_recovery` restoration | Recovery modal appears on relaunch to resume workout |
 
 ---
 
@@ -833,7 +831,15 @@ For deep academic and architectural defense, see the comprehensive [🎓 Viva Ex
    - The application implements kinematic anomaly mitigation (speed ceilings, acceleration variance, jitter analysis), not a cryptographic hardware attestation. Rooted devices with custom kernel mock providers cannot be provably blocked without specialized hardware GNSS security modules.
 2. **Offline Sync Reconciliation Delays:**
    - When playing offline, territory previews use local Clipper2 geometry. If a rival captures part of that sector while the runner is disconnected, PostGIS reconciles the contested ground upon reconnection and presents an honest area delta toast.
-3. **External Cloud Dependencies:**
+3. **Global Territory Mutation Lock:**
+   - All spatial run submissions acquire `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` on the PostgreSQL backend. While this guarantees serializable spatial consistency without deadlocks, it establishes a single global concurrency bottleneck.
+4. **Territory Strength Decay Scheduling:**
+   - The `ApplyTerritoryDecay` method is implemented across `Store` interfaces and tested in integration suites, but is not currently wired to an automatic cron or background scheduler in the server binary.
+5. **Presence Broadcast Scalability:**
+   - The WebSocket hub broadcasts active runner presence frames globally to all connected clients. Spatial proximity bucketing, per-client rate limits, and user privacy opt-ins are slated for Phase 3.
+6. **Public Map Tile Usage Compliance:**
+   - Offline pre-downloading from `tile.openstreetmap.org` is not permitted by OSM terms of service. Tile endpoints require configurable overrides for commercial or self-hosted tile services.
+7. **External Cloud Dependencies:**
    - Real device push alerts require a valid Google Service Account JSON. When omitted in development, the backend logs a warning and gracefully continues without push dispatch.
    - The Claim Planner relies on public OSRM pedestrian routing demo endpoints; if the external service experiences outages, the app automatically falls back to on-device geodesic loops.
 
