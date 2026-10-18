@@ -39,6 +39,8 @@ import 'widgets/loop_celebration_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
 import 'widgets/amoled_battery_saver_overlay.dart';
+import 'models/run_telemetry.dart';
+import 'notifiers/run_telemetry_notifier.dart';
 
 class MapScreenFeature extends StatefulWidget {
   const MapScreenFeature({super.key});
@@ -82,6 +84,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   int _lastAnnouncedKm = 0;
   int _selectedModeTab = 0;
   final ExerciseActivityType _selectedActivity = ExerciseActivityType.running;
+
+  // Phase 3 High-Performance State Notifiers
+  final RunTelemetryNotifier _telemetryNotifier = RunTelemetryNotifier();
+  final ValueNotifier<LatLng?> _liveLocationNotifier = ValueNotifier<LatLng?>(null);
+  final ValueNotifier<int> _runPathUpdateNotifier = ValueNotifier<int>(0);
 
   // AI Route Suggestion State
   SuggestedRoute? _activeSuggestedRoute;
@@ -278,6 +285,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _wsService.disconnect();
     _locationService.stopTracking();
     _keyboardFocusNode.dispose();
+    _telemetryNotifier.dispose();
+    _liveLocationNotifier.dispose();
+    _runPathUpdateNotifier.dispose();
     super.dispose();
   }
 
@@ -518,21 +528,36 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
     }
 
-    _locationService.startTracking();
+    _locationService.setTrackingMode(GpsTrackingMode.idle);
     _positionSub = _locationService.locationStream.listen((pos) {
       if (mounted) {
-        setState(() {
-          _currentLocation = LatLng(pos.latitude, pos.longitude);
-          _satelliteAccuracyMeters = pos.accuracy;
-          _currentSpeedKmh = pos.speed * 3.6;
-          _updatePosition(pos);
+        final wasInitial = _currentLocation == null;
+        _currentLocation = LatLng(pos.latitude, pos.longitude);
+        _liveLocationNotifier.value = _currentLocation;
+        _satelliteAccuracyMeters = pos.accuracy;
+        _currentSpeedKmh = pos.speed * 3.6;
+        _updatePosition(pos);
 
-          if (_isCameraFollowLocked && _currentLocation != null) {
-            try {
-              _mapController.move(_currentLocation!, _mapController.camera.zoom);
-            } catch (_) {}
-          }
-        });
+        if (_isCameraFollowLocked && _currentLocation != null) {
+          try {
+            _mapController.move(_currentLocation!, _mapController.camera.zoom);
+          } catch (_) {}
+        }
+
+        // Update targeted telemetry notifier without full-screen rebuild
+        _telemetryNotifier.updateGps(
+          speedKmh: _currentSpeedKmh,
+          accuracyMeters: _satelliteAccuracyMeters,
+          distanceKm: _runDistanceKm,
+          splitPace: _computeCurrentSplitPace(),
+          distanceToClosure: _distanceToClosureMeters,
+          proximityToClosure: _proximityToClosure,
+          currentAreaSqm: _accumulatedRunPreviewArea,
+        );
+
+        if (wasInitial) {
+          setState(() {});
+        }
 
         // Broadcast live kinematic presence to peers via WebSocket
         _wsService.sendPresenceUpdate(
@@ -579,6 +604,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       if (_isRunActive) {
         _runCoordinates.add(_currentLocation!);
+        _runPathUpdateNotifier.value++;
         
         // Loop Proximity Meter calculation
         if (_polygonEngine.currentPath.length >= 3) {
@@ -606,6 +632,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             areaSqMeters: loopEvent.areaSqMeters,
           ).then((_) {
             if (mounted) {
+              setState(() {});
               _showCaptureOutcome();
             }
           });
@@ -812,26 +839,29 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _runTimer?.cancel();
     _runTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted && _isRunActive) {
-        setState(() {
-          _elapsedDurationSeconds++;
+        _elapsedDurationSeconds++;
 
-          // Smart Auto-Pause with Hysteresis (< 1.8 km/h for 3s to pause, >= 3.0 km/h to resume)
-          final transition = _autoPauseEngine.tick(_currentSpeedKmh);
-          if (transition == AutoPauseTransition.paused) {
-            _isAutoPaused = true;
-            _appPrefs.triggerAutoPauseHaptic();
-            HapticFeedback.mediumImpact();
-          } else if (transition == AutoPauseTransition.resumed) {
-            _isAutoPaused = false;
-            _appPrefs.triggerAutoResumeHaptic();
-            HapticFeedback.lightImpact();
-          }
+        // Smart Auto-Pause with Hysteresis (< 1.8 km/h for 3s to pause, >= 3.0 km/h to resume)
+        final transition = _autoPauseEngine.tick(_currentSpeedKmh);
+        if (transition == AutoPauseTransition.paused) {
+          _isAutoPaused = true;
+          _locationService.setTrackingMode(GpsTrackingMode.paused);
+          _telemetryNotifier.setAutoPaused(true);
+          _appPrefs.triggerAutoPauseHaptic();
+          HapticFeedback.mediumImpact();
+        } else if (transition == AutoPauseTransition.resumed) {
+          _isAutoPaused = false;
+          _locationService.setTrackingMode(GpsTrackingMode.activeRun);
+          _telemetryNotifier.setAutoPaused(false);
+          _appPrefs.triggerAutoResumeHaptic();
+          HapticFeedback.lightImpact();
+        }
 
-          if (!_autoPauseEngine.isAutoPaused) {
-            _movingDurationSeconds++;
-          }
-        });
+        if (!_autoPauseEngine.isAutoPaused) {
+          _movingDurationSeconds++;
+        }
 
+        _telemetryNotifier.tick(isAutoPaused: _isAutoPaused);
         _checkGoalCompletion();
 
         // Persist active run to Hive every 5 seconds for crash/kill recovery
@@ -856,6 +886,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     if (!_isRunActive) {
       // START RUN
       _polygonEngine.clear();
+      _runCoordinates.clear();
+      _rollingPaceWindow.clear();
+      _runPathUpdateNotifier.value++;
+      _telemetryNotifier.reset();
+      _telemetryNotifier.setRunActive(true);
+      _locationService.setTrackingMode(GpsTrackingMode.activeRun, liveStatusText: "Run in progress...");
+
       setState(() {
         _isRunActive = true;
         _territoriesClaimedThisRun = 0;
@@ -868,8 +905,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _goalCompletedAnnounced = false;
         _autoPauseEngine.reset();
         _lastAnnouncedKm = 0;
-        _runCoordinates.clear();
-        _rollingPaceWindow.clear();
       });
 
       _startRunTimer();
@@ -885,6 +920,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       WakelockPlus.disable();
       _runRecoveryService.clearRecovery();
       _autoPauseEngine.reset();
+      _locationService.setTrackingMode(GpsTrackingMode.idle);
+      _telemetryNotifier.setRunActive(false);
+
       final int finalSeconds = _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds;
       final double finalDistance = _runDistanceKm;
       final int finalTerritories = _territoriesClaimedThisRun;
@@ -1264,17 +1302,23 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           highlightedTerritoryId: _highlightedTerritoryId,
                         ),
                         MapLayers.buildTerritoryBadgesLayer(territories),
-                        MapLayers.buildPolylineLayer(
-                          isRunActive: _isRunActive,
-                          runCoordinates: _runCoordinates,
-                          currentEnclosurePath: _polygonEngine.currentPath,
-                          suggestedRouteCoordinates: _activeSuggestedRoute?.polyline,
-                          rivalBreadcrumbs: _rivalBreadcrumbs,
-                          activeRivalRunners: _activeRivalRunners,
+                        ValueListenableBuilder<int>(
+                          valueListenable: _runPathUpdateNotifier,
+                          builder: (context, _, child) => MapLayers.buildPolylineLayer(
+                            isRunActive: _isRunActive,
+                            runCoordinates: _runCoordinates,
+                            currentEnclosurePath: _polygonEngine.currentPath,
+                            suggestedRouteCoordinates: _activeSuggestedRoute?.polyline,
+                            rivalBreadcrumbs: _rivalBreadcrumbs,
+                            activeRivalRunners: _activeRivalRunners,
+                          ),
                         ),
-                        MapLayers.buildMarkerLayer(
-                          currentLocation: _currentLocation,
-                          activeRivalRunners: _activeRivalRunners,
+                        ValueListenableBuilder<LatLng?>(
+                          valueListenable: _liveLocationNotifier,
+                          builder: (context, loc, child) => MapLayers.buildMarkerLayer(
+                            currentLocation: loc ?? _currentLocation,
+                            activeRivalRunners: _activeRivalRunners,
+                          ),
                         ),
                       ],
                     ),
@@ -1636,39 +1680,44 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               left: 16,
               right: 16,
               bottom: pad.bottom + 12,
-              child: RunHud(
-                isRunActive: _isRunActive,
-                isAutoPaused: _isAutoPaused,
-                distanceKm: _runDistanceKm,
-                elapsedSeconds: _elapsedDurationSeconds,
-                movingSeconds: _movingDurationSeconds,
-                splitPace: _computeCurrentSplitPace(),
-                currentSpeedKmh: _currentSpeedKmh,
-                satelliteAccuracyMeters: _satelliteAccuracyMeters,
-                territoriesClaimed: _territoriesClaimedThisRun,
-                distanceToClosureMeters: _distanceToClosureMeters,
-                proximityToClosure: _proximityToClosure,
-                targetPace: _locationService.pacerMode != VirtualPacerMode.none
-                    ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
-                    : null,
-                runGoal: _activeGoal,
-                currentAreaSqm: _accumulatedRunPreviewArea,
-                onOpenGoalSelector: _openGoalSelector,
-                isBatterySaverActive: _batterySaverService.isBatterySaverEnabled,
-                onToggleAmoledSaver: () {
-                  AppMotion.mediumTick();
-                  _batterySaverService.setAmoledHudActive(true);
-                },
-                onToggleRun: _toggleRun,
-                onSealShape: _sealCurrentShape,
-                onFinishRun: () {
-                  if (_isRunActive) {
-                    _toggleRun();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tap the center play button to begin tracking')),
-                    );
-                  }
+              child: ValueListenableBuilder<RunTelemetry>(
+                valueListenable: _telemetryNotifier,
+                builder: (context, telemetry, _) {
+                  return RunHud(
+                    isRunActive: _isRunActive,
+                    isAutoPaused: telemetry.isAutoPaused,
+                    distanceKm: telemetry.distanceKm,
+                    elapsedSeconds: telemetry.elapsedSeconds,
+                    movingSeconds: telemetry.movingSeconds,
+                    splitPace: telemetry.splitPace,
+                    currentSpeedKmh: telemetry.currentSpeedKmh,
+                    satelliteAccuracyMeters: telemetry.satelliteAccuracyMeters,
+                    territoriesClaimed: telemetry.territoriesClaimed,
+                    distanceToClosureMeters: telemetry.distanceToClosureMeters,
+                    proximityToClosure: telemetry.proximityToClosure,
+                    targetPace: _locationService.pacerMode != VirtualPacerMode.none
+                        ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+                        : null,
+                    runGoal: telemetry.activeGoal ?? _activeGoal,
+                    currentAreaSqm: telemetry.currentAreaSqm,
+                    onOpenGoalSelector: _openGoalSelector,
+                    isBatterySaverActive: _batterySaverService.isBatterySaverEnabled,
+                    onToggleAmoledSaver: () {
+                      AppMotion.mediumTick();
+                      _batterySaverService.setAmoledHudActive(true);
+                    },
+                    onToggleRun: _toggleRun,
+                    onSealShape: _sealCurrentShape,
+                    onFinishRun: () {
+                      if (_isRunActive) {
+                        _toggleRun();
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Tap the center play button to begin tracking')),
+                        );
+                      }
+                    },
+                  );
                 },
               ),
             ),
@@ -1678,13 +1727,18 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               valueListenable: _batterySaverService.isAmoledHudActiveNotifier,
               builder: (context, isAmoledActive, _) {
                 if (!isAmoledActive || !_isRunActive) return const SizedBox.shrink();
-                return AmoledBatterySaverOverlay(
-                  distanceKm: _runDistanceKm,
-                  elapsedSeconds: _elapsedDurationSeconds,
-                  splitPace: _computeCurrentSplitPace(),
-                  currentSpeedKmh: _currentSpeedKmh,
-                  runGoal: _activeGoal,
-                  onWake: () => _batterySaverService.setAmoledHudActive(false),
+                return ValueListenableBuilder<RunTelemetry>(
+                  valueListenable: _telemetryNotifier,
+                  builder: (context, telemetry, _) {
+                    return AmoledBatterySaverOverlay(
+                      distanceKm: telemetry.distanceKm,
+                      elapsedSeconds: telemetry.elapsedSeconds,
+                      splitPace: telemetry.splitPace,
+                      currentSpeedKmh: telemetry.currentSpeedKmh,
+                      runGoal: telemetry.activeGoal ?? _activeGoal,
+                      onWake: () => _batterySaverService.setAmoledHudActive(false),
+                    );
+                  },
                 );
               },
             ),

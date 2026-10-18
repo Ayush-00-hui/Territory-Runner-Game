@@ -4,6 +4,25 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/activity_type.dart';
+import '../core/logging/app_logger.dart';
+
+/// Operational GPS tracking modes balancing positional accuracy and battery longevity.
+enum GpsTrackingMode {
+  /// Passive idle browsing when not recording a run.
+  /// Power-conscious: balanced accuracy, 10s interval, 15m distance filter.
+  /// No foreground notification or wake lock.
+  idle,
+
+  /// Active high-cadence run recording.
+  /// High accuracy: bestForNavigation, 1s interval, 2m distance filter.
+  /// Foreground notification with active wake lock.
+  activeRun,
+
+  /// Temporary pause during a run session (e.g. traffic light or manual pause).
+  /// Balanced accuracy: 5s interval, 10m distance filter.
+  /// Notification reflects paused state; wake lock disabled.
+  paused,
+}
 
 /// Simulation modes for desktop, browser, and indoor development
 enum VirtualPacerMode {
@@ -23,6 +42,7 @@ class LocationService {
   
   bool isSimulationMode = false;
   VirtualPacerMode _pacerMode = VirtualPacerMode.none;
+  GpsTrackingMode _currentTrackingMode = GpsTrackingMode.idle;
   Timer? _simulationTimer;
   
   // Default simulation start point (e.g., San Francisco)
@@ -33,6 +53,7 @@ class LocationService {
 
   Stream<Position> get locationStream => _locationController.stream;
   VirtualPacerMode get pacerMode => _pacerMode;
+  GpsTrackingMode get currentTrackingMode => _currentTrackingMode;
   double get simHeading => _simHeading;
 
   /// Checks local storage for first-time permission grant
@@ -48,31 +69,34 @@ class LocationService {
   }
 
   Future<bool> requestPermission() async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      isSimulationMode = true;
-      return false;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
         isSimulationMode = true;
         return false;
       }
-    }
 
-    if (permission == LocationPermission.deniedForever) {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          isSimulationMode = true;
+          return false;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        isSimulationMode = true;
+        return false;
+      }
+      
+      isSimulationMode = false;
+      return true;
+    } catch (e) {
+      AppLogger.warning('Location permission check failed or unsupported: $e', tag: 'LocationService');
       isSimulationMode = true;
       return false;
     }
-    
-    isSimulationMode = false;
-    return true;
   }
 
   Future<Position?> getCurrentLocation() async {
@@ -142,52 +166,84 @@ class LocationService {
     return true;
   }
 
-  /// Creates platform-optimized location settings with foreground service notifications.
+  /// Creates platform-optimized location settings with adaptive precision and background execution.
   LocationSettings createLocationSettings({
+    GpsTrackingMode mode = GpsTrackingMode.activeRun,
     String notificationTitle = "Territory Runner",
     String notificationText = "Tracking your running route in the background...",
   }) {
+    final accuracy = (mode == GpsTrackingMode.activeRun)
+        ? LocationAccuracy.bestForNavigation
+        : LocationAccuracy.medium;
+    final int distanceFilter = (mode == GpsTrackingMode.activeRun)
+        ? 2
+        : (mode == GpsTrackingMode.paused ? 10 : 15);
+    final Duration interval = (mode == GpsTrackingMode.activeRun)
+        ? const Duration(seconds: 1)
+        : (mode == GpsTrackingMode.paused ? const Duration(seconds: 5) : const Duration(seconds: 10));
+
+    final bool showNotification = mode != GpsTrackingMode.idle;
+
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return AndroidSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 5,
-        intervalDuration: const Duration(seconds: 1),
-        foregroundNotificationConfig: ForegroundNotificationConfig(
-          notificationTitle: notificationTitle,
-          notificationText: notificationText,
-          enableWakeLock: true,
-        ),
+        accuracy: accuracy,
+        distanceFilter: distanceFilter,
+        intervalDuration: interval,
+        foregroundNotificationConfig: showNotification
+            ? ForegroundNotificationConfig(
+                notificationTitle: notificationTitle,
+                notificationText: notificationText,
+                enableWakeLock: mode == GpsTrackingMode.activeRun,
+              )
+            : null,
       );
     } else if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)) {
       return AppleSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 5,
+        accuracy: accuracy,
+        distanceFilter: distanceFilter,
         activityType: ActivityType.fitness,
-        pauseLocationUpdatesAutomatically: false,
-        showBackgroundLocationIndicator: true,
-        allowBackgroundLocationUpdates: true,
+        pauseLocationUpdatesAutomatically: mode == GpsTrackingMode.paused,
+        showBackgroundLocationIndicator: showNotification,
+        allowBackgroundLocationUpdates: showNotification,
       );
     } else {
-      return const LocationSettings(
-        accuracy: LocationAccuracy.bestForNavigation,
-        distanceFilter: 5,
+      return LocationSettings(
+        accuracy: accuracy,
+        distanceFilter: distanceFilter,
       );
     }
   }
 
   ExerciseActivityType currentActivity = ExerciseActivityType.running;
 
-  void startTracking({bool isZeroG = false, String? liveStatusText, ExerciseActivityType? activityType}) async {
+  /// Dynamic adaptive GPS tracking mode controller.
+  /// Switches sensor accuracy and foreground service notification based on workout lifecycle.
+  Future<void> setTrackingMode(
+    GpsTrackingMode mode, {
+    bool isZeroG = false,
+    String? liveStatusText,
+    ExerciseActivityType? activityType,
+  }) async {
+    _currentTrackingMode = mode;
     if (activityType != null) {
       currentActivity = activityType;
     }
+    AppLogger.info('GPS tracking mode set to: ${mode.name}', tag: 'LocationService');
+
+    if (mode == GpsTrackingMode.idle) {
+      _positionStreamSubscription?.cancel();
+      _positionStreamSubscription = null;
+      _simulationTimer?.cancel();
+      _simulationTimer = null;
+      return;
+    }
+
     if (_pacerMode != VirtualPacerMode.none) {
       _startSimulation();
       return;
     }
 
     final hasPermission = await requestPermission();
-    
     if (!hasPermission || isSimulationMode) {
       isSimulationMode = true;
       _startSimulation();
@@ -195,9 +251,17 @@ class LocationService {
     }
 
     try {
+      final notificationTitle = mode == GpsTrackingMode.paused
+          ? "Territory Runner - Run Paused"
+          : "Territory Runner - Run Active";
+      final notificationText = liveStatusText ?? (mode == GpsTrackingMode.paused
+          ? "Run paused — GPS throttled to conserve battery"
+          : "Tracking your running route in the background...");
+
       final locationSettings = createLocationSettings(
-        notificationTitle: "Territory Runner",
-        notificationText: liveStatusText ?? "Tracking your running route in the background...",
+        mode: mode,
+        notificationTitle: notificationTitle,
+        notificationText: notificationText,
       );
 
       _positionStreamSubscription?.cancel();
@@ -209,13 +273,25 @@ class LocationService {
           _locationController.add(position);
         }
       }, onError: (e) {
+        AppLogger.warning('Hardware GPS stream error: $e. Falling back to simulation.', tag: 'LocationService');
         isSimulationMode = true;
         _startSimulation();
       });
     } catch (e) {
+      AppLogger.warning('Failed to attach location settings: $e', tag: 'LocationService');
       isSimulationMode = true;
       _startSimulation();
     }
+  }
+
+  /// Backward-compatible entrypoint defaulting to active running tracking.
+  void startTracking({bool isZeroG = false, String? liveStatusText, ExerciseActivityType? activityType}) {
+    setTrackingMode(
+      GpsTrackingMode.activeRun,
+      isZeroG: isZeroG,
+      liveStatusText: liveStatusText,
+      activityType: activityType,
+    );
   }
 
   void stopTracking() {
