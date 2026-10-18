@@ -1,0 +1,10 @@
+# Key Properties Example for Territory Runner
+# Copy this file to `android/key.properties` (which is git-ignored) and populate with your keystore credentials.
+#
+# Generate a keystore with keytool:
+# keytool -genkey -v -keystore android/upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+#
+keyAlias=upload
+keyPassword=your_key_password_here
+storeFile=upload-keystore.jks
+storePassword=your_keystore_password_here

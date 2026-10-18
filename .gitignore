@@ -47,6 +47,9 @@ app.*.map.json
 /android/app/release
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+**/key.properties
+*.keystore
+*.jks
 
 # Widget Preview related
 .widget_preview/

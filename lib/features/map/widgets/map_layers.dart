@@ -20,7 +20,7 @@ class MapLayers {
           ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
           : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
       maxZoom: 19,
-      userAgentPackageName: 'com.example.territory_runner',
+      userAgentPackageName: 'com.territoryrunner.app',
       tileProvider: OfflineFirstTileProvider(),
       tileBuilder: (context, tileWidget, tile) {
         return ColorFiltered(

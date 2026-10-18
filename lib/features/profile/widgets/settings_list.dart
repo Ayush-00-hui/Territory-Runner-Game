@@ -228,9 +228,9 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             icon: Icons.info_outline_rounded,
             title: 'Territory Runner',
             subtitle: '${AppVersion.display} • Territory running',
-            trailing: const Text(
+            trailing: Text(
               AppVersion.display,
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
             ),
             onTap: null,
           ),

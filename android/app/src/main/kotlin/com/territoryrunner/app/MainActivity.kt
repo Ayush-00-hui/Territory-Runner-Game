@@ -1,4 +1,4 @@
-package com.example.territory_runner
+package com.territoryrunner.app
 
 import io.flutter.embedding.android.FlutterActivity
 

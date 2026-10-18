@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "YOUR_APP_ID",
         "android_client_info": {
-          "package_name": "com.example.territory_runner"
+          "package_name": "com.territoryrunner.app"
         }
       },
       "oauth_client": [],

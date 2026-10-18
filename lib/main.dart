@@ -29,6 +29,9 @@ void main() async {
   await Hive.openBox<RunnerProfile>('profile');
   await Hive.openBox<String>('active_run_recovery');
 
+  // Load package metadata
+  unawaited(AppVersion.init());
+
   // Immediately render UI — zero splash screen blocking!
   runApp(const TerritoryApp());
 
