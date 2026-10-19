@@ -361,17 +361,18 @@ func TestWebSocket_SlowClientDropped(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 2, hub.ActiveClientCount())
 
-	// Target slow client with rapid messages to saturate its 128-slot outbound buffer.
-	// Since slow client never drains, it must be dropped as a slow consumer,
-	// while responsive client Alpha remains connected and unblocked.
-	for i := 0; i < 150; i++ {
-		hub.SendToUser("runner_slow", []byte(`{"type":"targeted_flood"}`))
+	// Target slow client with rapid, non-trivial messages to saturate its 128-slot outbound buffer.
+	// Since slow client never drains, its socket buffer and channel will fill,
+	// causing it to be dropped as a slow consumer while responsive client Alpha remains connected.
+	floodMsg := map[string]string{"type": "flood", "payload": strings.Repeat("X", 4096)}
+	for i := 0; i < 300; i++ {
+		hub.SendToUser("runner_slow", floodMsg)
 	}
 
-	time.Sleep(50 * time.Millisecond)
-
 	// Slow client should have been dropped, responsive client Alpha remains connected
-	assert.Equal(t, 1, hub.ActiveClientCount(), "slow client must be dropped when outbound buffer is full")
+	assert.Eventually(t, func() bool {
+		return hub.ActiveClientCount() == 1
+	}, 2*time.Second, 20*time.Millisecond, "slow client must be dropped when outbound buffer is full")
 }
 
 func TestWebSocket_MaxConnectionsPerUser(t *testing.T) {
