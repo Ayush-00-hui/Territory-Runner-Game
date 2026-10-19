@@ -835,10 +835,11 @@ For deep academic and architectural defense, see the comprehensive [🎓 Viva Ex
    - All spatial run submissions acquire `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` on the PostgreSQL backend. While this guarantees serializable spatial consistency without deadlocks, it establishes a single global concurrency bottleneck.
 4. **Territory Strength Decay Scheduling:**
    - The `ApplyTerritoryDecay` method is implemented across `Store` interfaces and tested in integration suites, but is not currently wired to an automatic cron or background scheduler in the server binary.
-5. **Presence Broadcast Scalability:**
-   - The WebSocket hub broadcasts active runner presence frames globally to all connected clients. Spatial proximity bucketing, per-client rate limits, and user privacy opt-ins are slated for Phase 3.
+5. **Presence Broadcast Scalability & Single-Node Ceiling:**
+   - The WebSocket hub (`backend/internal/ws/hub.go`) is an in-memory, single-node distribution hub. All connected clients reside in `h.clients` with $O(N)$ fanout per broadcast on a single goroutine.
+   - Client-side defense-in-depth mitigations (Phase 3) suppress coordinates inside active privacy zones before transmission, enforce minimum 2.5s broadcast intervals, and deduplicate stationary jitter (< 3m, < 0.5 m/s). Horizontal scaling beyond a single instance will require spatial partitioning (e.g. Redis Pub/Sub channels keyed by S2/H3 cells or Geohashes).
 6. **Public Map Tile Usage Compliance:**
-   - Offline pre-downloading from `tile.openstreetmap.org` is not permitted by OSM terms of service. Tile endpoints require configurable overrides for commercial or self-hosted tile services.
+   - Resolved in Phase 2: Offline prefetch is gated behind `--dart-define=ALLOW_TILE_PREFETCH=false` by default to adhere to OpenStreetMap usage policies. Configurable tile endpoints (`MAP_TILE_URL`), custom User-Agent, and 7-day retention with HTTP `If-Modified-Since` revalidation prevent policy violations.
 7. **External Cloud Dependencies:**
    - Real device push alerts require a valid Google Service Account JSON. When omitted in development, the backend logs a warning and gracefully continues without push dispatch.
    - The Claim Planner relies on public OSRM pedestrian routing demo endpoints; if the external service experiences outages, the app automatically falls back to on-device geodesic loops.

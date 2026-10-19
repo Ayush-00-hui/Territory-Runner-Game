@@ -111,3 +111,54 @@ No issues found! (ran in 4.3s)
 - **Exit Code**: `0`
 - **Output**: Clean exit across all 9 packages (anticheat, api, auth, coach, geo, league, notify, store, ws).
 
+---
+
+## 4. Phase 3 Verification (Live-Location Privacy & Scale)
+
+### 4.1 Flutter Static Code Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...
+No issues found! (ran in 4.2s)
+```
+
+### 4.2 Flutter Test Suite (with WebSocket Privacy & Scale Tests)
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:10 +218: All tests passed! (218 passed, 0 failed)
+```
+*Note*: Includes `test/websocket_privacy_and_scale_test.dart` testing client-side privacy zone suppression, 2500ms rate throttling, stationary jitter deduplication, and exponential backoff bounds.
+
+### 4.3 Go Backend Static Analysis & Tests
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit (0 errors, 0 warnings).
+
+- **Command**: `go test -v -count=1 ./internal/ws`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+=== RUN   TestWebSocketHubPresenceAndBroadcast
+--- PASS: TestWebSocketHubPresenceAndBroadcast (0.05s)
+=== RUN   TestWebSocketTargetedTerritoryCarvedAlert
+--- PASS: TestWebSocketTargetedTerritoryCarvedAlert (0.05s)
+=== RUN   TestWebSocketPresence_SuppressedInsidePrivacyZone
+--- PASS: TestWebSocketPresence_SuppressedInsidePrivacyZone (0.10s)
+PASS
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	0.967s
+```
+
+- **Command**: `go test -v -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit across all 9 packages (anticheat, api, auth, coach, geo, league, notify, store, ws).
+
+

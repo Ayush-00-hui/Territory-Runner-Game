@@ -123,12 +123,12 @@ This document is the definitive technical examination guide for **Territory Runn
 
 ### Q3.3: How do you handle GPS signal dropout in tunnels or urban canyons?
 **Defense:**
-- In urban environments, tall buildings cause GPS multipath reflections, signal scattering, or total dropout.
-- **Signal Gap Mitigation Algorithm (`LocationTrackingService`):**
-  1. Tracks the elapsed time ($\Delta t$) and distance ($\Delta d$) since the last valid GPS fix.
-  2. If $\Delta t > 10\text{s}$ or $\Delta d > 80\text{m}$ (tunnel emergence), the system flags a *signal gap*.
-  3. Instead of creating a straight false line that cuts through buildings, the engine interpolates intermediate synthetic dead-reckoning points with lower accuracy weighting.
-  4. If the gap exceeds $500\text{m}$ without GPS, the path is split to prevent illegitimate area capture across unscouted city blocks.
+- In urban environments, tall buildings and tunnels cause GPS multipath reflections, signal scattering, or total dropout.
+- **Signal Gap Mitigation & Jump Suppression (`GpsQualityService` & `MapScreen`):**
+  1. Tracks the elapsed time since the last valid GPS fix (`GpsQualityService.gapTimeout = 15s`). If elapsed time exceeds 15 seconds, signal quality transitions to `GpsQuality.lost`.
+  2. Upon signal reacquisition, the client calculates velocity across the gap ($\Delta d / \Delta t$).
+  3. If velocity exceeds the sport speed ceiling (e.g. 35 km/h for running via `GpsQualityService.isUnrealisticJump`), the teleportation fix is suppressed to prevent cutting across unscouted city blocks or buildings.
+  4. The engine strictly avoids fabricating synthetic dead-reckoning coordinates across signal gaps; points are either accepted as genuine kinematics or suppressed.
 
 ---
 
@@ -245,10 +245,12 @@ This document is the definitive technical examination guide for **Territory Runn
    - `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` in `backend/internal/store/postgres.go` serializes all run territory mutations worldwide into a single queue. While eliminating spatial race conditions, it represents a known vertical scaling ceiling under high global concurrent write throughput.
 2. **Territory Strength Decay Scheduling**:
    - `ApplyTerritoryDecay` is implemented in the `Store` interface, `PostgresStore`, and `MemoryStore`, but is currently triggered only via unit tests (`postgres_test.go`). It is not yet scheduled by an in-process cron or background worker in `backend/cmd/server/main.go`.
-3. **Live Presence Distribution**:
-   - The WebSocket hub broadcasts active runner presence (`lat`, `lng`, `speed`, `heading`) globally to all connected clients. Proximity bucketing (e.g. Geohash/grid cell), opt-in sharing toggles, and per-client presence rate limits are slated for implementation in Phase 3.
+3. **Live Presence Distribution & Single-Node Scaling Ceiling**:
+   - The Go WebSocket hub (`backend/internal/ws/hub.go`) is an in-memory, single-node distribution hub. All connected clients reside in `h.clients` with $O(N)$ fanout per broadcast on a single goroutine.
+   - While memory footprint is lightweight ($\sim 8\text{ MB}$ per 1,000 clients), network broadcast serialization and egress bandwidth ($400,000\text{ packets/s}$ at 1,000 runners broadcasting at 2.5s intervals) impose a vertical ceiling.
+   - Client-side mitigations (Phase 3) suppress coordinates inside active privacy zones before transmission, enforce minimum 2.5s broadcast intervals, and deduplicate stationary jitter (< 3m, < 0.5 m/s). Horizontal scaling beyond a single instance will require spatial partitioning (e.g. Redis Pub/Sub channels keyed by S2/H3 cells or Geohashes).
 4. **Tile Server Usage Policy Compliance**:
-   - Pre-downloading bounding box map tiles from public `tile.openstreetmap.org` is not permitted under OSM's Tile Usage Policy. Map tile hosts must be configurable with commercial or self-hosted tile servers and appropriate caching headers (Phase 2).
+   - Resolved in Phase 2: Offline prefetch is gated behind `--dart-define=ALLOW_TILE_PREFETCH=false` by default to adhere to OpenStreetMap usage policies. Configurable tile endpoints (`MAP_TILE_URL`), custom User-Agent, and 7-day retention with HTTP `If-Modified-Since` revalidation prevent policy violations.
 5. **No Signal Gap Dead-Reckoning**:
    - The engine does not perform linear dead-reckoning or Kalman dead-reckoning across signal dropouts. Coordinates received after a gap are processed directly without synthetic interpolation.
 6. **Per-Activity Enclosure Floor**:

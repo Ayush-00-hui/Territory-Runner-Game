@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../core/logging/app_logger.dart';
 import '../models/ws_events.dart';
 import 'api_client.dart';
 import 'firebase_service.dart';
+import 'privacy_zone_service.dart';
 
 /// Real-Time WebSocket Service for live rival runner presence and territory alerts
 class WebSocketService {
@@ -15,6 +17,7 @@ class WebSocketService {
 
   final FirebaseService _firebaseService;
   final ApiClient _apiClient;
+  final PrivacyZoneService _privacyZoneService;
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
@@ -24,6 +27,17 @@ class WebSocketService {
   bool _isConnected = false;
   bool _isDisposed = false;
   int _reconnectAttempts = 0;
+
+  DateTime? _lastPresenceSentTime;
+  double? _lastSentLat;
+  double? _lastSentLng;
+  static const Distance _distanceCalc = Distance();
+
+  /// Minimum interval between outbound presence packets to avoid flooding the WebSocket hub
+  static const Duration minPresenceInterval = Duration(milliseconds: 2500);
+
+  /// Minimum movement displacement (in meters) required to send an update if stationary
+  static const double minMovementMeters = 3.0;
 
   final _presenceController = StreamController<RunnerPresenceEvent>.broadcast();
   final _runnerLeftController = StreamController<String>.broadcast();
@@ -37,14 +51,25 @@ class WebSocketService {
   Stream<ConquestBroadcastEvent> get broadcastStream => _broadcastController.stream;
   Stream<bool> get isConnectedStream => _connectionStateController.stream;
   bool get isConnected => _isConnected;
+  int get reconnectAttempts => _reconnectAttempts;
 
-  WebSocketService._internal({FirebaseService? firebaseService, ApiClient? apiClient})
-      : _firebaseService = firebaseService ?? FirebaseService(),
-        _apiClient = apiClient ?? ApiClient();
+  WebSocketService._internal({
+    FirebaseService? firebaseService,
+    ApiClient? apiClient,
+    PrivacyZoneService? privacyZoneService,
+  })  : _firebaseService = firebaseService ?? FirebaseService(),
+        _apiClient = apiClient ?? ApiClient(),
+        _privacyZoneService = privacyZoneService ?? PrivacyZoneService();
 
   /// Visible for testing constructor
   @visibleForTesting
-  WebSocketService.custom({required this._firebaseService, required this._apiClient});
+  WebSocketService.custom({
+    FirebaseService? firebaseService,
+    ApiClient? apiClient,
+    PrivacyZoneService? privacyZoneService,
+  })  : _firebaseService = firebaseService ?? FirebaseService(),
+        _apiClient = apiClient ?? ApiClient(),
+        _privacyZoneService = privacyZoneService ?? PrivacyZoneService();
 
   /// Establishes the real-time WebSocket connection to the Go backend
   void connect() {
@@ -121,14 +146,51 @@ class WebSocketService {
     }
   }
 
-  /// Sends periodic kinematic position updates to nearby peers
-  void sendPresenceUpdate({
+  /// Sends periodic kinematic position updates to nearby peers.
+  /// Throttled to [minPresenceInterval], deduplicates stationary jitter (< [minMovementMeters]),
+  /// and strictly drops updates that fall inside an active privacy exclusion zone.
+  /// Returns true if dispatched to the WebSocket sink, or false if suppressed or throttled.
+  bool sendPresenceUpdate({
     required double latitude,
     required double longitude,
     double speed = 0.0,
     double heading = 0.0,
+    bool force = false,
   }) {
-    if (!_isConnected || _channel == null) return;
+    if (!_isConnected || _channel == null) return false;
+
+    final targetPoint = LatLng(latitude, longitude);
+
+    // 1. Client-Side Privacy Zone Suppression (Defense-in-depth)
+    if (_privacyZoneService.isPointInPrivacyZone(targetPoint)) {
+      AppLogger.debug(
+        'Presence update suppressed: coordinate is within an active privacy exclusion zone',
+        tag: 'WebSocketService',
+      );
+      return false;
+    }
+
+    final now = DateTime.now();
+
+    // 2. Frequency Throttling (unless forced)
+    if (!force && _lastPresenceSentTime != null) {
+      final elapsed = now.difference(_lastPresenceSentTime!);
+      if (elapsed < minPresenceInterval) {
+        return false;
+      }
+    }
+
+    // 3. Stationary Jitter Deduplication
+    if (!force && _lastSentLat != null && _lastSentLng != null) {
+      final distanceMoved = _distanceCalc.as(
+        LengthUnit.Meter,
+        LatLng(_lastSentLat!, _lastSentLng!),
+        targetPoint,
+      );
+      if (distanceMoved < minMovementMeters && speed < 0.5) {
+        return false;
+      }
+    }
 
     final packet = {
       'type': 'presence_update',
@@ -140,8 +202,13 @@ class WebSocketService {
 
     try {
       _channel!.sink.add(jsonEncode(packet));
+      _lastPresenceSentTime = now;
+      _lastSentLat = latitude;
+      _lastSentLng = longitude;
+      return true;
     } catch (e) {
       AppLogger.warning('Failed to send presence update: $e', tag: 'WebSocketService');
+      return false;
     }
   }
 
@@ -170,13 +237,24 @@ class WebSocketService {
 
     // Exponential backoff with jitter (max 15s)
     _reconnectAttempts++;
-    final backoffSec = math.min(15, math.pow(2, math.min(_reconnectAttempts, 4)).toInt());
-    final jitterMs = math.Random().nextInt(1000);
-    final delay = Duration(seconds: backoffSec, milliseconds: jitterMs);
+    final delay = computeBackoffDelay(_reconnectAttempts);
 
     AppLogger.debug('Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts)...', tag: 'WebSocketService');
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, connect);
+  }
+
+  /// Calculates exponential backoff duration with random jitter up to 15 seconds.
+  static Duration computeBackoffDelay(int attempts, {math.Random? random}) {
+    final backoffSec = math.min(15, math.pow(2, math.min(attempts, 4)).toInt());
+    final jitterMs = (random ?? math.Random()).nextInt(1000);
+    return Duration(seconds: backoffSec, milliseconds: jitterMs);
+  }
+
+  @visibleForTesting
+  void setMockChannel(WebSocketChannel channel) {
+    _channel = channel;
+    _isConnected = true;
   }
 
   /// Gracefully closes connection
