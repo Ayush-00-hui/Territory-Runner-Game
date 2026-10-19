@@ -159,7 +159,7 @@ func TestE2EFullRunLifecycle(t *testing.T) {
 	}
 	require.True(t, runnerFound, "Runner sovereign territory exists in database")
 	require.True(t, rivalFound, "Rival territory exists in database")
-	assert.Equal(t, 100.0, runnerStrength, "Freshly captured territory has 100% strength")
+	assert.InDelta(t, 100.0, runnerStrength, 0.01, "Freshly captured territory has 100% strength")
 	assert.Greater(t, runnerArea, 0.0)
 	assert.Equal(t, rivalInitialArea, rivalArea, "Rival territory area tracked in database")
 

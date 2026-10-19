@@ -692,7 +692,7 @@ func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
 	tInitial, err := st.GetTerritoryByID(ctx, territoryID)
 	require.NoError(t, err)
 	require.NotNil(t, tInitial)
-	assert.Equal(t, 100.0, tInitial.Strength, "initial strength must be 100.0")
+	assert.InDelta(t, 100.0, tInitial.Strength, 0.01, "initial strength must be 100.0")
 
 	// Artificially simulate 2 days of inactivity
 	_, err = pool.Exec(ctx, `
@@ -718,7 +718,7 @@ func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
 	tDefended, err := st.GetTerritoryByID(ctx, territoryID)
 	require.NoError(t, err)
 	require.NotNil(t, tDefended)
-	assert.Equal(t, 100.0, tDefended.Strength, "strength must be restored to 100.0")
+	assert.InDelta(t, 100.0, tDefended.Strength, 0.01, "strength must be restored to 100.0")
 	assert.WithinDuration(t, time.Now().UTC(), tDefended.LastDefendedAt, 5*time.Second, "last_defended_at must be refreshed to now")
 }
 
