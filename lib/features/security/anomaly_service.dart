@@ -147,6 +147,25 @@ class AnomalyService {
             features: {'stepSpeedKmh': stepSpeedKmh, 'distMeters': distMeters},
           );
         }
+
+        // Check 3b: Biomechanical acceleration ceiling check
+        if (dtSeconds > 0.2 && dtSeconds <= 3.0) {
+          final double dv = (latest.speed - prev.speed).abs();
+          final double accel = dv / dtSeconds;
+          final double maxAccelLimit = activity == ExerciseActivityType.cycling ? 12.0 : 8.0;
+          if (accel > maxAccelLimit) {
+            AppLogger.warning(
+              'CHEAT DETECTED: Acceleration ${accel.toStringAsFixed(2)} m/s² exceeds ${activity.displayName.toLowerCase()} limit (${maxAccelLimit.toStringAsFixed(1)} m/s²)',
+              tag: 'AnomalyService',
+            );
+            return AnomalyResult(
+              isAnomaly: true,
+              anomalyScore: 45.0 + (accel - maxAccelLimit),
+              reason: 'Biomechanical acceleration limit exceeded: ${accel.toStringAsFixed(2)} m/s² (max ${maxAccelLimit.toStringAsFixed(1)} m/s² for ${activity.displayName.toLowerCase()})',
+              features: {'max_accel': accel},
+            );
+          }
+        }
       }
     }
 
@@ -176,6 +195,27 @@ class AnomalyService {
             features: {'avg_speed_kmh': windowAvgSpeedKmh},
           );
         }
+      }
+    }
+
+    // Check 4b: Identical-step GPS replay detection
+    if (positions.length >= 4) {
+      int identicalSteps = 0;
+      for (int i = 1; i < positions.length; i++) {
+        final p1 = positions[i - 1];
+        final p2 = positions[i];
+        if (p1.latitude == p2.latitude && p1.longitude == p2.longitude) {
+          identicalSteps++;
+        }
+      }
+      if (identicalSteps >= positions.length / 2) {
+        AppLogger.warning('CHEAT DETECTED: Excessive frozen GPS replay breadcrumbs', tag: 'AnomalyService');
+        return const AnomalyResult(
+          isAnomaly: true,
+          anomalyScore: 8.0,
+          reason: 'Excessive frozen/replay identical GPS breadcrumbs detected',
+          features: {'frozenRatio': 1.0},
+        );
       }
     }
 

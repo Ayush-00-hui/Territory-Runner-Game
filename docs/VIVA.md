@@ -179,6 +179,13 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 
 ---
 
+### Q4.3: How do Biomechanical Acceleration Ceilings and GPS Replay Detection identify botters and synthetic emulator injects?
+**Defense:**
+- **Biomechanical Acceleration Ceilings:** Human sprint biomechanics cap peak forward acceleration at $\approx 4.5 - 5.0\text{ m/s}^2$ (Usain Bolt peak is $\sim 4.5\text{ m/s}^2$). Any delta speed where $a = \Delta v / \Delta t > 8.0\text{ m/s}^2$ ($> 12.0\text{ m/s}^2$ for cycling) across consecutive fixes ($\Delta t \le 3.0\text{s}$) physically proves synthetic velocity injection or motorized transport.
+- **Identical-Step GPS Replay Detection:** Software emulators or bot scripts often hold coordinates static or replay frozen breadcrumbs while advancing distance. When $\ge 50\%$ of adjacent GPS vertices possess identical $(lat, lon)$ coordinates in a moving run, the trace is rejected with `Excessive frozen/replay identical GPS breadcrumbs detected`.
+
+---
+
 ## 5. Push Notification Infrastructure & Weekly League
 
 ### Q5.1: Why implement FCM HTTP v1 with OAuth2 Service Account JWT instead of the legacy Firebase server key?
@@ -304,4 +311,7 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 7. **Social & Duels Offline Resilience & Anti-Abuse (Resolved in Phase 4)**:
    - Head-to-Head Duels and Squad Friends feature local offline caching via `SharedPreferences`. When network connectivity is lost, active duel challenges and progress meters display gracefully from local cache with an offline warning indicator.
    - Anti-abuse limits (max 5 active, max 10 pending) and activity-type segregation strictly enforced across Dart client and Go backend.
+8. **Kinematic Anticheat & Battery Longevity (Resolved in Phase 5)**:
+   - Full parity across Dart `AnomalyService` and Go `anticheat.Detector` for mock GPS detection, activity speed ceilings, teleportation jumps, biomechanical acceleration limits ($8.0\text{ m/s}^2$ running, $12.0\text{ m/s}^2$ cycling), and $\ge 50\%$ identical-step frozen replay rejection.
+   - Dynamic GPS duty-cycling ($1\text{s} \to 3\text{s}$, $2\text{m} \to 8\text{m}$) coupled with pure black AMOLED screen overlay achieves up to $60-80\%$ display power reduction during marathon endurance workouts.
 

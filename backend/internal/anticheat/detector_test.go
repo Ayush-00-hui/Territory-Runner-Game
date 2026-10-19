@@ -238,3 +238,56 @@ func TestRunning_RejectsSuperhumanAverageSpeed(t *testing.T) {
 	require.NotEmpty(t, result.Reasons)
 	assert.Contains(t, result.Reasons[0], "exceeds running endurance ceiling")
 }
+
+func TestBiomechanicalAccelerationCeiling(t *testing.T) {
+	detector := anticheat.NewDetector()
+	now := time.Now().UTC()
+
+	// Speed burst from 0.0 m/s to 6.0 m/s in 0.5s (accel = 12.0 m/s²)
+	// Speed 6.0 m/s = 21.6 km/h is below running ceiling (25.0 km/h),
+	// but acceleration 12.0 m/s² exceeds running acceleration limit (8.0 m/s²)
+	runningPoints := []geo.TrackPoint{
+		{
+			Latitude:  37.774900,
+			Longitude: -122.4194,
+			Timestamp: now,
+			Speed:     0.0,
+		},
+		{
+			Latitude:  37.774913, // ~1.5m displacement (avg speed 3.0 m/s = 10.8 km/h)
+			Longitude: -122.4194,
+			Timestamp: now.Add(500 * time.Millisecond),
+			Speed:     6.0, // dv = 6.0 m/s in 0.5s = 12.0 m/s²
+		},
+	}
+
+	result := detector.EvaluateTrackWithActivity(runningPoints, "running")
+	assert.True(t, result.IsAnomaly)
+	require.NotEmpty(t, result.Reasons)
+	assert.Contains(t, result.Reasons[0], "Biomechanical acceleration limit exceeded")
+
+	// Same 12 m/s² burst is acceptable for cycling (limit 12.0 m/s²)
+	cyclingResult := detector.EvaluateTrackWithActivity(runningPoints, "cycling")
+	assert.False(t, cyclingResult.IsAnomaly)
+
+	// Extreme vehicle burst (dv = 9 m/s in 0.5s = 18 m/s² > 12 m/s² for cycling)
+	// Speed reaches 11.0 m/s = 39.6 km/h, well below 50.0 km/h cycling ceiling
+	extremePoints := []geo.TrackPoint{
+		{
+			Latitude:  37.774900,
+			Longitude: -122.4194,
+			Timestamp: now,
+			Speed:     2.0,
+		},
+		{
+			Latitude:  37.774929, // ~3.2m displacement (avg speed 6.4 m/s = 23 km/h)
+			Longitude: -122.4194,
+			Timestamp: now.Add(500 * time.Millisecond),
+			Speed:     11.0, // dv = 9.0 m/s in 0.5s = 18.0 m/s²
+		},
+	}
+	extremeCyclingResult := detector.EvaluateTrackWithActivity(extremePoints, "cycling")
+	assert.True(t, extremeCyclingResult.IsAnomaly)
+	require.NotEmpty(t, extremeCyclingResult.Reasons)
+	assert.Contains(t, extremeCyclingResult.Reasons[0], "Biomechanical acceleration limit exceeded")
+}

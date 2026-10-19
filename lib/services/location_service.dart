@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/activity_type.dart';
 import '../core/logging/app_logger.dart';
+import 'battery_saver_service.dart';
 
 /// Operational GPS tracking modes balancing positional accuracy and battery longevity.
 enum GpsTrackingMode {
@@ -171,15 +172,17 @@ class LocationService {
     GpsTrackingMode mode = GpsTrackingMode.activeRun,
     String notificationTitle = "Territory Runner",
     String notificationText = "Tracking your running route in the background...",
+    bool? isBatterySaverActive,
   }) {
+    final bool batterySaver = isBatterySaverActive ?? BatterySaverService().isBatterySaverEnabled;
     final accuracy = (mode == GpsTrackingMode.activeRun)
-        ? LocationAccuracy.bestForNavigation
+        ? (batterySaver ? LocationAccuracy.high : LocationAccuracy.bestForNavigation)
         : LocationAccuracy.medium;
     final int distanceFilter = (mode == GpsTrackingMode.activeRun)
-        ? 2
+        ? (batterySaver ? 8 : 2)
         : (mode == GpsTrackingMode.paused ? 10 : 15);
     final Duration interval = (mode == GpsTrackingMode.activeRun)
-        ? const Duration(seconds: 1)
+        ? (batterySaver ? const Duration(seconds: 3) : const Duration(seconds: 1))
         : (mode == GpsTrackingMode.paused ? const Duration(seconds: 5) : const Duration(seconds: 10));
 
     final bool showNotification = mode != GpsTrackingMode.idle;

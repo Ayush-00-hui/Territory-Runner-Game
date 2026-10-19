@@ -210,5 +210,108 @@ void main() {
       expect(result.isAnomaly, isTrue);
       expect(result.reason.contains('endurance ceiling'), isTrue);
     });
+
+    test('Biomechanical acceleration limit rejects impossible speed spikes', () {
+      final now = DateTime.now();
+      // Burst from 0 m/s to 6 m/s in 0.5s = 12.0 m/s² (exceeds 8.0 m/s² running limit)
+      final positions = [
+        Position(
+          latitude: 37.774900,
+          longitude: -122.4194,
+          timestamp: now,
+          altitude: 10.0,
+          altitudeAccuracy: 1.0,
+          accuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 1.0,
+          speed: 0.0,
+          speedAccuracy: 0.5,
+          isMocked: false,
+        ),
+        Position(
+          latitude: 37.774913,
+          longitude: -122.4194,
+          timestamp: now.add(const Duration(milliseconds: 500)),
+          altitude: 10.0,
+          altitudeAccuracy: 1.0,
+          accuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 1.0,
+          speed: 6.0,
+          speedAccuracy: 0.5,
+          isMocked: false,
+        ),
+      ];
+
+      final runningResult = anomalyService.scoreSegment(positions, ExerciseActivityType.running);
+      expect(runningResult.isAnomaly, isTrue);
+      expect(runningResult.reason.contains('Biomechanical acceleration limit exceeded'), isTrue);
+
+      // Same 12 m/s² acceleration is permitted under cycling (12.0 m/s² ceiling)
+      final cyclingResult = anomalyService.scoreSegment(positions, ExerciseActivityType.cycling);
+      expect(cyclingResult.isAnomaly, isFalse);
+    });
+
+    test('Excessive frozen GPS breadcrumbs (> 50% identical) triggers replay detection', () {
+      final now = DateTime.now();
+      final positions = [
+        Position(
+          latitude: 37.7749,
+          longitude: -122.4194,
+          timestamp: now,
+          altitude: 10.0,
+          altitudeAccuracy: 1.0,
+          accuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 1.0,
+          speed: 1.5,
+          speedAccuracy: 0.5,
+          isMocked: false,
+        ),
+        Position(
+          latitude: 37.7749,
+          longitude: -122.4194,
+          timestamp: now.add(const Duration(seconds: 1)),
+          altitude: 10.0,
+          altitudeAccuracy: 1.0,
+          accuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 1.0,
+          speed: 1.5,
+          speedAccuracy: 0.5,
+          isMocked: false,
+        ),
+        Position(
+          latitude: 37.7749,
+          longitude: -122.4194,
+          timestamp: now.add(const Duration(seconds: 2)),
+          altitude: 10.0,
+          altitudeAccuracy: 1.0,
+          accuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 1.0,
+          speed: 1.5,
+          speedAccuracy: 0.5,
+          isMocked: false,
+        ),
+        Position(
+          latitude: 37.774913,
+          longitude: -122.4194,
+          timestamp: now.add(const Duration(seconds: 3)),
+          altitude: 10.0,
+          altitudeAccuracy: 1.0,
+          accuracy: 5.0,
+          heading: 0.0,
+          headingAccuracy: 1.0,
+          speed: 1.5,
+          speedAccuracy: 0.5,
+          isMocked: false,
+        ),
+      ];
+
+      final result = anomalyService.scoreSegment(positions, ExerciseActivityType.running);
+      expect(result.isAnomaly, isTrue);
+      expect(result.reason.contains('Excessive frozen/replay identical GPS breadcrumbs detected'), isTrue);
+    });
   });
 }
