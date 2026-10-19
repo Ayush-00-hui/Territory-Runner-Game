@@ -479,7 +479,7 @@ class ApiClient {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((e) => FriendUser.fromJson(e as Map<String, dynamic>)).toList();
     }
-    return [];
+    throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
   }
 
   /// Fetches pending friend requests (GET /v1/friends/requests)
@@ -495,7 +495,7 @@ class ApiClient {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((e) => FriendRequestDetail.fromJson(e as Map<String, dynamic>)).toList();
     }
-    return [];
+    throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
   }
 
   /// Sends a friend request to a target runner (POST /v1/friends/request)
@@ -537,7 +537,7 @@ class ApiClient {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((e) => Duel.fromJson(e as Map<String, dynamic>)).toList();
     }
-    return [];
+    throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
   }
 
   /// Initiates a head-to-head duel (POST /v1/duels)

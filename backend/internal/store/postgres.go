@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -944,7 +945,7 @@ func (s *PostgresStore) CreateDuel(ctx context.Context, d *Duel) error {
 	}
 
 	if d.ID == "" {
-		d.ID = fmt.Sprintf("duel_%d", time.Now().UnixNano())
+		d.ID = fmt.Sprintf("duel_%s", uuid.New().String())
 	}
 	if d.ExpiresAt.IsZero() {
 		d.ExpiresAt = time.Now().UTC().Add(24 * time.Hour)

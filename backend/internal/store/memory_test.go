@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -393,6 +394,205 @@ func TestFriendsAndDuelsAntiAbuse(t *testing.T) {
 	err = memStore.AcceptDuel(ctx, validDuel.ID, "usr_bob")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "expired")
+}
+
+func TestDuelDeclineFlow(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_eve", Username: "Eve", Faction: "Shadow Syndicate"})
+
+	duel := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "area",
+		TargetValue:  10000.0,
+		XpStake:      200,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel))
+
+	// Unauthorized third party cannot decline
+	err := memStore.DeclineDuel(ctx, duel.ID, "usr_eve")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unauthorized")
+
+	// Opponent declines
+	err = memStore.DeclineDuel(ctx, duel.ID, "usr_bob")
+	require.NoError(t, err)
+
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	require.Len(t, duels, 1)
+	assert.Equal(t, "declined", duels[0].Status)
+}
+
+func TestDuelExpirationResolution(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", XP: 1000})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", XP: 1000})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_charlie", Username: "Charlie", XP: 1000})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_dave", Username: "Dave", XP: 1000})
+
+	// Case 1: Alice leads against Bob when duel expires -> Alice wins
+	duel1 := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "area",
+		TargetValue:  20000.0,
+		XpStake:      300,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel1))
+	require.NoError(t, memStore.AcceptDuel(ctx, duel1.ID, "usr_bob"))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_alice", "running", 5000.0, 1000.0))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_bob", "running", 2000.0, 500.0))
+
+	// Expire duel 1
+	memStore.SetDuelExpiresAtForTest(duel1.ID, time.Now().UTC().Add(-10*time.Minute))
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	var resolvedDuel1 store.Duel
+	for _, d := range duels {
+		if d.ID == duel1.ID {
+			resolvedDuel1 = d
+			break
+		}
+	}
+	assert.Equal(t, "completed", resolvedDuel1.Status)
+	assert.Equal(t, "usr_alice", resolvedDuel1.WinnerID)
+
+	aliceUser, _ := memStore.GetUser(ctx, "usr_alice")
+	assert.Equal(t, int64(1300), aliceUser.XP) // 1000 + 300
+
+	// Case 2: Charlie leads against Alice when duel expires -> Charlie wins
+	duel2 := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_charlie",
+		TargetType:   "area",
+		TargetValue:  20000.0,
+		XpStake:      400,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel2))
+	require.NoError(t, memStore.AcceptDuel(ctx, duel2.ID, "usr_charlie"))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_alice", "running", 3000.0, 1000.0))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_charlie", "running", 6000.0, 1500.0))
+
+	memStore.SetDuelExpiresAtForTest(duel2.ID, time.Now().UTC().Add(-5*time.Minute))
+	duels, err = memStore.GetDuelsByUser(ctx, "usr_charlie")
+	require.NoError(t, err)
+	var resolvedDuel2 store.Duel
+	for _, d := range duels {
+		if d.ID == duel2.ID {
+			resolvedDuel2 = d
+			break
+		}
+	}
+	assert.Equal(t, "completed", resolvedDuel2.Status)
+	assert.Equal(t, "usr_charlie", resolvedDuel2.WinnerID)
+
+	charlieUser, _ := memStore.GetUser(ctx, "usr_charlie")
+	assert.Equal(t, int64(1400), charlieUser.XP) // 1000 + 400
+
+	// Case 3: Tied duel when expired -> status is "expired", no winner
+	duel3 := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_dave",
+		TargetType:   "area",
+		TargetValue:  20000.0,
+		XpStake:      200,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel3))
+	require.NoError(t, memStore.AcceptDuel(ctx, duel3.ID, "usr_dave"))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_alice", "running", 4000.0, 1000.0))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_dave", "running", 4000.0, 1000.0))
+
+	memStore.SetDuelExpiresAtForTest(duel3.ID, time.Now().UTC().Add(-2*time.Minute))
+	duels, err = memStore.GetDuelsByUser(ctx, "usr_dave")
+	require.NoError(t, err)
+	var resolvedDuel3 store.Duel
+	for _, d := range duels {
+		if d.ID == duel3.ID {
+			resolvedDuel3 = d
+			break
+		}
+	}
+	assert.Equal(t, "expired", resolvedDuel3.Status)
+	assert.Empty(t, resolvedDuel3.WinnerID)
+}
+
+func TestDuelActivityModalitySegregation(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_runner_1", Username: "Runner1"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_runner_2", Username: "Runner2"})
+
+	// Create a CYCLING duel
+	duel := &store.Duel{
+		ChallengerID: "usr_runner_1",
+		OpponentID:   "usr_runner_2",
+		ActivityType: "cycling",
+		TargetType:   "distance",
+		TargetValue:  20.0, // 20 km
+		XpStake:      500,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel))
+	require.NoError(t, memStore.AcceptDuel(ctx, duel.ID, "usr_runner_2"))
+
+	// 1. Running workout occurs (5.0 km) -> Should NOT progress cycling duel
+	err := memStore.UpdateDuelProgress(ctx, "usr_runner_1", "running", 10000.0, 5000.0)
+	require.NoError(t, err)
+
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_runner_1")
+	require.NoError(t, err)
+	assert.Equal(t, 0.0, duels[0].ChallengerProgress)
+
+	// 2. Cycling workout occurs (10.0 km) -> MUST progress cycling duel
+	err = memStore.UpdateDuelProgress(ctx, "usr_runner_1", "cycling", 50000.0, 10000.0)
+	require.NoError(t, err)
+
+	duels, err = memStore.GetDuelsByUser(ctx, "usr_runner_1")
+	require.NoError(t, err)
+	assert.Equal(t, 10.0, duels[0].ChallengerProgress)
+}
+
+func TestDuelConcurrencyLimits(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_pacer", Username: "Pacer"})
+
+	// Create 5 active duels with different opponents
+	for i := 1; i <= 5; i++ {
+		oppID := fmt.Sprintf("usr_rival_%d", i)
+		_ = memStore.UpsertUser(ctx, &store.User{ID: oppID, Username: oppID})
+
+		d := &store.Duel{
+			ChallengerID: "usr_pacer",
+			OpponentID:   oppID,
+			TargetType:   "area",
+			TargetValue:  5000.0,
+			XpStake:      100,
+		}
+		require.NoError(t, memStore.CreateDuel(ctx, d))
+		require.NoError(t, memStore.AcceptDuel(ctx, d.ID, oppID))
+	}
+
+	// 6th active duel attempt fails with max active duel limit
+	opp6 := "usr_rival_6"
+	_ = memStore.UpsertUser(ctx, &store.User{ID: opp6, Username: opp6})
+	err := memStore.CreateDuel(ctx, &store.Duel{
+		ChallengerID: "usr_pacer",
+		OpponentID:   opp6,
+		TargetType:   "area",
+		TargetValue:  5000.0,
+		XpStake:      100,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "maximum active duel limit (5) reached")
 }
 
 func TestUserSettingsDefaultAndUpdates(t *testing.T) {

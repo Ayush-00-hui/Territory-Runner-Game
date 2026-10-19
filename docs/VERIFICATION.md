@@ -515,6 +515,118 @@ No issues found! (ran in 4.0s)
 ```
 *(All 240 unit, widget, and integration tests passing)*
 
+---
+
+## 10. Phase 4 Verification (Social Syndicate, Duels & Anti-Abuse Hardening)
+
+### 10.1 Flutter Static Code Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...
+No issues found! (ran in 17.5s)
+```
+
+### 10.2 Go Backend Tests (Duels, Anti-Abuse & Expiration)
+- **Command**: `go test -v ./internal/store/...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+=== RUN   TestIdempotencyDoesNotDoubleCount
+--- PASS: TestIdempotencyDoesNotDoubleCount (0.00s)
+=== RUN   TestCaptureMultiLoopSummedAreaAndXP
+--- PASS: TestCaptureMultiLoopSummedAreaAndXP (0.00s)
+=== RUN   TestLeaderboardOrdering
+--- PASS: TestLeaderboardOrdering (0.00s)
+=== RUN   TestCaptureSetsTerritoryStrengthAndLastDefendedAt
+--- PASS: TestCaptureSetsTerritoryStrengthAndLastDefendedAt (0.00s)
+=== RUN   TestFriendshipFlow
+--- PASS: TestFriendshipFlow (0.00s)
+=== RUN   TestDuelFlow
+--- PASS: TestDuelFlow (0.00s)
+=== RUN   TestFriendsAndDuelsAntiAbuse
+--- PASS: TestFriendsAndDuelsAntiAbuse (0.00s)
+=== RUN   TestDuelDeclineFlow
+--- PASS: TestDuelDeclineFlow (0.00s)
+=== RUN   TestDuelExpirationResolution
+--- PASS: TestDuelExpirationResolution (0.00s)
+=== RUN   TestDuelActivityModalitySegregation
+--- PASS: TestDuelActivityModalitySegregation (0.00s)
+=== RUN   TestDuelConcurrencyLimits
+--- PASS: TestDuelConcurrencyLimits (0.00s)
+=== RUN   TestUserSettingsDefaultAndUpdates
+--- PASS: TestUserSettingsDefaultAndUpdates (0.00s)
+=== RUN   TestCaptureRunMinimumAreaFloor25Sqm
+--- PASS: TestCaptureRunMinimumAreaFloor25Sqm (0.00s)
+=== RUN   TestLazyTerritoryDecayCalculation
+--- PASS: TestLazyTerritoryDecayCalculation (0.00s)
+=== RUN   TestWeakTerritoryCaptureBonusAndDefenseReset
+--- PASS: TestWeakTerritoryCaptureBonusAndDefenseReset (0.00s)
+PASS
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.505s
+```
+
+### 10.3 Go Full Test Suite
+- **Command**: `go test ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/cmd/server	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	1.271s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	(cached)
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	0.417s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	0.995s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.429s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	4.625s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	(cached)
+```
+*(All 12 Go packages passing)*
+
+### 10.4 Go Static Analysis
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+(Clean exit; 0 errors, 0 warnings)
+```
+
+### 10.5 Phase 4 Flutter Social & Duels Test Suite
+- **Command**: `flutter test test/phase_4_social_duels_test.dart`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: Phase 4: Friend Models Tests FriendUser serialization roundtrip
+00:00 +1: Phase 4: Friend Models Tests FriendRequestDetail serialization roundtrip
+00:00 +2: Phase 4: Duel Model Tests Duel serialization and progress telemetry calculation
+00:00 +3: Phase 4: ApiClient Social & Duels Integration Tests getFriends, getFriendRequests, and friend actions
+00:00 +4: Phase 4: ApiClient Social & Duels Integration Tests getDuels, createDuel, acceptDuel, and declineDuel
+00:00 +5: Phase 4: SocialHubView Widget Tests Renders Squad members and allows tab switching to Duels
+00:00 +6: Phase 4: SocialHubView Widget Tests Shows incoming friend request with Accept and Decline actions
+00:00 +7: Phase 4: SocialHubView Widget Tests Renders cached friends and duels when network is offline
+00:00 +8: All tests passed!
+```
+
+### 10.6 Complete Flutter Test Suite
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:13 +241: All tests passed!
+```
+*(All 241 tests passing)*
+
+
 
 
 

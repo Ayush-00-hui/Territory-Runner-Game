@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:territory_runner/features/social/widgets/social_hub_sheet.dart';
 import 'package:territory_runner/models/duel.dart';
 import 'package:territory_runner/models/friend.dart';
@@ -397,6 +398,79 @@ void main() {
       expect(find.text('Neon Syndicate'), findsOneWidget);
       expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
       expect(find.byIcon(Icons.cancel_rounded), findsOneWidget);
+    });
+
+    testWidgets('Renders cached friends and duels when network is offline', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'territory_runner_cached_friends': jsonEncode([
+          {
+            'id': 'f_offline',
+            'username': 'OfflinePacer',
+            'faction': 'Iron Legion',
+            'total_area_sqm': 30000.0,
+            'level': 3,
+            'xp': 3000,
+            'total_runs': 10,
+          }
+        ]),
+        'territory_runner_cached_duels': jsonEncode([
+          {
+            'id': 'duel_offline',
+            'challenger_id': 'test_me',
+            'challenger_username': 'TestRunner',
+            'opponent_id': 'f_offline',
+            'opponent_username': 'OfflinePacer',
+            'target_type': 'area',
+            'target_value': 10000.0,
+            'status': 'active',
+            'challenger_progress': 4500.0,
+            'opponent_progress': 2000.0,
+            'xp_stake': 250,
+            'expires_at': DateTime.now().add(const Duration(hours: 12)).toIso8601String(),
+            'created_at': DateTime.now().toIso8601String(),
+          }
+        ]),
+      });
+
+      // ApiClient that fails all requests with network unreachable
+      final failingMockClient = MockClient((request) async {
+        return http.Response('Network Error', 503);
+      });
+
+      final apiClient = ApiClient.custom(
+        httpClient: failingMockClient,
+        baseUrl: 'http://test.local',
+        maxRetries: 0,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SocialHubView(
+              apiClient: apiClient,
+              currentUserId: 'test_me',
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Verify offline banner is shown
+      expect(find.text('Network offline: displaying cached syndicates'), findsOneWidget);
+
+      // Verify cached friend is displayed
+      expect(find.text('OfflinePacer'), findsOneWidget);
+      expect(find.text('Lvl 3'), findsOneWidget);
+
+      // Switch to Duels tab and verify cached active duel
+      await tester.tap(find.textContaining('Duels (1)'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Active conquests (1)'), findsOneWidget);
+      expect(find.text('Area: 10000 m²'), findsOneWidget);
+      expect(find.text('Battle in progress'), findsOneWidget);
+      expect(find.textContaining('VS OfflinePacer'), findsOneWidget);
     });
   });
 }

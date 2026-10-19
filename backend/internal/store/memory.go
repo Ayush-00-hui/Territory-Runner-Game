@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
+	"github.com/google/uuid"
 )
 
 // MemoryStore provides a thread-safe, in-memory implementation of Store for hermetic unit testing.
@@ -821,7 +822,7 @@ func (m *MemoryStore) CreateDuel(ctx context.Context, d *Duel) error {
 	d.OpponentUsername = opponent.Username
 
 	if d.ID == "" {
-		d.ID = fmt.Sprintf("duel_%d", time.Now().UnixNano())
+		d.ID = fmt.Sprintf("duel_%s", uuid.New().String())
 	}
 	d.Status = "pending"
 	d.CreatedAt = now

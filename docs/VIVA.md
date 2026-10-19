@@ -258,7 +258,30 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 
 ---
 
-## 8. Known Technical Limitations & Phase 3 Resolutions
+### Q7.4: Why evaluate Duel Expiration lazily on read rather than running an asynchronous background scheduler?
+**Defense:**
+- **Zero Daemon Overhead:** Similar to lazy territory decay, computing expiration during `GetDuelsByUser` avoids running standing cron goroutines or database worker daemons that sleep/poll continuously.
+- **Deterministic Evaluation & Fairness:** When `now.After(d.ExpiresAt)` is detected:
+  - If `ChallengerProgress > OpponentProgress`: Challenger wins, status becomes `completed`, XP stake awarded.
+  - If `OpponentProgress > ChallengerProgress`: Opponent wins, status becomes `completed`, XP stake awarded.
+  - If tied: marked `expired`, zero XP awarded.
+  - In PostgreSQL, the update and XP credit are committed to persistent storage asynchronously without blocking read response latency.
+
+---
+
+### Q7.5: How does Territory Runner enforce social anti-abuse and prevent duel spamming or cheating?
+**Defense:**
+- **Anti-Abuse Limits:** Both in-memory and PostgreSQL stores enforce strict rate caps:
+  1. Maximum 5 concurrent active duels per runner (`maximum active duel limit (5) reached`).
+  2. Maximum 10 pending challenge invitations sent per runner.
+  3. Maximum 10 pending invitations received per opponent.
+  4. Self-challenges are rejected (`CANNOT_DUEL_SELF`).
+  5. XP stakes bounded between 0 and 1,000 XP; area targets bounded between 500 and 500,000 m²; distance targets bounded between 0.5 and 50.0 km.
+- **Modality Segregation:** `UpdateDuelProgress` strictly filters by matching `activity_type`. A 10 km cycling workout will NEVER progress a running duel challenge, eliminating cross-modality exploiting.
+
+---
+
+## 8. Known Technical Limitations & Phase Resolutions
 
 1. **Global Territory Mutation Lock**:
    - `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` in `backend/internal/store/postgres.go` serializes all run territory mutations worldwide into a single queue. While eliminating spatial race conditions and Deadlocks, it represents a known vertical scaling ceiling under high global concurrent write throughput.
@@ -278,4 +301,7 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
      - Running: minimum perimeter $60\text{ m}$, minimum area $200\text{ m}^2$, speed ceiling $25\text{ km/h}$ ($35\text{ km/h}$ outlier filter)
      - Cycling: minimum perimeter $150\text{ m}$, minimum area $1,000\text{ m}^2$, speed ceiling $50\text{ km/h}$ ($60\text{ km/h}$ outlier filter)
      - Enforced $25.0\text{ m}^2$ minimum capture floor before XP, duel, or league credit.
+7. **Social & Duels Offline Resilience & Anti-Abuse (Resolved in Phase 4)**:
+   - Head-to-Head Duels and Squad Friends feature local offline caching via `SharedPreferences`. When network connectivity is lost, active duel challenges and progress meters display gracefully from local cache with an offline warning indicator.
+   - Anti-abuse limits (max 5 active, max 10 pending) and activity-type segregation strictly enforced across Dart client and Go backend.
 

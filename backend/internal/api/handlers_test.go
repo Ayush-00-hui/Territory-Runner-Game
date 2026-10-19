@@ -961,6 +961,57 @@ func TestDuelsEndpoints(t *testing.T) {
 	assert.Equal(t, "active", duelsAfter[0].Status)
 }
 
+func TestDuelDeclineEndpoint(t *testing.T) {
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_eve", Username: "Eve", Faction: "Shadow Syndicate"})
+
+	// Alice challenges Bob
+	duelBody, _ := json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_bob",
+		"target_type":  "area",
+		"target_value": 15000.0,
+		"xp_stake":     200,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	var duel store.Duel
+	err := json.Unmarshal(rec.Body.Bytes(), &duel)
+	require.NoError(t, err)
+
+	// Eve tries to decline -> unauthorized / 400
+	req = httptest.NewRequest(http.MethodPut, "/v1/duels/"+duel.ID+"/decline", nil)
+	req.Header.Set("X-Dev-User", "usr_eve")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	// Bob declines -> 200 OK
+	req = httptest.NewRequest(http.MethodPut, "/v1/duels/"+duel.ID+"/decline", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+	assert.Equal(t, "ok", resp["status"])
+	assert.Equal(t, "declined", resp["action"])
+
+	// Verify duel is declined in store
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	assert.Equal(t, "declined", duels[0].Status)
+}
+
 func TestFriendsAndDuelsAntiAbuseEndpoints(t *testing.T) {
 	router, memStore := setupTestServer()
 	ctx := context.Background()
