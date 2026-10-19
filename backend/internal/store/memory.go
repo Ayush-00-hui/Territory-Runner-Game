@@ -342,6 +342,7 @@ func (m *MemoryStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay float
 			decayed = 100.0
 		}
 		t.Strength = decayed
+		t.LastDefendedAt = now
 		t.UpdatedAt = now
 	}
 	return nil

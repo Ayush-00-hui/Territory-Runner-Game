@@ -453,6 +453,7 @@ func (s *PostgresStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay flo
 		UPDATE territories
 		SET
 			strength = GREATEST(0.0, LEAST(100.0, strength - (EXTRACT(EPOCH FROM (NOW() - last_defended_at)) / 86400.0 * $1))),
+			last_defended_at = NOW(),
 			updated_at = NOW();
 	`
 	_, err := s.pool.Exec(ctx, query, decayPerDay)
