@@ -170,24 +170,16 @@ func (h *Hub) Run() {
 			}
 
 		case message := <-h.broadcast:
-			h.mu.Lock()
+			h.mu.RLock()
+			clientsSnapshot := make([]*Client, 0, len(h.clients))
 			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					// Drop slow consumer without blocking others
-					h.logger.Warn("slow consumer detected during broadcast; dropping client", "user_id", client.userID)
-					close(client.send)
-					delete(h.clients, client)
-					if userMap, exists := h.userClients[client.userID]; exists {
-						delete(userMap, client)
-						if len(userMap) == 0 {
-							delete(h.userClients, client.userID)
-						}
-					}
-				}
+				clientsSnapshot = append(clientsSnapshot, client)
 			}
-			h.mu.Unlock()
+			h.mu.RUnlock()
+
+			for _, client := range clientsSnapshot {
+				h.deliverToClient(client, message)
+			}
 		}
 	}
 }
