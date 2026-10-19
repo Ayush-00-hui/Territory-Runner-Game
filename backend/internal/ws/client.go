@@ -27,7 +27,41 @@ type Client struct {
 	logger          *slog.Logger
 	subscribedCells map[string]bool
 	lastPresence    time.Time
+	closed          bool
 	mu              sync.RWMutex
+}
+
+// Close safely closes the client's outbound channel and marks the client as closed.
+func (c *Client) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.closed {
+		c.closed = true
+		close(c.send)
+	}
+}
+
+// IsClosed returns whether this client session has been marked closed.
+func (c *Client) IsClosed() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.closed
+}
+
+// TrySend attempts to push data into the client's outbound buffer.
+// Returns false if the channel is full or already closed.
+func (c *Client) TrySend(data []byte) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.closed {
+		return false
+	}
+	select {
+	case c.send <- data:
+		return true
+	default:
+		return false
+	}
 }
 
 // HasSubscribedCell checks if this client is subscribed to any of the candidate cells.

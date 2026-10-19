@@ -128,7 +128,7 @@ func (h *Hub) Run() {
 		case <-h.stop:
 			h.mu.Lock()
 			for client := range h.clients {
-				close(client.send)
+				client.Close()
 				delete(h.clients, client)
 			}
 			h.mu.Unlock()
@@ -148,7 +148,7 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			if _, ok := h.clients[client]; ok {
 				delete(h.clients, client)
-				close(client.send)
+				client.Close()
 
 				if userMap, exists := h.userClients[client.userID]; exists {
 					delete(userMap, client)
@@ -455,20 +455,16 @@ func (h *Hub) DispatchPresence(senderID, username, faction string, rawLat, rawLn
 
 // deliverToClient sends a message to a client or drops slow consumers without blocking others.
 func (h *Hub) deliverToClient(client *Client, data []byte) {
-	h.mu.RLock()
-	isActive := h.clients[client]
-	h.mu.RUnlock()
-
-	if !isActive {
+	if client.IsClosed() {
 		return
 	}
 
-	select {
-	case client.send <- data:
-	default:
-		// Slow consumer: client's outbound channel is full. Drop client without blocking others.
-		h.logger.Warn("slow consumer detected; dropping client", "user_id", client.userID)
-		h.dropSlowClient(client)
+	if !client.TrySend(data) {
+		if !client.IsClosed() {
+			// Slow consumer: client's outbound channel is full. Drop client without blocking others.
+			h.logger.Warn("slow consumer detected; dropping client", "user_id", client.userID)
+			h.dropSlowClient(client)
+		}
 	}
 }
 
@@ -479,8 +475,7 @@ func (h *Hub) dropSlowClient(client *Client) {
 
 	if _, ok := h.clients[client]; ok {
 		delete(h.clients, client)
-		close(client.send)
-		_ = client.conn.Close()
+		client.Close()
 
 		if userMap, exists := h.userClients[client.userID]; exists {
 			delete(userMap, client)
