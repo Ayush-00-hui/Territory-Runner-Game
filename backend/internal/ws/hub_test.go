@@ -336,7 +336,9 @@ func TestWebSocket_RateLimit(t *testing.T) {
 }
 
 func TestWebSocket_SlowClientDropped(t *testing.T) {
-	hub, _, wsURL := setupTestHub(t)
+	// Configure test hub with a tiny outbound buffer (2 slots) so saturation is fast, deterministic,
+	// and independent of host OS kernel TCP loopback buffer sizes.
+	hub, _, wsURL := setupTestHub(t, ws.WithOutboundBufferSize(2))
 
 	hub.UpdateUserVisibility("runner_alpha", "nearby")
 
@@ -361,12 +363,11 @@ func TestWebSocket_SlowClientDropped(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	assert.Equal(t, 2, hub.ActiveClientCount())
 
-	// Target slow client with rapid, non-trivial messages to saturate its 128-slot outbound buffer.
-	// Since slow client never drains, its socket buffer and channel will fill,
-	// causing it to be dropped as a slow consumer while responsive client Alpha remains connected.
-	floodMsg := map[string]string{"type": "flood", "payload": strings.Repeat("X", 4096)}
-	for i := 0; i < 300; i++ {
-		hub.SendToUser("runner_slow", floodMsg)
+	// Target slow client with rapid messages to saturate its 2-slot outbound buffer.
+	// Since slow client never drains, it must be dropped as a slow consumer,
+	// while responsive client Alpha remains connected and unblocked.
+	for i := 0; i < 50; i++ {
+		hub.SendToUser("runner_slow", map[string]string{"type": "flood"})
 	}
 
 	// Slow client should have been dropped, responsive client Alpha remains connected

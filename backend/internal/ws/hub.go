@@ -58,6 +58,15 @@ func WithMaxConnsPerUser(max int) Option {
 	}
 }
 
+// WithOutboundBufferSize sets the per-client outbound channel buffer size.
+func WithOutboundBufferSize(size int) Option {
+	return func(h *Hub) {
+		if size > 0 {
+			h.outboundBufferSize = size
+		}
+	}
+}
+
 // Hub manages active WebSocket runner connections and fans out targeted real-time updates.
 type Hub struct {
 	clients          map[*Client]bool
@@ -75,6 +84,7 @@ type Hub struct {
 	store            store.Store
 	presenceDelay    time.Duration
 	maxConnsPerUser  int
+	outboundBufferSize int
 }
 
 // NewHub initializes a new real-time WebSocket hub.
@@ -95,6 +105,7 @@ func NewHub(logger *slog.Logger, opts ...Option) *Hub {
 		stop:             make(chan struct{}),
 		presenceDelay:    5 * time.Second, // Default 5s privacy delay
 		maxConnsPerUser:  3,               // Max 3 connections per user
+		outboundBufferSize: 128,           // Default 128-slot outbound buffer per client
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -469,6 +480,7 @@ func (h *Hub) dropSlowClient(client *Client) {
 	if _, ok := h.clients[client]; ok {
 		delete(h.clients, client)
 		close(client.send)
+		_ = client.conn.Close()
 
 		if userMap, exists := h.userClients[client.userID]; exists {
 			delete(userMap, client)
@@ -510,10 +522,15 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request, userID, username, 
 		return
 	}
 
+	bufSize := h.outboundBufferSize
+	if bufSize <= 0 {
+		bufSize = 128
+	}
+
 	client := &Client{
 		hub:             h,
 		conn:            conn,
-		send:            make(chan []byte, 128),
+		send:            make(chan []byte, bufSize),
 		userID:          userID,
 		username:        username,
 		faction:         faction,
