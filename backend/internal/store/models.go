@@ -1,6 +1,20 @@
 package store
 
-import "time"
+import (
+	"math"
+	"time"
+)
+
+const (
+	// TerritoryDefaultStrength is the base strength of freshly captured or defended land.
+	TerritoryDefaultStrength = 100.0
+	// TerritoryDecayPerDay is the lazy decay rate: 15.0 strength lost per 24 hours.
+	TerritoryDecayPerDay = 15.0
+	// TerritoryWeakThreshold is the strength floor below which territory is vulnerable and yields 1.5x XP.
+	TerritoryWeakThreshold = 30.0
+	// MinCaptureFloorSqm is the minimum new area floor (25 m²) required before awarding XP, league, or duel credit.
+	MinCaptureFloorSqm = 25.0
+)
 
 // User represents a player profile in the database.
 type User struct {
@@ -26,6 +40,40 @@ type Territory struct {
 	Strength       float64   `json:"strength"`
 	LastDefendedAt time.Time `json:"last_defended_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// CalculateEffectiveStrength computes real-time dynamic strength factoring in elapsed days since last defense.
+// Formula: max(0.0, stored_strength - 15.0 * days_since_last_defended).
+func CalculateEffectiveStrength(storedStrength float64, lastDefendedAt time.Time, now time.Time) float64 {
+	if lastDefendedAt.IsZero() {
+		return math.Max(0.0, math.Min(100.0, storedStrength))
+	}
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	diff := now.Sub(lastDefendedAt)
+	if diff < 0 {
+		return math.Max(0.0, math.Min(100.0, storedStrength))
+	}
+	days := diff.Hours() / 24.0
+	decayed := storedStrength - (days * TerritoryDecayPerDay)
+	if decayed < 0.0 {
+		return 0.0
+	}
+	if decayed > 100.0 {
+		return 100.0
+	}
+	return decayed
+}
+
+// EffectiveStrength returns the real-time decayed strength of the territory at the specified timestamp.
+func (t *Territory) EffectiveStrength(now time.Time) float64 {
+	return CalculateEffectiveStrength(t.Strength, t.LastDefendedAt, now)
+}
+
+// IsWeak returns true if dynamic strength has fallen below the weak fortification threshold (30.0).
+func (t *Territory) IsWeak(now time.Time) bool {
+	return t.EffectiveStrength(now) < TerritoryWeakThreshold
 }
 
 // Run records a runner's GPS session and capture result.

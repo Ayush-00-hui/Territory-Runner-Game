@@ -19,7 +19,10 @@ This document is the definitive technical examination guide for **Territory Runn
 ## 1. Distributed Systems & Concurrency Control
 
 ### Q1.1: Why use PostgreSQL transaction-scoped advisory locks (`pg_advisory_xact_lock`) instead of Optimistic Concurrency Control (OCC) or an external coordinator like Redis Redlock?
-**Defense:**
+**Examiner Defense Rationale (2-3 lines):**
+`pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` strictly serializes PostGIS spatial mutations (`ST_Union`, `ST_Difference`) inside PostgreSQL, eliminating spatial race conditions and deadlocks without the split-brain risks or operational overhead of external coordinators like Redis Redlock. Being transaction-scoped, PostgreSQL automatically releases the lock upon `COMMIT` or `ROLLBACK`, eliminating orphaned lock leaks.
+
+**Deep Defense:**
 - **Why NOT Optimistic Concurrency Control (OCC / Version Numbers)?**
   OCC assumes conflicting writes are rare. In physical territory conquest, multiple runners actively compete to carve the same contested city park or block. In OCC, when Runner B attempts to carve Runner A's polygon while Runner A is updating it, Runner B's transaction detects a version conflict and aborts. In high-density running zones, OCC leads to cascading rollbacks, high retry latency, and wasted computational overhead executing expensive PostGIS difference operations that get discarded.
 - **Why NOT Redis Redlock?**
@@ -92,6 +95,12 @@ This document is the definitive technical examination guide for **Territory Runn
 
 ---
 
+### Q2.4: Why use a Lazy Territory Decay rule calculated on read instead of a background cron daemon or worker pool?
+**Examiner Defense Rationale (2-3 lines):**
+Decaying territory strength lazily on read (`strength = max(0, 100.0 - 15.0 * dt_days)`) eliminates wasteful scheduled cron sweeps over millions of inactive geometric rows. Active defending runners reset `strength = 100.0` and `last_defended_at = now` on write, guaranteeing $O(1)$ query evaluation and zero background database I/O amplification.
+
+---
+
 ## 3. Mobile Lifecycle, Battery Longevity & Real-World GPS
 
 ### Q3.1: How does Territory Runner maintain continuous background GPS tracking without being terminated by Android Doze mode or iOS background limits?
@@ -121,7 +130,13 @@ This document is the definitive technical examination guide for **Territory Runn
 
 ---
 
-### Q3.3: How do you handle GPS signal dropout in tunnels or urban canyons?
+### Q3.3: Why enforce a Zero-Interpolation GPS gap policy (segment and reset on $\Delta t > 15\text{s}$) instead of linear or Kalman dead-reckoning across signal dropouts?
+**Examiner Defense Rationale (2-3 lines):**
+Signal dropouts exceeding 15 seconds segment the track buffer rather than interpolating across unknown terrain. Dead-reckoning through urban canyons or tunnels risks hallucinating paths through impassable buildings or private property; resetting ensures every captured polygon represents physically verified athlete movement.
+
+---
+
+### Q3.4: How do you handle GPS signal dropout in tunnels or urban canyons?
 **Defense:**
 - In urban environments, tall buildings and tunnels cause GPS multipath reflections, signal scattering, or total dropout.
 - **Signal Gap Mitigation & Jump Suppression (`GpsQualityService` & `MapScreen`):**
@@ -243,20 +258,24 @@ This document is the definitive technical examination guide for **Territory Runn
 
 ---
 
-## 8. Known Technical Limitations
+## 8. Known Technical Limitations & Phase 3 Resolutions
 
 1. **Global Territory Mutation Lock**:
-   - `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` in `backend/internal/store/postgres.go` serializes all run territory mutations worldwide into a single queue. While eliminating spatial race conditions, it represents a known vertical scaling ceiling under high global concurrent write throughput.
-2. **Territory Strength Decay Scheduling**:
-   - `ApplyTerritoryDecay` is implemented in the `Store` interface, `PostgresStore`, and `MemoryStore`, but is currently triggered only via unit tests (`postgres_test.go`). It is not yet scheduled by an in-process cron or background worker in `backend/cmd/server/main.go`.
+   - `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))` in `backend/internal/store/postgres.go` serializes all run territory mutations worldwide into a single queue. While eliminating spatial race conditions and Deadlocks, it represents a known vertical scaling ceiling under high global concurrent write throughput.
+2. **Territory Strength Decay (Resolved in Phase 3)**:
+   - Territory strength decay is now evaluated lazily on read (`EffectiveStrength(now) = max(0, 100.0 - 15.0 * dt_days)`) across both `PostgresStore` and `MemoryStore`. This provides continuous $15\text{ points/day}$ decay without requiring scheduled background cron daemons or periodic worker sweeps.
 3. **Live Presence Distribution & Single-Node Scaling Ceiling**:
    - The Go WebSocket hub (`backend/internal/ws/hub.go`) is an in-memory, single-node distribution hub. All connected clients reside in `h.clients` with $O(N)$ fanout per broadcast on a single goroutine.
    - While memory footprint is lightweight ($\sim 8\text{ MB}$ per 1,000 clients), network broadcast serialization and egress bandwidth ($400,000\text{ packets/s}$ at 1,000 runners broadcasting at 2.5s intervals) impose a vertical ceiling.
-   - Client-side mitigations (Phase 3) suppress coordinates inside active privacy zones before transmission, enforce minimum 2.5s broadcast intervals, and deduplicate stationary jitter (< 3m, < 0.5 m/s). Horizontal scaling beyond a single instance will require spatial partitioning (e.g. Redis Pub/Sub channels keyed by S2/H3 cells or Geohashes).
-4. **Tile Server Usage Policy Compliance**:
-   - Resolved in Phase 2: Offline prefetch is gated behind `--dart-define=ALLOW_TILE_PREFETCH=false` by default to adhere to OpenStreetMap usage policies. Configurable tile endpoints (`MAP_TILE_URL`), custom User-Agent, and 7-day retention with HTTP `If-Modified-Since` revalidation prevent policy violations.
-5. **No Signal Gap Dead-Reckoning**:
-   - The engine does not perform linear dead-reckoning or Kalman dead-reckoning across signal dropouts. Coordinates received after a gap are processed directly without synthetic interpolation.
-6. **Universal Enclosure Floor Without Modality Discrimination**:
-   - While kinematics speed ceilings are segregated by sport (walking: 10 instant / 15 outlier km/h; running: 25 instant / 35 outlier km/h; cycling: 50 instant / 60 outlier km/h), the minimum loop perimeter remains universally set at 40 meters across all activities. Per-activity minimum area floors (e.g. 100/400/2500 m²) are deliberately not enforced in code (`polygon_enclosure_engine.dart` and `engine.go`) to ensure any genuine topological enclosure $\ge 40\text{m}$ can be claimed.
+   - Client-side mitigations suppress coordinates inside active privacy zones before transmission, enforce minimum 2.5s broadcast intervals, and deduplicate stationary jitter (< 3m, < 0.5 m/s). Horizontal scaling beyond a single instance will require spatial partitioning (e.g. Redis Pub/Sub channels keyed by S2/H3 cells or Geohashes).
+4. **Tile Server Usage Policy Compliance (Resolved in Phase 2)**:
+   - Offline prefetch is gated behind `--dart-define=ALLOW_TILE_PREFETCH=false` by default to adhere to OpenStreetMap usage policies. Configurable tile endpoints (`MAP_TILE_URL`), custom User-Agent, and 7-day retention with HTTP `If-Modified-Since` revalidation prevent policy violations.
+5. **GPS Signal Gap Policy (Resolved in Phase 3)**:
+   - The engine enforces a strict zero-interpolation policy across signal dropouts: gaps $> 15.0\text{ s}$ immediately segment the active track buffer and reject loop closure across the dropout (`ErrSignalGapDetected`), preventing hallucinated territory enclosures across GPS dropouts.
+6. **Modality-Calibrated Enclosure Thresholds (Resolved in Phase 3)**:
+   - Full 1:1 parity between Dart and Go engines for activity-specific geometric thresholds:
+     - Walking: minimum perimeter $40\text{ m}$, minimum area $100\text{ m}^2$, speed ceiling $10\text{ km/h}$ ($15\text{ km/h}$ outlier filter)
+     - Running: minimum perimeter $60\text{ m}$, minimum area $200\text{ m}^2$, speed ceiling $25\text{ km/h}$ ($35\text{ km/h}$ outlier filter)
+     - Cycling: minimum perimeter $150\text{ m}$, minimum area $1,000\text{ m}^2$, speed ceiling $50\text{ km/h}$ ($60\text{ km/h}$ outlier filter)
+     - Enforced $25.0\text{ m}^2$ minimum capture floor before XP, duel, or league credit.
 

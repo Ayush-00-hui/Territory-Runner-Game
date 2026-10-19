@@ -12,11 +12,15 @@ var (
 	// ErrLoopSelfIntersecting is returned when a loop crosses itself.
 	ErrLoopSelfIntersecting = errors.New("Loop crossed itself — try again")
 	// ErrLoopPerimeterTooSmall is returned when a closed loop perimeter is below threshold.
-	ErrLoopPerimeterTooSmall = errors.New("Loop perimeter below minimum threshold (40.0m)")
+	ErrLoopPerimeterTooSmall = errors.New("Loop perimeter below minimum threshold")
+	// ErrLoopAreaTooSmall is returned when a closed loop area is below minimum threshold.
+	ErrLoopAreaTooSmall = errors.New("Loop area below minimum threshold")
 	// ErrLoopTooFewPoints is returned when candidate path has fewer than minimum vertices.
 	ErrLoopTooFewPoints = errors.New("Loop vertices below minimum threshold (4 points)")
 	// ErrLoopAreaTooLarge is returned when a loop exceeds maximum single human capture area.
 	ErrLoopAreaTooLarge = errors.New("Loop area exceeds maximum allowable single run threshold (5000000 m²)")
+	// ErrSignalGapDetected is returned when a GPS signal gap exceeds the maximum allowed time.
+	ErrSignalGapDetected = errors.New("GPS signal interrupted (>15s gap) — path reset to prevent inaccurate enclosure")
 )
 
 // Config encapsulates the geometric constraints of the enclosure engine.
@@ -24,37 +28,72 @@ type Config struct {
 	MinClosureDistanceMeters    float64
 	MinPointsRequired           int
 	MinLoopDistanceMeters       float64
+	MinLoopAreaSqM              float64
 	MaxLoopAreaSqM              float64
 	MinStationaryDistanceMeters float64
 	MaxSpeedKmhOutlier          float64
+	MaxSignalGapSeconds         float64
+	ActivityName                string
 }
 
-// DefaultConfig returns the calibrated threshold parameters matching the Flutter client.
+// DefaultConfig returns the calibrated threshold parameters matching the Flutter client for running.
 func DefaultConfig() Config {
 	return Config{
 		MinClosureDistanceMeters:    35.0,
 		MinPointsRequired:           4,
-		MinLoopDistanceMeters:       40.0,
+		MinLoopDistanceMeters:       60.0,
+		MinLoopAreaSqM:              200.0,
 		MaxLoopAreaSqM:              5000000.0,
 		MinStationaryDistanceMeters: 1.8,
 		MaxSpeedKmhOutlier:          35.0,
+		MaxSignalGapSeconds:         15.0,
+		ActivityName:                "running",
 	}
 }
 
 // ConfigForActivity returns kinematics thresholds calibrated specifically to the exercise modality.
 func ConfigForActivity(activity string) Config {
-	cfg := DefaultConfig()
-	switch strings.ToLower(strings.TrimSpace(activity)) {
+	act := strings.ToLower(strings.TrimSpace(activity))
+	switch act {
 	case "walking":
-		cfg.MaxSpeedKmhOutlier = 15.0
+		return Config{
+			MinClosureDistanceMeters:    35.0,
+			MinPointsRequired:           4,
+			MinLoopDistanceMeters:       40.0,
+			MinLoopAreaSqM:              100.0,
+			MaxLoopAreaSqM:              5000000.0,
+			MinStationaryDistanceMeters: 1.8,
+			MaxSpeedKmhOutlier:          15.0,
+			MaxSignalGapSeconds:         15.0,
+			ActivityName:                "walking",
+		}
 	case "cycling":
-		cfg.MaxSpeedKmhOutlier = 60.0
+		return Config{
+			MinClosureDistanceMeters:    35.0,
+			MinPointsRequired:           4,
+			MinLoopDistanceMeters:       150.0,
+			MinLoopAreaSqM:              1000.0,
+			MaxLoopAreaSqM:              5000000.0,
+			MinStationaryDistanceMeters: 1.8,
+			MaxSpeedKmhOutlier:          60.0,
+			MaxSignalGapSeconds:         15.0,
+			ActivityName:                "cycling",
+		}
 	case "running":
 		fallthrough
 	default:
-		cfg.MaxSpeedKmhOutlier = 35.0
+		return Config{
+			MinClosureDistanceMeters:    35.0,
+			MinPointsRequired:           4,
+			MinLoopDistanceMeters:       60.0,
+			MinLoopAreaSqM:              200.0,
+			MaxLoopAreaSqM:              5000000.0,
+			MinStationaryDistanceMeters: 1.8,
+			MaxSpeedKmhOutlier:          35.0,
+			MaxSignalGapSeconds:         15.0,
+			ActivityName:                "running",
+		}
 	}
-	return cfg
 }
 
 // Engine implements server-side GPS breadcrumb tracking and sovereign loop enclosure.
@@ -100,6 +139,20 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 	now := tp.Timestamp
 	if now.IsZero() {
 		now = time.Now().UTC()
+	}
+
+	// 0. GPS Signal Gap Guard: Gaps > MaxSignalGapSeconds (15s) segment the track.
+	// No interpolation across dropouts: reset buffer so no loop closes across the broken gap.
+	if e.cfg.MaxSignalGapSeconds > 0 && len(e.timestamps) > 0 {
+		gapSec := math.Abs(now.Sub(e.timestamps[len(e.timestamps)-1]).Seconds())
+		if gapSec > e.cfg.MaxSignalGapSeconds {
+			e.lastInvalidErr = ErrSignalGapDetected
+			e.path = []LatLng{pos}
+			e.timestamps = []time.Time{now}
+			e.lastReceivedPos = &pos
+			e.lastReceivedTime = &now
+			return nil, nil
+		}
 	}
 
 	// 1. Discard satellite multipath outlier jumps against immediately preceding sample
@@ -291,6 +344,9 @@ func (e *Engine) ValidateLoop(points []LatLng, closedAt time.Time) (*EnclosedLoo
 	}
 
 	areaSqM := ComputeGeodesicShoelaceArea(points)
+	if e.cfg.MinLoopAreaSqM > 0 && areaSqM < e.cfg.MinLoopAreaSqM {
+		return nil, fmt.Errorf("%w: %.1f m² < %.1f m²", ErrLoopAreaTooSmall, areaSqM, e.cfg.MinLoopAreaSqM)
+	}
 	if areaSqM > e.cfg.MaxLoopAreaSqM {
 		return nil, fmt.Errorf("%w: %.1f m² > %.1f m²", ErrLoopAreaTooLarge, areaSqM, e.cfg.MaxLoopAreaSqM)
 	}

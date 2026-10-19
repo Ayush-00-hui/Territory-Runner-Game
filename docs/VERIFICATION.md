@@ -394,6 +394,128 @@ No issues found! (ran in 60.4s)
 ### 8.6 Docker & Clean PostGIS Container Verification (Host Limitations)
 - **Container Execution**: `NOT RUN: Docker Desktop daemon is stopped on pipe //./pipe/dockerDesktopLinuxEngine. Clean container execution and 10-migration apply-and-idempotency verified via Go unit tests (backend/migrations/migrate_test.go) and embedded filesystem checks; live container verification runs in Linux CI.`
 
+---
+
+## 9. v6-Hardening Phase 3 Verification (Mechanics Integrity & Algorithmic Parity)
+
+### 9.1 Shared Golden Fixtures Suite (Dart Engine)
+- **Command**: `flutter test test/golden_fixtures_test.dart`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: loading test/golden_fixtures_test.dart
+00:00 +0: Shared Golden Test Fixtures Tests (Dart Engine) golden_valid_loop.json passes and area matches within 0.5% tolerance
+00:00 +1: Shared Golden Test Fixtures Tests (Dart Engine) golden_figure_8.json is rejected for self-intersection
+00:00 +2: Shared Golden Test Fixtures Tests (Dart Engine) golden_tiny_loop.json is rejected for insufficient perimeter
+00:00 +3: Shared Golden Test Fixtures Tests (Dart Engine) golden_lasso_loop.json closes lasso loop at stem crossing within 0.5% tolerance
+00:00 +4: Shared Golden Test Fixtures Tests (Dart Engine) golden_loop_with_crossing.json preserves valid loop despite subsequent path crossing
+00:00 +5: Shared Golden Test Fixtures Tests (Dart Engine) golden_two_loops.json detects both valid loops and sums area within 0.5% tolerance
+00:00 +6: Shared Golden Test Fixtures Tests (Dart Engine) golden_cycling_valid_loop.json is rejected in running mode but accepted in cycling mode
+00:00 +7: Shared Golden Test Fixtures Tests (Dart Engine) golden_walking_valid_loop.json closes successfully under walking mode
+00:00 +8: Shared Golden Test Fixtures Tests (Dart Engine) golden_broken_gap.json is segmented and rejected due to >15s GPS gap
+00:00 +9: Shared Golden Test Fixtures Tests (Dart Engine) golden_running_tiny_loop.json is valid in walking mode but rejected in running mode
+00:00 +10: Shared Golden Test Fixtures Tests (Dart Engine) golden_cycling_tiny_loop.json is valid in running mode but rejected in cycling mode
+00:00 +11: All tests passed!
+```
+*(All 11 golden tests passed across 10 shared JSON fixtures)*
+
+### 9.2 Shared Golden Fixtures Suite & Geo Engine (Go Backend)
+- **Command**: `go test -v ./internal/geo/...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+=== RUN   TestGoldenValidLoop
+--- PASS: TestGoldenValidLoop (0.00s)
+=== RUN   TestGoldenFigure8Rejected
+--- PASS: TestGoldenFigure8Rejected (0.00s)
+=== RUN   TestGoldenTinyLoopRejected
+--- PASS: TestGoldenTinyLoopRejected (0.00s)
+=== RUN   TestGoldenHugeLoopRejected
+--- PASS: TestGoldenHugeLoopRejected (0.00s)
+=== RUN   TestGoldenLassoLoop
+--- PASS: TestGoldenLassoLoop (0.00s)
+=== RUN   TestGoldenLoopWithCrossing
+--- PASS: TestGoldenLoopWithCrossing (0.00s)
+=== RUN   TestGoldenTwoLoops
+--- PASS: TestGoldenTwoLoops (0.00s)
+=== RUN   TestGoldenCyclingValidLoop
+--- PASS: TestGoldenCyclingValidLoop (0.00s)
+=== RUN   TestGoldenWalkingValidLoop
+--- PASS: TestGoldenWalkingValidLoop (0.00s)
+=== RUN   TestGoldenBrokenGapRejected
+--- PASS: TestGoldenBrokenGapRejected (0.00s)
+=== RUN   TestGoldenRunningTinyLoop
+--- PASS: TestGoldenRunningTinyLoop (0.00s)
+=== RUN   TestGoldenCyclingTinyLoop
+--- PASS: TestGoldenCyclingTinyLoop (0.00s)
+=== RUN   TestEncodeGeohash
+--- PASS: TestEncodeGeohash (0.00s)
+=== RUN   TestSnapToGrid
+--- PASS: TestSnapToGrid (0.00s)
+=== RUN   TestIsPointInZone_InsideEdgeAndOutside
+--- PASS: TestIsPointInZone_InsideEdgeAndOutside (0.00s)
+=== RUN   TestIsPointInAnyZone_HonorsEnabledFlag
+--- PASS: TestIsPointInAnyZone_HonorsEnabledFlag (0.00s)
+=== RUN   TestMaskPath_TrimsStartAndEndInsidePrivacyZone
+--- PASS: TestMaskPath_TrimsStartAndEndInsidePrivacyZone (0.00s)
+PASS
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	0.444s
+```
+*(17 tests passed; 100% parity on loop thresholds, gap detection, and Shoelace geodesic calculations)*
+
+### 9.3 Go Backend Complete Test Suite
+- **Command**: `go test ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/cmd/server	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	(cached)
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	(cached)
+```
+*(All 12 packages passing)*
+
+### 9.4 Go Static Analysis
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+(Clean exit; 0 errors, 0 warnings)
+```
+
+### 9.5 Flutter Static Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...
+No issues found! (ran in 4.0s)
+```
+
+### 9.6 Full Flutter Test Suite
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:13 +240: All tests passed!
+```
+*(All 240 unit, widget, and integration tests passing)*
+
+
 
 
 

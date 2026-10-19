@@ -64,10 +64,10 @@ func TestE2EFullRunLifecycle(t *testing.T) {
 		DistanceMeters:  800.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(0 * time.Second), Speed: 2.7},
-			{Latitude: 51.5020, Longitude: -0.1200, Timestamp: now.Add(60 * time.Second), Speed: 2.8},
-			{Latitude: 51.5020, Longitude: -0.1220, Timestamp: now.Add(120 * time.Second), Speed: 2.7},
-			{Latitude: 51.5000, Longitude: -0.1220, Timestamp: now.Add(180 * time.Second), Speed: 2.8},
-			{Latitude: 51.50005, Longitude: -0.12005, Timestamp: now.Add(240 * time.Second), Speed: 2.6},
+			{Latitude: 51.5020, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second), Speed: 2.8},
+			{Latitude: 51.5020, Longitude: -0.1220, Timestamp: now.Add(20 * time.Second), Speed: 2.7},
+			{Latitude: 51.5000, Longitude: -0.1220, Timestamp: now.Add(30 * time.Second), Speed: 2.8},
+			{Latitude: 51.50005, Longitude: -0.12005, Timestamp: now.Add(40 * time.Second), Speed: 2.6},
 		},
 	}
 	body, _ := json.Marshal(rivalPayload)
@@ -91,11 +91,11 @@ func TestE2EFullRunLifecycle(t *testing.T) {
 		DurationSeconds: 320,
 		DistanceMeters:  850.0,
 		Points: []geo.TrackPoint{
-			{Latitude: 51.5010, Longitude: -0.1210, Timestamp: now.Add(350 * time.Second), Speed: 2.8},
-			{Latitude: 51.5030, Longitude: -0.1210, Timestamp: now.Add(410 * time.Second), Speed: 2.9},
-			{Latitude: 51.5030, Longitude: -0.1230, Timestamp: now.Add(470 * time.Second), Speed: 2.7},
-			{Latitude: 51.5010, Longitude: -0.1230, Timestamp: now.Add(530 * time.Second), Speed: 2.8},
-			{Latitude: 51.50105, Longitude: -0.12105, Timestamp: now.Add(590 * time.Second), Speed: 2.6},
+			{Latitude: 51.5010, Longitude: -0.1210, Timestamp: now.Add(50 * time.Second), Speed: 2.8},
+			{Latitude: 51.5030, Longitude: -0.1210, Timestamp: now.Add(60 * time.Second), Speed: 2.9},
+			{Latitude: 51.5030, Longitude: -0.1230, Timestamp: now.Add(70 * time.Second), Speed: 2.7},
+			{Latitude: 51.5010, Longitude: -0.1230, Timestamp: now.Add(80 * time.Second), Speed: 2.8},
+			{Latitude: 51.50105, Longitude: -0.12105, Timestamp: now.Add(90 * time.Second), Speed: 2.6},
 		},
 	}
 	body, _ = json.Marshal(runnerPayload)

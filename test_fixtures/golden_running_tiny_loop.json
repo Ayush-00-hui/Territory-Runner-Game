@@ -1,0 +1,19 @@
+{
+  "name": "golden_running_tiny_loop",
+  "description": "Small 12m x 12m loop (perimeter ~48m, area ~144 m²). Valid under walking mode (min 40m / 100 m²), but rejected under running mode (min 60m / 200 m²)",
+  "activity_type": "running",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 60.0,
+  "min_loop_area_sqm": 200.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": false,
+  "expected_rejection_reason": "Loop perimeter below minimum threshold",
+  "points": [
+    { "latitude": 51.500000, "longitude": -0.120000, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.500108, "longitude": -0.120000, "timestamp": "2026-10-13T10:00:10Z" },
+    { "latitude": 51.500108, "longitude": -0.120173, "timestamp": "2026-10-13T10:00:20Z" },
+    { "latitude": 51.500000, "longitude": -0.120173, "timestamp": "2026-10-13T10:00:30Z" },
+    { "latitude": 51.500005, "longitude": -0.120005, "timestamp": "2026-10-13T10:00:40Z" }
+  ]
+}

@@ -317,3 +317,80 @@ func TestGoldenWalkingValidLoop(t *testing.T) {
 	diffPercent := (delta / expected) * 100.0
 	assert.LessOrEqual(t, diffPercent, fixture.AreaTolerancePercent)
 }
+
+func TestGoldenBrokenGapRejected(t *testing.T) {
+	fixture := loadFixture(t, "golden_broken_gap.json")
+	require.False(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	engine := geo.NewEngine()
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, geo.ErrSignalGapDetected)
+	assert.Empty(t, loops, "Track with >15s gap must produce 0 valid loops")
+}
+
+func TestGoldenRunningTinyLoop(t *testing.T) {
+	fixture := loadFixture(t, "golden_running_tiny_loop.json")
+	require.False(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	// 1. Under walking mode (min perimeter 40m, min area 100 m²): ACCEPTED
+	walkingEngine := geo.NewEngine(geo.ConfigForActivity("walking"))
+	walkingLoops, err := walkingEngine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, walkingLoops, 1, "Tiny loop (~48m, ~144 m²) is valid under walking mode")
+
+	// 2. Under running mode (min perimeter 60m, min area 200 m²): REJECTED
+	runningEngine := geo.NewEngine(geo.ConfigForActivity("running"))
+	runningLoops, err := runningEngine.ProcessTrack(trackPoints)
+	assert.Empty(t, runningLoops, "Tiny loop below 60m/200 m² must be rejected under running mode")
+	if err != nil {
+		assert.Contains(t, err.Error(), fixture.ExpectedRejectionReason)
+	}
+}
+
+func TestGoldenCyclingTinyLoop(t *testing.T) {
+	fixture := loadFixture(t, "golden_cycling_tiny_loop.json")
+	require.False(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	// 1. Under running mode (min perimeter 60m, min area 200 m²): ACCEPTED
+	runningEngine := geo.NewEngine(geo.ConfigForActivity("running"))
+	runningLoops, err := runningEngine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, runningLoops, 1, "Loop (~100m, ~625 m²) is valid under running mode")
+
+	// 2. Under cycling mode (min perimeter 150m, min area 1000 m²): REJECTED
+	cyclingEngine := geo.NewEngine(geo.ConfigForActivity("cycling"))
+	cyclingLoops, err := cyclingEngine.ProcessTrack(trackPoints)
+	assert.Empty(t, cyclingLoops, "Loop below 150m/1000 m² must be rejected under cycling mode")
+	if err != nil {
+		assert.Contains(t, err.Error(), fixture.ExpectedRejectionReason)
+	}
+}
+

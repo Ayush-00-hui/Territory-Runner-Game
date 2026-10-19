@@ -6,7 +6,7 @@
   "min_loop_distance_meters": 40.0,
   "max_loop_area_sqm": 5000000.0,
   "is_valid": false,
-  "expected_rejection_reason": "Loop perimeter below minimum threshold (40.0m)",
+  "expected_rejection_reason": "Loop perimeter below minimum threshold",
   "points": [
     { "latitude": 51.50000, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:00Z" },
     { "latitude": 51.50004, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:10Z" },

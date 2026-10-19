@@ -1,0 +1,19 @@
+{
+  "name": "golden_cycling_tiny_loop",
+  "description": "Medium 25m x 25m loop (perimeter ~100m, area ~625 m²). Valid under running mode (min 60m / 200 m²), but rejected under cycling mode (min 150m / 1000 m²)",
+  "activity_type": "cycling",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 150.0,
+  "min_loop_area_sqm": 1000.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": false,
+  "expected_rejection_reason": "Loop perimeter below minimum threshold",
+  "points": [
+    { "latitude": 51.500000, "longitude": -0.120000, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.500225, "longitude": -0.120000, "timestamp": "2026-10-13T10:00:10Z" },
+    { "latitude": 51.500225, "longitude": -0.120360, "timestamp": "2026-10-13T10:00:20Z" },
+    { "latitude": 51.500000, "longitude": -0.120360, "timestamp": "2026-10-13T10:00:30Z" },
+    { "latitude": 51.500010, "longitude": -0.120010, "timestamp": "2026-10-13T10:00:40Z" }
+  ]
+}

@@ -237,5 +237,86 @@ void main() {
       final double percentDiff = (delta / expectedArea) * 100.0;
       expect(percentDiff, lessThanOrEqualTo(tolerance));
     });
+
+    test('golden_broken_gap.json is segmented and rejected due to >15s GPS gap', () {
+      final file = File('test_fixtures/golden_broken_gap.json');
+      expect(file.existsSync(), isTrue);
+      final data = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+
+      final rawPoints = data['points'] as List<dynamic>;
+      final engine = PolygonEnclosureEngine();
+      EnclosedLoopEvent? event;
+      for (final p in rawPoints) {
+        final pt = LatLng((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble());
+        final ts = DateTime.parse(p['timestamp'] as String);
+        final ev = engine.addPosition(pt, ts);
+        if (ev != null) event = ev;
+      }
+
+      expect(event, isNull, reason: 'Track with >15s gap must not close loop across dropout');
+      expect(engine.lastInvalidReason, equals(PolygonEnclosureEngine.signalGapReason));
+    });
+
+    test('golden_running_tiny_loop.json is valid in walking mode but rejected in running mode', () {
+      final file = File('test_fixtures/golden_running_tiny_loop.json');
+      expect(file.existsSync(), isTrue);
+      final data = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+
+      final rawPoints = data['points'] as List<dynamic>;
+
+      // 1. Walking mode (min perimeter 40m, min area 100 m²): Accepted
+      final walkingEngine = PolygonEnclosureEngine(activityType: ExerciseActivityType.walking);
+      EnclosedLoopEvent? walkingEvent;
+      for (final p in rawPoints) {
+        final pt = LatLng((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble());
+        final ts = DateTime.parse(p['timestamp'] as String);
+        final ev = walkingEngine.addPosition(pt, ts);
+        if (ev != null) walkingEvent = ev;
+      }
+      expect(walkingEvent, isNotNull, reason: '48m/144m² loop is valid under walking mode');
+
+      // 2. Running mode (min perimeter 60m, min area 200 m²): Rejected
+      final runningEngine = PolygonEnclosureEngine(activityType: ExerciseActivityType.running);
+      EnclosedLoopEvent? runningEvent;
+      for (final p in rawPoints) {
+        final pt = LatLng((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble());
+        final ts = DateTime.parse(p['timestamp'] as String);
+        final ev = runningEngine.addPosition(pt, ts);
+        if (ev != null) runningEvent = ev;
+      }
+      expect(runningEvent, isNull, reason: '48m loop must be rejected under running mode (min 60m)');
+      expect(runningEngine.lastInvalidReason, equals(PolygonEnclosureEngine.loopPerimeterTooSmallReason));
+    });
+
+    test('golden_cycling_tiny_loop.json is valid in running mode but rejected in cycling mode', () {
+      final file = File('test_fixtures/golden_cycling_tiny_loop.json');
+      expect(file.existsSync(), isTrue);
+      final data = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
+
+      final rawPoints = data['points'] as List<dynamic>;
+
+      // 1. Running mode (min perimeter 60m, min area 200 m²): Accepted
+      final runningEngine = PolygonEnclosureEngine(activityType: ExerciseActivityType.running);
+      EnclosedLoopEvent? runningEvent;
+      for (final p in rawPoints) {
+        final pt = LatLng((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble());
+        final ts = DateTime.parse(p['timestamp'] as String);
+        final ev = runningEngine.addPosition(pt, ts);
+        if (ev != null) runningEvent = ev;
+      }
+      expect(runningEvent, isNotNull, reason: '100m/625m² loop is valid under running mode');
+
+      // 2. Cycling mode (min perimeter 150m, min area 1000 m²): Rejected
+      final cyclingEngine = PolygonEnclosureEngine(activityType: ExerciseActivityType.cycling);
+      EnclosedLoopEvent? cyclingEvent;
+      for (final p in rawPoints) {
+        final pt = LatLng((p['latitude'] as num).toDouble(), (p['longitude'] as num).toDouble());
+        final ts = DateTime.parse(p['timestamp'] as String);
+        final ev = cyclingEngine.addPosition(pt, ts);
+        if (ev != null) cyclingEvent = ev;
+      }
+      expect(cyclingEvent, isNull, reason: '100m loop must be rejected under cycling mode (min 150m)');
+      expect(cyclingEngine.lastInvalidReason, equals(PolygonEnclosureEngine.loopPerimeterTooSmallReason));
+    });
   });
 }

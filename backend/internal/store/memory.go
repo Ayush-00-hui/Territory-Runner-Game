@@ -104,9 +104,12 @@ func (m *MemoryStore) GetRunByIdempotencyKey(ctx context.Context, key string) (*
 func (m *MemoryStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat, maxLng, maxLat float64) ([]Territory, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	now := time.Now().UTC()
 	var res []Territory
 	for _, t := range m.territories {
-		res = append(res, *t)
+		cpy := *t
+		cpy.Strength = cpy.EffectiveStrength(now)
+		res = append(res, cpy)
 	}
 	return res, nil
 }
@@ -162,41 +165,71 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		m.users[run.UserID] = user
 	}
 
+	now := time.Now().UTC()
+	if !run.CreatedAt.IsZero() {
+		now = run.CreatedAt
+	}
+	var rivalsAffected []string
+	var weakBonusArea float64
+
 	if len(loops) > 0 {
 		var loopArea float64
 		for _, loop := range loops {
 			loopArea += loop.AreaSqMeters
 		}
 		areaClaimed = loopArea
-		xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
-		user.TotalAreaSqm += areaClaimed
-		user.XP += int64(xpAwarded)
+
+		for _, t := range m.territories {
+			if t.OwnerID != run.UserID {
+				rivalsAffected = append(rivalsAffected, t.OwnerID)
+				if t.IsWeak(now) {
+					// Rival territory was decayed (< 30.0 strength), granting 1.5x XP bonus
+					weakBonusArea += areaClaimed * 0.5
+				}
+			}
+		}
+
+		// Enforce 25 m² minimum new area floor before awarding XP, league, or duel credit
+		if areaClaimed >= MinCaptureFloorSqm {
+			effectiveXpArea := areaClaimed + weakBonusArea
+			xpAwarded = int(math.Max(100, math.Round(effectiveXpArea/20.0)))
+			user.TotalAreaSqm += areaClaimed
+			user.XP += int64(xpAwarded)
+		} else {
+			areaClaimed = 0.0
+			xpAwarded = 0
+		}
 		user.TotalRuns++
-		user.UpdatedAt = time.Now().UTC()
+		user.UpdatedAt = now
 		playerTotalArea = user.TotalAreaSqm
 
-		tID := fmt.Sprintf("poly_%s_territory", run.UserID)
-		if len(loops[0].Polygon) > 0 {
-			geojson = fmt.Sprintf(`{"type":"MultiPolygon","coordinates":[[[[%f,%f]]]]}`, loops[0].Polygon[0].Longitude, loops[0].Polygon[0].Latitude)
-		}
-		m.territories[tID] = &Territory{
-			ID:             tID,
-			OwnerID:        run.UserID,
-			Username:       user.Username,
-			GeoJSON:        geojson,
-			AreaSqm:        playerTotalArea,
-			Strength:       100.0,
-			LastDefendedAt: time.Now().UTC(),
-			UpdatedAt:      time.Now().UTC(),
+		if areaClaimed > 0 {
+			tID := fmt.Sprintf("poly_%s_territory", run.UserID)
+			if len(loops[0].Polygon) > 0 {
+				geojson = fmt.Sprintf(`{"type":"MultiPolygon","coordinates":[[[[%f,%f]]]]}`, loops[0].Polygon[0].Longitude, loops[0].Polygon[0].Latitude)
+			}
+			m.territories[tID] = &Territory{
+				ID:             tID,
+				OwnerID:        run.UserID,
+				Username:       user.Username,
+				GeoJSON:        geojson,
+				AreaSqm:        playerTotalArea,
+				Strength:       TerritoryDefaultStrength,
+				LastDefendedAt: now,
+				UpdatedAt:      now,
+			}
 		}
 	} else {
-		if areaClaimed > 0 {
+		if areaClaimed >= MinCaptureFloorSqm {
 			user.TotalAreaSqm += areaClaimed
 			xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
 			user.XP += int64(xpAwarded)
+		} else {
+			areaClaimed = 0.0
+			xpAwarded = 0
 		}
 		user.TotalRuns++
-		user.UpdatedAt = time.Now().UTC()
+		user.UpdatedAt = now
 		playerTotalArea = user.TotalAreaSqm
 	}
 
@@ -209,19 +242,10 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		runCopy.Status = "accepted"
 	}
 	if runCopy.CreatedAt.IsZero() {
-		runCopy.CreatedAt = time.Now().UTC()
+		runCopy.CreatedAt = now
 	}
 	m.runs[run.IdempotencyKey] = &runCopy
 	m.runsByOrder = append(m.runsByOrder, run.IdempotencyKey)
-
-	var rivalsAffected []string
-	if len(loops) > 0 {
-		for _, t := range m.territories {
-			if t.OwnerID != run.UserID {
-				rivalsAffected = append(rivalsAffected, t.OwnerID)
-			}
-		}
-	}
 
 	m.updateDuelProgressLocked(run.UserID, runCopy.ActivityType, areaClaimed, run.DistanceMeters)
 
@@ -349,8 +373,9 @@ func (m *MemoryStore) GetTerritoryByID(ctx context.Context, id string) (*Territo
 	if !ok {
 		return nil, nil
 	}
-	copy := *t
-	return &copy, nil
+	cpy := *t
+	cpy.Strength = cpy.EffectiveStrength(time.Now().UTC())
+	return &cpy, nil
 }
 
 // SaveDeviceToken persists or updates an FCM registration token for a user.

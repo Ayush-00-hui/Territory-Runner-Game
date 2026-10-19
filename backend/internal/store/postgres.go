@@ -149,12 +149,14 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 	}
 	defer rows.Close()
 
+	now := time.Now().UTC()
 	var list []Territory
 	for rows.Next() {
 		var t Territory
 		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
+		t.Strength = t.EffectiveStrength(now)
 		list = append(list, t)
 	}
 	return list, nil
@@ -222,6 +224,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	var areaClaimed float64
 	var xpAwarded int
 	var rivalsAffected []string
+	var weakBonusArea float64
 
 	// 3. Process spatial loop capture for all closed loops
 	for _, loop := range loops {
@@ -246,6 +249,30 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		`
 		if err := tx.QueryRow(ctx, unionQuery, territoryID, run.UserID, polyWKT).Scan(&territoryGeoJSON, &playerTotalArea); err != nil {
 			return nil, fmt.Errorf("failed to union owner territory: %w", err)
+		}
+
+		// Check for weak rivals before clipping to award 1.5x XP bonus
+		checkRivalsQuery := `
+			SELECT owner_id, COALESCE(strength, 100.0), COALESCE(last_defended_at, updated_at)
+			FROM territories
+			WHERE owner_id != $1
+			  AND ST_Intersects(geom, ST_MakeValid(ST_PolygonFromText($2, 4326)));
+		`
+		if rRows, err := tx.Query(ctx, checkRivalsQuery, run.UserID, polyWKT); err == nil {
+			now := time.Now().UTC()
+			for rRows.Next() {
+				var rOwner string
+				var rStrength float64
+				var rLastDefended time.Time
+				if rRows.Scan(&rOwner, &rStrength, &rLastDefended) == nil {
+					rivalsAffected = append(rivalsAffected, rOwner)
+					effStr := CalculateEffectiveStrength(rStrength, rLastDefended, now)
+					if effStr < TerritoryWeakThreshold {
+						weakBonusArea += loop.AreaSqMeters * 0.5
+					}
+				}
+			}
+			rRows.Close()
 		}
 
 		// B. ST_Difference against rival territories:
@@ -285,7 +312,14 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 			return nil, fmt.Errorf("failed to clean empty rival territories: %w", err)
 		}
 
-		xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
+		// Enforce 25 m² minimum new area floor before awarding XP, league, or duel credit
+		if areaClaimed >= MinCaptureFloorSqm {
+			effectiveXpArea := areaClaimed + weakBonusArea
+			xpAwarded = int(math.Max(100, math.Round(effectiveXpArea/20.0)))
+		} else {
+			areaClaimed = 0.0
+			xpAwarded = 0
+		}
 	}
 
 	// 4. Update user total area and XP
@@ -470,6 +504,7 @@ func (s *PostgresStore) GetTerritoryByID(ctx context.Context, id string) (*Terri
 	if err != nil {
 		return nil, fmt.Errorf("error querying territory by id: %w", err)
 	}
+	t.Strength = t.EffectiveStrength(time.Now().UTC())
 	return &t, nil
 }
 

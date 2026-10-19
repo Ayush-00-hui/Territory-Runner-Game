@@ -68,10 +68,10 @@ func TestSubmitRunValidLoop(t *testing.T) {
 		DistanceMeters:  450.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(40 * time.Second)},
 		},
 	}
 
@@ -104,10 +104,10 @@ func TestDuplicateIdempotencyKeyDoesNotDoubleCount(t *testing.T) {
 		DistanceMeters:  400.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(40 * time.Second)},
 		},
 	}
 
@@ -151,10 +151,10 @@ func TestSubmitRunLassoCrossingKeepsValidLoop(t *testing.T) {
 		DistanceMeters:  400.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5010, Longitude: -0.1210, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.5010, Longitude: -0.1200, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1210, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.5010, Longitude: -0.1210, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.5010, Longitude: -0.1200, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.5000, Longitude: -0.1210, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(40 * time.Second)},
 		},
 	}
 
@@ -185,10 +185,10 @@ func TestSubmitRunPureFigure8Rejected(t *testing.T) {
 		DistanceMeters:  64.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now},
-			{Latitude: 51.50016, Longitude: -0.12016, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.50016, Longitude: -0.12000, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.12016, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.50016, Longitude: -0.12016, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.50016, Longitude: -0.12000, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.12016, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now.Add(40 * time.Second)},
 		},
 	}
 
@@ -218,15 +218,15 @@ func TestSubmitRunTwoLoopsAwardXPForBoth(t *testing.T) {
 		DistanceMeters:  700.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now},
-			{Latitude: 51.50080, Longitude: -0.12000, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.50080, Longitude: -0.12120, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.12120, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.50001, Longitude: -0.12001, Timestamp: now.Add(4 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.11900, Timestamp: now.Add(5 * time.Minute)},
-			{Latitude: 51.50080, Longitude: -0.11900, Timestamp: now.Add(6 * time.Minute)},
-			{Latitude: 51.50080, Longitude: -0.11780, Timestamp: now.Add(7 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.11780, Timestamp: now.Add(8 * time.Minute)},
-			{Latitude: 51.50001, Longitude: -0.11899, Timestamp: now.Add(9 * time.Minute)},
+			{Latitude: 51.50080, Longitude: -0.12000, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.50080, Longitude: -0.12120, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.12120, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.50001, Longitude: -0.12001, Timestamp: now.Add(40 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.11900, Timestamp: now.Add(50 * time.Second)},
+			{Latitude: 51.50080, Longitude: -0.11900, Timestamp: now.Add(60 * time.Second)},
+			{Latitude: 51.50080, Longitude: -0.11780, Timestamp: now.Add(70 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.11780, Timestamp: now.Add(80 * time.Second)},
+			{Latitude: 51.50001, Longitude: -0.11899, Timestamp: now.Add(90 * time.Second)},
 		},
 	}
 
@@ -766,10 +766,10 @@ func TestConquestTriggersFCMAlert(t *testing.T) {
 		DurationSeconds: 400,
 		DistanceMeters:  2000.0,
 		Points: []geo.TrackPoint{
-			{Latitude: 51.498, Longitude: -0.122, Timestamp: now.Add(-300 * time.Second)},
-			{Latitude: 51.507, Longitude: -0.122, Timestamp: now.Add(-200 * time.Second)},
-			{Latitude: 51.507, Longitude: -0.113, Timestamp: now.Add(-100 * time.Second)},
-			{Latitude: 51.498, Longitude: -0.113, Timestamp: now.Add(-50 * time.Second)},
+			{Latitude: 51.498, Longitude: -0.122, Timestamp: now.Add(-40 * time.Second)},
+			{Latitude: 51.507, Longitude: -0.122, Timestamp: now.Add(-30 * time.Second)},
+			{Latitude: 51.507, Longitude: -0.113, Timestamp: now.Add(-20 * time.Second)},
+			{Latitude: 51.498, Longitude: -0.113, Timestamp: now.Add(-10 * time.Second)},
 			{Latitude: 51.498, Longitude: -0.122, Timestamp: now},
 		},
 	}

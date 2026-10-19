@@ -22,12 +22,12 @@ void main() {
       final engine = PolygonEnclosureEngine();
       final pts = hugeSquare();
       for (int i = 0; i < pts.length; i++) {
-        expect(engine.addPosition(pts[i], t0.add(Duration(minutes: i))), isNull);
+        expect(engine.addPosition(pts[i], t0.add(Duration(seconds: i * 10))), isNull);
       }
       // Back near the start (~15 m away) -> would close, but area is too large.
       final event = engine.addPosition(
         const LatLng(0.0001, 0.0001),
-        t0.add(const Duration(minutes: 5)),
+        t0.add(const Duration(seconds: 40)),
       );
       expect(event, isNull);
       expect(engine.lastInvalidReason, equals(PolygonEnclosureEngine.loopTooLargeReason));
@@ -37,7 +37,7 @@ void main() {
       final engine = PolygonEnclosureEngine();
       final pts = hugeSquare();
       for (int i = 0; i < pts.length; i++) {
-        engine.addPosition(pts[i], t0.add(Duration(minutes: i)));
+        engine.addPosition(pts[i], t0.add(Duration(seconds: i * 10)));
       }
       final event = engine.sealCurrentPath();
       expect(event, isNull);
@@ -49,7 +49,7 @@ void main() {
       final engine = PolygonEnclosureEngine(maxLoopAreaSqMeters: 1e9);
       final pts = hugeSquare();
       for (int i = 0; i < pts.length; i++) {
-        engine.addPosition(pts[i], t0.add(Duration(minutes: i)));
+        engine.addPosition(pts[i], t0.add(Duration(seconds: i * 10)));
       }
       final event = engine.sealCurrentPath();
       expect(event, isNotNull);

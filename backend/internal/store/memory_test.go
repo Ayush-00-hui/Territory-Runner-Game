@@ -421,4 +421,188 @@ func TestUserSettingsDefaultAndUpdates(t *testing.T) {
 	assert.Equal(t, "nearby", settings.LiveVisibility)
 }
 
+func TestCaptureRunMinimumAreaFloor25Sqm(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// 1. Loop with area 18 m² (< 25 m²): Must award 0 XP, 0 claimed area, no duel credit
+	subThresholdLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.50000, Longitude: -0.12000},
+			{Latitude: 51.50004, Longitude: -0.12000},
+			{Latitude: 51.50004, Longitude: -0.12005},
+			{Latitude: 51.50000, Longitude: -0.12005},
+			{Latitude: 51.50000, Longitude: -0.12000},
+		},
+		AreaSqMeters:       18.0,
+		LoopDistanceMeters: 18.0,
+		ClosedAt:           time.Now().UTC(),
+	}
+
+	res1, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_sub_floor",
+		UserID:         "usr_runner_1",
+		IdempotencyKey: "idem_floor_001",
+		DistanceMeters: 50.0,
+	}, []geo.EnclosedLoop{subThresholdLoop}, nil)
+	require.NoError(t, err)
+	assert.True(t, res1.LoopDetected, "Loop was geometrically detected")
+	assert.Equal(t, 0.0, res1.AreaClaimedSqm, "Area below 25 m² must not be awarded")
+	assert.Equal(t, 0, res1.XpAwarded, "XP must be 0 for sub-25 m² captures")
+
+	user1, err := memStore.GetUser(ctx, "usr_runner_1")
+	require.NoError(t, err)
+	assert.Equal(t, 0.0, user1.TotalAreaSqm)
+	assert.Equal(t, int64(0), user1.XP)
+
+	// 2. Loop with area 40 m² (>= 25 m²): Must award claimed area and XP
+	validLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.50000, Longitude: -0.12000},
+			{Latitude: 51.50007, Longitude: -0.12000},
+			{Latitude: 51.50007, Longitude: -0.12008},
+			{Latitude: 51.50000, Longitude: -0.12008},
+			{Latitude: 51.50000, Longitude: -0.12000},
+		},
+		AreaSqMeters:       40.0,
+		LoopDistanceMeters: 45.0,
+		ClosedAt:           time.Now().UTC(),
+	}
+
+	res2, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_above_floor",
+		UserID:         "usr_runner_1",
+		IdempotencyKey: "idem_floor_002",
+		DistanceMeters: 100.0,
+	}, []geo.EnclosedLoop{validLoop}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 40.0, res2.AreaClaimedSqm)
+	assert.Greater(t, res2.XpAwarded, 0)
+
+	user1After, err := memStore.GetUser(ctx, "usr_runner_1")
+	require.NoError(t, err)
+	assert.Equal(t, 40.0, user1After.TotalAreaSqm)
+	assert.Greater(t, user1After.XP, int64(0))
+}
+
+func TestLazyTerritoryDecayCalculation(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// Capture a 500 m² territory
+	now := time.Now().UTC()
+	loop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       500.0,
+		LoopDistanceMeters: 400.0,
+		ClosedAt:           now,
+	}
+
+	_, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_decay_test",
+		UserID:         "usr_decay",
+		IdempotencyKey: "idem_decay_001",
+	}, []geo.EnclosedLoop{loop}, nil)
+	require.NoError(t, err)
+
+	tID := "poly_usr_decay_territory"
+
+	// 1. Immediately after capture: strength is 100.0
+	tImmediate, err := memStore.GetTerritoryByID(ctx, tID)
+	require.NoError(t, err)
+	require.NotNil(t, tImmediate)
+	assert.Equal(t, 100.0, tImmediate.Strength)
+	assert.False(t, tImmediate.IsWeak(now))
+
+	// 2. Direct formula verification:
+	// 2 days later: 100 - (2 * 15) = 70.0
+	twoDaysLater := now.Add(48 * time.Hour)
+	assert.InDelta(t, 70.0, tImmediate.EffectiveStrength(twoDaysLater), 0.01)
+	assert.False(t, tImmediate.IsWeak(twoDaysLater))
+
+	// 5 days later: 100 - (5 * 15) = 25.0 (< 30.0 -> IsWeak == true)
+	fiveDaysLater := now.Add(5 * 24 * time.Hour)
+	assert.InDelta(t, 25.0, tImmediate.EffectiveStrength(fiveDaysLater), 0.01)
+	assert.True(t, tImmediate.IsWeak(fiveDaysLater))
+
+	// 10 days later: 100 - (10 * 15) = max(0, -50) = 0.0
+	tenDaysLater := now.Add(10 * 24 * time.Hour)
+	assert.Equal(t, 0.0, tImmediate.EffectiveStrength(tenDaysLater))
+	assert.True(t, tImmediate.IsWeak(tenDaysLater))
+}
+
+func TestWeakTerritoryCaptureBonusAndDefenseReset(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+	now := time.Now().UTC()
+
+	// 1. Setup rival user with decayed/weak territory (captured 6 days ago, strength = 10.0 < 30.0)
+	rivalLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       1000.0,
+		LoopDistanceMeters: 500.0,
+		ClosedAt:           now.Add(-6 * 24 * time.Hour),
+	}
+
+	_, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_rival_initial",
+		UserID:         "usr_rival",
+		IdempotencyKey: "idem_rival_001",
+		CreatedAt:      now.Add(-6 * 24 * time.Hour),
+	}, []geo.EnclosedLoop{rivalLoop}, nil)
+	require.NoError(t, err)
+
+	// Simulate territory age by setting LastDefendedAt to 6 days ago
+	rivalTID := "poly_usr_rival_territory"
+	rivalT, err := memStore.GetTerritoryByID(ctx, rivalTID)
+	require.NoError(t, err)
+	// Read lazily calculates strength
+	assert.True(t, rivalT.EffectiveStrength(now) < store.TerritoryWeakThreshold, "Rival territory must be weak (<30.0)")
+
+	// 2. Attacker conquers rival land: 1000 m²
+	attackerLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       1000.0,
+		LoopDistanceMeters: 500.0,
+		ClosedAt:           now,
+	}
+
+	attackerRes, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_attacker_conquer",
+		UserID:         "usr_attacker",
+		IdempotencyKey: "idem_att_001",
+		CreatedAt:      now,
+	}, []geo.EnclosedLoop{attackerLoop}, nil)
+	require.NoError(t, err)
+
+	// Normal 1000 m² gives round(1000/20) = 50 XP (or min 100 = 100).
+	// Weak rival 1.5x bonus gives round((1000*1.5)/20) = round(1500/20) = 75 XP (or min 100).
+	// For larger area, say 5000 m²: normal is 250 XP, weak 1.5x is 375 XP.
+	assert.Contains(t, attackerRes.RivalsAffected, "usr_rival")
+
+	// 3. Defending territory resets strength to 100.0 and LastDefendedAt to now
+	attackerT, err := memStore.GetTerritoryByID(ctx, "poly_usr_attacker_territory")
+	require.NoError(t, err)
+	assert.Equal(t, 100.0, attackerT.Strength, "Freshly captured/defended territory must reset to 100.0 strength")
+}
+
+
 
