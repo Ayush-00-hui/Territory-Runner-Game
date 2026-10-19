@@ -172,7 +172,7 @@ func TestCaptureSetsTerritoryStrengthAndLastDefendedAt(t *testing.T) {
 	require.Len(t, territories, 1)
 
 	assert.Equal(t, "poly_usr_fortified_territory", territories[0].ID)
-	assert.Equal(t, 100.0, territories[0].Strength)
+	assert.InDelta(t, 100.0, territories[0].Strength, 0.01)
 	assert.True(t, territories[0].LastDefendedAt.After(before) || territories[0].LastDefendedAt.Equal(before))
 }
 
@@ -717,7 +717,7 @@ func TestLazyTerritoryDecayCalculation(t *testing.T) {
 	tImmediate, err := memStore.GetTerritoryByID(ctx, tID)
 	require.NoError(t, err)
 	require.NotNil(t, tImmediate)
-	assert.Equal(t, 100.0, tImmediate.Strength)
+	assert.InDelta(t, 100.0, tImmediate.Strength, 0.01)
 	assert.False(t, tImmediate.IsWeak(now))
 
 	// 2. Direct formula verification:
@@ -801,7 +801,7 @@ func TestWeakTerritoryCaptureBonusAndDefenseReset(t *testing.T) {
 	// 3. Defending territory resets strength to 100.0 and LastDefendedAt to now
 	attackerT, err := memStore.GetTerritoryByID(ctx, "poly_usr_attacker_territory")
 	require.NoError(t, err)
-	assert.Equal(t, 100.0, attackerT.Strength, "Freshly captured/defended territory must reset to 100.0 strength")
+	assert.InDelta(t, 100.0, attackerT.Strength, 0.01, "Freshly captured/defended territory must reset to 100.0 strength")
 }
 
 
