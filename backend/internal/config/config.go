@@ -26,17 +26,19 @@ type Config struct {
 	AllowedOrigins    []string
 	MaxPointsPerRun   int
 	MaxRunDurationSec int
+	RunMigrations     bool
 }
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() (*Config, error) {
-	port := getEnv("PORT", "8085")
+	port := getEnv("PORT", "8080")
 	dbURL := getEnv("DATABASE_URL", "postgres://runner:runnerpass@localhost:5432/territory_runner?sslmode=disable")
 	authMode := getEnv("AUTH_MODE", "dev")
 	env := getEnv("ENV", "development")
 	firebaseProjectID := getEnv("FIREBASE_PROJECT_ID", "")
 	geminiKey := getEnv("GEMINI_API_KEY", "")
 	geminiModel := getEnv("GEMINI_MODEL", "gemini-2.5-flash")
+	runMigrations := strings.ToLower(getEnv("RUN_MIGRATIONS", "false")) == "true" || getEnv("RUN_MIGRATIONS", "false") == "1"
 
 	allowedOriginsStr := os.Getenv("ALLOWED_ORIGINS")
 	var allowedOrigins []string
@@ -76,6 +78,7 @@ func Load() (*Config, error) {
 		AllowedOrigins:    allowedOrigins,
 		MaxPointsPerRun:   maxPoints,
 		MaxRunDurationSec: maxDuration,
+		RunMigrations:     runMigrations,
 	}
 
 	if err := cfg.Validate(); err != nil {

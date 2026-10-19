@@ -20,6 +20,13 @@ docker-up:
 docker-down:
 	docker compose down
 
+healthcheck:
+	go run ./cmd/server healthcheck
+
+smoke-test:
+	powershell -ExecutionPolicy Bypass -File ../scripts/smoke_test.ps1 -BaseUrl http://localhost:8080
+
 clean:
 	rm -rf bin/
+
 

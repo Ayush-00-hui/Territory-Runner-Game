@@ -31,10 +31,11 @@ RUN chown -R appuser:appgroup /app
 
 USER appuser
 
+ENV PORT=8080
 EXPOSE 8080
 
 HEALTHCHECK --interval=10s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost:8080/readyz || exit 1
+  CMD ["/app/server", "healthcheck"]
 
 ENTRYPOINT ["/app/server"]
 

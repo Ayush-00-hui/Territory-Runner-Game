@@ -1,131 +1,137 @@
-# Production Deployment Guide: Managed PostGIS (Supabase / Neon)
+# Production Deployment & Infrastructure Guide
 
-This guide documents deploying the Territory Runner Go backend and PostGIS spatial database to free-tier cloud platforms.
+> [!IMPORTANT]
+> **Status**: Documentation of production architectures and deployment procedures. No cloud resources are currently provisioned or deployed.
 
----
-
-## 1. Managed Database Provider Selection
-
-Territory Runner requires **PostgreSQL 15+** with the **PostGIS 3.4+** spatial extension (`geometry(MultiPolygon, 4326)` and spherical geodesic computations via `::geography`).
-
-| Feature | Supabase (Recommended) | Neon Postgres |
-| :--- | :--- | :--- |
-| **Free Tier Resources** | 500 MB storage, 2 projects, IPv4/IPv6 pooler | 0.5 GB storage, serverless compute scaling |
-| **PostGIS Support** | Enabled out-of-the-box (`extensions` schema) | Available via `CREATE EXTENSION postgis;` |
-| **Connection Pooling** | Built-in Supavisor (Port 5432 direct, 6543 pooled) | Built-in PgBouncer pooler (`-pooler` endpoint) |
-| **Max Connections** | ~60 active connections (Free Tier) | 100 active connections |
-| **Advisory Locks** | Fully supported in Session Mode / Direct Port 5432 | Supported on direct compute endpoint |
+This guide details the production deployment architecture for the **Territory Runner** Go backend and managed PostgreSQL/PostGIS database.
 
 ---
 
-## 2. Critical Connection Pooling Considerations
+## 1. Required Environment Variables
 
-Territory Runner executes atomic spatial mutations with transaction-scoped serialization:
-```sql
-SELECT pg_advisory_xact_lock(hashtext('territory_mutation_lock'));
+All configuration is loaded from environment variables (or `.env` in containerized environments). In production, missing or insecure combinations fail fast at startup (`config.Validate()`).
+
+| Environment Variable | Production Value | Required? | Purpose |
+| :--- | :--- | :---: | :--- |
+| `ENV` | `production` | **Yes** | Enforces production security invariants. Forbids `AUTH_MODE=dev` and query parameter credentials. |
+| `PORT` | `8080` | **Yes** | Listening HTTP and WebSocket port (default: `8080`). |
+| `AUTH_MODE` | `firebase` | **Yes** | Enforces cryptographically verified RS256 Firebase ID tokens via `Sec-WebSocket-Protocol` or `Authorization: Bearer`. |
+| `FIREBASE_PROJECT_ID` | `<your-project-id>` | **Yes** | Matches `aud` and `iss` in Firebase JWT verification. |
+| `DATABASE_URL` | `postgres://user:pass@host:5432/db?sslmode=require` | **Yes** | Connection string to PostgreSQL 15+ with PostGIS 3.4+. Must be a direct or session-mode endpoint. |
+| `RUN_MIGRATIONS` | `true` | Optional | When `true`, automatically applies embedded migrations on startup guarded by PostgreSQL advisory locks. |
+| `ALLOWED_ORIGINS` | `https://your-domain.com` | Recommended | Comma-separated CORS and WebSocket origin whitelist. |
+| `GEMINI_API_KEY` | `AIzaSy...` | Optional | Google AI Studio API key for AI tactical commentary. If empty, coach degrades gracefully. |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Optional | Low-latency Gemini model name. |
+| `MAX_POINTS_PER_RUN` | `20000` | Optional | Maximum GPS breadcrumbs accepted per run upload (default: `20000`). |
+| `MAX_RUN_DURATION_SECONDS` | `86400` | Optional | Maximum allowed duration for a single run session in seconds (default: 24 hours). |
+
+---
+
+## 2. Managed PostGIS Setup (Supabase / Render)
+
+Territory Runner requires **PostgreSQL 15+** with the **PostGIS 3.4+** spatial extension (`geometry(MultiPolygon, 4326)` with spherical geodesic calculations via `::geography`).
+
+### Provisioning on Supabase
+1. Create a new Supabase project in your target region.
+2. In the Supabase Dashboard, navigate to **Database > Extensions**.
+3. Verify or enable the `postgis` extension (enabled by default in Supabase).
+4. Retrieve the database connection credentials from **Project Settings > Database**.
+
+### Direct vs. Pooled Connection Note (CRITICAL)
+
+> [!WARNING]
+> **Advisory Lock Requirement**: Always connect to Supabase via the **Direct Connection (Port 5432)** or **Session Mode Pooler**, NOT the Transaction Mode Pooler (Port 6543).
+
+**Why Transaction Poolers Break Migrations and Territory Concurrency:**
+- **Advisory Locks**: Automated schema migrations (`golang-migrate`) and territory territorial mutation serialization use PostgreSQL advisory locks (`pg_advisory_lock` and `pg_advisory_xact_lock`).
+- **Connection Affinity**: Transaction-mode poolers (like PgBouncer or Supavisor on port 6543) assign a different backend connection to each transaction or statement. Advisory locks are bound to a physical database session; in transaction mode, the lock is acquired on one connection while subsequent statements execute on another, causing `ERROR: lock not held` or deadlocks.
+- **Prepared Statements**: `pgx/v5` caches binary prepared statements on the session. Transaction poolers route queries to arbitrary physical connections that lack the prepared statement plan.
+
+**Target URI Pattern:**
+```text
+# CORRECT: Direct Connection (Port 5432, Session-level affinity)
+postgres://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres?sslmode=require
+
+# INCORRECT: Transaction Pooler (Port 6543 - DO NOT USE FOR BACKEND SERVER)
+postgres://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres?sslmode=require
 ```
 
-### The Pitfall: Transaction Mode vs Session Mode
-- **Transaction Mode Poolers (PgBouncer default / Supavisor Transaction mode on port 6543)** assign a different backend database connection to each transaction or statement. This breaks:
-  1. `pgx` prepared statement caches (`conn.Prepare` / binary query plans).
-  2. Transaction-scoped advisory locks if connections bounce prematurely.
-  3. Client-side state resets across rapid multi-step queries.
-- **The Solution:**
-  - Connect via **Session Mode** or the **Direct Connection** (Port `5432`), **NOT** Transaction Pooler Mode.
-  - In Supabase: Use the URI labeled **"Direct Connection"** (e.g., `postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres?sslmode=require`) or disable statement caching with `default_query_exec_mode=simple_protocol` if forced to use a transaction pooler.
-  - In Neon: Connect to the primary compute endpoint (e.g., `ep-xyz.us-east-2.aws.neon.tech`), avoiding the `-pooler` suffix for the spatial engine.
+---
 
-### Connection Pool Configuration in Go (`pgxpool`)
-To stay well within free-tier connection limits while maintaining concurrency:
-```go
-// Add pool tuning parameters to DATABASE_URL:
-// "postgres://user:pass@host:5432/db?sslmode=require&pool_max_conns=20&pool_min_conns=2&pool_max_conn_idle_time=5m"
-```
+## 3. Step-by-Step Render Deployment
+
+1. **Connect Repository**:
+   - In Render Dashboard, click **New > Web Service**.
+   - Connect your GitHub repository (`Territory-Runner-Game`).
+2. **Build Configuration**:
+   - **Environment**: `Docker`
+   - **Dockerfile Path**: `backend/Dockerfile`
+   - **Docker Context**: `backend`
+   - **Branch**: `main` (or release branch)
+3. **Environment Variables**:
+   Configure all required variables listed in Section 1:
+   - `ENV=production`
+   - `PORT=8080`
+   - `AUTH_MODE=firebase`
+   - `FIREBASE_PROJECT_ID=your-firebase-project-id`
+   - `DATABASE_URL=postgres://...:5432/postgres?sslmode=require`
+   - `RUN_MIGRATIONS=true`
+4. **Health Check Path**:
+   - Set healthcheck endpoint to `/readyz`.
+5. **Deploy**:
+   - Click **Create Web Service**. Render builds the statically linked Go binary using multi-stage compilation and starts the container.
 
 ---
 
-## 3. Applying Database Migrations
+## 4. Production Docker Compose Stack (Self-Hosted / 8 GB Host)
 
-Migrations are stored under `backend/migrations/`:
-- `000001_init_schema.up.sql`: Initial PostGIS extension, `users`, `territories`, `runs`, and GiST spatial indices.
-- `000002_add_territory_strength.up.sql`: Territory decay fortifications (`strength`, `last_defended_at`).
-- `000003_add_device_tokens.up.sql`: FCM push notification device registration tokens (`device_tokens`).
+For dedicated servers or virtual machines (target: 8 GB RAM), use `backend/docker-compose.prod.yml`:
 
-### Option A: Via `golang-migrate` CLI (Automated CI/CD)
 ```bash
-# Install migrate tool
-go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+cd backend
 
-# Run migrations against production database
-migrate -path backend/migrations -database "$DATABASE_URL" up
+# Create .env from template with production secrets
+cp .env.example .env
+
+# Set strong database password and Firebase project ID in .env:
+# POSTGRES_PASSWORD=your-secure-random-password-32-chars
+# FIREBASE_PROJECT_ID=your-project-id
+
+# Start production stack
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-### Option B: Via Direct SQL Console (Supabase SQL Editor / Neon Dashboard)
-Execute the files sequentially in the dashboard SQL editor:
-1. Run `backend/migrations/000001_init_schema.up.sql`
-2. Run `backend/migrations/000002_add_territory_strength.up.sql`
-3. Run `backend/migrations/000003_add_device_tokens.up.sql`
-
-Both migration scripts use `IF NOT EXISTS` guards and idempotent constraints, ensuring zero downtime and safe re-application.
+### Security Architecture of `docker-compose.prod.yml`:
+1. **Isolated Database**: PostGIS does NOT publish ports to the host; communication occurs strictly over the private Docker bridge network (`internal_network`).
+2. **Resource Caps**: PostGIS is budgeted for 2.0 CPUs and 2048 MB RAM; Go backend is budgeted for 1.5 CPUs and 1024 MB RAM, leaving 5 GB host memory for OS, I/O caching, and system daemons.
+3. **Auto-Healing**: Containers use `restart: always` with active Docker healthchecks (`/app/server healthcheck` and `pg_isready`).
 
 ---
 
-## 4. Required Environment Variables
+## 5. Database Backups and Disaster Recovery
 
-When deploying the backend container (e.g. to **Render**, **Fly.io**, **Railway**, or **Google Cloud Run**), configure the following environment variables:
-
-| Variable | Recommended Value | Purpose |
-| :--- | :--- | :--- |
-| `ENV` | `production` | Enables production security defaults. |
-| `PORT` | `8085` (or host assigned `$PORT`) | Listening HTTP / WebSocket port. |
-| `DATABASE_URL` | `postgres://user:pass@host:5432/db?sslmode=require` | Connection string to managed PostGIS. |
-| `AUTH_MODE` | `firebase` | Enforces RS256 JWT signature verification. |
-| `FIREBASE_PROJECT_ID` | `territory-runner-app` | Matches `aud` and `iss` in Firebase JWTs. |
-| `ALLOWED_ORIGINS` | `https://your-domain.com` (or empty for mobile-only) | CORS and WebSocket Origin validation. |
-| `GEMINI_API_KEY` | `AIzaSy...` | Google AI Studio key for coach insights. |
-| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model for low-latency commentary. |
-| `MAX_POINTS_PER_RUN` | `20000` | Anti-DoS cap on submitted GPS track points. |
-| `MAX_RUN_DURATION_SECONDS` | `86400` | Maximum 24-hour run window. |
-| `RUNS_RATE_LIMIT` | `10` | 10 run uploads per minute per runner. |
-| `COACH_RATE_LIMIT` | `20` | 20 coach invocations per minute. |
-
----
-
-## 5. Docker Deployment Example (Fly.io / Render)
-
-### Building and Deploying Docker Image
+### Automated Backups (`scripts/backup_db.sh`)
+The backup script creates a timestamped, compressed custom-format PostgreSQL dump:
 ```bash
-# Build production container
-docker build -t territory-runner-backend:latest ./backend
+DATABASE_URL="postgres://runner:pass@host:5432/territory_runner" ./scripts/backup_db.sh
+# Output saved to: backups/territory_runner_YYYYMMDD_HHMMSS.dump
+```
 
-# Fly.io launch
-fly launch --dockerfile backend/Dockerfile
-
-# Set production secrets
-fly secrets set \
-  DATABASE_URL="postgres://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:5432/postgres?sslmode=require" \
-  AUTH_MODE="firebase" \
-  FIREBASE_PROJECT_ID="territory-runner-app" \
-  GEMINI_API_KEY="AIzaSy..."
+### Disaster Recovery / Restore (`scripts/restore_db.sh`)
+Restores schema, PostGIS geometries, and table records with clean overwrite flags:
+```bash
+DATABASE_URL="postgres://runner:pass@host:5432/territory_runner" ./scripts/restore_db.sh backups/territory_runner_20261019_120000.dump
 ```
 
 ---
 
-## 6. Verification Checklist
+## 6. Pre-Flight Security Checklist
 
-After deployment, verify system health:
-1. **Liveness & Readiness**:
-   ```bash
-   curl -I https://api.yourdomain.com/v1/territories?bbox=-0.13,51.49,-0.11,51.51
-   # Returns 200 OK with GeoJSON FeatureCollection
-   ```
-2. **PostGIS Extensions**:
-   ```sql
-   SELECT PostGIS_Full_Version();
-   -- Confirms GEOS, PROJ, and GDAL spatial libraries are loaded
-   ```
-3. **Advisory Lock Concurrency**:
-   Confirmed via Phase 3 integration test suite:
-   ```bash
-   cd backend && make test-integration
-   ```
+Before directing real traffic to the production cluster:
+
+- [ ] `ENV=production` is set; verified that `AUTH_MODE=dev` triggers immediate startup exit.
+- [ ] Direct database connection (Port 5432) used instead of transaction pooler.
+- [ ] Database credentials not committed to version control; verified `.gitignore` excludes `.env`.
+- [ ] Reverse proxy (e.g. Cloudflare / Render) enforces TLS 1.3 (`https://` and `wss://`).
+- [ ] All 10 SQL migrations applied and verified via `RUN_MIGRATIONS=true`.
+- [ ] Smoke test suite passes: `powershell -File scripts/smoke_test.ps1 -BaseUrl https://api.yourdomain.com`.
