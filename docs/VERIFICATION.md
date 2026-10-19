@@ -744,6 +744,94 @@ ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	(cached)
 ```
 *(All 244 unit, widget, and integration tests passing)*
 
+---
+
+## 12. Phase 6 Verification (Accessibility, Dark Tactical HUD & Polish)
+
+### 12.1 Theme & Design System Hardening
+- **Command**: `flutter test test/theme/`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: C:/Users/AYUSH/Desktop/territory_runner/test/theme/no_raw_colors_test.dart: No Color(0x or Colors.white outside lib/ui/theme (except designated migration list)
+00:00 +1: C:/Users/AYUSH/Desktop/territory_runner/test/theme/accessibility_test.dart: Phase 5 Accessibility & Reduced Motion Tests AppMotion honors reduced motion flag and collapses durations to zero
+00:00 +2: C:/Users/AYUSH/Desktop/territory_runner/test/theme/accessibility_test.dart: Phase 5 Accessibility & Reduced Motion Tests AppMotion sharedAxisTransition returns child directly when animations are disabled
+00:00 +3: C:/Users/AYUSH/Desktop/territory_runner/test/theme/accessibility_test.dart: Phase 5 Accessibility & Reduced Motion Tests PrimaryButton and SecondaryButton meet minimum 48px touch target height
+00:00 +4: C:/Users/AYUSH/Desktop/territory_runner/test/theme/accessibility_test.dart: Phase 5 Small Screen Overflow & Responsiveness Tests (320px width) WeeklyLeagueView renders on 320px narrow screen without overflow
+00:00 +5: C:/Users/AYUSH/Desktop/territory_runner/test/theme/accessibility_test.dart: Phase 5 Small Screen Overflow & Responsiveness Tests (320px width) FactionLeaderboard renders on 320px narrow screen without overflow
+00:00 +6: C:/Users/AYUSH/Desktop/territory_runner/test/theme/accessibility_test.dart: Phase 5 Small Screen Overflow & Responsiveness Tests (320px width) ChallengesShelf renders on 320px narrow screen without overflow
+00:00 +7: C:/Users/AYUSH/Desktop/territory_runner/test/theme/accessibility_test.dart: Phase 5 Small Screen Overflow & Responsiveness Tests (320px width) HistoryRunCard renders on 320px narrow screen without overflow
+00:00 +8: C:/Users/AYUSH/Desktop/territory_runner/test/theme/accessibility_test.dart: Phase 5 Small Screen Overflow & Responsiveness Tests (320px width) HoldToFinishButton renders on 320px screen without overflow
+00:00 +9: All tests passed!
+```
+
+### 12.2 WCAG AA/AAA Contrast Verification
+- **Command**: `flutter test test/theme/wcag_contrast_test.dart`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: WCAG AA Contrast Ratios for Ink + Pacer Blue Palette Body text contrast >= 4.5:1 on surfaces
+00:00 +1: WCAG AA Contrast Ratios for Ink + Pacer Blue Palette onAccent on accent contrast >= 4.5:1
+00:00 +2: WCAG AA Contrast Ratios for Ink + Pacer Blue Palette Large text, muted text and UI icons contrast >= 3.0:1
+00:00 +3: All tests passed!
+```
+
+### 12.3 Polish Proof & Typography Audits
+- **Command**: `flutter test test/phase_5_polish_proof_test.dart`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: Phase 5: Polish & Proof - Contrast, Motion, Typography & Offline Audits WCAG Contrast & Color Palette Verification
+00:00 +1: Phase 5: Polish & Proof - Contrast, Motion, Typography & Offline Audits Athletic Typography enforces Tabular Figures on big metric stats with Inter
+00:00 +2: Phase 5: Polish & Proof - Contrast, Motion, Typography & Offline Audits Offline-first asset audit: verified physical presence of bundled Inter fonts
+00:00 +3: Phase 5: Polish & Proof - Contrast, Motion, Typography & Offline Audits AppMotion respects reduced motion user preferences
+00:00 +4: Phase 5: Polish & Proof - Contrast, Motion, Typography & Offline Audits Spacing and Radii design scale consistency
+00:00 +5: All tests passed!
+```
+
+### 12.4 Calm Error Screen & Error Fallback
+- **Command**: `flutter test test/calm_error_screen_test.dart`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: CalmErrorScreen Widget Tests Renders calm error screen with recovery instructions
+00:00 +1: CalmErrorScreen Widget Tests Toggles diagnostics disclosure drawer
+00:00 +2: All tests passed!
+```
+
+### 12.5 Onboarding & Tactical Auth Experience
+- **Command**: `flutter test test/phase_6_onboarding_and_auth_test.dart`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: Phase 6: OnboardingScreen Tests OnboardingScreen renders Slide 1 initial state and advances to Slide 2 & 3
+00:00 +1: Phase 6: OnboardingScreen Tests OnboardingScreen Skip button immediately triggers completion and writes prefs
+00:00 +2: Phase 6: OnboardingScreen Tests OnboardingScreen Previous button navigates back to preceding slide
+00:00 +3: Phase 6: PermissionPrimerSheet Tests Location permission primer renders satellite precision content
+00:00 +4: Phase 6: PermissionPrimerSheet Tests Background location permission primer renders locked-screen sensing content
+00:00 +5: Phase 6: PermissionPrimerSheet Tests Static helper PermissionPrimerSheet.show presents and returns result
+00:00 +6: Phase 6: AuthScreen Redesign Tests AuthScreen renders brand header, tabs, and switches between One-Tap, Email, Phone
+00:00 +7: Phase 6: AuthScreen Redesign Tests AuthScreen Email validation triggers error notice on empty fields
+00:00 +8: Phase 6: AuthScreen Redesign Tests AuthScreen Continue as Guest triggers onAuthenticated callback
+00:00 +9: All tests passed!
+```
+
+### 12.6 Full Flutter Test Suite Verification
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:10 +244: All tests passed!
+```
+*(All 244 unit, widget, and integration tests passing)*
+
+
 
 
 

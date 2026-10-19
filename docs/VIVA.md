@@ -314,4 +314,9 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 8. **Kinematic Anticheat & Battery Longevity (Resolved in Phase 5)**:
    - Full parity across Dart `AnomalyService` and Go `anticheat.Detector` for mock GPS detection, activity speed ceilings, teleportation jumps, biomechanical acceleration limits ($8.0\text{ m/s}^2$ running, $12.0\text{ m/s}^2$ cycling), and $\ge 50\%$ identical-step frozen replay rejection.
    - Dynamic GPS duty-cycling ($1\text{s} \to 3\text{s}$, $2\text{m} \to 8\text{m}$) coupled with pure black AMOLED screen overlay achieves up to $60-80\%$ display power reduction during marathon endurance workouts.
+9. **Accessibility, Dark Tactical HUD & Production Polish (Resolved in Phase 6)**:
+   - WCAG AAA / AA contrast compliance verified across all typography and semantic status tokens (body text contrast $\ge 4.5:1$, large numbers $\ge 3.0:1$, zero hardcoded colors outside `AppColors`).
+   - Athletic typography with Inter tabular figures (`FontFeature.tabularFigures()`) eliminates timer and distance stat jitter.
+   - Complete `Semantics` coverage on all action buttons and HUD overlays, minimum $48\text{px}$ touch targets, responsive layouts tested down to $320\text{px}$ narrow devices, and `AppMotion` respecting user reduced motion preferences.
+
 
