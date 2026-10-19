@@ -141,8 +141,9 @@ func (h *Hub) Run() {
 				h.userClients[client.userID] = make(map[*Client]bool)
 			}
 			h.userClients[client.userID][client] = true
+			totalClients := len(h.clients)
 			h.mu.Unlock()
-			h.logger.Debug("client connected to ws hub", "user_id", client.userID, "total_clients", len(h.clients))
+			h.logger.Debug("client connected to ws hub", "user_id", client.userID, "total_clients", totalClients)
 
 		case client := <-h.unregister:
 			h.mu.Lock()
