@@ -11,6 +11,7 @@ import 'offline_maps_sheet.dart';
 import 'privacy_zones_sheet.dart';
 import '../../gallery/design_gallery_screen.dart';
 import '../../onboarding/onboarding_screen.dart';
+import '../../../core/utils/constants.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -210,8 +211,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         _buildSettingsGroup([
           ProfileOptionTile(
             icon: Icons.download_for_offline_rounded,
-            title: 'Offline maps',
-            subtitle: 'Download map tiles for running without cellular signal',
+            title: AppConstants.allowTilePrefetch ? 'Offline maps' : 'Map cache & storage',
+            subtitle: AppConstants.allowTilePrefetch
+                ? 'Download map sectors for running without cellular signal'
+                : 'Local viewing cache (bulk prefetch disabled under OSM policy)',
             onTap: () {
               AppMotion.selectionTick();
               showOfflineMapsSheet(context);
@@ -248,6 +251,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 applicationLegalese: 'Crafted with athletic precision.',
               );
             },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.map_outlined,
+            title: 'Map Data & Attribution',
+            subtitle: AppConstants.tileAttribution,
+            onTap: null,
           ),
           const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(

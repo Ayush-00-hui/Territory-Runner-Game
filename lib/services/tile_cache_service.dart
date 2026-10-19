@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
 import '../core/logging/app_logger.dart';
+import '../core/utils/constants.dart';
 
 /// Offline map tile caching engine providing slippy tile coordinate calculations,
 /// proactive bounding box pre-downloading, disk size monitoring, and offline-first tile serving.
@@ -17,17 +18,44 @@ class TileCacheService {
 
   TileCacheService._internal();
 
-  Directory? _cacheDir;
+  static Directory? _cacheDir;
+
+  @visibleForTesting
+  void setCacheDirectoryForTesting(Directory dir) {
+    _cacheDir = dir;
+  }
 
   Future<Directory> _getCacheDirectory() async {
-    if (_cacheDir != null) return _cacheDir!;
-    final docs = await getApplicationDocumentsDirectory();
-    final dir = Directory('${docs.path}/offline_tiles');
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
+    if (_cacheDir != null) {
+      if (!await _cacheDir!.exists()) {
+        await _cacheDir!.create(recursive: true);
+      }
+      return _cacheDir!;
     }
-    _cacheDir = dir;
-    return dir;
+    if (Platform.environment.containsKey('FLUTTER_TEST')) {
+      final dir = Directory('${Directory.systemTemp.path}/test_offline_tiles');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      _cacheDir = dir;
+      return dir;
+    }
+    try {
+      final docs = await getApplicationDocumentsDirectory();
+      final dir = Directory('${docs.path}/offline_tiles');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      _cacheDir = dir;
+      return dir;
+    } catch (_) {
+      final dir = Directory('${Directory.systemTemp.path}/offline_tiles');
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      _cacheDir = dir;
+      return dir;
+    }
   }
 
   /// Converts latitude, longitude and zoom level to Slippy Map tile X and Y indices
@@ -64,12 +92,21 @@ class TileCacheService {
 
   /// Pre-downloads map tiles in a circular area around [center] across [zoomLevels]
   /// Returns the number of successfully downloaded and cached tiles.
+  /// Note: Gated by [AppConstants.allowTilePrefetch] to comply with OSM Tile Usage Policy.
   Future<int> preDownloadArea({
     required LatLng center,
     double radiusKm = 1.2,
     List<int> zoomLevels = const [14, 15, 16],
     Function(int completed, int total)? onProgress,
   }) async {
+    if (!AppConstants.allowTilePrefetch) {
+      AppLogger.warning(
+        'Tile prefetch skipped: ALLOW_TILE_PREFETCH is false. Bulk downloading is disallowed under OpenStreetMap Tile Usage Policy.',
+        tag: 'TileCacheService',
+      );
+      return 0;
+    }
+
     // Earth radius approximation: 1 deg lat ~= 111 km
     final double dLat = radiusKm / 111.0;
     final double dLng = radiusKm / (111.0 * math.cos(center.latitude * math.pi / 180.0));
@@ -108,9 +145,15 @@ class TileCacheService {
 
       if (!await hasCachedTile(z, x, y)) {
         try {
-          final url = 'https://tile.openstreetmap.org/$z/$x/$y.png';
+          final url = AppConstants.tileUrlTemplate
+              .replaceAll('{z}', z.toString())
+              .replaceAll('{x}', x.toString())
+              .replaceAll('{y}', y.toString())
+              .replaceAll('{apiKey}', AppConstants.tileApiKey)
+              .replaceAll('{accessToken}', AppConstants.tileApiKey);
+
           final resp = await http.get(Uri.parse(url), headers: {
-            'User-Agent': 'TerritoryRunner/4.0',
+            'User-Agent': AppConstants.userAgent,
           }).timeout(const Duration(seconds: 4));
 
           if (resp.statusCode == 200) {
@@ -133,7 +176,7 @@ class TileCacheService {
       final dir = await _getCacheDirectory();
       if (!await dir.exists()) return 0;
       int count = 0;
-      await for (final file in dir.list(recursive: true, followLinks: false)) {
+      for (final file in dir.listSync(recursive: true, followLinks: false)) {
         if (file is File && file.path.endsWith('.png')) {
           count++;
         }
@@ -150,9 +193,9 @@ class TileCacheService {
       final dir = await _getCacheDirectory();
       if (!await dir.exists()) return 0;
       int totalBytes = 0;
-      await for (final file in dir.list(recursive: true, followLinks: false)) {
+      for (final file in dir.listSync(recursive: true, followLinks: false)) {
         if (file is File) {
-          totalBytes += await file.length();
+          totalBytes += file.lengthSync();
         }
       }
       return totalBytes;
@@ -234,27 +277,72 @@ class _OfflineFirstImageProvider extends ImageProvider<_OfflineFirstImageProvide
   }
 
   Future<ui.Codec> _loadAsync(ImageDecoderCallback decode) async {
-    // 1. Check local disk cache
     final file = await cacheService.getTileFile(z, x, y);
-    if (await file.exists()) {
-      final bytes = await file.readAsBytes();
-      if (bytes.isNotEmpty) {
-        final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
-        return await decode(buffer);
+    bool hasCachedFile = await file.exists();
+    DateTime? lastModified;
+    Uint8List? cachedBytes;
+
+    if (hasCachedFile) {
+      try {
+        lastModified = await file.lastModified();
+        cachedBytes = await file.readAsBytes();
+      } catch (_) {
+        hasCachedFile = false;
+        cachedBytes = null;
       }
     }
 
-    // 2. Fetch from network and write to cache
+    // 1. If we have a fresh cached tile (< minTileCacheDays old), serve immediately.
+    final bool isCacheFresh = hasCachedFile &&
+        cachedBytes != null &&
+        cachedBytes.isNotEmpty &&
+        lastModified != null &&
+        DateTime.now().difference(lastModified).inDays < AppConstants.minTileCacheDays;
+
+    if (isCacheFresh) {
+      final buffer = await ui.ImmutableBuffer.fromUint8List(cachedBytes);
+      return await decode(buffer);
+    }
+
+    // 2. Fetch from network (fresh fetch or conditional revalidation)
+    final requestHeaders = <String, String>{
+      'User-Agent': AppConstants.userAgent,
+      ...?headers,
+    };
+    if (hasCachedFile && lastModified != null) {
+      requestHeaders['If-Modified-Since'] = HttpDate.format(lastModified);
+    }
+
     try {
-      final client = http.Client();
-      final response = await client.get(Uri.parse(url), headers: headers);
-      if (response.statusCode == 200) {
+      final response = await http
+          .get(Uri.parse(url), headers: requestHeaders)
+          .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
         // Cache asynchronously in background
         cacheService.saveTile(z, x, y, response.bodyBytes);
         final buffer = await ui.ImmutableBuffer.fromUint8List(response.bodyBytes);
         return await decode(buffer);
+      } else if (response.statusCode == 304 && cachedBytes != null && cachedBytes.isNotEmpty) {
+        // Not Modified: touch timestamp to extend cache freshness
+        try {
+          await file.setLastModified(DateTime.now());
+        } catch (_) {}
+        final buffer = await ui.ImmutableBuffer.fromUint8List(cachedBytes);
+        return await decode(buffer);
       }
-    } catch (_) {}
+    } catch (_) {
+      // Network failed or timed out: fall back to cached tile if available
+      if (cachedBytes != null && cachedBytes.isNotEmpty) {
+        final buffer = await ui.ImmutableBuffer.fromUint8List(cachedBytes);
+        return await decode(buffer);
+      }
+    }
+
+    // 3. If cache was stale but network failed, fallback to stale cached bytes
+    if (cachedBytes != null && cachedBytes.isNotEmpty) {
+      final buffer = await ui.ImmutableBuffer.fromUint8List(cachedBytes);
+      return await decode(buffer);
+    }
 
     // 3. Fallback: 1x1 transparent pixel so map rendering doesn't crash
     final transparentPng = Uint8List.fromList([

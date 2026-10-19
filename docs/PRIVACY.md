@@ -73,3 +73,17 @@ A fundamental architectural distinction exists between **territory polygons** an
 2. **Account Deletion**:
    - Users can request complete account deletion.
    - Deletion cascades across `users`, `privacy_zones`, `friendships`, `duels`, and reassigns or removes associated game assets in compliance with privacy regulations.
+
+---
+
+## 7. Map Tile Requests & Local Caching Privacy
+
+1. **Third-Party Tile Requests**:
+   - To render base maps, the client makes HTTPS GET requests for image tiles ($z/x/y$) to the configured tile provider (OpenStreetMap or Mapbox).
+   - Tile requests include standard coordinate indices and the application's identifying User-Agent (`com.territoryrunner.app/1.0.0 (https://github.com/Ayush-00-hui/Territory-Runner-Game)`).
+   - **Zero User Telemetry**: No user identifier, authentication token, runner name, or GPS breadcrumb track is ever attached to map tile network requests.
+2. **Local Tile Caching**:
+   - Downloaded map tiles are stored on device in an app-private cache directory.
+   - Tiles remain cached locally for a minimum of 7 days before conditional revalidation (`If-Modified-Since`), minimizing network requests.
+   - Runners can purge all cached map tiles at any time from **Profile > Data & Offline > Map cache & storage > Purge Offline Map Cache**.
+

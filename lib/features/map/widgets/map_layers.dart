@@ -13,16 +13,40 @@ import '../../gameplay/polygon_enclosure_engine.dart';
 class MapLayers {
   MapLayers._();
 
-  /// Dark-mode global map tile layer with offline disk caching
+  /// Dark-mode global map tile layer with offline disk caching and configurable tile provider
   static TileLayer buildTileLayer() {
+    final String urlTemplate;
+    final Map<String, String> additionalOptions = {};
+
+    if (AppConstants.tileApiKey.isNotEmpty) {
+      additionalOptions['accessToken'] = AppConstants.tileApiKey;
+      additionalOptions['apiKey'] = AppConstants.tileApiKey;
+    }
+
+    if (AppConstants.tileUrlTemplate != AppConstants.defaultOsmUrlTemplate) {
+      urlTemplate = AppConstants.tileUrlTemplate;
+    } else if (AppConstants.tileApiKey.isNotEmpty) {
+      urlTemplate = 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}';
+    } else {
+      urlTemplate = AppConstants.defaultOsmUrlTemplate;
+    }
+
+    final bool isMapboxDark = urlTemplate.contains('mapbox.com/styles/v1/mapbox/dark-v11');
+
     return TileLayer(
-      urlTemplate: AppConstants.mapApiKey.isNotEmpty
-          ? 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
-          : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+      urlTemplate: urlTemplate,
+      additionalOptions: additionalOptions,
       maxZoom: 19,
       userAgentPackageName: 'com.territoryrunner.app',
-      tileProvider: OfflineFirstTileProvider(),
+      tileProvider: OfflineFirstTileProvider(
+        headers: {
+          'User-Agent': AppConstants.userAgent,
+        },
+      ),
       tileBuilder: (context, tileWidget, tile) {
+        if (isMapboxDark) {
+          return tileWidget;
+        }
         return ColorFiltered(
           colorFilter: const ColorFilter.matrix(<double>[
             -0.85, 0, 0, 0, 220,

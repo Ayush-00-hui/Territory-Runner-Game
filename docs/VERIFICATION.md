@@ -83,3 +83,31 @@ ok  github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws         1.
 failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine; check if the path is correct and if the daemon is running: open //./pipe/dockerDesktopLinuxEngine: The system cannot find the file specified.
 ```
 *Note*: Docker Desktop daemon is not started on this host. Live PostGIS container tests run in GitHub Actions CI.
+
+---
+
+## 3. Phase 2 Verification (Map Tiles Compliance & Hardening)
+
+### 3.1 Flutter Static Code Analysis
+- **Command**: `flutter analyze`
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...
+No issues found! (ran in 4.3s)
+```
+
+### 3.2 Flutter Test Suite (with Tile Compliance Tests)
+- **Command**: `flutter test`
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:13 +214: All tests passed! (214 passed, 0 failed)
+```
+
+### 3.3 Go Backend Static Analysis & Tests
+- **Commands**: `go vet ./...` & `go test -v -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit across all 9 packages (anticheat, api, auth, coach, geo, league, notify, store, ws).
+

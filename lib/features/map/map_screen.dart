@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import '../../core/utils/constants.dart';
 import '../../services/location_service.dart';
 import '../../services/run_recovery_service.dart';
 import '../../services/gps_quality_service.dart';
@@ -1325,6 +1326,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             activeRivalRunners: _activeRivalRunners,
                           ),
                         ),
+                        if (AppConstants.tileAttribution.isNotEmpty)
+                          RichAttributionWidget(
+                            attributions: [
+                              TextSourceAttribution(
+                                AppConstants.tileAttribution,
+                                prependCopyright: false,
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),

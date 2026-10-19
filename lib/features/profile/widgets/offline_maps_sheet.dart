@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+import '../../../core/utils/constants.dart';
 import '../../../services/tile_cache_service.dart';
 import '../../../ui/ui.dart';
 
 void showOfflineMapsSheet(BuildContext context) {
   AppSheet.show(
     context: context,
-    builder: (ctx) => const _OfflineMapsSheet(),
+    builder: (ctx) => const OfflineMapsSheet(),
   );
 }
 
-class _OfflineMapsSheet extends StatefulWidget {
-  const _OfflineMapsSheet();
+class OfflineMapsSheet extends StatefulWidget {
+  const OfflineMapsSheet({super.key});
 
   @override
-  State<_OfflineMapsSheet> createState() => _OfflineMapsSheetState();
+  State<OfflineMapsSheet> createState() => _OfflineMapsSheetState();
 }
 
-class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
+class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
   final TileCacheService _cacheService = TileCacheService();
   int _tileCount = 0;
   int _cacheSizeBytes = 0;
@@ -161,7 +162,9 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
 
           const SizedBox(height: AppSpacing.s14),
           Text(
-            'Pre-download map sectors to continue claiming territories, viewing boundaries, and navigating when running in dead zones or cellular outages.',
+            AppConstants.allowTilePrefetch
+                ? 'Pre-download map sectors to continue claiming territories, viewing boundaries, and navigating when running in dead zones or cellular outages.'
+                : 'Map tiles viewed while exploring or running are automatically cached locally on your device for at least 7 days. Bulk sector pre-downloading is disabled under the OpenStreetMap Tile Usage Policy.',
             style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.4),
           ),
           const SizedBox(height: AppSpacing.s20),
@@ -242,25 +245,49 @@ class _OfflineMapsSheetState extends State<_OfflineMapsSheet> {
           const SizedBox(height: AppSpacing.s20),
 
           // Action Buttons
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: FilledButton.icon(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.onAccent,
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+          if (AppConstants.allowTilePrefetch) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: AppColors.onAccent,
+                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                ),
+                icon: const Icon(Icons.download_rounded, size: 20),
+                label: const Text(
+                  'Pre-Cache Current Sector (1.2 km)',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                onPressed: _isDownloading ? null : _preDownloadCurrentSector,
               ),
-              icon: const Icon(Icons.download_rounded, size: 20),
-              label: const Text(
-                'Pre-Cache Current Sector (1.2 km)',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              ),
-              onPressed: _isDownloading ? null : _preDownloadCurrentSector,
             ),
-          ),
-
-          const SizedBox(height: AppSpacing.s10),
+            const SizedBox(height: AppSpacing.s10),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.s12),
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: AppSpacing.br12,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline_rounded, color: AppColors.accent, size: 18),
+                  const SizedBox(width: AppSpacing.s10),
+                  Expanded(
+                    child: Text(
+                      'OSM Tile Usage Policy viewing cache active. Viewed sectors remain cached offline.',
+                      style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s12),
+          ],
 
           SizedBox(
             width: double.infinity,
