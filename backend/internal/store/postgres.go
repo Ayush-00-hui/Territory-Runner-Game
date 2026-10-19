@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -149,12 +150,14 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 	}
 	defer rows.Close()
 
+	now := time.Now().UTC()
 	var list []Territory
 	for rows.Next() {
 		var t Territory
 		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
+		t.Strength = t.EffectiveStrength(now)
 		list = append(list, t)
 	}
 	return list, nil
@@ -222,6 +225,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	var areaClaimed float64
 	var xpAwarded int
 	var rivalsAffected []string
+	var weakBonusArea float64
 
 	// 3. Process spatial loop capture for all closed loops
 	for _, loop := range loops {
@@ -246,6 +250,30 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		`
 		if err := tx.QueryRow(ctx, unionQuery, territoryID, run.UserID, polyWKT).Scan(&territoryGeoJSON, &playerTotalArea); err != nil {
 			return nil, fmt.Errorf("failed to union owner territory: %w", err)
+		}
+
+		// Check for weak rivals before clipping to award 1.5x XP bonus
+		checkRivalsQuery := `
+			SELECT owner_id, COALESCE(strength, 100.0), COALESCE(last_defended_at, updated_at)
+			FROM territories
+			WHERE owner_id != $1
+			  AND ST_Intersects(geom, ST_MakeValid(ST_PolygonFromText($2, 4326)));
+		`
+		if rRows, err := tx.Query(ctx, checkRivalsQuery, run.UserID, polyWKT); err == nil {
+			now := time.Now().UTC()
+			for rRows.Next() {
+				var rOwner string
+				var rStrength float64
+				var rLastDefended time.Time
+				if rRows.Scan(&rOwner, &rStrength, &rLastDefended) == nil {
+					rivalsAffected = append(rivalsAffected, rOwner)
+					effStr := CalculateEffectiveStrength(rStrength, rLastDefended, now)
+					if effStr < TerritoryWeakThreshold {
+						weakBonusArea += loop.AreaSqMeters * 0.5
+					}
+				}
+			}
+			rRows.Close()
 		}
 
 		// B. ST_Difference against rival territories:
@@ -285,7 +313,14 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 			return nil, fmt.Errorf("failed to clean empty rival territories: %w", err)
 		}
 
-		xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
+		// Enforce 25 m² minimum new area floor before awarding XP, league, or duel credit
+		if areaClaimed >= MinCaptureFloorSqm {
+			effectiveXpArea := areaClaimed + weakBonusArea
+			xpAwarded = int(math.Max(100, math.Round(effectiveXpArea/20.0)))
+		} else {
+			areaClaimed = 0.0
+			xpAwarded = 0
+		}
 	}
 
 	// 4. Update user total area and XP
@@ -470,6 +505,7 @@ func (s *PostgresStore) GetTerritoryByID(ctx context.Context, id string) (*Terri
 	if err != nil {
 		return nil, fmt.Errorf("error querying territory by id: %w", err)
 	}
+	t.Strength = t.EffectiveStrength(time.Now().UTC())
 	return &t, nil
 }
 
@@ -909,7 +945,7 @@ func (s *PostgresStore) CreateDuel(ctx context.Context, d *Duel) error {
 	}
 
 	if d.ID == "" {
-		d.ID = fmt.Sprintf("duel_%d", time.Now().UnixNano())
+		d.ID = fmt.Sprintf("duel_%s", uuid.New().String())
 	}
 	if d.ExpiresAt.IsZero() {
 		d.ExpiresAt = time.Now().UTC().Add(24 * time.Hour)
@@ -1176,6 +1212,39 @@ func (s *PostgresStore) SetPrivacyZones(ctx context.Context, userID string, zone
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit privacy zones: %w", err)
+	}
+	return nil
+}
+
+// GetUserSettings returns user settings defaulting live_visibility to 'off'.
+func (s *PostgresStore) GetUserSettings(ctx context.Context, userID string) (*UserSettings, error) {
+	var vis string
+	err := s.pool.QueryRow(ctx, `SELECT COALESCE(live_visibility, 'off') FROM users WHERE id = $1;`, userID).Scan(&vis)
+	if err != nil {
+		// User might not exist yet in users table, default to 'off'
+		return &UserSettings{LiveVisibility: "off"}, nil
+	}
+	if vis == "" {
+		vis = "off"
+	}
+	return &UserSettings{LiveVisibility: vis}, nil
+}
+
+// UpdateUserSettings updates user settings, creating user row if absent.
+func (s *PostgresStore) UpdateUserSettings(ctx context.Context, userID string, settings *UserSettings) error {
+	vis := "off"
+	if settings != nil && settings.LiveVisibility != "" {
+		vis = settings.LiveVisibility
+	}
+
+	query := `
+		INSERT INTO users (id, username, live_visibility, updated_at)
+		VALUES ($1, $1, $2, NOW())
+		ON CONFLICT (id) DO UPDATE
+		SET live_visibility = EXCLUDED.live_visibility, updated_at = NOW();
+	`
+	if _, err := s.pool.Exec(ctx, query, userID, vis); err != nil {
+		return fmt.Errorf("failed to update user settings: %w", err)
 	}
 	return nil
 }

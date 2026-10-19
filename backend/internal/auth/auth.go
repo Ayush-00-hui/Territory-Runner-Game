@@ -295,13 +295,18 @@ func (a *Authenticator) AuthenticateRequest(r *http.Request) (string, error) {
 		if devUser == "" {
 			devUser = r.URL.Query().Get("user_id")
 		}
+		if devUser == "" {
+			devUser = r.URL.Query().Get("token")
+		}
 		if devUser != "" {
 			return devUser, nil
 		}
 		return "dev_runner_local", nil
 	}
 
-	// Production / Firebase authentication mode
+	// Production / Firebase authentication mode:
+	// Only accept Authorization header or Sec-WebSocket-Protocol header.
+	// Query parameters are rejected to prevent token leakage in HTTP access logs and proxy caches.
 	token := ""
 	authHeader := r.Header.Get("Authorization")
 	if strings.HasPrefix(authHeader, "Bearer ") {
@@ -319,11 +324,6 @@ func (a *Authenticator) AuthenticateRequest(r *http.Request) (string, error) {
 		if token == "" && len(parts) == 1 {
 			token = strings.TrimSpace(parts[0])
 		}
-	} else {
-		// Security Notice: Passing JWT tokens via URL query parameters (?token=...)
-		// risks exposing sensitive credentials in HTTP access logs, browser history,
-		// and proxy telemetry. Clients should prefer Authorization or Sec-WebSocket-Protocol headers.
-		token = r.URL.Query().Get("token")
 	}
 
 	if token == "" {

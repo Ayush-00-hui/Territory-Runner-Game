@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -394,4 +395,414 @@ func TestFriendsAndDuelsAntiAbuse(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "expired")
 }
+
+func TestDuelDeclineFlow(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_eve", Username: "Eve", Faction: "Shadow Syndicate"})
+
+	duel := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "area",
+		TargetValue:  10000.0,
+		XpStake:      200,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel))
+
+	// Unauthorized third party cannot decline
+	err := memStore.DeclineDuel(ctx, duel.ID, "usr_eve")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unauthorized")
+
+	// Opponent declines
+	err = memStore.DeclineDuel(ctx, duel.ID, "usr_bob")
+	require.NoError(t, err)
+
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	require.Len(t, duels, 1)
+	assert.Equal(t, "declined", duels[0].Status)
+}
+
+func TestDuelExpirationResolution(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", XP: 1000})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", XP: 1000})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_charlie", Username: "Charlie", XP: 1000})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_dave", Username: "Dave", XP: 1000})
+
+	// Case 1: Alice leads against Bob when duel expires -> Alice wins
+	duel1 := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_bob",
+		TargetType:   "area",
+		TargetValue:  20000.0,
+		XpStake:      300,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel1))
+	require.NoError(t, memStore.AcceptDuel(ctx, duel1.ID, "usr_bob"))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_alice", "running", 5000.0, 1000.0))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_bob", "running", 2000.0, 500.0))
+
+	// Expire duel 1
+	memStore.SetDuelExpiresAtForTest(duel1.ID, time.Now().UTC().Add(-10*time.Minute))
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	var resolvedDuel1 store.Duel
+	for _, d := range duels {
+		if d.ID == duel1.ID {
+			resolvedDuel1 = d
+			break
+		}
+	}
+	assert.Equal(t, "completed", resolvedDuel1.Status)
+	assert.Equal(t, "usr_alice", resolvedDuel1.WinnerID)
+
+	aliceUser, _ := memStore.GetUser(ctx, "usr_alice")
+	assert.Equal(t, int64(1300), aliceUser.XP) // 1000 + 300
+
+	// Case 2: Charlie leads against Alice when duel expires -> Charlie wins
+	duel2 := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_charlie",
+		TargetType:   "area",
+		TargetValue:  20000.0,
+		XpStake:      400,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel2))
+	require.NoError(t, memStore.AcceptDuel(ctx, duel2.ID, "usr_charlie"))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_alice", "running", 3000.0, 1000.0))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_charlie", "running", 6000.0, 1500.0))
+
+	memStore.SetDuelExpiresAtForTest(duel2.ID, time.Now().UTC().Add(-5*time.Minute))
+	duels, err = memStore.GetDuelsByUser(ctx, "usr_charlie")
+	require.NoError(t, err)
+	var resolvedDuel2 store.Duel
+	for _, d := range duels {
+		if d.ID == duel2.ID {
+			resolvedDuel2 = d
+			break
+		}
+	}
+	assert.Equal(t, "completed", resolvedDuel2.Status)
+	assert.Equal(t, "usr_charlie", resolvedDuel2.WinnerID)
+
+	charlieUser, _ := memStore.GetUser(ctx, "usr_charlie")
+	assert.Equal(t, int64(1400), charlieUser.XP) // 1000 + 400
+
+	// Case 3: Tied duel when expired -> status is "expired", no winner
+	duel3 := &store.Duel{
+		ChallengerID: "usr_alice",
+		OpponentID:   "usr_dave",
+		TargetType:   "area",
+		TargetValue:  20000.0,
+		XpStake:      200,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel3))
+	require.NoError(t, memStore.AcceptDuel(ctx, duel3.ID, "usr_dave"))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_alice", "running", 4000.0, 1000.0))
+	require.NoError(t, memStore.UpdateDuelProgress(ctx, "usr_dave", "running", 4000.0, 1000.0))
+
+	memStore.SetDuelExpiresAtForTest(duel3.ID, time.Now().UTC().Add(-2*time.Minute))
+	duels, err = memStore.GetDuelsByUser(ctx, "usr_dave")
+	require.NoError(t, err)
+	var resolvedDuel3 store.Duel
+	for _, d := range duels {
+		if d.ID == duel3.ID {
+			resolvedDuel3 = d
+			break
+		}
+	}
+	assert.Equal(t, "expired", resolvedDuel3.Status)
+	assert.Empty(t, resolvedDuel3.WinnerID)
+}
+
+func TestDuelActivityModalitySegregation(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_runner_1", Username: "Runner1"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_runner_2", Username: "Runner2"})
+
+	// Create a CYCLING duel
+	duel := &store.Duel{
+		ChallengerID: "usr_runner_1",
+		OpponentID:   "usr_runner_2",
+		ActivityType: "cycling",
+		TargetType:   "distance",
+		TargetValue:  20.0, // 20 km
+		XpStake:      500,
+	}
+	require.NoError(t, memStore.CreateDuel(ctx, duel))
+	require.NoError(t, memStore.AcceptDuel(ctx, duel.ID, "usr_runner_2"))
+
+	// 1. Running workout occurs (5.0 km) -> Should NOT progress cycling duel
+	err := memStore.UpdateDuelProgress(ctx, "usr_runner_1", "running", 10000.0, 5000.0)
+	require.NoError(t, err)
+
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_runner_1")
+	require.NoError(t, err)
+	assert.Equal(t, 0.0, duels[0].ChallengerProgress)
+
+	// 2. Cycling workout occurs (10.0 km) -> MUST progress cycling duel
+	err = memStore.UpdateDuelProgress(ctx, "usr_runner_1", "cycling", 50000.0, 10000.0)
+	require.NoError(t, err)
+
+	duels, err = memStore.GetDuelsByUser(ctx, "usr_runner_1")
+	require.NoError(t, err)
+	assert.Equal(t, 10.0, duels[0].ChallengerProgress)
+}
+
+func TestDuelConcurrencyLimits(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_pacer", Username: "Pacer"})
+
+	// Create 5 active duels with different opponents
+	for i := 1; i <= 5; i++ {
+		oppID := fmt.Sprintf("usr_rival_%d", i)
+		_ = memStore.UpsertUser(ctx, &store.User{ID: oppID, Username: oppID})
+
+		d := &store.Duel{
+			ChallengerID: "usr_pacer",
+			OpponentID:   oppID,
+			TargetType:   "area",
+			TargetValue:  5000.0,
+			XpStake:      100,
+		}
+		require.NoError(t, memStore.CreateDuel(ctx, d))
+		require.NoError(t, memStore.AcceptDuel(ctx, d.ID, oppID))
+	}
+
+	// 6th active duel attempt fails with max active duel limit
+	opp6 := "usr_rival_6"
+	_ = memStore.UpsertUser(ctx, &store.User{ID: opp6, Username: opp6})
+	err := memStore.CreateDuel(ctx, &store.Duel{
+		ChallengerID: "usr_pacer",
+		OpponentID:   opp6,
+		TargetType:   "area",
+		TargetValue:  5000.0,
+		XpStake:      100,
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "maximum active duel limit (5) reached")
+}
+
+func TestUserSettingsDefaultAndUpdates(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// 1. New user defaults to 'off'
+	settings, err := memStore.GetUserSettings(ctx, "user_new_1")
+	require.NoError(t, err)
+	assert.Equal(t, "off", settings.LiveVisibility)
+
+	// 2. Update to 'friends'
+	err = memStore.UpdateUserSettings(ctx, "user_new_1", &store.UserSettings{LiveVisibility: "friends"})
+	require.NoError(t, err)
+
+	settings, err = memStore.GetUserSettings(ctx, "user_new_1")
+	require.NoError(t, err)
+	assert.Equal(t, "friends", settings.LiveVisibility)
+
+	// 3. Update to 'nearby'
+	err = memStore.UpdateUserSettings(ctx, "user_new_1", &store.UserSettings{LiveVisibility: "nearby"})
+	require.NoError(t, err)
+
+	settings, err = memStore.GetUserSettings(ctx, "user_new_1")
+	require.NoError(t, err)
+	assert.Equal(t, "nearby", settings.LiveVisibility)
+}
+
+func TestCaptureRunMinimumAreaFloor25Sqm(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// 1. Loop with area 18 m² (< 25 m²): Must award 0 XP, 0 claimed area, no duel credit
+	subThresholdLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.50000, Longitude: -0.12000},
+			{Latitude: 51.50004, Longitude: -0.12000},
+			{Latitude: 51.50004, Longitude: -0.12005},
+			{Latitude: 51.50000, Longitude: -0.12005},
+			{Latitude: 51.50000, Longitude: -0.12000},
+		},
+		AreaSqMeters:       18.0,
+		LoopDistanceMeters: 18.0,
+		ClosedAt:           time.Now().UTC(),
+	}
+
+	res1, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_sub_floor",
+		UserID:         "usr_runner_1",
+		IdempotencyKey: "idem_floor_001",
+		DistanceMeters: 50.0,
+	}, []geo.EnclosedLoop{subThresholdLoop}, nil)
+	require.NoError(t, err)
+	assert.True(t, res1.LoopDetected, "Loop was geometrically detected")
+	assert.Equal(t, 0.0, res1.AreaClaimedSqm, "Area below 25 m² must not be awarded")
+	assert.Equal(t, 0, res1.XpAwarded, "XP must be 0 for sub-25 m² captures")
+
+	user1, err := memStore.GetUser(ctx, "usr_runner_1")
+	require.NoError(t, err)
+	assert.Equal(t, 0.0, user1.TotalAreaSqm)
+	assert.Equal(t, int64(0), user1.XP)
+
+	// 2. Loop with area 40 m² (>= 25 m²): Must award claimed area and XP
+	validLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.50000, Longitude: -0.12000},
+			{Latitude: 51.50007, Longitude: -0.12000},
+			{Latitude: 51.50007, Longitude: -0.12008},
+			{Latitude: 51.50000, Longitude: -0.12008},
+			{Latitude: 51.50000, Longitude: -0.12000},
+		},
+		AreaSqMeters:       40.0,
+		LoopDistanceMeters: 45.0,
+		ClosedAt:           time.Now().UTC(),
+	}
+
+	res2, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_above_floor",
+		UserID:         "usr_runner_1",
+		IdempotencyKey: "idem_floor_002",
+		DistanceMeters: 100.0,
+	}, []geo.EnclosedLoop{validLoop}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 40.0, res2.AreaClaimedSqm)
+	assert.Greater(t, res2.XpAwarded, 0)
+
+	user1After, err := memStore.GetUser(ctx, "usr_runner_1")
+	require.NoError(t, err)
+	assert.Equal(t, 40.0, user1After.TotalAreaSqm)
+	assert.Greater(t, user1After.XP, int64(0))
+}
+
+func TestLazyTerritoryDecayCalculation(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// Capture a 500 m² territory
+	now := time.Now().UTC()
+	loop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       500.0,
+		LoopDistanceMeters: 400.0,
+		ClosedAt:           now,
+	}
+
+	_, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_decay_test",
+		UserID:         "usr_decay",
+		IdempotencyKey: "idem_decay_001",
+	}, []geo.EnclosedLoop{loop}, nil)
+	require.NoError(t, err)
+
+	tID := "poly_usr_decay_territory"
+
+	// 1. Immediately after capture: strength is 100.0
+	tImmediate, err := memStore.GetTerritoryByID(ctx, tID)
+	require.NoError(t, err)
+	require.NotNil(t, tImmediate)
+	assert.Equal(t, 100.0, tImmediate.Strength)
+	assert.False(t, tImmediate.IsWeak(now))
+
+	// 2. Direct formula verification:
+	// 2 days later: 100 - (2 * 15) = 70.0
+	twoDaysLater := now.Add(48 * time.Hour)
+	assert.InDelta(t, 70.0, tImmediate.EffectiveStrength(twoDaysLater), 0.01)
+	assert.False(t, tImmediate.IsWeak(twoDaysLater))
+
+	// 5 days later: 100 - (5 * 15) = 25.0 (< 30.0 -> IsWeak == true)
+	fiveDaysLater := now.Add(5 * 24 * time.Hour)
+	assert.InDelta(t, 25.0, tImmediate.EffectiveStrength(fiveDaysLater), 0.01)
+	assert.True(t, tImmediate.IsWeak(fiveDaysLater))
+
+	// 10 days later: 100 - (10 * 15) = max(0, -50) = 0.0
+	tenDaysLater := now.Add(10 * 24 * time.Hour)
+	assert.Equal(t, 0.0, tImmediate.EffectiveStrength(tenDaysLater))
+	assert.True(t, tImmediate.IsWeak(tenDaysLater))
+}
+
+func TestWeakTerritoryCaptureBonusAndDefenseReset(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+	now := time.Now().UTC()
+
+	// 1. Setup rival user with decayed/weak territory (captured 6 days ago, strength = 10.0 < 30.0)
+	rivalLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       1000.0,
+		LoopDistanceMeters: 500.0,
+		ClosedAt:           now.Add(-6 * 24 * time.Hour),
+	}
+
+	_, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_rival_initial",
+		UserID:         "usr_rival",
+		IdempotencyKey: "idem_rival_001",
+		CreatedAt:      now.Add(-6 * 24 * time.Hour),
+	}, []geo.EnclosedLoop{rivalLoop}, nil)
+	require.NoError(t, err)
+
+	// Simulate territory age by setting LastDefendedAt to 6 days ago
+	rivalTID := "poly_usr_rival_territory"
+	rivalT, err := memStore.GetTerritoryByID(ctx, rivalTID)
+	require.NoError(t, err)
+	// Read lazily calculates strength
+	assert.True(t, rivalT.EffectiveStrength(now) < store.TerritoryWeakThreshold, "Rival territory must be weak (<30.0)")
+
+	// 2. Attacker conquers rival land: 1000 m²
+	attackerLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       1000.0,
+		LoopDistanceMeters: 500.0,
+		ClosedAt:           now,
+	}
+
+	attackerRes, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_attacker_conquer",
+		UserID:         "usr_attacker",
+		IdempotencyKey: "idem_att_001",
+		CreatedAt:      now,
+	}, []geo.EnclosedLoop{attackerLoop}, nil)
+	require.NoError(t, err)
+
+	// Normal 1000 m² gives round(1000/20) = 50 XP (or min 100 = 100).
+	// Weak rival 1.5x bonus gives round((1000*1.5)/20) = round(1500/20) = 75 XP (or min 100).
+	// For larger area, say 5000 m²: normal is 250 XP, weak 1.5x is 375 XP.
+	assert.Contains(t, attackerRes.RivalsAffected, "usr_rival")
+
+	// 3. Defending territory resets strength to 100.0 and LastDefendedAt to now
+	attackerT, err := memStore.GetTerritoryByID(ctx, "poly_usr_attacker_territory")
+	require.NoError(t, err)
+	assert.Equal(t, 100.0, attackerT.Strength, "Freshly captured/defended territory must reset to 100.0 strength")
+}
+
+
 

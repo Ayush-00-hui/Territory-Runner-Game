@@ -20,6 +20,7 @@ import '../gameplay/polygon_enclosure_engine.dart';
 import '../../services/sync_queue.dart';
 import '../../services/api_client.dart';
 import '../../services/websocket_service.dart';
+import '../../core/utils/geohash_utils.dart';
 import '../../models/ws_events.dart';
 import '../../main.dart'; // For showRunStartAnimation
 import '../../models/territory.dart';
@@ -559,6 +560,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         if (wasInitial) {
           setState(() {});
         }
+
+        // Subscribe to spatial viewport cells for targeted real-time rival presence
+        final viewportCells = GeohashUtils.computeViewportCells(LatLng(pos.latitude, pos.longitude));
+        _wsService.sendViewportSubscription(viewportCells);
 
         // Broadcast live kinematic presence to peers via WebSocket
         _wsService.sendPresenceUpdate(

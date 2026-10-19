@@ -665,6 +665,10 @@ func (a *API) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 		faction = u.Faction
 	}
 
+	if settings, err := a.store.GetUserSettings(r.Context(), uid); err == nil && settings != nil {
+		a.wsHub.UpdateUserVisibility(uid, settings.LiveVisibility)
+	}
+
 	if zones, err := a.store.GetPrivacyZones(r.Context(), uid); err == nil && len(zones) > 0 {
 		evals := make([]geo.PrivacyZoneEvaluator, len(zones))
 		for i, z := range zones {
@@ -716,6 +720,63 @@ func (a *API) HandleRegisterDeviceToken(w http.ResponseWriter, r *http.Request) 
 		"status": "registered",
 		"token":  trimmed,
 	})
+}
+
+// HandleGetSettings handles GET /v1/me/settings.
+func (a *API) HandleGetSettings(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	settings, err := a.store.GetUserSettings(r.Context(), uid)
+	if err != nil {
+		a.logger.Error("failed to get user settings", "user_id", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve user settings")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, settings)
+}
+
+// UpdateSettingsRequest defines payload for updating settings.
+type UpdateSettingsRequest struct {
+	LiveVisibility string `json:"live_visibility"`
+}
+
+// HandleUpdateSettings handles PUT /v1/me/settings.
+func (a *API) HandleUpdateSettings(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var req UpdateSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	vis := strings.ToLower(strings.TrimSpace(req.LiveVisibility))
+	if vis != "off" && vis != "friends" && vis != "nearby" {
+		writeError(w, http.StatusBadRequest, "INVALID_SETTING", "live_visibility must be one of: off, friends, nearby")
+		return
+	}
+
+	settings := &store.UserSettings{LiveVisibility: vis}
+	if err := a.store.UpdateUserSettings(r.Context(), uid, settings); err != nil {
+		a.logger.Error("failed to update user settings", "user_id", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update user settings")
+		return
+	}
+
+	if a.wsHub != nil {
+		a.wsHub.UpdateUserVisibility(uid, vis)
+	}
+
+	writeJSON(w, http.StatusOK, settings)
 }
 
 // HandleGetCurrentLeague handles GET /v1/league/current.

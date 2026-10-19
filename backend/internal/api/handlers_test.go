@@ -3,6 +3,11 @@ package api_test
 import (
 	"bytes"
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -27,7 +32,7 @@ func setupTestServer() (http.Handler, store.Store) {
 	memStore := store.NewMemoryStore()
 	cfg := &config.Config{AuthMode: "dev", Env: "development"}
 	authenticator := auth.NewAuthenticator(cfg)
-	wsHub := ws.NewHub(nil)
+	wsHub := ws.NewHub(nil, ws.WithPresenceDelay(0))
 	go wsHub.Run()
 	apiHandler := api.NewAPI(memStore, nil,
 		api.WithWebSocketHub(wsHub),
@@ -63,10 +68,10 @@ func TestSubmitRunValidLoop(t *testing.T) {
 		DistanceMeters:  450.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(40 * time.Second)},
 		},
 	}
 
@@ -99,10 +104,10 @@ func TestDuplicateIdempotencyKeyDoesNotDoubleCount(t *testing.T) {
 		DistanceMeters:  400.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(40 * time.Second)},
 		},
 	}
 
@@ -146,10 +151,10 @@ func TestSubmitRunLassoCrossingKeepsValidLoop(t *testing.T) {
 		DistanceMeters:  400.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5010, Longitude: -0.1210, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.5010, Longitude: -0.1200, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1210, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.5010, Longitude: -0.1210, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.5010, Longitude: -0.1200, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.5000, Longitude: -0.1210, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(40 * time.Second)},
 		},
 	}
 
@@ -180,10 +185,10 @@ func TestSubmitRunPureFigure8Rejected(t *testing.T) {
 		DistanceMeters:  64.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now},
-			{Latitude: 51.50016, Longitude: -0.12016, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.50016, Longitude: -0.12000, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.12016, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now.Add(4 * time.Minute)},
+			{Latitude: 51.50016, Longitude: -0.12016, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.50016, Longitude: -0.12000, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.12016, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now.Add(40 * time.Second)},
 		},
 	}
 
@@ -213,15 +218,15 @@ func TestSubmitRunTwoLoopsAwardXPForBoth(t *testing.T) {
 		DistanceMeters:  700.0,
 		Points: []geo.TrackPoint{
 			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now},
-			{Latitude: 51.50080, Longitude: -0.12000, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.50080, Longitude: -0.12120, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.12120, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.50001, Longitude: -0.12001, Timestamp: now.Add(4 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.11900, Timestamp: now.Add(5 * time.Minute)},
-			{Latitude: 51.50080, Longitude: -0.11900, Timestamp: now.Add(6 * time.Minute)},
-			{Latitude: 51.50080, Longitude: -0.11780, Timestamp: now.Add(7 * time.Minute)},
-			{Latitude: 51.50000, Longitude: -0.11780, Timestamp: now.Add(8 * time.Minute)},
-			{Latitude: 51.50001, Longitude: -0.11899, Timestamp: now.Add(9 * time.Minute)},
+			{Latitude: 51.50080, Longitude: -0.12000, Timestamp: now.Add(10 * time.Second)},
+			{Latitude: 51.50080, Longitude: -0.12120, Timestamp: now.Add(20 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.12120, Timestamp: now.Add(30 * time.Second)},
+			{Latitude: 51.50001, Longitude: -0.12001, Timestamp: now.Add(40 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.11900, Timestamp: now.Add(50 * time.Second)},
+			{Latitude: 51.50080, Longitude: -0.11900, Timestamp: now.Add(60 * time.Second)},
+			{Latitude: 51.50080, Longitude: -0.11780, Timestamp: now.Add(70 * time.Second)},
+			{Latitude: 51.50000, Longitude: -0.11780, Timestamp: now.Add(80 * time.Second)},
+			{Latitude: 51.50001, Longitude: -0.11899, Timestamp: now.Add(90 * time.Second)},
 		},
 	}
 
@@ -307,18 +312,37 @@ func TestRunCoachEndpoint(t *testing.T) {
 }
 
 func TestWebSocketEndpoint(t *testing.T) {
-	router, _ := setupTestServer()
+	router, st := setupTestServer()
 	ts := httptest.NewServer(router)
 	defer ts.Close()
 
-	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/v1/ws?dev_user=ws_tester"
+	ctx := context.Background()
+	_ = st.UpdateUserSettings(ctx, "ws_sender", &store.UserSettings{LiveVisibility: "nearby"})
 
-	conn, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/v1/ws"
+
+	// Sender connects
+	connSender, resp, err := websocket.DefaultDialer.Dial(wsURL+"?dev_user=ws_sender", nil)
 	require.NoError(t, err)
-	defer conn.Close()
+	defer connSender.Close()
 	assert.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
 
-	// Send presence update
+	// Receiver connects
+	connReceiver, resp, err := websocket.DefaultDialer.Dial(wsURL+"?dev_user=ws_receiver", nil)
+	require.NoError(t, err)
+	defer connReceiver.Close()
+	assert.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+
+	// Receiver subscribes to cell
+	cell := geo.GeohashPrecision6(51.502, -0.122)
+	err = connReceiver.WriteJSON(ws.InboundMessage{
+		Type:  ws.TypeViewportSubscribe,
+		Cells: []string{cell},
+	})
+	require.NoError(t, err)
+	time.Sleep(50 * time.Millisecond)
+
+	// Sender sends presence update
 	msg := ws.InboundMessage{
 		Type:      ws.TypePresenceUpdate,
 		Latitude:  51.502,
@@ -326,19 +350,18 @@ func TestWebSocketEndpoint(t *testing.T) {
 		Speed:     3.0,
 		Heading:   45.0,
 	}
-	err = conn.WriteJSON(msg)
+	err = connSender.WriteJSON(msg)
 	require.NoError(t, err)
 
-	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-	_, p, err := conn.ReadMessage()
+	_ = connReceiver.SetReadDeadline(time.Now().Add(1 * time.Second))
+	_, p, err := connReceiver.ReadMessage()
 	require.NoError(t, err)
 
 	var presence ws.PresenceMessage
 	err = json.Unmarshal(p, &presence)
 	require.NoError(t, err)
 	assert.Equal(t, ws.TypeRunnerPresence, presence.Type)
-	assert.Equal(t, "ws_tester", presence.UserID)
-	assert.Equal(t, 51.502, presence.Latitude)
+	assert.Equal(t, "ws_sender", presence.UserID)
 }
 
 func TestSubmitRun_NonMonotonicTimestampsRejected(t *testing.T) {
@@ -743,10 +766,10 @@ func TestConquestTriggersFCMAlert(t *testing.T) {
 		DurationSeconds: 400,
 		DistanceMeters:  2000.0,
 		Points: []geo.TrackPoint{
-			{Latitude: 51.498, Longitude: -0.122, Timestamp: now.Add(-300 * time.Second)},
-			{Latitude: 51.507, Longitude: -0.122, Timestamp: now.Add(-200 * time.Second)},
-			{Latitude: 51.507, Longitude: -0.113, Timestamp: now.Add(-100 * time.Second)},
-			{Latitude: 51.498, Longitude: -0.113, Timestamp: now.Add(-50 * time.Second)},
+			{Latitude: 51.498, Longitude: -0.122, Timestamp: now.Add(-40 * time.Second)},
+			{Latitude: 51.507, Longitude: -0.122, Timestamp: now.Add(-30 * time.Second)},
+			{Latitude: 51.507, Longitude: -0.113, Timestamp: now.Add(-20 * time.Second)},
+			{Latitude: 51.498, Longitude: -0.113, Timestamp: now.Add(-10 * time.Second)},
 			{Latitude: 51.498, Longitude: -0.122, Timestamp: now},
 		},
 	}
@@ -936,6 +959,57 @@ func TestDuelsEndpoints(t *testing.T) {
 	duelsAfter, err := memStore.GetDuelsByUser(ctx, "usr_alice")
 	require.NoError(t, err)
 	assert.Equal(t, "active", duelsAfter[0].Status)
+}
+
+func TestDuelDeclineEndpoint(t *testing.T) {
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_bob", Username: "Bob", Faction: "Iron Legion"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_eve", Username: "Eve", Faction: "Shadow Syndicate"})
+
+	// Alice challenges Bob
+	duelBody, _ := json.Marshal(map[string]interface{}{
+		"opponent_id":  "usr_bob",
+		"target_type":  "area",
+		"target_value": 15000.0,
+		"xp_stake":     200,
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/duels", bytes.NewReader(duelBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	var duel store.Duel
+	err := json.Unmarshal(rec.Body.Bytes(), &duel)
+	require.NoError(t, err)
+
+	// Eve tries to decline -> unauthorized / 400
+	req = httptest.NewRequest(http.MethodPut, "/v1/duels/"+duel.ID+"/decline", nil)
+	req.Header.Set("X-Dev-User", "usr_eve")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	// Bob declines -> 200 OK
+	req = httptest.NewRequest(http.MethodPut, "/v1/duels/"+duel.ID+"/decline", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var resp map[string]string
+	_ = json.Unmarshal(rec.Body.Bytes(), &resp)
+	assert.Equal(t, "ok", resp["status"])
+	assert.Equal(t, "declined", resp["action"])
+
+	// Verify duel is declined in store
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_alice")
+	require.NoError(t, err)
+	assert.Equal(t, "declined", duels[0].Status)
 }
 
 func TestFriendsAndDuelsAntiAbuseEndpoints(t *testing.T) {
@@ -1503,6 +1577,174 @@ func TestActivitySegregatedDuels(t *testing.T) {
 	require.NotEmpty(t, duels)
 	assert.Equal(t, 5000.0, duels[0].OpponentProgress, "Running run must advance progress in running duel")
 }
+
+func TestGetAndSetUserSettings(t *testing.T) {
+	router, _ := setupTestServer()
+
+	// 1. GET /v1/me/settings default is "off"
+	req := httptest.NewRequest(http.MethodGet, "/v1/me/settings", nil)
+	req.Header.Set("X-Dev-User", "user_settings_test")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var settings store.UserSettings
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &settings))
+	assert.Equal(t, "off", settings.LiveVisibility)
+
+	// 2. PUT /v1/me/settings with valid "nearby"
+	putBody, _ := json.Marshal(api.UpdateSettingsRequest{LiveVisibility: "nearby"})
+	req = httptest.NewRequest(http.MethodPut, "/v1/me/settings", bytes.NewReader(putBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "user_settings_test")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &settings))
+	assert.Equal(t, "nearby", settings.LiveVisibility)
+
+	// 3. Verify GET returns updated setting
+	req = httptest.NewRequest(http.MethodGet, "/v1/me/settings", nil)
+	req.Header.Set("X-Dev-User", "user_settings_test")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &settings))
+	assert.Equal(t, "nearby", settings.LiveVisibility)
+
+	// 4. PUT with invalid value -> 400 Bad Request
+	badBody, _ := json.Marshal(map[string]string{"live_visibility": "global"})
+	req = httptest.NewRequest(http.MethodPut, "/v1/me/settings", bytes.NewReader(badBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "user_settings_test")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestWebSocketHandshake_AuthAndProtocols(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	wsHub := ws.NewHub(nil, ws.WithPresenceDelay(0))
+	go wsHub.Run()
+	t.Cleanup(func() { wsHub.Stop() })
+
+	// Set up production Authenticator with StaticKeyProvider
+	rsaKey, err := rsaGenerateKey()
+	require.NoError(t, err)
+	kid := "test-ws-kid"
+	projID := "test-proj-ws"
+
+	authCfg := &config.Config{
+		AuthMode:          "firebase",
+		Env:               "production",
+		FirebaseProjectID: projID,
+	}
+	keyProvider := auth.NewStaticKeyProvider(map[string]*rsa.PublicKey{kid: &rsaKey.PublicKey})
+	prodAuthenticator := auth.NewAuthenticator(authCfg, auth.WithKeyProvider(keyProvider))
+
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithWebSocketHub(wsHub),
+		api.WithAuthenticator(prodAuthenticator),
+	)
+	router := api.SetupRouter(apiHandler, prodAuthenticator)
+
+	server := httptest.NewServer(router)
+	t.Cleanup(func() { server.Close() })
+
+	wsURL := "ws" + strings.TrimPrefix(server.URL, "http") + "/v1/ws"
+
+	// 1. Missing credentials -> 401 Unauthorized
+	_, resp, err := websocket.DefaultDialer.Dial(wsURL, nil)
+	assert.Error(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+
+	// 2. Query token in production is rejected -> 401 Unauthorized
+	validToken, err := buildTestJWT(rsaKey, kid, projID, "runner_ws_valid", time.Now().Add(time.Hour))
+	require.NoError(t, err)
+
+	_, resp, err = websocket.DefaultDialer.Dial(wsURL+"?token="+validToken, nil)
+	assert.Error(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+
+	// 3. Invalid / expired token in Sec-WebSocket-Protocol -> 401
+	expiredToken, err := buildTestJWT(rsaKey, kid, projID, "runner_ws_exp", time.Now().Add(-time.Hour))
+	require.NoError(t, err)
+
+	dialer := websocket.Dialer{
+		Subprotocols: []string{"bearer", expiredToken},
+	}
+	_, resp, err = dialer.Dial(wsURL, nil)
+	assert.Error(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+
+	// 4. Valid token in Sec-WebSocket-Protocol -> 101 Switching Protocols & Subprotocol echoed!
+	dialerValid := websocket.Dialer{
+		Subprotocols: []string{"bearer", validToken},
+	}
+	conn, resp, err := dialerValid.Dial(wsURL, nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	assert.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+	assert.Equal(t, "bearer", resp.Header.Get("Sec-Websocket-Protocol"))
+
+	// 5. Dev mode test: Dev authenticator still works with ?dev_user
+	devCfg := &config.Config{AuthMode: "dev", Env: "development"}
+	devAuth := auth.NewAuthenticator(devCfg)
+	devAPI := api.NewAPI(memStore, nil, api.WithWebSocketHub(wsHub), api.WithAuthenticator(devAuth))
+	devRouter := api.SetupRouter(devAPI, devAuth)
+	devServer := httptest.NewServer(devRouter)
+	t.Cleanup(func() { devServer.Close() })
+
+	devWSURL := "ws" + strings.TrimPrefix(devServer.URL, "http") + "/v1/ws"
+	devConn, devResp, err := websocket.DefaultDialer.Dial(devWSURL+"?dev_user=local_runner_dev", nil)
+	require.NoError(t, err)
+	defer devConn.Close()
+	assert.Equal(t, http.StatusSwitchingProtocols, devResp.StatusCode)
+}
+
+func rsaGenerateKey() (*rsa.PrivateKey, error) {
+	return rsa.GenerateKey(rand.Reader, 2048)
+}
+
+func buildTestJWT(privKey *rsa.PrivateKey, kid, projectID, subject string, exp time.Time) (string, error) {
+	now := time.Now().Unix()
+	header := map[string]string{
+		"alg": "RS256",
+		"kid": kid,
+		"typ": "JWT",
+	}
+	hBytes, _ := json.Marshal(header)
+	hB64 := base64.RawURLEncoding.EncodeToString(hBytes)
+
+	payload := map[string]interface{}{
+		"iss": "https://securetoken.google.com/" + projectID,
+		"aud": projectID,
+		"sub": subject,
+		"exp": exp.Unix(),
+		"iat": now,
+	}
+	pBytes, _ := json.Marshal(payload)
+	pB64 := base64.RawURLEncoding.EncodeToString(pBytes)
+
+	signed := hB64 + "." + pB64
+	hasher := sha256.New()
+	hasher.Write([]byte(signed))
+	digest := hasher.Sum(nil)
+
+	sig, err := rsa.SignPKCS1v15(rand.Reader, privKey, crypto.SHA256, digest)
+	if err != nil {
+		return "", err
+	}
+	return signed + "." + base64.RawURLEncoding.EncodeToString(sig), nil
+}
+
 
 
 

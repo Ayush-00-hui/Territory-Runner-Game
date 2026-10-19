@@ -149,6 +149,23 @@ func (d *Detector) EvaluateTrackWithActivity(points []geo.TrackPoint, activityTy
 					reasons = append(reasons, fmt.Sprintf("Position teleportation jump detected: %.1fm in %.1fs (%.1f km/h)", distMeters, dt, stepSpeedKmh))
 				}
 			}
+
+			// Rule 3b: Biomechanical acceleration ceiling check
+			if dt > 0.2 && dt <= 3.0 {
+				dv := math.Abs(pt.Speed - prev.Speed)
+				accel := dv / dt
+				maxAccelLimit := 8.0
+				if activityType == "cycling" {
+					maxAccelLimit = 12.0
+				}
+				if accel > maxAccelLimit {
+					ruleScore := 45.0 + (accel - maxAccelLimit)
+					if ruleScore > maxScore {
+						maxScore = ruleScore
+					}
+					reasons = append(reasons, fmt.Sprintf("Biomechanical acceleration limit exceeded: %.2f m/s² (max %.1f m/s² for %s)", accel, maxAccelLimit, activityType))
+				}
+			}
 		}
 	}
 
@@ -162,7 +179,7 @@ func (d *Detector) EvaluateTrackWithActivity(points []geo.TrackPoint, activityTy
 				identicalSteps++
 			}
 		}
-		if identicalSteps > len(points)/2 {
+		if identicalSteps >= len(points)/2 {
 			reasons = append(reasons, "Excessive frozen/replay identical GPS breadcrumbs detected")
 			if maxScore < 5.0 {
 				maxScore = 5.0

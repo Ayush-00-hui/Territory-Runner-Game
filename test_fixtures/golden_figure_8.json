@@ -9,9 +9,9 @@
   "expected_rejection_reason": "Loop crossed itself — try again",
   "points": [
     { "latitude": 51.50000, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:00Z" },
-    { "latitude": 51.50016, "longitude": -0.12016, "timestamp": "2026-10-13T10:01:00Z" },
-    { "latitude": 51.50016, "longitude": -0.12000, "timestamp": "2026-10-13T10:02:00Z" },
-    { "latitude": 51.50000, "longitude": -0.12016, "timestamp": "2026-10-13T10:03:00Z" },
-    { "latitude": 51.50000, "longitude": -0.12000, "timestamp": "2026-10-13T10:04:00Z" }
+    { "latitude": 51.50016, "longitude": -0.12016, "timestamp": "2026-10-13T10:00:10Z" },
+    { "latitude": 51.50016, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:20Z" },
+    { "latitude": 51.50000, "longitude": -0.12016, "timestamp": "2026-10-13T10:00:30Z" },
+    { "latitude": 51.50000, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:40Z" }
   ]
 }

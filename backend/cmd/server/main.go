@@ -18,9 +18,29 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations"
 )
 
 func main() {
+	// 0. Handle container healthcheck subcommand
+	if len(os.Args) > 1 && (os.Args[1] == "healthcheck" || os.Args[1] == "--healthcheck") {
+		port := os.Getenv("PORT")
+		if port == "" {
+			port = "8080"
+		}
+		client := &http.Client{Timeout: 3 * time.Second}
+		resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%s/readyz", port))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
+			} else {
+				fmt.Fprintf(os.Stderr, "healthcheck returned HTTP %d\n", resp.StatusCode)
+			}
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
 	// Structured JSON logging
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
@@ -44,6 +64,17 @@ func main() {
 	// Context for DB setup and graceful shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
+
+	// Automated database migrations (guarded by PostgreSQL advisory lock via golang-migrate)
+	if cfg.RunMigrations {
+		logger.Info("running automated database migrations (RUN_MIGRATIONS=true)")
+		migCtx, migCancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer migCancel()
+		if err := migrations.Run(migCtx, cfg.DatabaseURL, logger); err != nil {
+			logger.Error("database migration failure", "error", err)
+			os.Exit(1)
+		}
+	}
 
 	var dataStore store.Store
 

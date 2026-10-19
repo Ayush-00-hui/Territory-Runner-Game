@@ -34,24 +34,34 @@ class PolygonEnclosureEngine {
   // Enclosure configuration parameters
   final double minClosureDistanceMeters; // Proximity threshold to trigger closed loop
   final int minPointsRequired; // Minimum path nodes for a valid loop
-  final double minLoopDistanceMeters; // Minimum loop perimeter
+  final double? _minLoopDistanceMetersOverride; // Explicit override
+  final double? _minLoopAreaSqMetersOverride; // Explicit override
   final double maxLoopAreaSqMeters; // Maximum single-loop area (matches Go server: 5,000,000 m²)
   final double? maxSpeedKmhOutlier; // Explicit outlier ceiling override
-  ExerciseActivityType? activityType; // Activity mode calibrating outlier ceilings
+  final double maxSignalGapSeconds; // Max gap before track segmentation (default: 15s)
+  ExerciseActivityType? activityType; // Activity mode calibrating thresholds
 
-  /// Rejection message used when a loop exceeds [maxLoopAreaSqMeters].
-  /// Kept identical to the Go backend's ErrLoopAreaTooLarge text.
+  /// Rejection messages matching Go backend's errors.
   static const String loopTooLargeReason =
       'Loop area exceeds maximum allowable single run threshold (5000000 m²)';
+  static const String loopPerimeterTooSmallReason =
+      'Loop perimeter below minimum threshold';
+  static const String loopAreaTooSmallReason =
+      'Loop area below minimum threshold';
+  static const String signalGapReason =
+      'GPS signal interrupted (>15s gap) — path reset to prevent inaccurate enclosure';
 
   PolygonEnclosureEngine({
     this.minClosureDistanceMeters = 35.0,
     this.minPointsRequired = 4,
-    this.minLoopDistanceMeters = 40.0,
+    double? minLoopDistanceMeters,
+    double? minLoopAreaSqMeters,
     this.maxLoopAreaSqMeters = 5000000.0,
     this.maxSpeedKmhOutlier,
+    this.maxSignalGapSeconds = 15.0,
     this.activityType,
-  });
+  })  : _minLoopDistanceMetersOverride = minLoopDistanceMeters,
+        _minLoopAreaSqMetersOverride = minLoopAreaSqMeters;
 
   void setActivityType(ExerciseActivityType type) {
     activityType = type;
@@ -69,6 +79,37 @@ class PolygonEnclosureEngine {
         return 35.0;
     }
   }
+
+  /// Authoritative perimeter threshold (meters) for the active exercise modality:
+  /// Walking: 40m, Running: 60m, Cycling: 150m
+  double get effectiveMinLoopDistanceMeters {
+    if (_minLoopDistanceMetersOverride != null) return _minLoopDistanceMetersOverride;
+    switch (activityType ?? ExerciseActivityType.running) {
+      case ExerciseActivityType.walking:
+        return 40.0;
+      case ExerciseActivityType.cycling:
+        return 150.0;
+      case ExerciseActivityType.running:
+        return 60.0;
+    }
+  }
+
+  /// Authoritative loop area threshold (m²) for the active exercise modality:
+  /// Walking: 100 m², Running: 200 m², Cycling: 1000 m²
+  double get effectiveMinLoopAreaSqMeters {
+    if (_minLoopAreaSqMetersOverride != null) return _minLoopAreaSqMetersOverride;
+    switch (activityType ?? ExerciseActivityType.running) {
+      case ExerciseActivityType.walking:
+        return 100.0;
+      case ExerciseActivityType.cycling:
+        return 1000.0;
+      case ExerciseActivityType.running:
+        return 200.0;
+    }
+  }
+
+  double get minLoopDistanceMeters => effectiveMinLoopDistanceMeters;
+  double get minLoopAreaSqMeters => effectiveMinLoopAreaSqMeters;
 
   List<LatLng> get currentPath => List.unmodifiable(_path);
   int get pointCount => _path.length;
@@ -103,8 +144,20 @@ class PolygonEnclosureEngine {
     }
 
     final loopLength = _calculatePathDistance(closedPoints);
+    if (loopLength < effectiveMinLoopDistanceMeters) {
+      _lastInvalidReason = loopPerimeterTooSmallReason;
+      AppLogger.debug('Manual seal rejected: $_lastInvalidReason', tag: 'PolygonEnclosureEngine');
+      return null;
+    }
+
     final areaSqM = computeGeodesicShoelaceArea(closedPoints);
     final areaSqKm = areaSqM / 1000000.0;
+
+    if (areaSqM < effectiveMinLoopAreaSqMeters) {
+      _lastInvalidReason = loopAreaTooSmallReason;
+      AppLogger.debug('Manual seal rejected: $_lastInvalidReason', tag: 'PolygonEnclosureEngine');
+      return null;
+    }
 
     if (areaSqM > maxLoopAreaSqMeters) {
       _lastInvalidReason = loopTooLargeReason;
@@ -137,8 +190,24 @@ class PolygonEnclosureEngine {
   /// Ingests a new GPS position and checks for arbitrary polygon loop enclosure.
   /// Returns [EnclosedLoopEvent] if a valid loop was closed, or null otherwise.
   EnclosedLoopEvent? addPosition(LatLng position, [DateTime? timestamp]) {
-    _lastInvalidReason = null;
     final now = timestamp ?? DateTime.now();
+
+    // 0. GPS Signal Gap Guard: Gaps > maxSignalGapSeconds (15s) segment the track.
+    // No interpolation across dropouts: reset buffer so no loop closes across the broken gap.
+    if (_timestamps.isNotEmpty) {
+      final double gapSec = (now.difference(_timestamps.last).inMilliseconds / 1000.0).abs();
+      if (gapSec > maxSignalGapSeconds) {
+        _lastInvalidReason = signalGapReason;
+        _path.clear();
+        _timestamps.clear();
+        _path.add(position);
+        _timestamps.add(now);
+        _lastReceivedPosition = position;
+        _lastReceivedTimestamp = now;
+        AppLogger.info('GPS signal interrupted (${gapSec.toStringAsFixed(1)}s gap) — path reset', tag: 'PolygonEnclosureEngine');
+        return null;
+      }
+    }
 
     // 1. Discard satellite multipath outlier jumps against immediately preceding sample
     if (_lastReceivedTimestamp != null && _lastReceivedPosition != null) {
@@ -205,9 +274,9 @@ class PolygonEnclosureEngine {
             lassoPoints.add(intersection);
 
             final loopLength = _calculatePathDistance(lassoPoints);
-            if (loopLength >= minLoopDistanceMeters && !hasSelfIntersection(lassoPoints)) {
+            if (loopLength >= effectiveMinLoopDistanceMeters && !hasSelfIntersection(lassoPoints)) {
               final areaSqM = computeGeodesicShoelaceArea(lassoPoints);
-              if (areaSqM <= maxLoopAreaSqMeters && areaSqM > maxLassoArea) {
+              if (areaSqM >= effectiveMinLoopAreaSqMeters && areaSqM <= maxLoopAreaSqMeters && areaSqM > maxLassoArea) {
                 maxLassoArea = areaSqM;
                 bestLassoJ = j;
                 bestLassoIntersection = intersection;
@@ -251,6 +320,7 @@ class PolygonEnclosureEngine {
         _timestamps.clear();
         _path.addAll(newPath);
         _timestamps.addAll(newTimestamps);
+        _lastInvalidReason = null;
 
         return bestLassoEvent;
       }
@@ -270,8 +340,8 @@ class PolygonEnclosureEngine {
         final loopPoints = List<LatLng>.from(_path.sublist(i, currentIndex + 1));
         final loopLength = _calculatePathDistance(loopPoints);
 
-        if (loopLength < minLoopDistanceMeters) {
-          candidateFailureReason ??= 'Loop perimeter below minimum threshold (40.0m)';
+        if (loopLength < effectiveMinLoopDistanceMeters) {
+          candidateFailureReason ??= loopPerimeterTooSmallReason;
           continue;
         }
 
@@ -281,6 +351,11 @@ class PolygonEnclosureEngine {
         }
 
         final areaSqM = computeGeodesicShoelaceArea(loopPoints);
+        if (areaSqM < effectiveMinLoopAreaSqMeters) {
+          candidateFailureReason = loopAreaTooSmallReason;
+          continue;
+        }
+
         if (areaSqM > maxLoopAreaSqMeters) {
           candidateFailureReason = loopTooLargeReason;
           continue;
@@ -309,6 +384,7 @@ class PolygonEnclosureEngine {
       _timestamps.clear();
       _path.add(position);
       _timestamps.add(now);
+      _lastInvalidReason = null;
 
       return bestProximityEvent;
     }

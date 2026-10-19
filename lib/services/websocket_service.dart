@@ -9,6 +9,7 @@ import '../models/ws_events.dart';
 import 'api_client.dart';
 import 'firebase_service.dart';
 import 'privacy_zone_service.dart';
+import 'user_settings_service.dart';
 
 /// Real-Time WebSocket Service for live rival runner presence and territory alerts
 class WebSocketService {
@@ -18,6 +19,7 @@ class WebSocketService {
   final FirebaseService _firebaseService;
   final ApiClient _apiClient;
   final PrivacyZoneService _privacyZoneService;
+  final UserSettingsService _userSettingsService;
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
@@ -39,6 +41,9 @@ class WebSocketService {
   /// Minimum movement displacement (in meters) required to send an update if stationary
   static const double minMovementMeters = 3.0;
 
+  List<String> _lastSubscribedCells = [];
+  List<String> get lastSubscribedCells => List.unmodifiable(_lastSubscribedCells);
+
   final _presenceController = StreamController<RunnerPresenceEvent>.broadcast();
   final _runnerLeftController = StreamController<String>.broadcast();
   final _alertController = StreamController<TerritoryAlertEvent>.broadcast();
@@ -57,9 +62,11 @@ class WebSocketService {
     FirebaseService? firebaseService,
     ApiClient? apiClient,
     PrivacyZoneService? privacyZoneService,
+    UserSettingsService? userSettingsService,
   })  : _firebaseService = firebaseService ?? FirebaseService(),
         _apiClient = apiClient ?? ApiClient(),
-        _privacyZoneService = privacyZoneService ?? PrivacyZoneService();
+        _privacyZoneService = privacyZoneService ?? PrivacyZoneService(),
+        _userSettingsService = userSettingsService ?? UserSettingsService();
 
   /// Visible for testing constructor
   @visibleForTesting
@@ -67,30 +74,66 @@ class WebSocketService {
     FirebaseService? firebaseService,
     ApiClient? apiClient,
     PrivacyZoneService? privacyZoneService,
+    UserSettingsService? userSettingsService,
   })  : _firebaseService = firebaseService ?? FirebaseService(),
         _apiClient = apiClient ?? ApiClient(),
-        _privacyZoneService = privacyZoneService ?? PrivacyZoneService();
+        _privacyZoneService = privacyZoneService ?? PrivacyZoneService(),
+        _userSettingsService = userSettingsService ?? UserSettingsService();
+
+  /// Computes the WebSocket URI and subprotocols according to authentication mode.
+  /// When authenticated with Firebase, ID token is sent via Sec-WebSocket-Protocol (`bearer`, `<token>`)
+  /// and `?user_id` is removed from the URI.
+  /// In unauthenticated/dev mode, `?dev_user=<uid>` is used.
+  Future<({Uri uri, Iterable<String>? protocols})> buildConnectionParams({
+    bool forceRefresh = false,
+  }) async {
+    final httpBase = _apiClient.baseUrl;
+    final wsScheme = httpBase.startsWith('https') ? 'wss' : 'ws';
+    final hostAndPort = httpBase.replaceFirst(RegExp(r'^https?://'), '');
+
+    String? token;
+    final user = _firebaseService.currentUser;
+    if (user != null) {
+      try {
+        token = await user.getIdToken(forceRefresh);
+      } catch (e) {
+        AppLogger.warning('Error fetching Firebase ID token for WebSocket: $e', tag: 'WebSocketService');
+      }
+    }
+
+    if (token != null && token.isNotEmpty) {
+      // Production path: Sec-WebSocket-Protocol header ('bearer', <token>), no query params
+      final uri = Uri.parse('$wsScheme://$hostAndPort/v1/ws');
+      final protocols = ['bearer', token];
+      return (uri: uri, protocols: protocols);
+    } else {
+      // Dev mode path: ?dev_user=<uid>
+      final uid = _firebaseService.currentUserId;
+      final uri = Uri.parse('$wsScheme://$hostAndPort/v1/ws?dev_user=$uid');
+      return (uri: uri, protocols: null);
+    }
+  }
 
   /// Establishes the real-time WebSocket connection to the Go backend
-  void connect() {
+  Future<void> connect() async {
     if (_isConnected || _isDisposed) return;
 
     _reconnectTimer?.cancel();
-    final uid = _firebaseService.currentUserId;
-    final httpBase = _apiClient.baseUrl;
-
-    final wsScheme = httpBase.startsWith('https') ? 'wss' : 'ws';
-    final hostAndPort = httpBase.replaceFirst(RegExp(r'^https?://'), '');
-    final wsUri = Uri.parse('$wsScheme://$hostAndPort/v1/ws?user_id=$uid');
+    final forceRefresh = _reconnectAttempts > 0;
+    final params = await buildConnectionParams(forceRefresh: forceRefresh);
 
     try {
-      _channel = WebSocketChannel.connect(wsUri);
+      _channel = WebSocketChannel.connect(params.uri, protocols: params.protocols);
       _isConnected = true;
       _reconnectAttempts = 0;
       _connectionStateController.add(true);
-      AppLogger.info('Connected to real-time hub: $wsUri', tag: 'WebSocketService');
+      AppLogger.info('Connected to real-time hub: ${params.uri}', tag: 'WebSocketService');
 
       _startHeartbeat();
+
+      if (_lastSubscribedCells.isNotEmpty) {
+        sendViewportSubscription(_lastSubscribedCells);
+      }
 
       _subscription = _channel!.stream.listen(
         _onMessageReceived,
@@ -106,6 +149,23 @@ class WebSocketService {
     } catch (e) {
       AppLogger.warning('Failed to initiate WebSocket connection: $e', tag: 'WebSocketService');
       _handleDisconnect();
+    }
+  }
+
+  /// Sends a lightweight subscription message declaring the runner's visible viewport spatial cells.
+  void sendViewportSubscription(List<String> cells) {
+    if (listEquals(_lastSubscribedCells, cells)) return;
+    _lastSubscribedCells = List.from(cells);
+    if (!_isConnected || _channel == null || cells.isEmpty) return;
+
+    try {
+      final packet = {
+        'type': 'viewport_subscribe',
+        'cells': cells,
+      };
+      _channel!.sink.add(jsonEncode(packet));
+    } catch (e) {
+      AppLogger.warning('Failed to send viewport subscription: $e', tag: 'WebSocketService');
     }
   }
 
@@ -146,9 +206,9 @@ class WebSocketService {
     }
   }
 
-  /// Sends periodic kinematic position updates to nearby peers.
-  /// Throttled to [minPresenceInterval], deduplicates stationary jitter (< [minMovementMeters]),
-  /// and strictly drops updates that fall inside an active privacy exclusion zone.
+  /// Sends periodic position updates to nearby peers or friends.
+  /// Suppresses updates if live_visibility is 'off', coordinate falls inside a privacy zone,
+  /// or when throttled by minPresenceInterval or stationary jitter.
   /// Returns true if dispatched to the WebSocket sink, or false if suppressed or throttled.
   bool sendPresenceUpdate({
     required double latitude,
@@ -158,6 +218,11 @@ class WebSocketService {
     bool force = false,
   }) {
     if (!_isConnected || _channel == null) return false;
+
+    // 0. Client-side Live Visibility Consent Check (Defense-in-depth)
+    if (_userSettingsService.liveVisibility == LiveVisibility.off) {
+      return false;
+    }
 
     final targetPoint = LatLng(latitude, longitude);
 

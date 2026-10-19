@@ -132,7 +132,7 @@ graph TD
         ForegroundService[Foreground Location Service & Sticky Notification]
         WakeLockMgr[Wakelock Keep-Alive Manager]
         CrashBox[(Hive Crash Recovery Box)]
-        SignalFilter[Signal Gap Interpolator & Kinematic Filter]
+        SignalFilter[Signal Gap Segmentation & Kinematic Filter]
         ClaimPlanner[Explore Claim Planner & Net-New Area]
         LocalEngine[Clipper2 Optimistic Engine & Loop Enclosure]
         HiveQueue[(Hive Offline Sync Queue)]
@@ -596,9 +596,16 @@ Connect to `ws://localhost:8085/v1/ws?token=<token>` (or `?dev_user=<username>` 
 
 ## 🧮 Core Mechanics & Algorithmic Parity
 
-### 1. Multi-Candidate & Lasso Loop Closure
-The enclosure engines in Dart (`polygon_enclosure_engine.dart`) and Go (`backend/internal/geo/engine.go`) implement identical closure logic:
-- **Proximity Loop:** When head coordinate $P_{\text{head}}$ comes within $R_{\text{close}} \le 35\text{ m}$ of earlier points with $P \ge 40\text{ m}$, candidate start indices are inspected. If candidate $i$ intersects the loop, the engine does not fail; it iterates through all candidates to find the best valid simple loop.
+### 1. Multi-Candidate, Modality-Calibrated & Lasso Loop Closure
+The enclosure engines in Dart (`polygon_enclosure_engine.dart`) and Go (`backend/internal/geo/engine.go`) implement identical closure logic and activity-calibrated geometry thresholds:
+- **Activity-Calibrated Geometric Thresholds:**
+  | Activity Modality | Minimum Loop Perimeter | Minimum Enclosed Area | Instantaneous Speed Ceiling | Outlier Jitter Ceiling |
+  | :--- | :--- | :--- | :--- | :--- |
+  | **Walking** | $40\text{ m}$ | $100\text{ m}^2$ | $10.0\text{ km/h}$ | $15.0\text{ km/h}$ |
+  | **Running** (Default) | $60\text{ m}$ | $200\text{ m}^2$ | $25.0\text{ km/h}$ | $35.0\text{ km/h}$ |
+  | **Cycling** | $150\text{ m}$ | $1,000\text{ m}^2$ | $50.0\text{ km/h}$ | $60.0\text{ km/h}$ |
+- **Zero-Interpolation Signal Gap Segmentation:** Gaps exceeding $15.0\text{ s}$ between consecutive GPS points segment the path and reset the buffer (`ErrSignalGapDetected`). No synthetic dead-reckoning or interpolation is performed across dropouts to prevent hallucinating loops through impassable physical terrain.
+- **Proximity Loop:** When head coordinate $P_{\text{head}}$ comes within $R_{\text{close}} \le 35\text{ m}$ of earlier points with $P \ge P_{\text{min}}$, candidate start indices are inspected. If candidate $i$ intersects the loop, the engine does not fail; it iterates through all candidates to find the best valid simple loop maximizing area.
 - **Lasso Closure:** When segment $(P_{n-1}, P_n)$ properly crosses non-adjacent segment $(P_i, P_{i+1})$, the engine snaps the loop at intersection $Q$:
   $$\text{Polygon} = [Q, P_{i+1}, P_{i+2}, \dots, P_n, Q]$$
   The preceding path tail $[P_0, \dots, P_i, Q]$ is retained for continuous running.
@@ -611,11 +618,11 @@ Planar Euclidean geometry distorts true physical surface area at non-equatorial 
 $$x_i = R_{\text{earth}} \cdot \lambda_i \cdot \cos(\bar{\phi}), \quad y_i = R_{\text{earth}} \cdot \phi_i$$
 Where $\bar{\phi} = \frac{1}{n}\sum_{i=1}^n \phi_i$. The signed enclosed area is evaluated via Gauss's Shoelace formula:
 $$\text{Area} = \frac{1}{2} \left| \sum_{i=1}^n (x_i y_{i+1} - x_{i+1} y_i) \right|$$
-This achieves $<0.5\%$ error relative to PostGIS `ST_Area(geom::geography)` ellipsoidal integration.
+This achieves $<0.5\%$ error relative to PostGIS `ST_Area(geom::geography)` ellipsoidal integration across all golden fixtures.
 
 ---
 
-### 3. Multi-Loop Atomic PostGIS Transactions
+### 3. Multi-Loop Atomic PostGIS Transactions & Capture Floor
 When multiple loops occur within one run:
 1. `ProcessTrack` collects all non-overlapping valid loops.
 2. In PostgreSQL, `CaptureRunAndMutateTerritories` locks `pg_advisory_xact_lock(hashtext('territory_mutation_lock'))`.
@@ -624,15 +631,15 @@ When multiple loops occur within one run:
    - `ST_Union` into the runner's sovereign `geometry(MultiPolygon, 4326)`.
    - `ST_Difference` on intersecting rival territories.
    - Updates `strength = 100.0` and `last_defended_at = NOW()`.
-   - Sums net area and commits atomically.
+4. **Minimum Capture Floor:** Enforces a $25.0\text{ m}^2$ net-new area threshold (`MinCaptureFloorSqm`). Captures below $25.0\text{ m}^2$ update territory geometry but award zero XP, zero league area, and zero duel progress, preventing micro-jitter exploitation.
 
 ---
 
-### 4. Territory Strength Decay & Defense Mechanics
-$$\text{Strength}(t) = \max\left(0, 100.0 - 15.0 \times \frac{t - t_{\text{defended}}}{86400\text{ s}}\right)$$
-- Undefended territory decays at $15\text{ points/day}$.
-- Running through own territory resets strength to $100\%$.
-- Sectors with $\text{strength} < 30\%$ grant $1.5\times$ net XP bonus to conquering rivals.
+### 4. Lazy Territory Strength Decay & Defense Mechanics
+$$\text{EffectiveStrength}(t) = \max\left(0, 100.0 - 15.0 \times \frac{t - t_{\text{defended}}}{86400\text{ s}}\right)$$
+- **Lazy Evaluation on Read:** Territory strength decays at $15.0\text{ points/day}$ evaluated dynamically on read in both `PostgresStore` and `MemoryStore`, eliminating the need for database cron daemons or periodic worker sweeps.
+- **Active Defense:** Running through owned territory resets strength to $100.0\%$ and updates `last_defended_at = NOW()`.
+- **Weak Rival Land Bonus:** Sectors with effective strength $< 30.0\%$ grant a $1.5\times$ net XP bonus to conquering rivals.
 - If a rival's capture reduces a weak sector's remaining area below $50\text{ m}^2$, the sector collapses completely.
 
 ---

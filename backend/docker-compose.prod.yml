@@ -1,0 +1,79 @@
+# ==============================================================================
+# Territory Runner: Production Compose Stack
+# Purpose: Hardened deployment profile designed for 8 GB RAM host / VM.
+# Security properties:
+#   1. PostgreSQL is NOT exposed to host ports; internal overlay network only.
+#   2. Strong database password enforced via environment variable.
+#   3. Strict Firebase JWT authentication (AUTH_MODE=firebase) required.
+#   4. Explicit CPU and memory resource caps prevent noisy neighbor starvation.
+#   5. Automated database migrations guarded by session-level advisory locks.
+# ==============================================================================
+
+services:
+  postgis:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: territory_postgis_prod
+    restart: always
+    environment:
+      POSTGRES_USER: runner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Error: POSTGRES_PASSWORD environment variable must be set}
+      POSTGRES_DB: territory_runner
+    # NOTE: No host ports published. Accessible only from internal docker network.
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U runner -d territory_runner"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - internal_network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: territory_backend_prod
+    restart: always
+    depends_on:
+      postgis:
+        condition: service_healthy
+    environment:
+      PORT: "8080"
+      ENV: "production"
+      AUTH_MODE: "firebase"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:?Error: FIREBASE_PROJECT_ID must be set in production}
+      DATABASE_URL: "postgres://runner:${POSTGRES_PASSWORD}@postgis:5432/territory_runner?sslmode=disable"
+      RUN_MIGRATIONS: "true"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1024M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - internal_network
+
+volumes:
+  pgdata_prod:
+    name: territory_pgdata_prod
+
+networks:
+  internal_network:
+    driver: bridge

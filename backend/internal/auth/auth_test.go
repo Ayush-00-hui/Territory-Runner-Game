@@ -225,3 +225,35 @@ func TestDevAuthMode_AcceptsDevHeaders(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "local_developer", uid)
 }
+
+func TestVerifyToken_QueryTokenRejectedInProd(t *testing.T) {
+	authenticator, privKey, kid, projectID := setupTestAuth(t)
+
+	builder := newTokenBuilder(privKey, kid, projectID, "user_runner_query")
+	tokenStr, err := builder.build()
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/ws?token="+tokenStr, nil)
+	uid, err := authenticator.AuthenticateRequest(req)
+	assert.ErrorIs(t, err, auth.ErrUnauthorized)
+	assert.Empty(t, uid)
+}
+
+func TestDevAuthMode_AcceptsDevUserQueryParam(t *testing.T) {
+	cfg := &config.Config{
+		AuthMode: "dev",
+		Env:      "development",
+	}
+	authenticator := auth.NewAuthenticator(cfg)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/ws?dev_user=query_developer", nil)
+	uid, err := authenticator.AuthenticateRequest(req)
+	require.NoError(t, err)
+	assert.Equal(t, "query_developer", uid)
+
+	req2 := httptest.NewRequest(http.MethodGet, "/v1/ws?user_id=uid_developer", nil)
+	uid2, err := authenticator.AuthenticateRequest(req2)
+	require.NoError(t, err)
+	assert.Equal(t, "uid_developer", uid2)
+}
+

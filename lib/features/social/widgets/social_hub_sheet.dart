@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../models/duel.dart';
 import '../../../models/friend.dart';
 import '../../../services/api_client.dart';
@@ -92,6 +94,10 @@ class _SocialHubViewState extends State<SocialHubView> {
   late final ApiClient _apiClient;
   late final String _myUid;
 
+  static const String _cachedFriendsKey = 'territory_runner_cached_friends';
+  static const String _cachedRequestsKey = 'territory_runner_cached_friend_requests';
+  static const String _cachedDuelsKey = 'territory_runner_cached_duels';
+
   _SocialTab _activeTab = _SocialTab.squad;
   bool _isLoading = false;
   String? _errorMessage;
@@ -108,9 +114,69 @@ class _SocialHubViewState extends State<SocialHubView> {
     _refreshData();
   }
 
+  Future<void> _loadCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final friendsJson = prefs.getString(_cachedFriendsKey);
+      final requestsJson = prefs.getString(_cachedRequestsKey);
+      final duelsJson = prefs.getString(_cachedDuelsKey);
+
+      final cachedFriends = <FriendUser>[];
+      if (friendsJson != null && friendsJson.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(friendsJson);
+        for (final item in list) {
+          if (item is Map<String, dynamic>) {
+            cachedFriends.add(FriendUser.fromJson(item));
+          }
+        }
+      }
+
+      final cachedRequests = <FriendRequestDetail>[];
+      if (requestsJson != null && requestsJson.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(requestsJson);
+        for (final item in list) {
+          if (item is Map<String, dynamic>) {
+            cachedRequests.add(FriendRequestDetail.fromJson(item));
+          }
+        }
+      }
+
+      final cachedDuels = <Duel>[];
+      if (duelsJson != null && duelsJson.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(duelsJson);
+        for (final item in list) {
+          if (item is Map<String, dynamic>) {
+            cachedDuels.add(Duel.fromJson(item));
+          }
+        }
+      }
+
+      if (mounted && (cachedFriends.isNotEmpty || cachedRequests.isNotEmpty || cachedDuels.isNotEmpty)) {
+        setState(() {
+          if (_friends.isEmpty) _friends = cachedFriends;
+          if (_requests.isEmpty) _requests = cachedRequests;
+          if (_duels.isEmpty) _duels = cachedDuels;
+        });
+      }
+    } catch (e) {
+      AppLogger.warning('Failed to load cached social data: $e', tag: 'SocialHubView');
+    }
+  }
+
+  Future<void> _saveCachedData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_cachedFriendsKey, jsonEncode(_friends.map((f) => f.toJson()).toList()));
+      await prefs.setString(_cachedRequestsKey, jsonEncode(_requests.map((r) => r.toJson()).toList()));
+      await prefs.setString(_cachedDuelsKey, jsonEncode(_duels.map((d) => d.toJson()).toList()));
+    } catch (e) {
+      AppLogger.warning('Failed to cache social data: $e', tag: 'SocialHubView');
+    }
+  }
+
   Future<void> _refreshData() async {
     setState(() {
-      _isLoading = true;
+      _isLoading = _friends.isEmpty && _duels.isEmpty;
       _errorMessage = null;
     });
 
@@ -128,8 +194,12 @@ class _SocialHubViewState extends State<SocialHubView> {
         _duels = results[2] as List<Duel>;
         _isLoading = false;
       });
+      await _saveCachedData();
     } catch (e) {
       if (!mounted) return;
+      if (_friends.isEmpty && _duels.isEmpty) {
+        await _loadCachedData();
+      }
       setState(() {
         _isLoading = false;
         _errorMessage = 'Network offline: displaying cached syndicates';
@@ -202,6 +272,31 @@ class _SocialHubViewState extends State<SocialHubView> {
             ),
           ),
         ),
+
+        if (_errorMessage != null && (_friends.isNotEmpty || _duels.isNotEmpty))
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadius.br8,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.cloud_off_rounded, color: AppColors.warning, size: 16),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
 
         const SizedBox(height: AppSpacing.s12),
 

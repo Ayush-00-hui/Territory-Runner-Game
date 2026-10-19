@@ -10,9 +10,9 @@
   "area_tolerance_percent": 0.5,
   "points": [
     { "latitude": 51.50000, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:00Z" },
-    { "latitude": 51.50050, "longitude": -0.12000, "timestamp": "2026-10-13T10:01:00Z" },
-    { "latitude": 51.50050, "longitude": -0.12150, "timestamp": "2026-10-13T10:02:00Z" },
-    { "latitude": 51.50020, "longitude": -0.12150, "timestamp": "2026-10-13T10:03:00Z" },
-    { "latitude": 51.50020, "longitude": -0.11950, "timestamp": "2026-10-13T10:04:00Z" }
+    { "latitude": 51.50050, "longitude": -0.12000, "timestamp": "2026-10-13T10:00:10Z" },
+    { "latitude": 51.50050, "longitude": -0.12150, "timestamp": "2026-10-13T10:00:20Z" },
+    { "latitude": 51.50020, "longitude": -0.12150, "timestamp": "2026-10-13T10:00:30Z" },
+    { "latitude": 51.50020, "longitude": -0.11950, "timestamp": "2026-10-13T10:00:40Z" }
   ]
 }

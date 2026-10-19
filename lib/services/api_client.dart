@@ -42,9 +42,9 @@ class ApiClient {
   final int maxRetries;
 
   static String get defaultBaseUrl {
-    if (kIsWeb) return 'http://localhost:8085';
-    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:8085';
-    return 'http://localhost:8085';
+    if (kIsWeb) return 'http://localhost:8080';
+    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:8080';
+    return 'http://localhost:8080';
   }
 
   factory ApiClient({
@@ -479,7 +479,7 @@ class ApiClient {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((e) => FriendUser.fromJson(e as Map<String, dynamic>)).toList();
     }
-    return [];
+    throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
   }
 
   /// Fetches pending friend requests (GET /v1/friends/requests)
@@ -495,7 +495,7 @@ class ApiClient {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((e) => FriendRequestDetail.fromJson(e as Map<String, dynamic>)).toList();
     }
-    return [];
+    throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
   }
 
   /// Sends a friend request to a target runner (POST /v1/friends/request)
@@ -537,7 +537,7 @@ class ApiClient {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((e) => Duel.fromJson(e as Map<String, dynamic>)).toList();
     }
-    return [];
+    throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
   }
 
   /// Initiates a head-to-head duel (POST /v1/duels)
@@ -624,4 +624,36 @@ class ApiClient {
 
     return response.statusCode == 200;
   }
+
+  /// Fetches user settings (GET /v1/me/settings)
+  Future<Map<String, dynamic>?> getSettings() async {
+    final uri = Uri.parse('$baseUrl/v1/me/settings');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  /// Updates user settings (PUT /v1/me/settings)
+  Future<Map<String, dynamic>?> updateSettings(Map<String, dynamic> settings) async {
+    final uri = Uri.parse('$baseUrl/v1/me/settings');
+    final headers = await _buildHeaders();
+    final body = jsonEncode(settings);
+
+    final response = await _executeWithRetry(
+      () => _httpClient.put(uri, headers: headers, body: body),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  }
 }
+

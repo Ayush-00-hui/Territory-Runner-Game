@@ -40,6 +40,16 @@ void main() {
       expect(settings.distanceFilter, equals(2));
     });
 
+    test('createLocationSettings creates duty-cycled settings when battery saver is active', () {
+      final settings = locationService.createLocationSettings(
+        mode: GpsTrackingMode.activeRun,
+        isBatterySaverActive: true,
+      );
+
+      expect(settings.accuracy, equals(LocationAccuracy.high));
+      expect(settings.distanceFilter, equals(8));
+    });
+
     test('createLocationSettings creates throttled battery-saving settings for GpsTrackingMode.paused', () {
       final settings = locationService.createLocationSettings(
         mode: GpsTrackingMode.paused,
