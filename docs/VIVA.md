@@ -253,6 +253,6 @@ This document is the definitive technical examination guide for **Territory Runn
    - Resolved in Phase 2: Offline prefetch is gated behind `--dart-define=ALLOW_TILE_PREFETCH=false` by default to adhere to OpenStreetMap usage policies. Configurable tile endpoints (`MAP_TILE_URL`), custom User-Agent, and 7-day retention with HTTP `If-Modified-Since` revalidation prevent policy violations.
 5. **No Signal Gap Dead-Reckoning**:
    - The engine does not perform linear dead-reckoning or Kalman dead-reckoning across signal dropouts. Coordinates received after a gap are processed directly without synthetic interpolation.
-6. **Per-Activity Enclosure Floor**:
-   - While max speed outliers are separated by sport (15 km/h walking, 35 km/h running, 60 km/h cycling), the minimum loop perimeter remains universally set at 40 meters. Activity-specific area and perimeter thresholds are queued for Phase 5.
+6. **Universal Enclosure Floor Without Modality Discrimination**:
+   - While kinematics speed ceilings are segregated by sport (walking: 10 instant / 15 outlier km/h; running: 25 instant / 35 outlier km/h; cycling: 50 instant / 60 outlier km/h), the minimum loop perimeter remains universally set at 40 meters across all activities. Per-activity minimum area floors (e.g. 100/400/2500 m²) are deliberately not enforced in code (`polygon_enclosure_engine.dart` and `engine.go`) to ensure any genuine topological enclosure $\ge 40\text{m}$ can be claimed.
 

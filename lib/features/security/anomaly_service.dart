@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:geolocator/geolocator.dart';
 import '../../core/logging/app_logger.dart';
+import '../../models/activity_type.dart';
 
 /// Result of anomaly scoring on a trajectory window
 class AnomalyResult {
@@ -83,9 +84,15 @@ class AnomalyService {
     }
   }
 
-  /// Scores a sliding window of recent GPS positions
-  AnomalyResult scoreSegment(List<Position> positions) {
+  /// Scores a sliding window of recent GPS positions with activity-specific calibration.
+  AnomalyResult scoreSegment(List<Position> positions, [ExerciseActivityType? activityType]) {
     if (positions.isEmpty) return AnomalyResult.genuine;
+
+    final activity = activityType ?? ExerciseActivityType.running;
+    final double maxInstantSpeedKmh = activity == ExerciseActivityType.running ? _maxHumanSpeedKmh : activity.maxSpeedKmh;
+    final double maxTeleportSpeedKmh = activity == ExerciseActivityType.cycling
+        ? 65.0
+        : (activity == ExerciseActivityType.walking ? 15.0 : 35.0);
 
     // --- Tier 1: Fast Rule-Based Hard Checks ---
     final Position latest = positions.last;
@@ -101,14 +108,17 @@ class AnomalyService {
       );
     }
 
-    // Check 2: Instantaneous human speed ceiling (> 25 km/h is impossible for recreational runners)
+    // Check 2: Instantaneous human speed ceiling
     final double instantSpeedKmh = latest.speed * 3.6;
-    if (instantSpeedKmh > _maxHumanSpeedKmh) {
-      AppLogger.warning('CHEAT DETECTED: Instant speed ${instantSpeedKmh.toStringAsFixed(1)} km/h exceeds human limits', tag: 'AnomalyService');
+    if (instantSpeedKmh > maxInstantSpeedKmh) {
+      AppLogger.warning(
+        'CHEAT DETECTED: Instant speed ${instantSpeedKmh.toStringAsFixed(1)} km/h exceeds ${activity.displayName.toLowerCase()} limits (${maxInstantSpeedKmh.toStringAsFixed(1)} km/h)',
+        tag: 'AnomalyService',
+      );
       return AnomalyResult(
         isAnomaly: true,
-        anomalyScore: 10.0 + (instantSpeedKmh - _maxHumanSpeedKmh),
-        reason: 'Instantaneous speed exceeded ${_maxHumanSpeedKmh.toStringAsFixed(0)} km/h ($instantSpeedKmh km/h)',
+        anomalyScore: 10.0 + (instantSpeedKmh - maxInstantSpeedKmh),
+        reason: 'Instantaneous speed exceeded ${maxInstantSpeedKmh.toStringAsFixed(0)} km/h ($instantSpeedKmh km/h)',
         features: {'speed_kmh': instantSpeedKmh},
       );
     }
@@ -125,13 +135,45 @@ class AnomalyService {
           latest.longitude,
         );
         final double stepSpeedKmh = (distMeters / dtSeconds) * 3.6;
-        if (stepSpeedKmh > 35.0 || (distMeters > 50.0 && dtSeconds <= 1.0)) {
-          AppLogger.warning('CHEAT DETECTED: Teleport jump of ${distMeters.toStringAsFixed(1)}m in ${dtSeconds}s ($stepSpeedKmh km/h)', tag: 'AnomalyService');
+        if (stepSpeedKmh > maxTeleportSpeedKmh || (distMeters > 50.0 && dtSeconds <= 1.0)) {
+          AppLogger.warning(
+            'CHEAT DETECTED: Teleport jump of ${distMeters.toStringAsFixed(1)}m in ${dtSeconds}s ($stepSpeedKmh km/h)',
+            tag: 'AnomalyService',
+          );
           return AnomalyResult(
             isAnomaly: true,
             anomalyScore: 15.0,
             reason: 'Position teleportation detected ($distMeters m jump in ${dtSeconds}s)',
             features: {'stepSpeedKmh': stepSpeedKmh, 'distMeters': distMeters},
+          );
+        }
+      }
+    }
+
+    // Check 4: Average speed ceiling check across window
+    if (positions.length >= 3) {
+      final double totalTimeSeconds = (latest.timestamp.difference(positions.first.timestamp).inMilliseconds / 1000.0).abs();
+      if (totalTimeSeconds >= 3.0) {
+        double totalDist = 0.0;
+        for (int i = 0; i < positions.length - 1; i++) {
+          totalDist += Geolocator.distanceBetween(
+            positions[i].latitude,
+            positions[i].longitude,
+            positions[i + 1].latitude,
+            positions[i + 1].longitude,
+          );
+        }
+        final double windowAvgSpeedKmh = (totalDist / totalTimeSeconds) * 3.6;
+        if (windowAvgSpeedKmh > activity.maxAverageSpeedKmh) {
+          AppLogger.warning(
+            'CHEAT DETECTED: Average speed ${windowAvgSpeedKmh.toStringAsFixed(1)} km/h exceeds ${activity.displayName.toLowerCase()} endurance ceiling (${activity.maxAverageSpeedKmh} km/h)',
+            tag: 'AnomalyService',
+          );
+          return AnomalyResult(
+            isAnomaly: true,
+            anomalyScore: 50.0 + (windowAvgSpeedKmh - activity.maxAverageSpeedKmh),
+            reason: 'Average speed ${windowAvgSpeedKmh.toStringAsFixed(1)} km/h exceeds ${activity.displayName.toLowerCase()} endurance ceiling (${activity.maxAverageSpeedKmh.toStringAsFixed(1)} km/h)',
+            features: {'avg_speed_kmh': windowAvgSpeedKmh},
           );
         }
       }

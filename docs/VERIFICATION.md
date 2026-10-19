@@ -161,4 +161,45 @@ ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	0.967s
 - **Exit Code**: `0`
 - **Output**: Clean exit across all 9 packages (anticheat, api, auth, coach, geo, league, notify, store, ws).
 
+---
+
+## 5. Phase 4 Verification (Activity-Fairness & Anti-Cheat Parity)
+
+### 5.1 Flutter Static Code Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...
+No issues found! (ran in 4.5s)
+```
+
+### 5.2 Flutter Test Suite (with Activity-Aware Anomaly & Kinematics Tests)
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:13 +222: All tests passed! (222 passed, 0 failed)
+```
+*Note*: Includes `test/anomaly_service_test.dart` (8 tests) and `test/activity_type_test.dart` (3 tests) validating walking, running, and cycling speed ceilings and endurance limits.
+
+### 5.3 Go Backend Static Analysis & Tests
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit (0 errors, 0 warnings).
+
+- **Command**: `go test -v -count=1 ./internal/anticheat ./internal/geo`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit across 21 tests in anticheat and geo packages (0.533s anticheat, 0.577s geo).
+
+- **Command**: `go test -v -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit across all 9 packages (anticheat, api, auth, coach, geo, league, notify, store, ws).
+
+
 

@@ -6,16 +6,22 @@ Territory Runner segregates movement kinematics across three distinct athletic c
 
 | Parameter | Walking | Running (Default) | Cycling |
 | :--- | :--- | :--- | :--- |
+| **Max Instant Speed** | 10 km/h (2.78 m/s) | 25 km/h (6.94 m/s) | 50 km/h (13.89 m/s) |
+| **Max Average Endurance** | 8.5 km/h (2.36 m/s) | 22 km/h (6.11 m/s) | 40 km/h (11.11 m/s) |
 | **Max Outlier Speed** | 15 km/h (4.17 m/s) | 35 km/h (9.72 m/s) | 60 km/h (16.67 m/s) |
+| **Teleport Ceiling** | 15 km/h | 35 km/h | 65 km/h |
 | **Min Perimeter** | 40 m | 40 m | 40 m |
+| **Min Points** | 4 | 4 | 4 |
+| **Max Loop Area** | 5,000,000 m² | 5,000,000 m² | 5,000,000 m² |
 | **Target Movement Cadence** | Pedestrian / Stroll | Sprint / Jog | Velocipede / Road / Gravel |
 
-*Note on Minimum Enclosure Area*: The current codebase enforces a universal 40-meter minimum perimeter and 4-node floor. Activity-specific area and perimeter floors are specified for implementation in Phase 5.
+> [!NOTE]
+> **No Per-Activity Minimum Area Floors**: The codebase deliberately enforces a universal 40-meter minimum perimeter and 4-node floor. No per-activity minimum area floors (e.g., 100/400/2500 m²) exist in the code (`lib/features/gameplay/polygon_enclosure_engine.dart` or `backend/internal/geo/engine.go`). Any non-self-intersecting loop meeting the 40m perimeter and $\le 5,000,000\text{ m²}$ constraint is geometrically valid.
 
 ### Rationale
-- **Walking (15 km/h)**: Human fast-walking world records reach ~14-15 km/h. Filtering above 15 km/h prevents runners or cyclists from claiming walking leaderboards.
-- **Running (35 km/h)**: Usain Bolt's peak sprint speed is ~44.7 km/h over 20 meters, with sustained running speeds under 30 km/h. 35 km/h provides ample headroom for elite sprinters while rejecting cars, scooters, or bicycles.
-- **Cycling (60 km/h)**: Urban cycling rarely exceeds 40-50 km/h; 60 km/h accommodates high-speed downhill descents while filtering highway vehicular spoofing.
+- **Walking (10 km/h instant, 15 km/h outlier)**: Human fast-walking world records reach ~14-15 km/h. Filtering above 10 km/h instant and 15 km/h outlier prevents runners or cyclists from claiming walking leaderboards.
+- **Running (25 km/h instant, 35 km/h outlier)**: Elite sprinting speeds reach ~44 km/h momentarily, with sustained distance running below 22 km/h. 25 km/h instant and 35 km/h outlier accommodate sprinters while rejecting bicycles and cars.
+- **Cycling (50 km/h instant, 60 km/h outlier)**: Urban road cycling rarely exceeds 40-50 km/h; 50 km/h instant and 60 km/h outlier accommodate fast descents while filtering highway motor vehicle spoofing.
 
 ---
 
