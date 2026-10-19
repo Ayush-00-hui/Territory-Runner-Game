@@ -111,13 +111,13 @@ This document is the definitive technical examination guide for **Territory Runn
 
 ### Q3.2: How does the application survive sudden process termination, crash, or battery exhaustion mid-run?
 **Defense:**
-- The client maintains an `active_run_recovery` Hive box on persistent local storage.
-- **Point-by-Point Persistence:** Every GPS coordinate received by `LocationTrackingService` is committed to local disk *before* updating the UI layer.
+- The client maintains an `active_run_recovery` Hive box on persistent local storage (`lib/services/run_recovery_service.dart`).
+- **Periodic Snapshot Persistence:** Every valid GPS coordinate and telemetry metric received by `LocationService` is throttled and committed to disk before updating the UI layer via `_runRecoveryService.saveActiveRun(...)`.
 - **Crash Recovery Handshake:**
-  On cold app boot, `CrashRecoveryService.checkAndRestorePendingRun()` inspects the recovery box. If an active run was interrupted:
+  On app initialization, `MapScreen` checks `_runRecoveryService.hasRecoverableRun()`. If an interrupted session exists (`getRecoverableRun()`):
   1. The app detects the unfinalized workout session.
-  2. Prompts the runner with a recovery dialog: *"Unfinished run detected (1.4 km, 12 min). Resume tracking or finalize capture?"*
-  3. Resuming restores all track points, active pace timers, and loop enclosures without data loss.
+  2. Prompts the runner with an `AppSheet` recovery dialog: *"Unfinished run detected (X.X km, Y min). Resume tracking or finalize capture?"*
+  3. Resuming restores all track points, elapsed/moving duration timers, and live preview area without data loss. Finalizing or discarding invokes `_runRecoveryService.clearRecovery()`.
 
 ---
 
@@ -152,12 +152,15 @@ This document is the definitive technical examination guide for **Territory Runn
 
 ### Q4.2: How does the kinematic anti-cheat engine prevent vehicle spoofing, GPS mocking, and teleportation?
 **Defense:**
-- In [`backend/internal/anticheat/detector.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/anticheat/detector.go):
-  1. **Speed Ceiling:** Human sprint speed ceiling is hard-locked at $12.5\text{ m/s}$ ($45\text{ km/h}$, Usain Bolt peak sprint velocity). Any point interval exceeding this velocity triggers an instant anomaly flag (`SPEED_CEILING_EXCEEDED`).
-  2. **Teleportation Detection:** Any displacement $> 50\text{ m}$ occurring in $\le 1\text{ s}$ without intermediate kinematic trace triggers `TELEPORTATION_DETECTED`.
-  3. **Monotonic Timestamp Verification:** Every submitted point must satisfy $t_i > t_{i-1}$. Points with non-advancing or retrograded timestamps are rejected with HTTP 400.
-  4. **Hardware Mock Location Flag:** Inspects Android's `is_mocked` provider flag.
-  5. Runs with an anomaly score $\ge 0.70$ are permanently rejected with HTTP `422 Anomaly Rejected`.
+- In [`backend/internal/anticheat/detector.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/anticheat/detector.go) and [`backend/internal/api/handlers.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/handlers.go):
+  1. **Activity-Aware Speed Ceilings (`DefaultActivityLimits`):**
+     - **Running:** 25 km/h instant ceiling, 22 km/h endurance average, 35 km/h teleport ceiling.
+     - **Walking:** 10 km/h instant ceiling, 8.5 km/h endurance average, 15 km/h teleport ceiling.
+     - **Cycling:** 50 km/h instant ceiling, 40 km/h endurance average, 65 km/h teleport ceiling.
+  2. **Teleportation Detection:** Any step speed exceeding the activity's teleport ceiling or displacement $> 50\text{ m}$ in $\le 1\text{ s}$ triggers an instant anomaly flag.
+  3. **Hardware Mock Location Flag:** Inspects Android's `is_mocked` provider flag (scores 99.0).
+  4. **Multi-Feature Weighted Z-Score Detector:** Evaluates 5-dimensional kinematic vector (speed, acceleration, heading jerk, sinuosity, stop frequency) against calibrated baseline statistics.
+  5. Critical anomalies with score $\ge 50.0$ are rejected with HTTP `422 Unprocessable Entity` (`ANOMALY_REJECTED`). Runs with moderate anomalies ($3.0 \le \text{score} < 50.0$) are accepted but flagged for review (`status = "flagged_review"`).
 
 ---
 
@@ -168,6 +171,7 @@ This document is the definitive technical examination guide for **Territory Runn
 - **Google Deprecation:** The legacy FCM API (`https://fcm.googleapis.com/fcm/send`) was deprecated by Google in June 2024.
 - **Credential Security:** Legacy server keys were permanent strings that, if leaked in logs or source control, granted unrestricted push access. FCM HTTP v1 requires short-lived OAuth2 access tokens valid for only 60 minutes.
 - **Pure Go OAuth2 Implementation:** In [`backend/internal/notify/fcm.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/notify/fcm.go), the backend signs an RS256 JWT assertion using the service account's private key and exchanges it with `https://oauth2.googleapis.com/token`. Tokens are cached in-memory with thread-safe double-checked locking until `expires_at - 60s`.
+- **Graceful Unconfigured Fallback:** When Google Service Account credentials are not present in the environment, `NewFCMClient` logs a warning (`FCM service account credentials not configured; push notifications disabled`) and disables itself without failing server startup. Alert dispatches return `nil` gracefully.
 - **Asynchronous Decoupling:** Push alerts to carved victims are dispatched in an asynchronous Go goroutine with a 5-second context timeout, ensuring the conquering runner's HTTP 201 response completes in $< 20\text{ms}$ without waiting for external Google network round-trips.
 
 ---

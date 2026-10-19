@@ -201,5 +201,61 @@ No issues found! (ran in 4.5s)
 - **Exit Code**: `0`
 - **Output**: Clean exit across all 9 packages (anticheat, api, auth, coach, geo, league, notify, store, ws).
 
+---
+
+## 6. Phase 5 Verification (Push Notifications & Background Reliability)
+
+### 6.1 Flutter Static Code Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...
+No issues found! (ran in 6.1s)
+```
+
+### 6.2 Flutter Test Suite (Background & Notifications)
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:10 +222: All tests passed! (222 passed, 0 failed)
+```
+*Note*: Includes `test/adaptive_gps_test.dart` (5 tests), `test/notification_service_test.dart` (4 tests), and `test/run_recovery_service_test.dart` (2 tests) verifying foreground notification configuration, wake lock gating, crash recovery Hive box persistence, and unconfigured FCM fallback.
+
+### 6.3 Go Backend Static Analysis & Tests
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit (0 errors, 0 warnings).
+
+- **Command**: `go test -v -count=1 ./internal/notify`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+=== RUN   TestBuildAlertPayload
+--- PASS: TestBuildAlertPayload (0.00s)
+=== RUN   TestFCMClientGracefulDegradeWhenNoCredentials
+2026/10/19 13:08:45 WARN FCM service account credentials not configured; push notifications disabled (graceful fallback)
+--- PASS: TestFCMClientGracefulDegradeWhenNoCredentials (0.00s)
+=== RUN   TestFCMOAuth2TokenRefreshAndSend
+--- PASS: TestFCMOAuth2TokenRefreshAndSend (0.05s)
+=== RUN   TestFCMUserFanoutDelivery
+--- PASS: TestFCMUserFanoutDelivery (0.03s)
+=== RUN   TestMockNotifierRecordsDispatchedAlerts
+--- PASS: TestMockNotifierRecordsDispatchedAlerts (0.00s)
+PASS
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	0.823s
+```
+
+- **Command**: `go test -v -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit across all 9 packages (anticheat, api, auth, coach, geo, league, notify, store, ws).
+
+
 
 
