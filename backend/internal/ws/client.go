@@ -3,6 +3,7 @@ package ws
 import (
 	"encoding/json"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -17,13 +18,31 @@ const (
 
 // Client represents a single active WebSocket session.
 type Client struct {
-	hub      *Hub
-	conn     *websocket.Conn
-	send     chan []byte
-	userID   string
-	username string
-	faction  string
-	logger   *slog.Logger
+	hub             *Hub
+	conn            *websocket.Conn
+	send            chan []byte
+	userID          string
+	username        string
+	faction         string
+	logger          *slog.Logger
+	subscribedCells map[string]bool
+	lastPresence    time.Time
+	mu              sync.RWMutex
+}
+
+// HasSubscribedCell checks if this client is subscribed to any of the candidate cells.
+func (c *Client) HasSubscribedCell(cells []string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if len(c.subscribedCells) == 0 {
+		return false
+	}
+	for _, cell := range cells {
+		if c.subscribedCells[cell] {
+			return true
+		}
+	}
+	return false
 }
 
 // readPump pumps inbound messages from the websocket connection to the hub.
@@ -60,26 +79,29 @@ func (c *Client) readPump() {
 			// Refresh read deadline
 			_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
 
+		case TypeViewportSubscribe:
+			c.mu.Lock()
+			c.subscribedCells = make(map[string]bool, len(inbound.Cells))
+			for _, cell := range inbound.Cells {
+				c.subscribedCells[cell] = true
+			}
+			c.mu.Unlock()
+			c.logger.Debug("client subscribed to viewport cells", "user_id", c.userID, "count", len(inbound.Cells))
+
 		case TypePresenceUpdate:
-			// Enforce server-side privacy zones: never broadcast runner presence while user is inside a zone
-			if c.hub.IsPointInUserPrivacyZone(c.userID, inbound.Latitude, inbound.Longitude) {
-				c.logger.Debug("runner presence suppressed due to privacy zone", "user_id", c.userID, "lat", inbound.Latitude, "lng", inbound.Longitude)
+			// Server-side per-connection rate limit: at most 1 update / 2 s
+			now := time.Now()
+			c.mu.Lock()
+			if !c.lastPresence.IsZero() && now.Sub(c.lastPresence) < 2*time.Second {
+				c.mu.Unlock()
+				c.logger.Debug("presence update dropped due to rate limit (1 update / 2s)", "user_id", c.userID)
 				continue
 			}
+			c.lastPresence = now
+			c.mu.Unlock()
 
-			// Broadcast runner kinematic position to peers
-			presence := PresenceMessage{
-				Type:      TypeRunnerPresence,
-				UserID:    c.userID,
-				Username:  c.username,
-				Faction:   c.faction,
-				Latitude:  inbound.Latitude,
-				Longitude: inbound.Longitude,
-				Speed:     inbound.Speed,
-				Heading:   inbound.Heading,
-				UpdatedAt: time.Now().UTC().Format(time.RFC3339),
-			}
-			c.hub.BroadcastJSON(presence)
+			// Dispatch targeted presence through Hub
+			c.hub.DispatchPresence(c.userID, c.username, c.faction, inbound.Latitude, inbound.Longitude)
 		}
 	}
 }

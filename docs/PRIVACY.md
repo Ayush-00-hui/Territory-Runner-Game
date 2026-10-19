@@ -26,7 +26,8 @@ In addition to client-side redaction, the backend enforces privacy zones as an a
    - Enforced by server validation at `PUT /v1/me/privacy-zones` and database constraints (`radius_meters BETWEEN 50 AND 2000`).
 
 2. **Presence Suppression (WebSockets)**:
-   - When a runner moves within their registered privacy zone, real-time WebSocket presence updates (`TypePresenceUpdate`) are **completely dropped at the server hub** before broadcasting to nearby runners.
+   - When a runner moves within their registered privacy zone, real-time WebSocket presence updates (`TypePresenceUpdate`) are **completely dropped at the client and server hub** before broadcasting.
+   - Dual-ended enforcement: Presence is suppressed if either the sender or recipient is within an active privacy exclusion zone.
    - Competitors and rivals on the live map cannot see another runner's location or movement while inside their designated privacy bubble.
 
 3. **GPS Track & Export Masking**:
@@ -35,7 +36,37 @@ In addition to client-side redaction, the backend enforces privacy zones as an a
 
 ---
 
-## 3. Public Territory State vs. Private Paths
+## 3. Real-Time Presence & Live Location Visibility (Phase 1 Hardening)
+
+To adhere to privacy-by-default and prevent stalking or pace profiling during active runs:
+
+1. **Default Visibility (`off`)**:
+   - `live_visibility` defaults strictly to `'off'` on account creation (`000010_add_user_settings.up.sql`).
+   - Unless a runner explicitly opts in via **Profile > Live Location Visibility**, zero outbound presence messages are broadcast to the network.
+   - Configurable modes:
+     - `off`: Live position is never broadcast or delivered to anyone.
+     - `friends`: Delivered strictly to mutual accepted friends.
+     - `nearby`: Delivered to nearby runners within the same spatial geohash cell or 8 adjacent perimeter cells.
+
+2. **Kinematic Stripping, Delay & Spatial Coarsening**:
+   - **25m Grid Snapping**: Coordinates broadcast to nearby runners are snapped to a 25-meter grid center (`SnapToGrid25m`), preventing street-level triangulation.
+   - **5-Second Delay**: Presence broadcasts are held in a 5-second buffer before dispatch (`presenceDelay = 5s`).
+   - **Kinematic Redaction**: Speed, cadence, and heading are entirely stripped and omitted from public presence broadcasts.
+
+3. **Spatial Geohash Cell Targeting**:
+   - Uses standard base32 **Geohash precision 6** (~1.2 km x 0.6 km) with 8 adjacent neighbor cells.
+   - Clients declare visible map bounds via lightweight `viewport_subscribe` packets (`{"type": "viewport_subscribe", "cells": [...]}`).
+   - Presence packets are delivered exclusively to clients subscribed to overlapping cells, scaling $O(K)$ with local cell density rather than $O(N^2)$ global fanout, with a hard delivery cap of 200 recipients per packet.
+
+4. **Transport Security & Anti-Leak Controls**:
+   - **No Query Parameter Credentials**: In production mode (`AUTH_MODE != "dev"`), tokens or user IDs in query strings (`?token=`, `?user_id=`, `?dev_user=`) are strictly rejected (HTTP 401).
+   - **Standard Subprotocol Auth**: Clients negotiate authentication via `Sec-WebSocket-Protocol: bearer, <id_token>` or `Authorization: Bearer <token>`, preventing token leakage in HTTP access logs and proxy caches.
+   - **Connection Capping & Rate Limiting**: Capped at **3 concurrent WebSocket connections** per user (HTTP 429) and throttled to **at most 1 presence update per 2 seconds** per client socket.
+   - **Slow Consumer Isolation**: Saturated client channels drop packets gracefully without blocking other concurrent runners.
+
+---
+
+## 4. Public Territory State vs. Private Paths
 
 A fundamental architectural distinction exists between **territory polygons** and **GPS path tracks**:
 
@@ -49,7 +80,7 @@ A fundamental architectural distinction exists between **territory polygons** an
 
 ---
 
-## 4. Offline-First Synchronization
+## 5. Offline-First Synchronization
 
 - Privacy zones are cached locally in device storage (`SharedPreferences`) for immediate offline protection.
 - When an authenticated session is established, changes sync with `GET /v1/me/privacy-zones` and `PUT /v1/me/privacy-zones`.
@@ -57,7 +88,7 @@ A fundamental architectural distinction exists between **territory polygons** an
 
 ---
 
-## 5. Tactical SOS & Safety Features
+## 6. Tactical SOS & Safety Features
 
 - **No Remote Telemetry for SOS Contacts**: Emergency contact numbers and SOS SMS messages are stored strictly on the local device.
 - **Native OS Intent Dispatch**: Emergency calls (911/112) and SOS SMS dispatches use native `url_launcher` intents (`tel:` and `sms:`). The Territory Runner backend does not store or process emergency contact information.
@@ -65,7 +96,7 @@ A fundamental architectural distinction exists between **territory polygons** an
 
 ---
 
-## 6. Account Deletion & Data Portability (GDPR / CCPA)
+## 7. Account Deletion & Data Portability (GDPR / CCPA)
 
 1. **Data Portability**:
    - Users can export all captured territories and run tracks in standard **GPX 1.1** (with `<type>running</type>`) and RFC 7946 **GeoJSON** formats via `ExportService`.
@@ -76,7 +107,7 @@ A fundamental architectural distinction exists between **territory polygons** an
 
 ---
 
-## 7. Map Tile Requests & Local Caching Privacy
+## 8. Map Tile Requests & Local Caching Privacy
 
 1. **Third-Party Tile Requests**:
    - To render base maps, the client makes HTTPS GET requests for image tiles ($z/x/y$) to the configured tile provider (OpenStreetMap or Mapbox).

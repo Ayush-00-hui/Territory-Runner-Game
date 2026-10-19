@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 	"github.com/gorilla/websocket"
 )
 
@@ -16,12 +18,10 @@ import (
 type Option func(*Hub)
 
 // WithAllowedOrigins configures origin validation for WebSocket handshakes.
-// Mobile clients without an Origin header are always permitted.
 func WithAllowedOrigins(allowedOrigins []string) Option {
 	return func(h *Hub) {
 		h.upgrader.CheckOrigin = func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
-			// Native mobile clients without an Origin header must still work
 			if origin == "" {
 				return true
 			}
@@ -35,11 +35,36 @@ func WithAllowedOrigins(allowedOrigins []string) Option {
 	}
 }
 
-// Hub manages active WebSocket runner connections and fans out live broadcasts.
+// WithStore sets the backing store for fetching friend relationships and settings.
+func WithStore(s store.Store) Option {
+	return func(h *Hub) {
+		h.store = s
+	}
+}
+
+// WithPresenceDelay configures the delay applied before delivering coarsened presence updates.
+func WithPresenceDelay(d time.Duration) Option {
+	return func(h *Hub) {
+		h.presenceDelay = d
+	}
+}
+
+// WithMaxConnsPerUser sets the maximum allowed concurrent WebSocket sessions per user.
+func WithMaxConnsPerUser(max int) Option {
+	return func(h *Hub) {
+		if max > 0 {
+			h.maxConnsPerUser = max
+		}
+	}
+}
+
+// Hub manages active WebSocket runner connections and fans out targeted real-time updates.
 type Hub struct {
 	clients          map[*Client]bool
 	userClients      map[string]map[*Client]bool
 	userPrivacyZones map[string][]geo.PrivacyZoneEvaluator
+	userVisibility   map[string]string // "off" | "friends" | "nearby"
+	friendsCache     map[string]map[string]bool
 	broadcast        chan []byte
 	register         chan *Client
 	unregister       chan *Client
@@ -47,6 +72,9 @@ type Hub struct {
 	logger           *slog.Logger
 	stop             chan struct{}
 	upgrader         websocket.Upgrader
+	store            store.Store
+	presenceDelay    time.Duration
+	maxConnsPerUser  int
 }
 
 // NewHub initializes a new real-time WebSocket hub.
@@ -58,16 +86,20 @@ func NewHub(logger *slog.Logger, opts ...Option) *Hub {
 		clients:          make(map[*Client]bool),
 		userClients:      make(map[string]map[*Client]bool),
 		userPrivacyZones: make(map[string][]geo.PrivacyZoneEvaluator),
+		userVisibility:   make(map[string]string),
+		friendsCache:     make(map[string]map[string]bool),
 		broadcast:        make(chan []byte, 256),
 		register:         make(chan *Client),
 		unregister:       make(chan *Client),
-		logger:      logger,
-		stop:        make(chan struct{}),
+		logger:           logger,
+		stop:             make(chan struct{}),
+		presenceDelay:    5 * time.Second, // Default 5s privacy delay
+		maxConnsPerUser:  3,               // Max 3 connections per user
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
+			Subprotocols:    []string{"bearer"},
 			CheckOrigin: func(r *http.Request) bool {
-				// Permissive fallback: mobile clients without Origin header always allowed
 				return true
 			},
 		},
@@ -127,16 +159,24 @@ func (h *Hub) Run() {
 			}
 
 		case message := <-h.broadcast:
-			h.mu.RLock()
+			h.mu.Lock()
 			for client := range h.clients {
 				select {
 				case client.send <- message:
 				default:
+					// Drop slow consumer without blocking others
+					h.logger.Warn("slow consumer detected during broadcast; dropping client", "user_id", client.userID)
 					close(client.send)
 					delete(h.clients, client)
+					if userMap, exists := h.userClients[client.userID]; exists {
+						delete(userMap, client)
+						if len(userMap) == 0 {
+							delete(h.userClients, client.userID)
+						}
+					}
 				}
 			}
-			h.mu.RUnlock()
+			h.mu.Unlock()
 		}
 	}
 }
@@ -169,19 +209,19 @@ func (h *Hub) SendToUser(userID string, v interface{}) {
 	}
 
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-
 	userMap, exists := h.userClients[userID]
 	if !exists || len(userMap) == 0 {
+		h.mu.RUnlock()
 		return
 	}
-
+	targetClients := make([]*Client, 0, len(userMap))
 	for client := range userMap {
-		select {
-		case client.send <- data:
-		default:
-			h.logger.Warn("user client buffer full; dropped alert", "user_id", userID)
-		}
+		targetClients = append(targetClients, client)
+	}
+	h.mu.RUnlock()
+
+	for _, client := range targetClients {
+		h.deliverToClient(client, data)
 	}
 }
 
@@ -207,7 +247,7 @@ func (h *Hub) BroadcastConquest(attackerID, attackerName string, areaClaimed flo
 		h.SendToUser(victimID, alert)
 	}
 
-	// 2. Broadcast newsfeed conquest event to all active runners
+	// 2. Broadcast conquest event to all active runners
 	broadcastMsg := ConquestBroadcastMessage{
 		Type:           TypeConquestBroadcast,
 		Event:          "territory_claimed",
@@ -242,6 +282,203 @@ func (h *Hub) IsPointInUserPrivacyZone(userID string, lat, lng float64) bool {
 	return geo.IsPointInAnyZone(lat, lng, zones)
 }
 
+// UpdateUserVisibility updates cached presence visibility for a runner ("off" | "friends" | "nearby").
+func (h *Hub) UpdateUserVisibility(userID, visibility string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if visibility == "" {
+		visibility = "off"
+	}
+	h.userVisibility[userID] = visibility
+}
+
+// GetUserVisibility returns the current presence visibility for a user, defaulting to "off".
+func (h *Hub) GetUserVisibility(userID string) string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if vis, ok := h.userVisibility[userID]; ok && vis != "" {
+		return vis
+	}
+	return "off"
+}
+
+// SetFriendsCache sets the mutual friends list for a user (used in testing or synced from store).
+func (h *Hub) SetFriendsCache(userID string, friendIDs []string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	m := make(map[string]bool, len(friendIDs))
+	for _, id := range friendIDs {
+		m[id] = true
+	}
+	h.friendsCache[userID] = m
+}
+
+// areUsersFriends checks if userA and userB are mutual friends.
+func (h *Hub) areUsersFriends(userA, userB string) bool {
+	h.mu.RLock()
+	if cache, ok := h.friendsCache[userA]; ok {
+		isFriend := cache[userB]
+		h.mu.RUnlock()
+		return isFriend
+	}
+	h.mu.RUnlock()
+
+	if h.store != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		friends, err := h.store.GetFriends(ctx, userA)
+		if err == nil {
+			friendMap := make(map[string]bool, len(friends))
+			for _, f := range friends {
+				friendMap[f.ID] = true
+			}
+			h.mu.Lock()
+			h.friendsCache[userA] = friendMap
+			h.mu.Unlock()
+			return friendMap[userB]
+		}
+	}
+	return false
+}
+
+// DispatchPresence processes inbound presence with consent enforcement, coordinate coarsening,
+// spatial cell / friends targeting, privacy zone suppression, and delivery delay.
+func (h *Hub) DispatchPresence(senderID, username, faction string, rawLat, rawLng float64) {
+	// 1. Check sender's privacy zone (defense-in-depth)
+	if h.IsPointInUserPrivacyZone(senderID, rawLat, rawLng) {
+		h.logger.Debug("presence suppressed: coordinate inside sender privacy zone", "user_id", senderID)
+		return
+	}
+
+	// 2. Check sender's live_visibility setting (defaults to "off")
+	visibility := h.GetUserVisibility(senderID)
+	if visibility == "off" || visibility == "" {
+		// "off" sends nothing to anyone
+		return
+	}
+
+	// 3. Coarsen coordinates: snap to ~25 m spatial grid and strip heading/speed
+	coarsenedLat, coarsenedLng := geo.SnapToGrid(rawLat, rawLng, 25.0)
+
+	// 4. Select candidate recipients based on visibility mode
+	h.mu.RLock()
+	var candidateRecipients []*Client
+
+	if visibility == "friends" {
+		for client := range h.clients {
+			if client.userID == senderID {
+				continue
+			}
+			if h.areUsersFriends(senderID, client.userID) {
+				candidateRecipients = append(candidateRecipients, client)
+			}
+		}
+	} else if visibility == "nearby" {
+		cell := geo.GeohashPrecision6(coarsenedLat, coarsenedLng)
+		neighbors := geo.GeohashNeighbors(cell)
+		allCells := append(neighbors, cell)
+
+		for client := range h.clients {
+			if client.userID == senderID {
+				continue
+			}
+			if client.HasSubscribedCell(allCells) {
+				candidateRecipients = append(candidateRecipients, client)
+			}
+		}
+	}
+	h.mu.RUnlock()
+
+	// 5. Filter delivery path: check both sender's and recipient's privacy zones
+	var filteredRecipients []*Client
+	for _, client := range candidateRecipients {
+		// Recipient privacy zone check
+		if h.IsPointInUserPrivacyZone(client.userID, coarsenedLat, coarsenedLng) {
+			continue
+		}
+		// Sender privacy zone check on coarsened coordinates
+		if h.IsPointInUserPrivacyZone(senderID, coarsenedLat, coarsenedLng) {
+			continue
+		}
+		filteredRecipients = append(filteredRecipients, client)
+	}
+
+	// 6. Cap recipients per update (at most 200)
+	if len(filteredRecipients) > 200 {
+		filteredRecipients = filteredRecipients[:200]
+	}
+
+	if len(filteredRecipients) == 0 {
+		return
+	}
+
+	// 7. Construct coarsened presence payload (no speed, no heading)
+	presence := PresenceMessage{
+		Type:      TypeRunnerPresence,
+		UserID:    senderID,
+		Username:  username,
+		Faction:   faction,
+		Latitude:  coarsenedLat,
+		Longitude: coarsenedLng,
+		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+	data, err := json.Marshal(presence)
+	if err != nil {
+		h.logger.Error("failed to serialize targeted presence message", "error", err)
+		return
+	}
+
+	// 8. Deliver after short privacy delay (default 5 s)
+	deliver := func() {
+		for _, client := range filteredRecipients {
+			h.deliverToClient(client, data)
+		}
+	}
+
+	if h.presenceDelay <= 0 {
+		deliver()
+	} else {
+		time.AfterFunc(h.presenceDelay, deliver)
+	}
+}
+
+// deliverToClient sends a message to a client or drops slow consumers without blocking others.
+func (h *Hub) deliverToClient(client *Client, data []byte) {
+	h.mu.RLock()
+	isActive := h.clients[client]
+	h.mu.RUnlock()
+
+	if !isActive {
+		return
+	}
+
+	select {
+	case client.send <- data:
+	default:
+		// Slow consumer: client's outbound channel is full. Drop client without blocking others.
+		h.logger.Warn("slow consumer detected; dropping client", "user_id", client.userID)
+		h.dropSlowClient(client)
+	}
+}
+
+// dropSlowClient terminates and removes a slow client from active maps.
+func (h *Hub) dropSlowClient(client *Client) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	if _, ok := h.clients[client]; ok {
+		delete(h.clients, client)
+		close(client.send)
+
+		if userMap, exists := h.userClients[client.userID]; exists {
+			delete(userMap, client)
+			if len(userMap) == 0 {
+				delete(h.userClients, client.userID)
+			}
+		}
+	}
+}
+
 // ActiveClientCount returns the number of currently connected WebSocket runners.
 func (h *Hub) ActiveClientCount() int {
 	h.mu.RLock()
@@ -254,8 +491,19 @@ func (h *Hub) Stop() {
 	close(h.stop)
 }
 
-// ServeWS upgrades the HTTP connection to a full-duplex WebSocket session.
+// ServeWS upgrades the HTTP connection to a full-duplex WebSocket session with connection capping.
 func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request, userID, username, faction string) {
+	// Enforce maximum concurrent connections per user (max 3)
+	h.mu.RLock()
+	conns := len(h.userClients[userID])
+	h.mu.RUnlock()
+
+	if conns >= h.maxConnsPerUser {
+		h.logger.Warn("max concurrent websocket connections exceeded", "user_id", userID, "count", conns)
+		http.Error(w, `{"error":"too_many_connections","detail":"maximum concurrent websocket connections exceeded"}`, http.StatusTooManyRequests)
+		return
+	}
+
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.logger.Error("failed to upgrade websocket connection", "error", err)
@@ -263,13 +511,14 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request, userID, username, 
 	}
 
 	client := &Client{
-		hub:      h,
-		conn:     conn,
-		send:     make(chan []byte, 128),
-		userID:   userID,
-		username: username,
-		faction:  faction,
-		logger:   h.logger,
+		hub:             h,
+		conn:            conn,
+		send:            make(chan []byte, 128),
+		userID:          userID,
+		username:        username,
+		faction:         faction,
+		logger:          h.logger,
+		subscribedCells: make(map[string]bool),
 	}
 
 	h.register <- client

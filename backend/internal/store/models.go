@@ -4,15 +4,16 @@ import "time"
 
 // User represents a player profile in the database.
 type User struct {
-	ID           string    `json:"id"`
-	Username     string    `json:"username"`
-	Faction      string    `json:"faction"`
-	TotalAreaSqm float64   `json:"total_area_sqm"`
-	XP           int64     `json:"xp"`
-	Level        int       `json:"level"`
-	TotalRuns    int       `json:"total_runs"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID             string    `json:"id"`
+	Username       string    `json:"username"`
+	Faction        string    `json:"faction"`
+	TotalAreaSqm   float64   `json:"total_area_sqm"`
+	XP             int64     `json:"xp"`
+	Level          int       `json:"level"`
+	TotalRuns      int       `json:"total_runs"`
+	LiveVisibility string    `json:"live_visibility,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 // Territory represents sovereign claimed territory stored as a PostGIS MultiPolygon.
@@ -186,5 +187,11 @@ type PrivacyZone struct {
 	IsEnabled    bool      `json:"is_enabled"`
 	CreatedAt    time.Time `json:"created_at"`
 }
+
+// UserSettings represents a user's privacy and operational preferences.
+type UserSettings struct {
+	LiveVisibility string `json:"live_visibility"`
+}
+
 
 

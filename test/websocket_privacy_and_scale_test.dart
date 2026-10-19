@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:territory_runner/models/privacy_zone.dart';
 import 'package:territory_runner/services/privacy_zone_service.dart';
+import 'package:territory_runner/services/user_settings_service.dart';
 import 'package:territory_runner/services/websocket_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -76,8 +77,10 @@ void main() {
       );
       await privacyService.addZone(homeZone);
 
+      final settingsService = UserSettingsService.custom(initial: LiveVisibility.nearby);
       final wsService = WebSocketService.custom(
         privacyZoneService: privacyService,
+        userSettingsService: settingsService,
       );
 
       final fakeChannel = _FakeWebSocketChannel();
@@ -123,6 +126,7 @@ void main() {
 
       final wsService = WebSocketService.custom(
         privacyZoneService: privacyService,
+        userSettingsService: UserSettingsService.custom(initial: LiveVisibility.nearby),
       );
 
       final fakeChannel = _FakeWebSocketChannel();
@@ -159,6 +163,7 @@ void main() {
       final privacyService = PrivacyZoneService();
       final wsService = WebSocketService.custom(
         privacyZoneService: privacyService,
+        userSettingsService: UserSettingsService.custom(initial: LiveVisibility.nearby),
       );
 
       final fakeChannel = _FakeWebSocketChannel();

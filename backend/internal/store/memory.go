@@ -23,6 +23,7 @@ type MemoryStore struct {
 	friendships  map[string]*Friendship
 	duels        map[string]*Duel
 	privacyZones map[string][]PrivacyZone
+	userSettings map[string]*UserSettings
 }
 
 // NewMemoryStore initializes an in-memory store.
@@ -36,6 +37,7 @@ func NewMemoryStore() *MemoryStore {
 		friendships:  make(map[string]*Friendship),
 		duels:        make(map[string]*Duel),
 		privacyZones: make(map[string][]PrivacyZone),
+		userSettings: make(map[string]*UserSettings),
 	}
 }
 
@@ -1019,5 +1021,36 @@ func (m *MemoryStore) SetPrivacyZones(ctx context.Context, userID string, zones 
 		cloned[i] = z
 	}
 	m.privacyZones[userID] = cloned
+	return nil
+}
+
+// GetUserSettings returns user settings defaulting live_visibility to 'off'.
+func (m *MemoryStore) GetUserSettings(ctx context.Context, userID string) (*UserSettings, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if s, ok := m.userSettings[userID]; ok && s != nil {
+		return &UserSettings{LiveVisibility: s.LiveVisibility}, nil
+	}
+	if u, ok := m.users[userID]; ok && u != nil && u.LiveVisibility != "" {
+		return &UserSettings{LiveVisibility: u.LiveVisibility}, nil
+	}
+	return &UserSettings{LiveVisibility: "off"}, nil
+}
+
+// UpdateUserSettings updates user settings.
+func (m *MemoryStore) UpdateUserSettings(ctx context.Context, userID string, settings *UserSettings) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	vis := "off"
+	if settings != nil && settings.LiveVisibility != "" {
+		vis = settings.LiveVisibility
+	}
+
+	m.userSettings[userID] = &UserSettings{LiveVisibility: vis}
+	if u, ok := m.users[userID]; ok && u != nil {
+		u.LiveVisibility = vis
+	}
 	return nil
 }

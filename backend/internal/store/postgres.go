@@ -1179,3 +1179,36 @@ func (s *PostgresStore) SetPrivacyZones(ctx context.Context, userID string, zone
 	}
 	return nil
 }
+
+// GetUserSettings returns user settings defaulting live_visibility to 'off'.
+func (s *PostgresStore) GetUserSettings(ctx context.Context, userID string) (*UserSettings, error) {
+	var vis string
+	err := s.pool.QueryRow(ctx, `SELECT COALESCE(live_visibility, 'off') FROM users WHERE id = $1;`, userID).Scan(&vis)
+	if err != nil {
+		// User might not exist yet in users table, default to 'off'
+		return &UserSettings{LiveVisibility: "off"}, nil
+	}
+	if vis == "" {
+		vis = "off"
+	}
+	return &UserSettings{LiveVisibility: vis}, nil
+}
+
+// UpdateUserSettings updates user settings, creating user row if absent.
+func (s *PostgresStore) UpdateUserSettings(ctx context.Context, userID string, settings *UserSettings) error {
+	vis := "off"
+	if settings != nil && settings.LiveVisibility != "" {
+		vis = settings.LiveVisibility
+	}
+
+	query := `
+		INSERT INTO users (id, username, live_visibility, updated_at)
+		VALUES ($1, $1, $2, NOW())
+		ON CONFLICT (id) DO UPDATE
+		SET live_visibility = EXCLUDED.live_visibility, updated_at = NOW();
+	`
+	if _, err := s.pool.Exec(ctx, query, userID, vis); err != nil {
+		return fmt.Errorf("failed to update user settings: %w", err)
+	}
+	return nil
+}

@@ -92,6 +92,12 @@ type Store interface {
 	// SetPrivacyZones replaces all privacy zones for a user.
 	SetPrivacyZones(ctx context.Context, userID string, zones []PrivacyZone) error
 
+	// GetUserSettings returns user settings including live_visibility.
+	GetUserSettings(ctx context.Context, userID string) (*UserSettings, error)
+
+	// UpdateUserSettings updates user settings including live_visibility.
+	UpdateUserSettings(ctx context.Context, userID string, settings *UserSettings) error
+
 	// Ping checks database connectivity.
 	Ping(ctx context.Context) error
 

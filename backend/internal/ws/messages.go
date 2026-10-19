@@ -5,8 +5,9 @@ type MessageType string
 
 const (
 	// Client -> Server
-	TypePresenceUpdate MessageType = "presence_update"
-	TypeHeartbeat      MessageType = "heartbeat"
+	TypePresenceUpdate    MessageType = "presence_update"
+	TypeHeartbeat         MessageType = "heartbeat"
+	TypeViewportSubscribe MessageType = "viewport_subscribe"
 
 	// Server -> Client
 	TypeRunnerPresence       MessageType = "runner_presence"
@@ -23,9 +24,11 @@ type InboundMessage struct {
 	Longitude float64     `json:"longitude,omitempty"`
 	Speed     float64     `json:"speed,omitempty"`
 	Heading   float64     `json:"heading,omitempty"`
+	Cells     []string    `json:"cells,omitempty"`
 }
 
-// PresenceMessage broadcasts live runner kinematics to nearby/active peers.
+// PresenceMessage broadcasts live runner position to peers.
+// Note: heading and speed are intentionally omitted to minimize transmitted data and prevent kinematic tracking.
 type PresenceMessage struct {
 	Type      MessageType `json:"type"`
 	UserID    string      `json:"user_id"`
@@ -33,8 +36,6 @@ type PresenceMessage struct {
 	Faction   string      `json:"faction"`
 	Latitude  float64     `json:"latitude"`
 	Longitude float64     `json:"longitude"`
-	Speed     float64     `json:"speed"`
-	Heading   float64     `json:"heading"`
 	UpdatedAt string      `json:"updated_at"`
 }
 

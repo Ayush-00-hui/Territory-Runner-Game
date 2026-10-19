@@ -7,11 +7,13 @@ import '../../../services/firebase_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../ui/ui.dart';
 import 'emergency_contact_dialog.dart';
+import 'live_visibility_sheet.dart';
 import 'offline_maps_sheet.dart';
 import 'privacy_zones_sheet.dart';
 import '../../gallery/design_gallery_screen.dart';
 import '../../onboarding/onboarding_screen.dart';
 import '../../../core/utils/constants.dart';
+import '../../../services/user_settings_service.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -183,6 +185,30 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         // 5. PRIVACY & SAFETY
         _buildSectionTitle('Privacy & Safety'),
         _buildSettingsGroup([
+          AnimatedBuilder(
+            animation: UserSettingsService(),
+            builder: (context, _) {
+              final vis = UserSettingsService().liveVisibility;
+              return ProfileOptionTile(
+                icon: Icons.visibility_outlined,
+                title: 'Live location visibility',
+                subtitle: 'Sharing: ${vis.displayName} (default: Off)',
+                trailing: Text(
+                  vis.displayName,
+                  style: const TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onTap: () {
+                  AppMotion.selectionTick();
+                  showLiveVisibilitySheet(context);
+                },
+              );
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
             icon: Icons.shield_rounded,
             title: 'Privacy zones',

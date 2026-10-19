@@ -256,6 +256,66 @@ ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	0.823
 - **Exit Code**: `0`
 - **Output**: Clean exit across all 9 packages (anticheat, api, auth, coach, geo, league, notify, store, ws).
 
+---
+
+## 7. v6-Hardening Phase 1 Verification (Realtime Security & Privacy)
+
+### 7.1 Flutter Static Code Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...
+No issues found! (ran in 4.2s)
+```
+
+### 7.2 Flutter Test Suite (WebSocket Auth, Consent, Spatial Cells & Privacy Scale)
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:12 +237: All tests passed!
+```
+*Note*: Includes 15 new tests in `test/websocket_auth_and_visibility_test.dart` and 4 tests in `test/websocket_privacy_and_scale_test.dart` validating:
+- Subprotocol authentication (`Sec-WebSocket-Protocol: bearer, <token>`) and exclusion of query parameters in production.
+- Token refresh on reconnect (`forceRefresh: true`).
+- `UserSettingsService` default `LiveVisibility.off`, offline-first persistence, and server sync.
+- Outbound presence suppression when `liveVisibility == LiveVisibility.off`.
+- Base32 Geohash precision 6 calculations, bounding box validation, and 8-neighbor generation.
+- `LiveVisibilitySheet` UI rendering, default `Off (Recommended)`, and reactive selection updates.
+
+### 7.3 Go Static Code Analysis & Test Suite
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**: Clean exit (0 errors, 0 warnings).
+
+- **Command**: `go test -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/cmd/server	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	0.572s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	1.387s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	1.226s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	0.951s
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	0.476s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	0.402s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	1.072s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.438s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	4.683s
+```
+*(All 11 packages clean and passing; ws suite tests presence delay, friends-only routing, geohash spatial cells, rate limits, connection capping, and slow consumer isolation)*
+
+### 7.4 Docker & Race Detection (Host Limitations)
+- **Go Race Detection**: `NOT RUN: go test -race ./... requires CGO and a C compiler (gcc/clang) unavailable on this Windows host. Runs in Linux CI.`
+- **PostGIS Docker Tests**: `NOT RUN: Docker Desktop daemon is stopped on pipe //./pipe/dockerDesktopLinuxEngine. Hermetic memory store tested locally; live PostgreSQL/PostGIS integration tests run in GitHub Actions CI.`
+
+
 
 
 

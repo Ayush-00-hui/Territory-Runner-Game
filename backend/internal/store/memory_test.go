@@ -395,3 +395,30 @@ func TestFriendsAndDuelsAntiAbuse(t *testing.T) {
 	assert.Contains(t, err.Error(), "expired")
 }
 
+func TestUserSettingsDefaultAndUpdates(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// 1. New user defaults to 'off'
+	settings, err := memStore.GetUserSettings(ctx, "user_new_1")
+	require.NoError(t, err)
+	assert.Equal(t, "off", settings.LiveVisibility)
+
+	// 2. Update to 'friends'
+	err = memStore.UpdateUserSettings(ctx, "user_new_1", &store.UserSettings{LiveVisibility: "friends"})
+	require.NoError(t, err)
+
+	settings, err = memStore.GetUserSettings(ctx, "user_new_1")
+	require.NoError(t, err)
+	assert.Equal(t, "friends", settings.LiveVisibility)
+
+	// 3. Update to 'nearby'
+	err = memStore.UpdateUserSettings(ctx, "user_new_1", &store.UserSettings{LiveVisibility: "nearby"})
+	require.NoError(t, err)
+
+	settings, err = memStore.GetUserSettings(ctx, "user_new_1")
+	require.NoError(t, err)
+	assert.Equal(t, "nearby", settings.LiveVisibility)
+}
+
+

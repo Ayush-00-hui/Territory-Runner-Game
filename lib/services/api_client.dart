@@ -624,4 +624,36 @@ class ApiClient {
 
     return response.statusCode == 200;
   }
+
+  /// Fetches user settings (GET /v1/me/settings)
+  Future<Map<String, dynamic>?> getSettings() async {
+    final uri = Uri.parse('$baseUrl/v1/me/settings');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  /// Updates user settings (PUT /v1/me/settings)
+  Future<Map<String, dynamic>?> updateSettings(Map<String, dynamic> settings) async {
+    final uri = Uri.parse('$baseUrl/v1/me/settings');
+    final headers = await _buildHeaders();
+    final body = jsonEncode(settings);
+
+    final response = await _executeWithRetry(
+      () => _httpClient.put(uri, headers: headers, body: body),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+    return null;
+  }
 }
+
