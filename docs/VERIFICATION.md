@@ -831,6 +831,93 @@ ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	(cached)
 ```
 *(All 244 unit, widget, and integration tests passing)*
 
+---
+
+## 13. Critical Hardening: WebSocket Deadlock Resolution, Friends Cache Invalidation & Web Compilation
+
+### 13.1 Go WebSocket Hub & Friends Concurrency Verification
+- **Command**: `go test -v ./internal/ws/...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+=== RUN   TestWebSocket_SubprotocolEchoed
+--- PASS: TestWebSocket_SubprotocolEchoed (0.00s)
+=== RUN   TestWebSocket_OffSendsNothing
+--- PASS: TestWebSocket_OffSendsNothing (0.30s)
+=== RUN   TestWebSocket_FriendsOnly
+--- PASS: TestWebSocket_FriendsOnly (0.25s)
+=== RUN   TestWebSocket_NearbyCellDeliveryAndNonNeighbourExclusion
+--- PASS: TestWebSocket_NearbyCellDeliveryAndNonNeighbourExclusion (0.30s)
+=== RUN   TestWebSocket_PrivacyZoneSuppression
+--- PASS: TestWebSocket_PrivacyZoneSuppression (2.40s)
+=== RUN   TestWebSocket_RateLimit
+--- PASS: TestWebSocket_RateLimit (0.30s)
+=== RUN   TestWebSocket_SlowClientDropped
+--- PASS: TestWebSocket_SlowClientDropped (0.07s)
+=== RUN   TestWebSocket_MaxConnectionsPerUser
+--- PASS: TestWebSocket_MaxConnectionsPerUser (0.05s)
+=== RUN   TestWebSocketTargetedTerritoryCarvedAlert
+--- PASS: TestWebSocketTargetedTerritoryCarvedAlert (0.05s)
+=== RUN   TestWebSocket_FriendsDeadlockOnCacheMiss
+--- PASS: TestWebSocket_FriendsDeadlockOnCacheMiss (0.05s)
+=== RUN   TestWebSocket_FriendsDelivery_AddAndRemoveFriendDynamics
+--- PASS: TestWebSocket_FriendsDelivery_AddAndRemoveFriendDynamics (0.35s)
+=== RUN   TestWebSocket_FriendsDelivery_ConcurrentStress
+--- PASS: TestWebSocket_FriendsDelivery_ConcurrentStress (0.00s)
+PASS
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	4.943s
+```
+
+### 13.2 Entire Backend Suite Regression Run
+- **Command**: `go test ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	1.197s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	1.026s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.430s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	4.935s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	(cached)
+```
+
+### 13.3 Shared Golden Test Fixtures (Dart Parity)
+- **Command**: `flutter test test/golden_fixtures_test.dart`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: Shared Golden Test Fixtures Tests (Dart Engine) golden_valid_loop.json passes and area matches within 0.5% tolerance
+00:00 +1: Shared Golden Test Fixtures Tests (Dart Engine) golden_figure_8.json is rejected for self-intersection
+00:00 +2: Shared Golden Test Fixtures Tests (Dart Engine) golden_tiny_loop.json is rejected for insufficient perimeter
+00:00 +3: Shared Golden Test Fixtures Tests (Dart Engine) golden_lasso_loop.json closes lasso loop at stem crossing within 0.5% tolerance
+00:00 +4: Shared Golden Test Fixtures Tests (Dart Engine) golden_loop_with_crossing.json preserves valid loop despite subsequent path crossing
+00:00 +5: Shared Golden Test Fixtures Tests (Dart Engine) golden_two_loops.json detects both valid loops and sums area within 0.5% tolerance
+00:00 +6: Shared Golden Test Fixtures Tests (Dart Engine) golden_cycling_valid_loop.json is rejected in running mode but accepted in cycling mode
+00:00 +7: Shared Golden Test Fixtures Tests (Dart Engine) golden_walking_valid_loop.json closes successfully under walking mode
+00:00 +8: Shared Golden Test Fixtures Tests (Dart Engine) golden_broken_gap.json is segmented and rejected due to >15s GPS gap
+00:00 +9: Shared Golden Test Fixtures Tests (Dart Engine) golden_running_tiny_loop.json is valid in walking mode but rejected in running mode
+00:00 +10: Shared Golden Test Fixtures Tests (Dart Engine) golden_cycling_tiny_loop.json is valid in running mode but rejected in cycling mode
+00:00 +11: All tests passed!
+```
+
+### 13.4 Flutter Web Production Build Verification
+- **Command**: `flutter build web`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Compiling lib\main.dart for the Web...                             67.8s
+√ Built build\web
+```
+
+
 
 
 

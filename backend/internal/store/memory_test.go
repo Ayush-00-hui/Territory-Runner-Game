@@ -213,11 +213,11 @@ func TestFriendshipFlow(t *testing.T) {
 	assert.False(t, aliceRequests[0].IsIncoming)
 
 	// Alice cannot accept her own request
-	err = memStore.RespondFriendRequest(ctx, req.ID, "usr_alice", "accept")
+	_, err = memStore.RespondFriendRequest(ctx, req.ID, "usr_alice", "accept")
 	assert.Error(t, err)
 
 	// Bob accepts
-	err = memStore.RespondFriendRequest(ctx, req.ID, "usr_bob", "accept")
+	_, err = memStore.RespondFriendRequest(ctx, req.ID, "usr_bob", "accept")
 	require.NoError(t, err)
 
 	// Bob's friends list contains Alice
@@ -232,6 +232,18 @@ func TestFriendshipFlow(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, aliceFriends, 1)
 	assert.Equal(t, "Bob", aliceFriends[0].Username)
+
+	// Remove friend dissolves mutual friendship
+	err = memStore.RemoveFriend(ctx, "usr_alice", "usr_bob")
+	require.NoError(t, err)
+
+	bobFriendsAfter, err := memStore.GetFriends(ctx, "usr_bob")
+	require.NoError(t, err)
+	assert.Empty(t, bobFriendsAfter)
+
+	aliceFriendsAfter, err := memStore.GetFriends(ctx, "usr_alice")
+	require.NoError(t, err)
+	assert.Empty(t, aliceFriendsAfter)
 
 	// No more pending requests
 	pending, err := memStore.GetFriendRequests(ctx, "usr_bob")

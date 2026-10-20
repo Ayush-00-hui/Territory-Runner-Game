@@ -760,10 +760,10 @@ func (s *PostgresStore) SendFriendRequest(ctx context.Context, requesterID, addr
 	return &f, nil
 }
 
-// RespondFriendRequest accepts or declines a pending friend request.
-func (s *PostgresStore) RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) error {
+// RespondFriendRequest accepts or declines a pending friend request and returns the updated Friendship.
+func (s *PostgresStore) RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) (*Friendship, error) {
 	if action != "accept" && action != "decline" {
-		return fmt.Errorf("invalid action: %s (must be 'accept' or 'decline')", action)
+		return nil, fmt.Errorf("invalid action: %s (must be 'accept' or 'decline')", action)
 	}
 
 	newStatus := "accepted"
@@ -774,14 +774,35 @@ func (s *PostgresStore) RespondFriendRequest(ctx context.Context, friendshipID, 
 	query := `
 		UPDATE friendships
 		SET status = $1, updated_at = NOW()
-		WHERE id = $2 AND addressee_id = $3 AND status = 'pending';
+		WHERE id = $2 AND addressee_id = $3 AND status = 'pending'
+		RETURNING id, requester_id, addressee_id, status, created_at, updated_at;
 	`
-	cmd, err := s.pool.Exec(ctx, query, newStatus, friendshipID, userID)
+	var f Friendship
+	err := s.pool.QueryRow(ctx, query, newStatus, friendshipID, userID).Scan(
+		&f.ID, &f.RequesterID, &f.AddresseeID, &f.Status, &f.CreatedAt, &f.UpdatedAt,
+	)
 	if err != nil {
-		return fmt.Errorf("failed to respond to friend request: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("pending request not found or unauthorized")
+		}
+		return nil, fmt.Errorf("failed to respond to friend request: %w", err)
+	}
+	return &f, nil
+}
+
+// RemoveFriend dissolves an accepted mutual friendship between userA and userB.
+func (s *PostgresStore) RemoveFriend(ctx context.Context, userA, userB string) error {
+	query := `
+		DELETE FROM friendships
+		WHERE ((requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1))
+		  AND status = 'accepted';
+	`
+	cmd, err := s.pool.Exec(ctx, query, userA, userB)
+	if err != nil {
+		return fmt.Errorf("failed to remove friend: %w", err)
 	}
 	if cmd.RowsAffected() == 0 {
-		return fmt.Errorf("pending request not found or unauthorized")
+		return fmt.Errorf("friendship not found")
 	}
 	return nil
 }

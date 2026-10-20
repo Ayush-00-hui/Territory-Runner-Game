@@ -62,8 +62,11 @@ type Store interface {
 	// SendFriendRequest creates a new pending friendship request from requesterID to addresseeID.
 	SendFriendRequest(ctx context.Context, requesterID, addresseeID string) (*Friendship, error)
 
-	// RespondFriendRequest accepts or declines a pending friend request.
-	RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) error
+	// RespondFriendRequest accepts or declines a pending friend request and returns the updated Friendship.
+	RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) (*Friendship, error)
+
+	// RemoveFriend dissolves an accepted mutual friendship between userA and userB.
+	RemoveFriend(ctx context.Context, userA, userB string) error
 
 	// GetFriends returns all accepted friends of the given user.
 	GetFriends(ctx context.Context, userID string) ([]FriendUser, error)

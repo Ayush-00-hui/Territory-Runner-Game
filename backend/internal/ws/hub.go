@@ -12,10 +12,23 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 	"github.com/gorilla/websocket"
+	"golang.org/x/sync/singleflight"
 )
 
 // Option configures Hub parameters.
 type Option func(*Hub)
+
+// DefaultFriendsCacheTTL defines the cache duration for user friend sets (PROPOSED: 60s).
+const DefaultFriendsCacheTTL = 60 * time.Second
+
+// WithFriendsCacheTTL sets the TTL for cached friendships.
+func WithFriendsCacheTTL(ttl time.Duration) Option {
+	return func(h *Hub) {
+		if ttl > 0 {
+			h.friendsCacheTTL = ttl
+		}
+	}
+}
 
 // WithAllowedOrigins configures origin validation for WebSocket handshakes.
 func WithAllowedOrigins(allowedOrigins []string) Option {
@@ -67,13 +80,21 @@ func WithOutboundBufferSize(size int) Option {
 	}
 }
 
+type friendsCacheEntry struct {
+	friends   map[string]bool
+	expiresAt time.Time
+}
+
 // Hub manages active WebSocket runner connections and fans out targeted real-time updates.
 type Hub struct {
 	clients          map[*Client]bool
 	userClients      map[string]map[*Client]bool
 	userPrivacyZones map[string][]geo.PrivacyZoneEvaluator
 	userVisibility   map[string]string // "off" | "friends" | "nearby"
-	friendsCache     map[string]map[string]bool
+	friendsCache     map[string]*friendsCacheEntry
+	friendsMu        sync.RWMutex
+	friendsSF        singleflight.Group
+	friendsCacheTTL  time.Duration
 	broadcast        chan []byte
 	register         chan *Client
 	unregister       chan *Client
@@ -97,7 +118,8 @@ func NewHub(logger *slog.Logger, opts ...Option) *Hub {
 		userClients:      make(map[string]map[*Client]bool),
 		userPrivacyZones: make(map[string][]geo.PrivacyZoneEvaluator),
 		userVisibility:   make(map[string]string),
-		friendsCache:     make(map[string]map[string]bool),
+		friendsCache:     make(map[string]*friendsCacheEntry),
+		friendsCacheTTL:  DefaultFriendsCacheTTL,
 		broadcast:        make(chan []byte, 256),
 		register:         make(chan *Client),
 		unregister:       make(chan *Client),
@@ -306,43 +328,82 @@ func (h *Hub) GetUserVisibility(userID string) string {
 	return "off"
 }
 
-// SetFriendsCache sets the mutual friends list for a user (used in testing or synced from store).
+// InvalidateFriends removes cached friend sets for the specified users.
+// If no user IDs are passed, it clears the entire friends cache.
+func (h *Hub) InvalidateFriends(userIDs ...string) {
+	h.friendsMu.Lock()
+	defer h.friendsMu.Unlock()
+	if len(userIDs) == 0 {
+		h.friendsCache = make(map[string]*friendsCacheEntry)
+		return
+	}
+	for _, id := range userIDs {
+		delete(h.friendsCache, id)
+		h.friendsSF.Forget(id)
+	}
+}
+
+// SetFriendsCache sets the mutual friends list for a user (used in testing or explicit synchronization).
 func (h *Hub) SetFriendsCache(userID string, friendIDs []string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	h.friendsMu.Lock()
+	defer h.friendsMu.Unlock()
 	m := make(map[string]bool, len(friendIDs))
 	for _, id := range friendIDs {
 		m[id] = true
 	}
-	h.friendsCache[userID] = m
+	h.friendsCache[userID] = &friendsCacheEntry{
+		friends:   m,
+		expiresAt: time.Now().Add(h.friendsCacheTTL),
+	}
+}
+
+// getSenderFriends returns the friend ID set for the given user, resolving from cache or store.
+func (h *Hub) getSenderFriends(userID string) map[string]bool {
+	h.friendsMu.RLock()
+	entry, ok := h.friendsCache[userID]
+	if ok && time.Now().Before(entry.expiresAt) {
+		res := entry.friends
+		h.friendsMu.RUnlock()
+		return res
+	}
+	h.friendsMu.RUnlock()
+
+	if h.store == nil {
+		return nil
+	}
+
+	v, err, _ := h.friendsSF.Do(userID, func() (interface{}, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		friends, err := h.store.GetFriends(ctx, userID)
+		if err != nil {
+			return nil, err
+		}
+		friendMap := make(map[string]bool, len(friends))
+		for _, f := range friends {
+			friendMap[f.ID] = true
+		}
+		h.friendsMu.Lock()
+		h.friendsCache[userID] = &friendsCacheEntry{
+			friends:   friendMap,
+			expiresAt: time.Now().Add(h.friendsCacheTTL),
+		}
+		h.friendsMu.Unlock()
+		return friendMap, nil
+	})
+	if err != nil || v == nil {
+		return nil
+	}
+	return v.(map[string]bool)
 }
 
 // areUsersFriends checks if userA and userB are mutual friends.
 func (h *Hub) areUsersFriends(userA, userB string) bool {
-	h.mu.RLock()
-	if cache, ok := h.friendsCache[userA]; ok {
-		isFriend := cache[userB]
-		h.mu.RUnlock()
-		return isFriend
+	friends := h.getSenderFriends(userA)
+	if friends == nil {
+		return false
 	}
-	h.mu.RUnlock()
-
-	if h.store != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		friends, err := h.store.GetFriends(ctx, userA)
-		if err == nil {
-			friendMap := make(map[string]bool, len(friends))
-			for _, f := range friends {
-				friendMap[f.ID] = true
-			}
-			h.mu.Lock()
-			h.friendsCache[userA] = friendMap
-			h.mu.Unlock()
-			return friendMap[userB]
-		}
-	}
-	return false
+	return friends[userB]
 }
 
 // DispatchPresence processes inbound presence with consent enforcement, coordinate coarsening,
@@ -364,17 +425,27 @@ func (h *Hub) DispatchPresence(senderID, username, faction string, rawLat, rawLn
 	// 3. Coarsen coordinates: snap to ~25 m spatial grid and strip heading/speed
 	coarsenedLat, coarsenedLng := geo.SnapToGrid(rawLat, rawLng, 25.0)
 
-	// 4. Select candidate recipients based on visibility mode
+	// 4. Select candidate recipients based on visibility mode:
+	// Snapshot clients under RLock and release it BEFORE friendship resolution or store I/O.
 	h.mu.RLock()
+	clientSnapshots := make([]*Client, 0, len(h.clients))
+	for client := range h.clients {
+		if client.userID != senderID {
+			clientSnapshots = append(clientSnapshots, client)
+		}
+	}
+	h.mu.RUnlock()
+
 	var candidateRecipients []*Client
 
 	if visibility == "friends" {
-		for client := range h.clients {
-			if client.userID == senderID {
-				continue
-			}
-			if h.areUsersFriends(senderID, client.userID) {
-				candidateRecipients = append(candidateRecipients, client)
+		// Resolve the sender's friend set ONCE per dispatch (not per client).
+		friends := h.getSenderFriends(senderID)
+		if len(friends) > 0 {
+			for _, client := range clientSnapshots {
+				if friends[client.userID] {
+					candidateRecipients = append(candidateRecipients, client)
+				}
 			}
 		}
 	} else if visibility == "nearby" {
@@ -382,16 +453,12 @@ func (h *Hub) DispatchPresence(senderID, username, faction string, rawLat, rawLn
 		neighbors := geo.GeohashNeighbors(cell)
 		allCells := append(neighbors, cell)
 
-		for client := range h.clients {
-			if client.userID == senderID {
-				continue
-			}
+		for _, client := range clientSnapshots {
 			if client.HasSubscribedCell(allCells) {
 				candidateRecipients = append(candidateRecipients, client)
 			}
 		}
 	}
-	h.mu.RUnlock()
 
 	// 5. Filter delivery path: check both sender's and recipient's privacy zones
 	var filteredRecipients []*Client
