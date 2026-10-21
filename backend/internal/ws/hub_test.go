@@ -1,15 +1,19 @@
 package ws_test
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
@@ -411,6 +415,9 @@ func TestWebSocketTargetedTerritoryCarvedAlert(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
+	// Attacker and victim are friends so victim receives attacker_id
+	hub.SetFriendsCache("attacker_02", []string{"victim_01"})
+
 	// Attacker captures territory that slices into victim_01
 	hub.BroadcastConquest("attacker_02", "ShadowRunner", 3500.0, []string{"victim_01"})
 
@@ -430,3 +437,319 @@ func TestWebSocketTargetedTerritoryCarvedAlert(t *testing.T) {
 	assert.Contains(t, alert.Message, "ShadowRunner")
 	assert.Contains(t, alert.Message, "3500 m²")
 }
+
+func TestWebSocket_FriendsDeadlockOnCacheMiss(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	ctx := context.Background()
+
+	// 1. Create two users and make them friends in the store
+	u1 := &store.User{ID: "usr_sender", Username: "Sender", Faction: "Cyber Vanguard"}
+	u2 := &store.User{ID: "usr_receiver", Username: "Receiver", Faction: "Cyber Vanguard"}
+	require.NoError(t, memStore.UpsertUser(ctx, u1))
+	require.NoError(t, memStore.UpsertUser(ctx, u2))
+
+	req, err := memStore.SendFriendRequest(ctx, u1.ID, u2.ID)
+	require.NoError(t, err)
+	_, err = memStore.RespondFriendRequest(ctx, req.ID, u2.ID, "accept")
+	require.NoError(t, err)
+
+	// 2. Setup Hub with store and NO pre-populated friend cache (empty cache)
+	hub, _, wsURL := setupTestHub(t, ws.WithStore(memStore))
+	hub.UpdateUserVisibility(u1.ID, "friends")
+
+	// 3. Connect both users via WebSocket
+	c1, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u1.ID, nil)
+	require.NoError(t, err)
+	defer c1.Close()
+
+	c2, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u2.ID, nil)
+	require.NoError(t, err)
+	defer c2.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// 4. Send presence update from c1, expect c2 to receive it within 3s timeout
+	done := make(chan error, 1)
+	go func() {
+		_ = c2.SetReadDeadline(time.Now().Add(3 * time.Second))
+		_, msgBytes, err := c2.ReadMessage()
+		if err != nil {
+			done <- err
+			return
+		}
+		var presence ws.PresenceMessage
+		if err := json.Unmarshal(msgBytes, &presence); err != nil {
+			done <- err
+			return
+		}
+		done <- nil
+	}()
+
+	err = c1.WriteJSON(ws.InboundMessage{
+		Type:      ws.TypePresenceUpdate,
+		Latitude:  51.501,
+		Longitude: -0.121,
+	})
+	require.NoError(t, err)
+
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("DEADLOCK DETECTED: DispatchPresence froze on cache miss")
+	}
+}
+
+func TestWebSocket_FriendsDelivery_AddAndRemoveFriendDynamics(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	u1 := &store.User{ID: "usr_dyn1", Username: "DynSender", Faction: "Cyber Vanguard"}
+	u2 := &store.User{ID: "usr_dyn2", Username: "DynReceiver", Faction: "Cyber Vanguard"}
+	require.NoError(t, memStore.UpsertUser(ctx, u1))
+	require.NoError(t, memStore.UpsertUser(ctx, u2))
+
+	hub, _, wsURL := setupTestHub(t, ws.WithStore(memStore), ws.WithPresenceDelay(0))
+	hub.UpdateUserVisibility(u1.ID, "friends")
+
+	c1, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u1.ID, nil)
+	require.NoError(t, err)
+	defer c1.Close()
+
+	c2, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u2.ID, nil)
+	require.NoError(t, err)
+	defer c2.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	received := make(chan ws.PresenceMessage, 10)
+	go func() {
+		for {
+			_, msgBytes, err := c2.ReadMessage()
+			if err != nil {
+				return
+			}
+			var p ws.PresenceMessage
+			if err := json.Unmarshal(msgBytes, &p); err == nil {
+				received <- p
+			}
+		}
+	}()
+
+	// Step 1: Not friends initially -> c2 should NOT receive update
+	hub.DispatchPresence(u1.ID, "DynSender", "Cyber Vanguard", 51.501, -0.121)
+
+	select {
+	case msg := <-received:
+		t.Fatalf("unexpected presence received before friendship established: %+v", msg)
+	case <-time.After(150 * time.Millisecond):
+		// Expected: nothing received
+	}
+
+	// Step 2: Add friend -> delivery starts immediately without hub restart
+	req, err := memStore.SendFriendRequest(ctx, u1.ID, u2.ID)
+	require.NoError(t, err)
+	f, err := memStore.RespondFriendRequest(ctx, req.ID, u2.ID, "accept")
+	require.NoError(t, err)
+	hub.InvalidateFriends(f.RequesterID, f.AddresseeID)
+
+	hub.DispatchPresence(u1.ID, "DynSender", "Cyber Vanguard", 51.502, -0.122)
+
+	select {
+	case msg := <-received:
+		assert.Equal(t, u1.ID, msg.UserID)
+	case <-time.After(2 * time.Second):
+		t.Fatal("expected presence after friend request accepted, timed out")
+	}
+
+	// Step 3: Remove friend -> delivery stops immediately
+	require.NoError(t, memStore.RemoveFriend(ctx, u1.ID, u2.ID))
+	hub.InvalidateFriends(u1.ID, u2.ID)
+
+	hub.DispatchPresence(u1.ID, "DynSender", "Cyber Vanguard", 51.503, -0.123)
+
+	select {
+	case msg := <-received:
+		t.Fatalf("unexpected presence received after friend removal: %+v", msg)
+	case <-time.After(150 * time.Millisecond):
+		// Expected: nothing received
+	}
+}
+
+func TestWebSocket_FriendsDelivery_ConcurrentStress(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// Seed 10 users in memory
+	for i := 0; i < 10; i++ {
+		uid := fmt.Sprintf("stress_user_%d", i)
+		_ = memStore.UpsertUser(ctx, &store.User{ID: uid, Username: uid, Faction: "Vanguard"})
+	}
+
+	// Make pairs mutual friends
+	for i := 0; i < 9; i++ {
+		req, err := memStore.SendFriendRequest(ctx, fmt.Sprintf("stress_user_%d", i), fmt.Sprintf("stress_user_%d", i+1))
+		if err == nil {
+			_, _ = memStore.RespondFriendRequest(ctx, req.ID, fmt.Sprintf("stress_user_%d", i+1), "accept")
+		}
+	}
+
+	hub, _, _ := setupTestHub(t, ws.WithStore(memStore), ws.WithPresenceDelay(0))
+	for i := 0; i < 10; i++ {
+		hub.UpdateUserVisibility(fmt.Sprintf("stress_user_%d", i), "friends")
+	}
+
+	const workers = 16
+	const iterations = 50
+	var wg sync.WaitGroup
+	wg.Add(workers)
+
+	for w := 0; w < workers; w++ {
+		go func(workerID int) {
+			defer wg.Done()
+			senderID := fmt.Sprintf("stress_user_%d", workerID%10)
+			for j := 0; j < iterations; j++ {
+				hub.DispatchPresence(senderID, senderID, "Vanguard", 51.500+float64(j)*0.0001, -0.120+float64(workerID)*0.0001)
+				if j%10 == 0 {
+					hub.InvalidateFriends(senderID)
+				}
+			}
+		}(w)
+	}
+
+	wg.Wait()
+}
+
+func TestWebSocket_RunnerLeft_RespectsVisibilityOff(t *testing.T) {
+	_, _, wsURL := setupTestHub(t)
+
+	// Alpha connects with default visibility "off"
+	c1, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid=runner_alpha_off", nil)
+	require.NoError(t, err)
+
+	// Beta connects and listens
+	c2, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid=runner_beta_listen", nil)
+	require.NoError(t, err)
+	defer c2.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Alpha disconnects
+	c1.Close()
+
+	// Beta should NOT receive runner_left for an "off" user
+	_ = c2.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	_, msg, err := c2.ReadMessage()
+	assert.Error(t, err, "expected no runner_left delivered when leaving user visibility is off, but got: %s", string(msg))
+}
+
+func TestWebSocket_RunnerLeft_OnlyDeliveredToEligibleRecipients(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	ctx := context.Background()
+
+	u1 := &store.User{ID: "usr_alice", Username: "Alice", Faction: "Vanguard"}
+	u2 := &store.User{ID: "usr_bob", Username: "Bob", Faction: "Vanguard"}
+	u3 := &store.User{ID: "usr_stranger", Username: "Stranger", Faction: "Vanguard"}
+	require.NoError(t, memStore.UpsertUser(ctx, u1))
+	require.NoError(t, memStore.UpsertUser(ctx, u2))
+	require.NoError(t, memStore.UpsertUser(ctx, u3))
+
+	// Alice and Bob are friends; Stranger is not
+	req, err := memStore.SendFriendRequest(ctx, u1.ID, u2.ID)
+	require.NoError(t, err)
+	_, err = memStore.RespondFriendRequest(ctx, req.ID, u2.ID, "accept")
+	require.NoError(t, err)
+
+	hub, _, wsURL := setupTestHub(t, ws.WithStore(memStore))
+	hub.UpdateUserVisibility(u1.ID, "friends")
+
+	c1, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u1.ID, nil)
+	require.NoError(t, err)
+	c2, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u2.ID, nil)
+	require.NoError(t, err)
+	defer c2.Close()
+	c3, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u3.ID, nil)
+	require.NoError(t, err)
+	defer c3.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Alice leaves
+	c1.Close()
+
+	// Bob (friend) should receive runner_left
+	_ = c2.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	_, bMsg, err := c2.ReadMessage()
+	require.NoError(t, err, "friend should receive runner_left")
+	var leftMsg ws.RunnerLeftMessage
+	err = json.Unmarshal(bMsg, &leftMsg)
+	require.NoError(t, err)
+	assert.Equal(t, ws.TypeRunnerLeft, leftMsg.Type)
+	assert.Equal(t, u1.ID, leftMsg.UserID)
+
+	// Stranger should NOT receive runner_left
+	_ = c3.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	_, sMsg, err := c3.ReadMessage()
+	assert.Error(t, err, "stranger should not receive runner_left, but got: %s", string(sMsg))
+}
+
+func TestWebSocket_ConquestBroadcast_OnlyVictimsAndFriends(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	ctx := context.Background()
+
+	attacker := &store.User{ID: "atk_01", Username: "Attacker", Faction: "Vanguard"}
+	victim := &store.User{ID: "vic_01", Username: "Victim", Faction: "Vanguard"}
+	friend := &store.User{ID: "fri_01", Username: "Friend", Faction: "Vanguard"}
+	stranger := &store.User{ID: "str_01", Username: "Stranger", Faction: "Vanguard"}
+	require.NoError(t, memStore.UpsertUser(ctx, attacker))
+	require.NoError(t, memStore.UpsertUser(ctx, victim))
+	require.NoError(t, memStore.UpsertUser(ctx, friend))
+	require.NoError(t, memStore.UpsertUser(ctx, stranger))
+
+	// Attacker and Friend are mutual friends
+	req, err := memStore.SendFriendRequest(ctx, attacker.ID, friend.ID)
+	require.NoError(t, err)
+	_, err = memStore.RespondFriendRequest(ctx, req.ID, friend.ID, "accept")
+	require.NoError(t, err)
+
+	hub, _, wsURL := setupTestHub(t, ws.WithStore(memStore))
+
+	cVictim, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+victim.ID, nil)
+	require.NoError(t, err)
+	defer cVictim.Close()
+
+	cFriend, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+friend.ID, nil)
+	require.NoError(t, err)
+	defer cFriend.Close()
+
+	cStranger, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+stranger.ID, nil)
+	require.NoError(t, err)
+	defer cStranger.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Attacker conquers territory claiming from victim
+	hub.BroadcastConquest(attacker.ID, attacker.Username, 1500.0, []string{victim.ID})
+
+	// 1. Friend should receive conquest announcement with AttackerID included
+	_ = cFriend.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	_, friBytes, err := cFriend.ReadMessage()
+	require.NoError(t, err)
+	var friMsg ws.ConquestBroadcastMessage
+	require.NoError(t, json.Unmarshal(friBytes, &friMsg))
+	assert.Equal(t, attacker.ID, friMsg.AttackerID, "friend must see attacker ID")
+
+	// 2. Victim should receive targeted alert; since victim is non-friend, attacker_id should NOT be exposed
+	_ = cVictim.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	_, vicBytes, err := cVictim.ReadMessage()
+	require.NoError(t, err)
+	var vicAlert ws.TerritoryAlertMessage
+	require.NoError(t, json.Unmarshal(vicBytes, &vicAlert))
+	assert.Empty(t, vicAlert.AttackerID, "non-friend victim must not receive attacker_id")
+
+	// 3. Stranger should receive NOTHING (not a victim, not a friend)
+	_ = cStranger.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	_, strBytes, err := cStranger.ReadMessage()
+	assert.Error(t, err, "stranger should not receive conquest event, but received: %s", string(strBytes))
+}
+

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/faction_standing.dart';
 import '../../../models/leaderboard_entry.dart';
 import '../../../models/runner_profile.dart';
@@ -79,7 +80,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
   }
 
   double _getUserClaimedAreaKm2() {
-    final double sqM = widget.territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+    final double sqM = widget.territories.fold(
+      0.0,
+      (sum, t) => sum + t.areaSqMeters,
+    );
     return sqM / 1000000.0;
   }
 
@@ -105,15 +109,30 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     if (_standings != null && _standings!.standings.isNotEmpty) {
       vanguard = _standings!.standings.firstWhere(
         (s) => s.faction.toLowerCase().contains('vanguard'),
-        orElse: () => const FactionStanding(faction: 'Cyber Vanguard', totalAreaSqm: 0, memberCount: 0, percentage: 0),
+        orElse: () => const FactionStanding(
+          faction: 'Cyber Vanguard',
+          totalAreaSqm: 0,
+          memberCount: 0,
+          percentage: 0,
+        ),
       );
       syndicate = _standings!.standings.firstWhere(
         (s) => s.faction.toLowerCase().contains('syndicate'),
-        orElse: () => const FactionStanding(faction: 'Iron Syndicate', totalAreaSqm: 0, memberCount: 0, percentage: 0),
+        orElse: () => const FactionStanding(
+          faction: 'Iron Syndicate',
+          totalAreaSqm: 0,
+          memberCount: 0,
+          percentage: 0,
+        ),
       );
       nomads = _standings!.standings.firstWhere(
         (s) => s.faction.toLowerCase().contains('nomad'),
-        orElse: () => const FactionStanding(faction: 'Neon Nomads', totalAreaSqm: 0, memberCount: 0, percentage: 0),
+        orElse: () => const FactionStanding(
+          faction: 'Neon Nomads',
+          totalAreaSqm: 0,
+          memberCount: 0,
+          percentage: 0,
+        ),
       );
     } else {
       // Local fallback based on verified territories
@@ -138,7 +157,8 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       );
     }
 
-    final double totalAreaSqm = vanguard.totalAreaSqm + syndicate.totalAreaSqm + nomads.totalAreaSqm;
+    final double totalAreaSqm =
+        vanguard.totalAreaSqm + syndicate.totalAreaSqm + nomads.totalAreaSqm;
 
     int vanguardPct = 33;
     int syndicatePct = 33;
@@ -171,7 +191,11 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                   Expanded(
                     child: Row(
                       children: [
-                        const Icon(Icons.shield_rounded, color: AppColors.accent, size: 18),
+                        const Icon(
+                          Icons.shield_rounded,
+                          color: AppColors.accent,
+                          size: 18,
+                        ),
                         const SizedBox(width: AppSpacing.s8),
                         Flexible(
                           child: Text(
@@ -189,11 +213,16 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                   ),
                   const SizedBox(width: AppSpacing.s8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.accentContainer,
                       borderRadius: AppSpacing.br8,
-                      border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                      border: Border.all(
+                        color: AppColors.accent.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Text(
                       totalAreaSqm > 0 ? 'Contested' : 'Unclaimed',
@@ -239,11 +268,32 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               // Faction Legend
               Row(
                 children: [
-                  Expanded(child: _buildFactionLegend('Vanguard', '$vanguardPct%', _formatArea(vanguard.totalAreaSqm), AppColors.accent)),
+                  Expanded(
+                    child: _buildFactionLegend(
+                      'Vanguard',
+                      '$vanguardPct%',
+                      _formatArea(vanguard.totalAreaSqm),
+                      AppColors.accent,
+                    ),
+                  ),
                   const SizedBox(width: 4),
-                  Expanded(child: _buildFactionLegend('Syndicate', '$syndicatePct%', _formatArea(syndicate.totalAreaSqm), AppColors.warning)),
+                  Expanded(
+                    child: _buildFactionLegend(
+                      'Syndicate',
+                      '$syndicatePct%',
+                      _formatArea(syndicate.totalAreaSqm),
+                      AppColors.warning,
+                    ),
+                  ),
                   const SizedBox(width: 4),
-                  Expanded(child: _buildFactionLegend('Nomads', '$nomadsPct%', _formatArea(nomads.totalAreaSqm), AppColors.info)),
+                  Expanded(
+                    child: _buildFactionLegend(
+                      'Nomads',
+                      '$nomadsPct%',
+                      _formatArea(nomads.totalAreaSqm),
+                      AppColors.info,
+                    ),
+                  ),
                 ],
               ),
 
@@ -251,7 +301,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                 const SizedBox(height: AppSpacing.s8),
                 Text(
                   _errorMessage!,
-                  style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 10),
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 10,
+                  ),
                 ),
               ],
             ],
@@ -298,7 +351,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               child: SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.accent,
+                ),
               ),
             ),
           )
@@ -308,7 +364,12 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     );
   }
 
-  Widget _buildFactionLegend(String name, String percentage, String area, Color color) {
+  Widget _buildFactionLegend(
+    String name,
+    String percentage,
+    String area,
+    Color color,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -326,7 +387,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               const SizedBox(width: 6),
               Text(
                 name,
-                style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                style: AppText.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
               ),
               const SizedBox(width: 4),
               Text(
@@ -391,12 +455,16 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
   }
 
   Widget _buildLeaderboardContent(double userAreaSqm) {
-    final currentUsername = widget.profile.username.isNotEmpty ? widget.profile.username.toUpperCase() : 'YOU';
+    final currentUsername = widget.profile.username.isNotEmpty
+        ? widget.profile.username.toUpperCase()
+        : 'YOU';
 
     // If server has entries, check if user is in top entries
     final entries = List<LeaderboardEntry>.from(_leaderboard);
     final userIdx = entries.indexWhere(
-      (e) => e.userId == widget.profile.id || e.username.toUpperCase() == currentUsername,
+      (e) =>
+          e.userId == widget.profile.id ||
+          e.username.toUpperCase() == currentUsername,
     );
 
     // If user has local territories and is not in list, add user
@@ -425,17 +493,27 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
         ),
         child: Column(
           children: [
-            const Icon(Icons.emoji_events_outlined, color: AppColors.textMuted, size: 36),
+            const Icon(
+              Icons.emoji_events_outlined,
+              color: AppColors.textMuted,
+              size: 36,
+            ),
             const SizedBox(height: AppSpacing.s10),
             Text(
               'No leaderboard entries yet',
-              style: AppText.headingSmall.copyWith(fontSize: 14, color: AppColors.textPrimary),
+              style: AppText.headingSmall.copyWith(
+                fontSize: 14,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: AppSpacing.s4),
             Text(
               'Claim your first territory to rank on the leaderboard.',
               textAlign: TextAlign.center,
-              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
             ),
           ],
         ),
@@ -444,7 +522,8 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
 
     return Column(
       children: entries.map((entry) {
-        final isUser = entry.userId == widget.profile.id ||
+        final isUser =
+            entry.userId == widget.profile.id ||
             entry.username.toUpperCase() == currentUsername;
         return _buildLeaderCard(entry, isUser);
       }).toList(),
@@ -457,13 +536,25 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
 
     if (entry.rank == 1) {
       rankColor = AppColors.gold;
-      rankIcon = const Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 18);
+      rankIcon = const Icon(
+        Icons.emoji_events_rounded,
+        color: AppColors.gold,
+        size: 18,
+      );
     } else if (entry.rank == 2) {
       rankColor = AppColors.silver;
-      rankIcon = const Icon(Icons.emoji_events_rounded, color: AppColors.silver, size: 18);
+      rankIcon = const Icon(
+        Icons.emoji_events_rounded,
+        color: AppColors.silver,
+        size: 18,
+      );
     } else if (entry.rank == 3) {
       rankColor = AppColors.bronze;
-      rankIcon = const Icon(Icons.emoji_events_rounded, color: AppColors.bronze, size: 18);
+      rankIcon = const Icon(
+        Icons.emoji_events_rounded,
+        color: AppColors.bronze,
+        size: 18,
+      );
     } else {
       rankColor = AppColors.textMuted;
       rankIcon = Text(
@@ -478,7 +569,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s10),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s14, vertical: AppSpacing.s12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s14,
+        vertical: AppSpacing.s12,
+      ),
       decoration: BoxDecoration(
         color: isUser ? AppColors.accentContainer : AppColors.surface,
         borderRadius: AppSpacing.br16,
@@ -496,7 +590,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: rankColor.withValues(alpha: 0.12),
-              border: Border.all(color: rankColor.withValues(alpha: 0.3), width: 1),
+              border: Border.all(
+                color: rankColor.withValues(alpha: 0.3),
+                width: 1,
+              ),
             ),
             child: Center(child: rankIcon),
           ),
@@ -514,7 +611,9 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                         entry.username,
                         style: AppText.bodyMedium.copyWith(
                           fontSize: 13,
-                          color: isUser ? AppColors.accent : AppColors.textPrimary,
+                          color: isUser
+                              ? AppColors.accent
+                              : AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
                         ),
                         overflow: TextOverflow.ellipsis,
@@ -523,7 +622,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                     if (isUser) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.accent,
                           borderRadius: AppSpacing.br8,
@@ -568,7 +670,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               const SizedBox(height: 2),
               Text(
                 'Controlled',
-                style: AppText.labelSmall.copyWith(color: AppColors.textMuted, fontSize: 9),
+                style: AppText.labelSmall.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 9,
+                ),
               ),
             ],
           ),

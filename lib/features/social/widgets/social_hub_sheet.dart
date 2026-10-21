@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../../models/duel.dart';
 import '../../../models/friend.dart';
 import '../../../services/api_client.dart';
@@ -18,10 +20,7 @@ Future<void> showSocialHubSheet(
     isScrollControlled: true,
     builder: (context) => FractionallySizedBox(
       heightFactor: 0.9,
-      child: SocialHubSheet(
-        apiClient: apiClient,
-        currentUserId: currentUserId,
-      ),
+      child: SocialHubSheet(apiClient: apiClient, currentUserId: currentUserId),
     ),
   );
 }
@@ -30,11 +29,7 @@ class SocialHubSheet extends StatelessWidget {
   final ApiClient? apiClient;
   final String? currentUserId;
 
-  const SocialHubSheet({
-    super.key,
-    this.apiClient,
-    this.currentUserId,
-  });
+  const SocialHubSheet({super.key, this.apiClient, this.currentUserId});
 
   @override
   Widget build(BuildContext context) {
@@ -78,11 +73,7 @@ class SocialHubView extends StatefulWidget {
   final ApiClient? apiClient;
   final String? currentUserId;
 
-  const SocialHubView({
-    super.key,
-    this.apiClient,
-    this.currentUserId,
-  });
+  const SocialHubView({super.key, this.apiClient, this.currentUserId});
 
   @override
   State<SocialHubView> createState() => _SocialHubViewState();
@@ -95,7 +86,8 @@ class _SocialHubViewState extends State<SocialHubView> {
   late final String _myUid;
 
   static const String _cachedFriendsKey = 'territory_runner_cached_friends';
-  static const String _cachedRequestsKey = 'territory_runner_cached_friend_requests';
+  static const String _cachedRequestsKey =
+      'territory_runner_cached_friend_requests';
   static const String _cachedDuelsKey = 'territory_runner_cached_duels';
 
   _SocialTab _activeTab = _SocialTab.squad;
@@ -151,7 +143,10 @@ class _SocialHubViewState extends State<SocialHubView> {
         }
       }
 
-      if (mounted && (cachedFriends.isNotEmpty || cachedRequests.isNotEmpty || cachedDuels.isNotEmpty)) {
+      if (mounted &&
+          (cachedFriends.isNotEmpty ||
+              cachedRequests.isNotEmpty ||
+              cachedDuels.isNotEmpty)) {
         setState(() {
           if (_friends.isEmpty) _friends = cachedFriends;
           if (_requests.isEmpty) _requests = cachedRequests;
@@ -159,18 +154,33 @@ class _SocialHubViewState extends State<SocialHubView> {
         });
       }
     } catch (e) {
-      AppLogger.warning('Failed to load cached social data: $e', tag: 'SocialHubView');
+      AppLogger.warning(
+        'Failed to load cached social data: $e',
+        tag: 'SocialHubView',
+      );
     }
   }
 
   Future<void> _saveCachedData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_cachedFriendsKey, jsonEncode(_friends.map((f) => f.toJson()).toList()));
-      await prefs.setString(_cachedRequestsKey, jsonEncode(_requests.map((r) => r.toJson()).toList()));
-      await prefs.setString(_cachedDuelsKey, jsonEncode(_duels.map((d) => d.toJson()).toList()));
+      await prefs.setString(
+        _cachedFriendsKey,
+        jsonEncode(_friends.map((f) => f.toJson()).toList()),
+      );
+      await prefs.setString(
+        _cachedRequestsKey,
+        jsonEncode(_requests.map((r) => r.toJson()).toList()),
+      );
+      await prefs.setString(
+        _cachedDuelsKey,
+        jsonEncode(_duels.map((d) => d.toJson()).toList()),
+      );
     } catch (e) {
-      AppLogger.warning('Failed to cache social data: $e', tag: 'SocialHubView');
+      AppLogger.warning(
+        'Failed to cache social data: $e',
+        tag: 'SocialHubView',
+      );
     }
   }
 
@@ -234,7 +244,11 @@ class _SocialHubViewState extends State<SocialHubView> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.refresh_rounded, color: AppColors.textSecondary, size: 20),
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
                 tooltip: 'Refresh Hub',
                 onPressed: _refreshData,
               ),
@@ -275,9 +289,15 @@ class _SocialHubViewState extends State<SocialHubView> {
 
         if (_errorMessage != null && (_friends.isNotEmpty || _duels.isNotEmpty))
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s16,
+              vertical: AppSpacing.s4,
+            ),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s12,
+                vertical: AppSpacing.s8,
+              ),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: AppRadius.br8,
@@ -285,12 +305,19 @@ class _SocialHubViewState extends State<SocialHubView> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.cloud_off_rounded, color: AppColors.warning, size: 16),
+                  const Icon(
+                    Icons.cloud_off_rounded,
+                    color: AppColors.warning,
+                    size: 16,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ],
@@ -314,12 +341,19 @@ class _SocialHubViewState extends State<SocialHubView> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.cloud_off_rounded, color: AppColors.textMuted, size: 48),
+                    const Icon(
+                      Icons.cloud_off_rounded,
+                      color: AppColors.textMuted,
+                      size: 48,
+                    ),
                     const SizedBox(height: AppSpacing.s12),
                     Text(
                       _errorMessage!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.s16),
                     OutlinedButton(
@@ -377,7 +411,9 @@ class _SocialHubViewState extends State<SocialHubView> {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? AppColors.onAccent : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.onAccent
+                    : AppColors.textSecondary,
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                 fontSize: 12,
                 letterSpacing: 0.4,
@@ -390,11 +426,20 @@ class _SocialHubViewState extends State<SocialHubView> {
   }
 
   Widget _buildSquadTab() {
-    final incomingRequests = _requests.where((r) => r.isIncoming && r.status == 'pending').toList();
+    final incomingRequests = _requests
+        .where((r) => r.isIncoming && r.status == 'pending')
+        .toList();
 
     return ListView(
-      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.s16, 0, AppSpacing.s16, AppSpacing.s32),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s16,
+        0,
+        AppSpacing.s16,
+        AppSpacing.s32,
+      ),
       children: [
         // Action row: Add friend
         Row(
@@ -411,7 +456,11 @@ class _SocialHubViewState extends State<SocialHubView> {
             ),
             TextButton.icon(
               onPressed: _showAddFriendDialog,
-              icon: const Icon(Icons.person_add_rounded, size: 16, color: AppColors.accent),
+              icon: const Icon(
+                Icons.person_add_rounded,
+                size: 16,
+                color: AppColors.accent,
+              ),
               label: const Text(
                 'Add runner',
                 style: TextStyle(
@@ -432,14 +481,20 @@ class _SocialHubViewState extends State<SocialHubView> {
             decoration: BoxDecoration(
               color: AppColors.surface2,
               borderRadius: AppSpacing.br16,
-              border: Border.all(color: AppColors.accent.withValues(alpha: 0.4)),
+              border: Border.all(
+                color: AppColors.accent.withValues(alpha: 0.4),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.mark_email_unread_rounded, color: AppColors.accent, size: 16),
+                    const Icon(
+                      Icons.mark_email_unread_rounded,
+                      color: AppColors.accent,
+                      size: 16,
+                    ),
                     const SizedBox(width: AppSpacing.s6),
                     Text(
                       'Incoming squad invitations (${incomingRequests.length})',
@@ -471,7 +526,11 @@ class _SocialHubViewState extends State<SocialHubView> {
             ),
             child: Column(
               children: [
-                const Icon(Icons.group_off_rounded, color: AppColors.textMuted, size: 40),
+                const Icon(
+                  Icons.group_off_rounded,
+                  color: AppColors.textMuted,
+                  size: 40,
+                ),
                 const SizedBox(height: AppSpacing.s12),
                 const Text(
                   'No squad members yet',
@@ -486,18 +545,27 @@ class _SocialHubViewState extends State<SocialHubView> {
                 const Text(
                   'Add rival athletes or syndicate members to monitor their territory conquest and challenge them to duels!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.s16),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.onAccent,
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.br12,
+                    ),
                   ),
                   onPressed: _showAddFriendDialog,
                   icon: const Icon(Icons.person_add_rounded, size: 18),
-                  label: const Text('Send friend request', style: TextStyle(fontWeight: FontWeight.w900)),
+                  label: const Text(
+                    'Send friend request',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
                 ),
               ],
             ),
@@ -523,8 +591,13 @@ class _SocialHubViewState extends State<SocialHubView> {
             radius: 18,
             backgroundColor: AppColors.surface2,
             child: Text(
-              req.requesterName.isNotEmpty ? req.requesterName[0].toUpperCase() : 'R',
-              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+              req.requesterName.isNotEmpty
+                  ? req.requesterName[0].toUpperCase()
+                  : 'R',
+              style: const TextStyle(
+                color: AppColors.accent,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.s10),
@@ -534,22 +607,37 @@ class _SocialHubViewState extends State<SocialHubView> {
               children: [
                 Text(
                   req.requesterName,
-                  style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
                 ),
                 Text(
                   req.requesterFaction,
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.check_circle_rounded, color: AppColors.accent, size: 28),
+            icon: const Icon(
+              Icons.check_circle_rounded,
+              color: AppColors.accent,
+              size: 28,
+            ),
             tooltip: 'Accept',
             onPressed: () => _respondRequest(req.id, 'accept'),
           ),
           IconButton(
-            icon: const Icon(Icons.cancel_rounded, color: AppColors.error, size: 28),
+            icon: const Icon(
+              Icons.cancel_rounded,
+              color: AppColors.error,
+              size: 28,
+            ),
             tooltip: 'Decline',
             onPressed: () => _respondRequest(req.id, 'decline'),
           ),
@@ -577,8 +665,13 @@ class _SocialHubViewState extends State<SocialHubView> {
             radius: 20,
             backgroundColor: AppColors.surface2,
             child: Text(
-              friend.username.isNotEmpty ? friend.username[0].toUpperCase() : 'R',
-              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w900),
+              friend.username.isNotEmpty
+                  ? friend.username[0].toUpperCase()
+                  : 'R',
+              style: const TextStyle(
+                color: AppColors.accent,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.s12),
@@ -590,11 +683,18 @@ class _SocialHubViewState extends State<SocialHubView> {
                   children: [
                     Text(
                       friend.username,
-                      style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w800, fontSize: 14),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(width: AppSpacing.s6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.surface2,
                         borderRadius: AppSpacing.brFull,
@@ -614,7 +714,10 @@ class _SocialHubViewState extends State<SocialHubView> {
                 const SizedBox(height: AppSpacing.s2),
                 Text(
                   '${friend.faction} • $areaFormatted claimed • ${friend.totalRuns} runs',
-                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                  ),
                 ),
               ],
             ),
@@ -623,15 +726,25 @@ class _SocialHubViewState extends State<SocialHubView> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentContainer,
               foregroundColor: AppColors.accent,
-              side: BorderSide(color: AppColors.accent.withValues(alpha: 0.4), width: 1.0),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
+              side: BorderSide(
+                color: AppColors.accent.withValues(alpha: 0.4),
+                width: 1.0,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s10,
+                vertical: AppSpacing.s6,
+              ),
               shape: RoundedRectangleBorder(borderRadius: AppSpacing.br10),
             ),
             onPressed: () => _showCreateDuelDialog(targetFriend: friend),
             icon: const Icon(Icons.sports_kabaddi_rounded, size: 14),
             label: const Text(
               'Duel',
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.3),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 11,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
         ],
@@ -642,11 +755,20 @@ class _SocialHubViewState extends State<SocialHubView> {
   Widget _buildDuelsTab() {
     final activeDuels = _duels.where((d) => d.isActive).toList();
     final pendingDuels = _duels.where((d) => d.isPending).toList();
-    final completedDuels = _duels.where((d) => d.isCompleted || d.isDeclined || d.isExpired).toList();
+    final completedDuels = _duels
+        .where((d) => d.isCompleted || d.isDeclined || d.isExpired)
+        .toList();
 
     return ListView(
-      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-      padding: const EdgeInsets.fromLTRB(AppSpacing.s16, 0, AppSpacing.s16, AppSpacing.s32),
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s16,
+        0,
+        AppSpacing.s16,
+        AppSpacing.s32,
+      ),
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -662,7 +784,11 @@ class _SocialHubViewState extends State<SocialHubView> {
             ),
             TextButton.icon(
               onPressed: () => _showCreateDuelDialog(),
-              icon: const Icon(Icons.add_rounded, size: 16, color: AppColors.accent),
+              icon: const Icon(
+                Icons.add_rounded,
+                size: 16,
+                color: AppColors.accent,
+              ),
               label: const Text(
                 'New duel',
                 style: TextStyle(
@@ -698,7 +824,9 @@ class _SocialHubViewState extends State<SocialHubView> {
         ],
 
         // Empty state
-        if (activeDuels.isEmpty && pendingDuels.isEmpty && completedDuels.isEmpty)
+        if (activeDuels.isEmpty &&
+            pendingDuels.isEmpty &&
+            completedDuels.isEmpty)
           Container(
             padding: const EdgeInsets.all(AppSpacing.s24),
             decoration: BoxDecoration(
@@ -708,7 +836,11 @@ class _SocialHubViewState extends State<SocialHubView> {
             ),
             child: Column(
               children: [
-                const Icon(Icons.sports_kabaddi_rounded, color: AppColors.textMuted, size: 40),
+                const Icon(
+                  Icons.sports_kabaddi_rounded,
+                  color: AppColors.textMuted,
+                  size: 40,
+                ),
                 const SizedBox(height: AppSpacing.s12),
                 const Text(
                   'No duels in progress',
@@ -723,18 +855,27 @@ class _SocialHubViewState extends State<SocialHubView> {
                 const Text(
                   'Challenge friends to a 24-hour Area Conquest or Distance Sprint. Runs submitted during the duel automatically advance your meter!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12, height: 1.4),
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.s16),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.onAccent,
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.br12,
+                    ),
                   ),
                   onPressed: () => _showCreateDuelDialog(),
                   icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text('Create first duel', style: TextStyle(fontWeight: FontWeight.w900)),
+                  label: const Text(
+                    'Create first duel',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
                 ),
               ],
             ),
@@ -801,7 +942,9 @@ class _SocialHubViewState extends State<SocialHubView> {
         color: AppColors.surface,
         borderRadius: AppSpacing.br16,
         border: Border.all(
-          color: duel.isActive ? AppColors.accent.withValues(alpha: 0.5) : AppColors.border,
+          color: duel.isActive
+              ? AppColors.accent.withValues(alpha: 0.5)
+              : AppColors.border,
         ),
       ),
       child: Column(
@@ -814,7 +957,9 @@ class _SocialHubViewState extends State<SocialHubView> {
               Row(
                 children: [
                   Icon(
-                    duel.targetType == 'distance' ? Icons.directions_run_rounded : Icons.hexagon_outlined,
+                    duel.targetType == 'distance'
+                        ? Icons.directions_run_rounded
+                        : Icons.hexagon_outlined,
                     color: AppColors.accent,
                     size: 16,
                   ),
@@ -869,10 +1014,21 @@ class _SocialHubViewState extends State<SocialHubView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('YOU', style: TextStyle(color: AppColors.textPrimary, fontSize: 11, fontWeight: FontWeight.bold)),
+                const Text(
+                  'YOU',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 Text(
                   '$myProgressDisplay / $targetDisplay (${(duel.myProgressFraction(_myUid) * 100).toStringAsFixed(0)}%)',
-                  style: const TextStyle(color: AppColors.accent, fontSize: 11, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -892,10 +1048,21 @@ class _SocialHubViewState extends State<SocialHubView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(opponentName, style: const TextStyle(color: AppColors.textSecondary, fontSize: 11, fontWeight: FontWeight.bold)),
+                Text(
+                  opponentName,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 Text(
                   '$theirProgressDisplay / $targetDisplay (${(duel.theirProgressFraction(_myUid) * 100).toStringAsFixed(0)}%)',
-                  style: const TextStyle(color: AppColors.secondary, fontSize: 11, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: AppColors.secondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -921,10 +1088,15 @@ class _SocialHubViewState extends State<SocialHubView> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accent,
                       foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSpacing.br10,
+                      ),
                     ),
                     onPressed: () => _acceptDuel(duel.id),
-                    child: const Text('ACCEPT DUEL', style: TextStyle(fontWeight: FontWeight.w900)),
+                    child: const Text(
+                      'ACCEPT DUEL',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s8),
@@ -933,7 +1105,9 @@ class _SocialHubViewState extends State<SocialHubView> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                       side: const BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br10),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSpacing.br10,
+                      ),
                     ),
                     onPressed: () => _declineDuel(duel.id),
                     child: const Text('DECLINE'),
@@ -954,7 +1128,9 @@ class _SocialHubViewState extends State<SocialHubView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Friend request ${action}ed!'),
-            backgroundColor: action == 'accept' ? AppColors.accent : AppColors.surface2,
+            backgroundColor: action == 'accept'
+                ? AppColors.accent
+                : AppColors.surface2,
           ),
         );
         _refreshData();
@@ -962,7 +1138,10 @@ class _SocialHubViewState extends State<SocialHubView> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -973,14 +1152,20 @@ class _SocialHubViewState extends State<SocialHubView> {
       final ok = await _apiClient.acceptDuel(duelId);
       if (ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Duel accepted! Battle engaged.'), backgroundColor: AppColors.accent),
+          const SnackBar(
+            content: Text('Duel accepted! Battle engaged.'),
+            backgroundColor: AppColors.accent,
+          ),
         );
         _refreshData();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -991,14 +1176,20 @@ class _SocialHubViewState extends State<SocialHubView> {
       final ok = await _apiClient.declineDuel(duelId);
       if (ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Duel declined.'), backgroundColor: AppColors.surface2),
+          const SnackBar(
+            content: Text('Duel declined.'),
+            backgroundColor: AppColors.surface2,
+          ),
         );
         _refreshData();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppColors.error),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
@@ -1017,7 +1208,11 @@ class _SocialHubViewState extends State<SocialHubView> {
             SizedBox(width: AppSpacing.s8),
             Text(
               'Add Squad Runner',
-              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
           ],
         ),
@@ -1027,12 +1222,19 @@ class _SocialHubViewState extends State<SocialHubView> {
           children: [
             const Text(
               'Enter the runner ID or callsign of your friend to issue a squad invite:',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.3),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                height: 1.3,
+              ),
             ),
             const SizedBox(height: AppSpacing.s16),
             TextField(
               controller: controller,
-              style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+              ),
               decoration: InputDecoration(
                 labelText: 'Runner ID / Callsign',
                 labelStyle: const TextStyle(color: AppColors.textMuted),
@@ -1041,7 +1243,10 @@ class _SocialHubViewState extends State<SocialHubView> {
                 border: OutlineInputBorder(borderRadius: AppSpacing.br12),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: AppSpacing.br12,
-                  borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+                  borderSide: const BorderSide(
+                    color: AppColors.accent,
+                    width: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -1050,7 +1255,10 @@ class _SocialHubViewState extends State<SocialHubView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -1076,12 +1284,18 @@ class _SocialHubViewState extends State<SocialHubView> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e'), backgroundColor: AppColors.error),
+                    SnackBar(
+                      content: Text('Failed: $e'),
+                      backgroundColor: AppColors.error,
+                    ),
                   );
                 }
               }
             },
-            child: const Text('DISPATCH INVITE', style: TextStyle(fontWeight: FontWeight.w900)),
+            child: const Text(
+              'DISPATCH INVITE',
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
           ),
         ],
       ),
@@ -1089,7 +1303,8 @@ class _SocialHubViewState extends State<SocialHubView> {
   }
 
   void _showCreateDuelDialog({FriendUser? targetFriend}) {
-    String opponentId = targetFriend?.id ?? (_friends.isNotEmpty ? _friends.first.id : '');
+    String opponentId =
+        targetFriend?.id ?? (_friends.isNotEmpty ? _friends.first.id : '');
     String targetType = 'area';
     double targetValue = 5000; // 5000 sqm or 5000 meters
     int xpStake = 500;
@@ -1121,7 +1336,11 @@ class _SocialHubViewState extends State<SocialHubView> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.sports_kabaddi_rounded, color: AppColors.secondary, size: 22),
+                      const Icon(
+                        Icons.sports_kabaddi_rounded,
+                        color: AppColors.secondary,
+                        size: 22,
+                      ),
                       const SizedBox(width: AppSpacing.s8),
                       Text(
                         'ISSUE CONQUEST CHALLENGE',
@@ -1139,24 +1358,36 @@ class _SocialHubViewState extends State<SocialHubView> {
                   // Opponent Picker
                   Text(
                     'OPPONENT RUNNER',
-                    style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 11),
+                    style: AppText.label.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.s6),
                   if (_friends.isNotEmpty)
                     DropdownButtonFormField<String>(
-                      initialValue: _friends.any((f) => f.id == opponentId) ? opponentId : _friends.first.id,
+                      initialValue: _friends.any((f) => f.id == opponentId)
+                          ? opponentId
+                          : _friends.first.id,
                       dropdownColor: AppColors.surface2,
                       decoration: InputDecoration(
                         filled: true,
                         fillColor: AppColors.surface2,
-                        border: OutlineInputBorder(borderRadius: AppSpacing.br12),
+                        border: OutlineInputBorder(
+                          borderRadius: AppSpacing.br12,
+                        ),
                       ),
-                      style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                       items: _friends
-                          .map((f) => DropdownMenuItem(
-                                value: f.id,
-                                child: Text('${f.username} (${f.faction})'),
-                              ))
+                          .map(
+                            (f) => DropdownMenuItem(
+                              value: f.id,
+                              child: Text('${f.username} (${f.faction})'),
+                            ),
+                          )
                           .toList(),
                       onChanged: (val) {
                         if (val != null) setSheetState(() => opponentId = val);
@@ -1165,13 +1396,18 @@ class _SocialHubViewState extends State<SocialHubView> {
                   else
                     TextField(
                       controller: opponentController,
-                      style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Opponent User ID',
                         labelStyle: const TextStyle(color: AppColors.textMuted),
                         filled: true,
                         fillColor: AppColors.surface2,
-                        border: OutlineInputBorder(borderRadius: AppSpacing.br12),
+                        border: OutlineInputBorder(
+                          borderRadius: AppSpacing.br12,
+                        ),
                       ),
                       onChanged: (val) => opponentId = val.trim(),
                     ),
@@ -1181,7 +1417,10 @@ class _SocialHubViewState extends State<SocialHubView> {
                   // Target Type Selector
                   Text(
                     'BATTLE METRIC',
-                    style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 11),
+                    style: AppText.label.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.s6),
                   Row(
@@ -1193,7 +1432,9 @@ class _SocialHubViewState extends State<SocialHubView> {
                           selectedColor: AppColors.accent,
                           backgroundColor: AppColors.surface2,
                           labelStyle: TextStyle(
-                            color: targetType == 'area' ? AppColors.onAccent : AppColors.textPrimary,
+                            color: targetType == 'area'
+                                ? AppColors.onAccent
+                                : AppColors.textPrimary,
                             fontWeight: FontWeight.w800,
                           ),
                           onSelected: (_) => setSheetState(() {
@@ -1210,7 +1451,9 @@ class _SocialHubViewState extends State<SocialHubView> {
                           selectedColor: AppColors.accent,
                           backgroundColor: AppColors.surface2,
                           labelStyle: TextStyle(
-                            color: targetType == 'distance' ? AppColors.onAccent : AppColors.textPrimary,
+                            color: targetType == 'distance'
+                                ? AppColors.onAccent
+                                : AppColors.textPrimary,
                             fontWeight: FontWeight.w800,
                           ),
                           onSelected: (_) => setSheetState(() {
@@ -1227,23 +1470,66 @@ class _SocialHubViewState extends State<SocialHubView> {
                   // Target Preset Chips
                   Text(
                     'CONQUEST TARGET',
-                    style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 11),
+                    style: AppText.label.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.s6),
                   Wrap(
                     spacing: AppSpacing.s8,
                     children: targetType == 'area'
                         ? [
-                            _buildTargetChip('2,500 m²', 2500, targetValue, (v) => setSheetState(() => targetValue = v)),
-                            _buildTargetChip('5,000 m²', 5000, targetValue, (v) => setSheetState(() => targetValue = v)),
-                            _buildTargetChip('10,000 m²', 10000, targetValue, (v) => setSheetState(() => targetValue = v)),
-                            _buildTargetChip('25,000 m²', 25000, targetValue, (v) => setSheetState(() => targetValue = v)),
+                            _buildTargetChip(
+                              '2,500 m²',
+                              2500,
+                              targetValue,
+                              (v) => setSheetState(() => targetValue = v),
+                            ),
+                            _buildTargetChip(
+                              '5,000 m²',
+                              5000,
+                              targetValue,
+                              (v) => setSheetState(() => targetValue = v),
+                            ),
+                            _buildTargetChip(
+                              '10,000 m²',
+                              10000,
+                              targetValue,
+                              (v) => setSheetState(() => targetValue = v),
+                            ),
+                            _buildTargetChip(
+                              '25,000 m²',
+                              25000,
+                              targetValue,
+                              (v) => setSheetState(() => targetValue = v),
+                            ),
                           ]
                         : [
-                            _buildTargetChip('3.0 km', 3000, targetValue, (v) => setSheetState(() => targetValue = v)),
-                            _buildTargetChip('5.0 km', 5000, targetValue, (v) => setSheetState(() => targetValue = v)),
-                            _buildTargetChip('10.0 km', 10000, targetValue, (v) => setSheetState(() => targetValue = v)),
-                            _buildTargetChip('15.0 km', 15000, targetValue, (v) => setSheetState(() => targetValue = v)),
+                            _buildTargetChip(
+                              '3.0 km',
+                              3000,
+                              targetValue,
+                              (v) => setSheetState(() => targetValue = v),
+                            ),
+                            _buildTargetChip(
+                              '5.0 km',
+                              5000,
+                              targetValue,
+                              (v) => setSheetState(() => targetValue = v),
+                            ),
+                            _buildTargetChip(
+                              '10.0 km',
+                              10000,
+                              targetValue,
+                              (v) => setSheetState(() => targetValue = v),
+                            ),
+                            _buildTargetChip(
+                              '15.0 km',
+                              15000,
+                              targetValue,
+                              (v) => setSheetState(() => targetValue = v),
+                            ),
                           ],
                   ),
 
@@ -1252,7 +1538,10 @@ class _SocialHubViewState extends State<SocialHubView> {
                   // XP Stake
                   Text(
                     'XP STAKE',
-                    style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 11),
+                    style: AppText.label.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.s6),
                   Wrap(
@@ -1264,7 +1553,9 @@ class _SocialHubViewState extends State<SocialHubView> {
                         selectedColor: AppColors.secondary,
                         backgroundColor: AppColors.surface2,
                         labelStyle: TextStyle(
-                          color: xpStake == stake ? AppColors.onAccent : AppColors.textPrimary,
+                          color: xpStake == stake
+                              ? AppColors.onAccent
+                              : AppColors.textPrimary,
                           fontWeight: FontWeight.w800,
                         ),
                         onSelected: (_) => setSheetState(() => xpStake = stake),
@@ -1278,13 +1569,23 @@ class _SocialHubViewState extends State<SocialHubView> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.secondary,
                       foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s14),
-                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.s14,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSpacing.br12,
+                      ),
                     ),
                     onPressed: () async {
-                      final chosenOpponent = opponentId.isNotEmpty ? opponentId : opponentController.text.trim();
+                      final chosenOpponent = opponentId.isNotEmpty
+                          ? opponentId
+                          : opponentController.text.trim();
                       if (chosenOpponent.isEmpty) {
-                        AppToast.show(context, 'Please select or specify an opponent', type: AppToastType.warning);
+                        AppToast.show(
+                          context,
+                          'Please select or specify an opponent',
+                          type: AppToastType.warning,
+                        );
                         return;
                       }
 
@@ -1306,13 +1607,21 @@ class _SocialHubViewState extends State<SocialHubView> {
                         }
                       } catch (e) {
                         if (mounted) {
-                          AppToast.show(context, 'Failed: $e', type: AppToastType.error);
+                          AppToast.show(
+                            context,
+                            'Failed: $e',
+                            type: AppToastType.error,
+                          );
                         }
                       }
                     },
                     child: const Text(
                       'LAUNCH 24-HOUR DUEL',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 1.0),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 1.0,
+                      ),
                     ),
                   ),
                 ],

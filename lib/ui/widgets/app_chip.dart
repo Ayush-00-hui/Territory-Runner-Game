@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -23,7 +24,10 @@ class AppChip extends StatelessWidget {
     this.onTap,
     this.activeColor = AppColors.accent,
     this.customTextColor,
-    this.padding = const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s6),
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: AppSpacing.s12,
+      vertical: AppSpacing.s6,
+    ),
   });
 
   @override
@@ -32,13 +36,9 @@ class AppChip extends StatelessWidget {
         ? activeColor
         : (customTextColor ?? AppColors.textSecondary);
 
-    final bgColor = isSelected
-        ? AppColors.accentContainer
-        : AppColors.surface2;
+    final bgColor = isSelected ? AppColors.accentContainer : AppColors.surface2;
 
-    final borderColor = isSelected
-        ? activeColor
-        : AppColors.borderSubtle;
+    final borderColor = isSelected ? activeColor : AppColors.borderSubtle;
 
     final content = AnimatedContainer(
       duration: AppMotion.duration(context, AppMotion.fast),

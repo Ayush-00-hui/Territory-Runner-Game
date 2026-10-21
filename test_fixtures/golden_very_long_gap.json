@@ -1,0 +1,18 @@
+{
+  "name": "golden_very_long_gap",
+  "description": "Standard loop with an excessive 640-second (> 10 minutes) gap even with small displacement. Path must be reset due to timeout.",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 40.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": false,
+  "expected_rejection_reason": "GPS signal interrupted (>15s gap) — path reset to prevent inaccurate enclosure",
+  "points": [
+    { "latitude": 51.5000, "longitude": -0.1200, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.5009, "longitude": -0.1200, "timestamp": "2026-10-13T10:00:10Z" },
+    { "latitude": 51.5009, "longitude": -0.1201, "timestamp": "2026-10-13T10:10:50Z" },
+    { "latitude": 51.5009, "longitude": -0.1214, "timestamp": "2026-10-13T10:11:00Z" },
+    { "latitude": 51.5000, "longitude": -0.1214, "timestamp": "2026-10-13T10:11:10Z" },
+    { "latitude": 51.5001, "longitude": -0.1201, "timestamp": "2026-10-13T10:11:20Z" }
+  ]
+}

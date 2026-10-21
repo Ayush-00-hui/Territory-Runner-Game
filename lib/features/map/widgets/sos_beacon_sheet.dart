@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../services/safety_service.dart';
 import '../../../ui/ui.dart';
 import '../../profile/widgets/emergency_contact_dialog.dart';
@@ -66,7 +67,10 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
             child: Container(
               width: 44,
               height: 4,
-              decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                color: AppColors.divider,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.s16),
@@ -81,7 +85,11 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                   color: AppColors.error.withValues(alpha: 0.16),
                   border: Border.all(color: AppColors.error, width: 2),
                 ),
-                child: const Icon(Icons.emergency_rounded, color: AppColors.error, size: 24),
+                child: const Icon(
+                  Icons.emergency_rounded,
+                  color: AppColors.error,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: AppSpacing.s12),
               Expanded(
@@ -99,7 +107,10 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                     const SizedBox(height: 2),
                     Text(
                       'GPS: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
-                      style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 10),
+                      style: AppText.label.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                      ),
                     ),
                   ],
                 ),
@@ -110,7 +121,10 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
           const SizedBox(height: AppSpacing.s16),
           Text(
             'If you feel unsafe or experience an incident, trigger instant emergency contact dispatch, audible deterrence, or 911 dialing.',
-            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.35),
+            style: AppText.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.35,
+            ),
           ),
           const SizedBox(height: AppSpacing.s20),
 
@@ -147,12 +161,19 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                 side: const BorderSide(color: AppColors.error, width: 1.5),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
               ),
-              icon: const Icon(Icons.sms_rounded, color: AppColors.error, size: 20),
+              icon: const Icon(
+                Icons.sms_rounded,
+                color: AppColors.error,
+                size: 20,
+              ),
               label: Text(
                 _safetyService.hasContactConfigured
                     ? 'SMS contact (${_safetyService.contactName.isNotEmpty ? _safetyService.contactName : _safetyService.contactPhone})'
                     : 'Set up emergency contact SMS',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12.5,
+                ),
               ),
               onPressed: () {
                 if (_safetyService.hasContactConfigured) {
@@ -176,10 +197,22 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.textPrimary,
                       side: const BorderSide(color: AppColors.borderSubtle),
-                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSpacing.br14,
+                      ),
                     ),
-                    icon: const Icon(Icons.share_location_rounded, color: AppColors.accent, size: 18),
-                    label: const Text('Share GPS', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
+                    icon: const Icon(
+                      Icons.share_location_rounded,
+                      color: AppColors.accent,
+                      size: 18,
+                    ),
+                    label: const Text(
+                      'Share GPS',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
+                    ),
                     onPressed: () {
                       _safetyService.shareLiveLocation(position: position);
                     },
@@ -192,17 +225,33 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                   height: 48,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: _isSirenOn ? AppColors.warning : AppColors.surface,
-                      foregroundColor: _isSirenOn ? AppColors.onAccent : AppColors.textPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                      backgroundColor: _isSirenOn
+                          ? AppColors.warning
+                          : AppColors.surface,
+                      foregroundColor: _isSirenOn
+                          ? AppColors.onAccent
+                          : AppColors.textPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSpacing.br14,
+                      ),
                       side: BorderSide(
-                        color: _isSirenOn ? AppColors.warning : AppColors.borderSubtle,
+                        color: _isSirenOn
+                            ? AppColors.warning
+                            : AppColors.borderSubtle,
                       ),
                     ),
-                    icon: Icon(_isSirenOn ? Icons.volume_off_rounded : Icons.volume_up_rounded, size: 18),
+                    icon: Icon(
+                      _isSirenOn
+                          ? Icons.volume_off_rounded
+                          : Icons.volume_up_rounded,
+                      size: 18,
+                    ),
                     label: Text(
                       _isSirenOn ? 'Stop siren' : 'Siren alarm',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11,
+                      ),
                     ),
                     onPressed: _toggleSiren,
                   ),

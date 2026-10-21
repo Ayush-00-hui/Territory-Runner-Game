@@ -1,7 +1,9 @@
 import 'dart:convert';
+
 import 'package:geolocator/geolocator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../core/logging/app_logger.dart';
 
 /// Represents a persisted snapshot of an in-progress athletic run session.
@@ -40,20 +42,26 @@ class ActiveRunSnapshot {
       'accumulated_preview_area': accumulatedPreviewArea,
       'accumulated_preview_xp': accumulatedPreviewXp,
       'last_saved_at': lastSavedAt.toIso8601String(),
-      'coordinates': coordinates.map((c) => {'lat': c.latitude, 'lng': c.longitude}).toList(),
-      'positions': positions.map((p) => {
-        'latitude': p.latitude,
-        'longitude': p.longitude,
-        'timestamp': p.timestamp.toIso8601String(),
-        'accuracy': p.accuracy,
-        'altitude': p.altitude,
-        'altitude_accuracy': p.altitudeAccuracy,
-        'heading': p.heading,
-        'heading_accuracy': p.headingAccuracy,
-        'speed': p.speed,
-        'speed_accuracy': p.speedAccuracy,
-        'is_mocked': p.isMocked,
-      }).toList(),
+      'coordinates': coordinates
+          .map((c) => {'lat': c.latitude, 'lng': c.longitude})
+          .toList(),
+      'positions': positions
+          .map(
+            (p) => {
+              'latitude': p.latitude,
+              'longitude': p.longitude,
+              'timestamp': p.timestamp.toIso8601String(),
+              'accuracy': p.accuracy,
+              'altitude': p.altitude,
+              'altitude_accuracy': p.altitudeAccuracy,
+              'heading': p.heading,
+              'heading_accuracy': p.headingAccuracy,
+              'speed': p.speed,
+              'speed_accuracy': p.speedAccuracy,
+              'is_mocked': p.isMocked,
+            },
+          )
+          .toList(),
     };
   }
 
@@ -70,7 +78,9 @@ class ActiveRunSnapshot {
       return Position(
         latitude: (m['latitude'] as num).toDouble(),
         longitude: (m['longitude'] as num).toDouble(),
-        timestamp: DateTime.tryParse(m['timestamp']?.toString() ?? '') ?? DateTime.now(),
+        timestamp:
+            DateTime.tryParse(m['timestamp']?.toString() ?? '') ??
+            DateTime.now(),
         accuracy: (m['accuracy'] as num?)?.toDouble() ?? 5.0,
         altitude: (m['altitude'] as num?)?.toDouble() ?? 0.0,
         altitudeAccuracy: (m['altitude_accuracy'] as num?)?.toDouble() ?? 0.0,
@@ -85,14 +95,19 @@ class ActiveRunSnapshot {
     return ActiveRunSnapshot(
       positions: positions,
       coordinates: coords,
-      startTime: DateTime.tryParse(map['start_time']?.toString() ?? '') ?? DateTime.now(),
+      startTime:
+          DateTime.tryParse(map['start_time']?.toString() ?? '') ??
+          DateTime.now(),
       elapsedDurationSeconds: map['elapsed_duration_seconds'] as int? ?? 0,
       movingDurationSeconds: map['moving_duration_seconds'] as int? ?? 0,
       distanceKm: (map['distance_km'] as num?)?.toDouble() ?? 0.0,
       territoriesClaimed: map['territories_claimed'] as int? ?? 0,
-      accumulatedPreviewArea: (map['accumulated_preview_area'] as num?)?.toDouble() ?? 0.0,
+      accumulatedPreviewArea:
+          (map['accumulated_preview_area'] as num?)?.toDouble() ?? 0.0,
       accumulatedPreviewXp: map['accumulated_preview_xp'] as int? ?? 0,
-      lastSavedAt: DateTime.tryParse(map['last_saved_at']?.toString() ?? '') ?? DateTime.now(),
+      lastSavedAt:
+          DateTime.tryParse(map['last_saved_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 }
@@ -151,7 +166,11 @@ class RunRecoveryService {
       final jsonStr = jsonEncode(snapshot.toMap());
       await _safeBox.put(activeKey, jsonStr);
     } catch (e) {
-      AppLogger.error('Failed to persist active run: $e', tag: 'RunRecoveryService', error: e);
+      AppLogger.error(
+        'Failed to persist active run: $e',
+        tag: 'RunRecoveryService',
+        error: e,
+      );
     }
   }
 
@@ -172,7 +191,11 @@ class RunRecoveryService {
       }
       return snapshot.coordinates.length >= 2;
     } catch (e) {
-      AppLogger.error('Error checking recoverable run: $e', tag: 'RunRecoveryService', error: e);
+      AppLogger.error(
+        'Error checking recoverable run: $e',
+        tag: 'RunRecoveryService',
+        error: e,
+      );
       return false;
     }
   }
@@ -186,7 +209,11 @@ class RunRecoveryService {
       final map = jsonDecode(raw) as Map<String, dynamic>;
       return ActiveRunSnapshot.fromMap(map);
     } catch (e) {
-      AppLogger.error('Error retrieving recoverable run: $e', tag: 'RunRecoveryService', error: e);
+      AppLogger.error(
+        'Error retrieving recoverable run: $e',
+        tag: 'RunRecoveryService',
+        error: e,
+      );
       return null;
     }
   }
@@ -196,7 +223,11 @@ class RunRecoveryService {
     try {
       await _safeBox.delete(activeKey);
     } catch (e) {
-      AppLogger.error('Error clearing recovery: $e', tag: 'RunRecoveryService', error: e);
+      AppLogger.error(
+        'Error clearing recovery: $e',
+        tag: 'RunRecoveryService',
+        error: e,
+      );
     }
   }
 }

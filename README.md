@@ -152,7 +152,7 @@ graph TD
         UI --> LeagueView
     end
 
-    subgraph Backend ["Go 1.22+ Server-Authoritative Backend (:8085)"]
+    subgraph Backend ["Go 1.24 Server-Authoritative Backend (:8080)"]
         ChiRouter[Chi HTTP Router]
         MiddlewareStack[RequestID, Logger, RateLimiter, BodyLimit, CORS Whitelist]
         AuthVerifier[Firebase Auth RS256 JWT Verifier]
@@ -215,7 +215,7 @@ sequenceDiagram
     participant GPS as 🛰️ GPS & Foreground Service
     participant Client as 📱 Flutter Client (Clipper2)
     participant Hive as 💾 Hive Storage
-    participant API as 🌐 Go Chi API (:8085)
+    participant API as 🌐 Go Chi API (:8080)
     participant Lock as 🔒 pg_advisory_xact_lock
     participant DB as 🐘 PostgreSQL / PostGIS 3.4
     participant FCM as 📲 FCM HTTP v1
@@ -402,11 +402,11 @@ This matrix documents actual tested reality versus theoretical claims:
    ```
    * The PostgreSQL + PostGIS 16 container initializes on port `5432`.
    * SQL schema migrations in `migrations/` are applied automatically.
-   * The Go backend listens on `http://localhost:8085`.
+   * The Go backend listens on `http://localhost:8080`.
 
 3. **Verify Service Health**:
    ```bash
-   curl -i http://localhost:8085/healthz
+   curl -i http://localhost:8080/healthz
    # Expected response: HTTP/1.1 200 OK {"status":"ok","database":"connected"}
    ```
 
@@ -421,7 +421,7 @@ cd backend
 # Set environment variables for development mode
 export ENV=development
 export AUTH_MODE=dev
-export PORT=8085
+export PORT=8080
 
 go run ./cmd/server
 ```
@@ -440,7 +440,7 @@ go run ./cmd/server
 
 2. **Forward Backend Port (Android Emulator)**:
    ```bash
-   adb reverse tcp:8085 tcp:8085
+   adb reverse tcp:8080 tcp:8080
    ```
 
 3. **Run on Target Device**:
@@ -461,7 +461,7 @@ Configure the backend using environment variables or a `.env` file in `backend/`
 
 | Variable | Type | Default | Production Requirement | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| `PORT` | Integer | `8085` | Cloud-assigned (e.g. `8080`) | HTTP server listening port |
+| `PORT` | Integer | `8080` | Cloud-assigned (e.g. `8080`) | HTTP server listening port |
 | `ENV` | String | `development` | `production` | Environment mode (`production` disables dev auth mode) |
 | `AUTH_MODE` | String | `dev` | `firebase` | Authentication mode (`firebase` validates RS256 Google JWTs) |
 | `DATABASE_URL` | String | `""` | **Required** | PostgreSQL connection URI (`postgres://user:pass@host:5432/db`) |
@@ -516,7 +516,7 @@ All endpoints except `/healthz` require authentication:
 
 ```http
 POST /v1/runs HTTP/1.1
-Host: localhost:8085
+Host: localhost:8080
 Content-Type: application/json
 Authorization: Bearer eyJhbGciOiJSUzI1Ni...
 
@@ -577,9 +577,28 @@ Authorization: Bearer eyJhbGciOiJSUzI1Ni...
 
 ---
 
-### WebSocket Frame Protocol
+### WebSocket Frame Protocol & Privacy Defaults
 
-Connect to `ws://localhost:8085/v1/ws?token=<token>` (or `?dev_user=<username>` in dev mode).
+Connect to `ws://localhost:8080/v1/ws`.
+
+**Authentication**:
+- **Production (`ENV=production`)**: Authenticate via the standard WebSocket subprotocol header:
+  ```http
+  Sec-WebSocket-Protocol: bearer, <firebase_id_token>
+  ```
+- **Development (`ENV=development`)**: Dev user bypass via query parameter:
+  ```
+  ws://localhost:8080/v1/ws?dev_user=<username>
+  ```
+
+**Live Visibility & Privacy Defaults**:
+- `live_visibility` defaults to **`"off"`** (strict privacy-by-default; runner location is never broadcast to peers unless explicitly enabled).
+- Supported visibility modes:
+  - `"off"` (default): No live location is broadcast to anyone.
+  - `"friends"`: Live location is broadcast exclusively to mutual accepted friends.
+  - `"nearby"`: Live location is broadcast coarsened/delayed to active runners within the local viewport.
+- Targeted delivery: `runner_left` events are delivered strictly to clients authorized to see that runner, never broadcast globally when visibility is `"off"`.
+- Conquest broadcasts: Sent only to the victim and the attacker's friends; `attacker_id` is blanked for non-friends.
 
 ```json
 // 1. Client Presence Heartbeat:
@@ -858,12 +877,12 @@ For deep academic and architectural defense, see the comprehensive [🎓 Viva Ex
 #### Q: GPS tracking stops or drops points when I turn off the phone screen.
 **A**: Ensure background location permissions are set to "Allow all the time". Territory Runner runs an Android foreground service with a persistent sticky notification (`FOREGROUND_SERVICE_LOCATION`) and requests a CPU wake lock (`wakelock_plus`) to prevent OS battery optimization from suspending the GPS sensor.
 
-#### Q: The mobile client cannot connect to `http://localhost:8085` on an Android Emulator.
+#### Q: The mobile client cannot connect to `http://localhost:8080` on an Android Emulator.
 **A**: Android emulators route `localhost` to the emulator loopback, not the host machine. Run:
 ```bash
-adb reverse tcp:8085 tcp:8085
+adb reverse tcp:8080 tcp:8080
 ```
-Or set `API_BASE_URL=http://10.0.2.2:8085` in the mobile client configuration.
+Or set `API_BASE_URL=http://10.0.2.2:8080` in the mobile client configuration.
 
 #### Q: Why does the Go server fail to start with `database connection refused`?
 **A**: Ensure PostgreSQL with PostGIS is running (`docker compose up -d`). If developing without PostgreSQL, start the server with `ENV=development` and omit `DATABASE_URL`; it will automatically fall back to the hermetic in-memory store.

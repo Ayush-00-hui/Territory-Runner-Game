@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../ui/ui.dart';
 import 'api_client.dart';
 import 'app_preferences.dart';
@@ -10,7 +12,10 @@ import 'app_preferences.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Background push alert received (FCM HTTP v1 payload)
-  AppLogger.info('Background message received: ${message.messageId} - ${message.data}', tag: 'NotificationService');
+  AppLogger.info(
+    'Background message received: ${message.messageId} - ${message.data}',
+    tag: 'NotificationService',
+  );
 }
 
 /// Service managing FCM HTTP v1 push notifications, permission primer UI,
@@ -25,10 +30,12 @@ class NotificationService {
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
-  final StreamController<String> _attackedTerritoryController = StreamController<String>.broadcast();
+  final StreamController<String> _attackedTerritoryController =
+      StreamController<String>.broadcast();
 
   /// Stream of territory IDs to navigate and focus on when push alerts are tapped
-  Stream<String> get onAttackedTerritoryTapped => _attackedTerritoryController.stream;
+  Stream<String> get onAttackedTerritoryTapped =>
+      _attackedTerritoryController.stream;
 
   /// Check if Firebase Core is initialized and available
   bool get isFirebaseAvailable {
@@ -44,17 +51,25 @@ class NotificationService {
     _apiClient = apiClient ?? ApiClient();
 
     if (!isFirebaseAvailable) {
-      AppLogger.info('Firebase not initialized; push notification service running in local fallback mode.', tag: 'NotificationService');
+      AppLogger.info(
+        'Firebase not initialized; push notification service running in local fallback mode.',
+        tag: 'NotificationService',
+      );
       _isInitialized = true;
       return;
     }
 
     try {
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
 
       // Handle foreground notifications
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        AppLogger.info('Foreground message received: ${message.data}', tag: 'NotificationService');
+        AppLogger.info(
+          'Foreground message received: ${message.data}',
+          tag: 'NotificationService',
+        );
         final type = message.data['type'];
         if (type == 'territory_carved') {
           final rival = message.data['rival_name'] as String? ?? 'Rival';
@@ -73,19 +88,24 @@ class NotificationService {
       });
 
       // Handle notification tap when app launched from terminated state
-      final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+      final initialMessage = await FirebaseMessaging.instance
+          .getInitialMessage();
       if (initialMessage != null) {
         _handleMessagePayload(initialMessage.data);
       }
 
       // Handle device token rotation
       FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-        AppLogger.info('FCM device token refreshed.', tag: 'NotificationService');
+        AppLogger.info(
+          'FCM device token refreshed.',
+          tag: 'NotificationService',
+        );
         _registerToken(newToken);
       });
 
       // Check existing permissions and sync token if already authorized
-      final settings = await FirebaseMessaging.instance.getNotificationSettings();
+      final settings = await FirebaseMessaging.instance
+          .getNotificationSettings();
       if (settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional) {
         final token = await FirebaseMessaging.instance.getToken();
@@ -95,9 +115,16 @@ class NotificationService {
       }
 
       _isInitialized = true;
-      AppLogger.info('FCM notification service successfully initialized.', tag: 'NotificationService');
+      AppLogger.info(
+        'FCM notification service successfully initialized.',
+        tag: 'NotificationService',
+      );
     } catch (e) {
-      AppLogger.warning('Failed to initialize FirebaseMessaging: $e', tag: 'NotificationService', error: e);
+      AppLogger.warning(
+        'Failed to initialize FirebaseMessaging: $e',
+        tag: 'NotificationService',
+        error: e,
+      );
       _isInitialized = true; // Fallback mode active
     }
   }
@@ -105,7 +132,10 @@ class NotificationService {
   void _handleMessagePayload(Map<String, dynamic> data) {
     final territoryId = data['territory_id'] as String?;
     if (territoryId != null && territoryId.isNotEmpty) {
-      AppLogger.info('Navigating to attacked territory: $territoryId', tag: 'NotificationService');
+      AppLogger.info(
+        'Navigating to attacked territory: $territoryId',
+        tag: 'NotificationService',
+      );
       _attackedTerritoryController.add(territoryId);
     }
   }
@@ -114,9 +144,16 @@ class NotificationService {
     try {
       final client = _apiClient ?? ApiClient();
       await client.registerDeviceToken(token);
-      AppLogger.debug('Successfully registered FCM device token with backend.', tag: 'NotificationService');
+      AppLogger.debug(
+        'Successfully registered FCM device token with backend.',
+        tag: 'NotificationService',
+      );
     } catch (e) {
-      AppLogger.error('Error registering device token with backend: $e', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'Error registering device token with backend: $e',
+        tag: 'NotificationService',
+        error: e,
+      );
     }
   }
 
@@ -126,7 +163,10 @@ class NotificationService {
   }
 
   /// Displays the tactical radar alerts permission primer bottom sheet if not already prompted
-  Future<bool> showPermissionPrimerIfNeeded(BuildContext context, {bool force = false}) async {
+  Future<bool> showPermissionPrimerIfNeeded(
+    BuildContext context, {
+    bool force = false,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final alreadyPrompted = prefs.getBool('fcm_permission_prompted') ?? false;
 
@@ -152,7 +192,10 @@ class NotificationService {
   /// Requests system notification permissions and registers the FCM device token
   Future<bool> requestNotificationPermission() async {
     if (!isFirebaseAvailable) {
-      AppLogger.info('Firebase not configured; simulated permission granted.', tag: 'NotificationService');
+      AppLogger.info(
+        'Firebase not configured; simulated permission granted.',
+        tag: 'NotificationService',
+      );
       return true;
     }
 
@@ -167,7 +210,8 @@ class NotificationService {
         sound: true,
       );
 
-      final isAuthorized = settings.authorizationStatus == AuthorizationStatus.authorized ||
+      final isAuthorized =
+          settings.authorizationStatus == AuthorizationStatus.authorized ||
           settings.authorizationStatus == AuthorizationStatus.provisional;
 
       if (isAuthorized) {
@@ -179,7 +223,11 @@ class NotificationService {
       }
       return false;
     } catch (e) {
-      AppLogger.error('Error requesting notification permissions: $e', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'Error requesting notification permissions: $e',
+        tag: 'NotificationService',
+        error: e,
+      );
       return false;
     }
   }
@@ -189,9 +237,16 @@ class NotificationService {
     if (!isFirebaseAvailable) return;
     try {
       await FirebaseMessaging.instance.deleteToken();
-      AppLogger.info('FCM device token deleted from device.', tag: 'NotificationService');
+      AppLogger.info(
+        'FCM device token deleted from device.',
+        tag: 'NotificationService',
+      );
     } catch (e) {
-      AppLogger.error('Error deleting FCM token: $e', tag: 'NotificationService', error: e);
+      AppLogger.error(
+        'Error deleting FCM token: $e',
+        tag: 'NotificationService',
+        error: e,
+      );
     }
   }
 }

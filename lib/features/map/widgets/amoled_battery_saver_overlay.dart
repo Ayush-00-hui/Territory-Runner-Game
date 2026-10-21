@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/run_goal.dart';
 import '../../../ui/ui.dart';
 
@@ -48,7 +49,10 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
           height: double.infinity,
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s24, vertical: AppSpacing.s20),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s24,
+                vertical: AppSpacing.s20,
+              ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -57,16 +61,26 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s10,
+                          vertical: AppSpacing.s4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black,
                           borderRadius: AppSpacing.brFull,
-                          border: Border.all(color: AppColors.accent, width: 1.0),
+                          border: Border.all(
+                            color: AppColors.accent,
+                            width: 1.0,
+                          ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.battery_charging_full_rounded, color: AppColors.accent, size: 14),
+                            Icon(
+                              Icons.battery_charging_full_rounded,
+                              color: AppColors.accent,
+                              size: 14,
+                            ),
                             SizedBox(width: AppSpacing.s4),
                             Text(
                               'Battery saver active',
@@ -82,7 +96,11 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                       ),
                       IconButton(
                         tooltip: 'Wake Map View',
-                        icon: const Icon(Icons.fullscreen_exit_rounded, color: AppColors.textSecondary, size: 24),
+                        icon: const Icon(
+                          Icons.fullscreen_exit_rounded,
+                          color: AppColors.textSecondary,
+                          size: 24,
+                        ),
                         onPressed: onWake,
                       ),
                     ],
@@ -171,7 +189,11 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                               ),
                             ],
                           ),
-                          Container(width: 1, height: 30, color: AppColors.border),
+                          Container(
+                            width: 1,
+                            height: 30,
+                            color: AppColors.border,
+                          ),
                           Column(
                             children: [
                               Text(
@@ -201,11 +223,17 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                       if (runGoal != null && runGoal!.isActive) ...[
                         const SizedBox(height: AppSpacing.s24),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s14, vertical: AppSpacing.s6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s14,
+                            vertical: AppSpacing.s6,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.black,
                             borderRadius: AppSpacing.brFull,
-                            border: Border.all(color: AppColors.gold, width: 1.0),
+                            border: Border.all(
+                              color: AppColors.gold,
+                              width: 1.0,
+                            ),
                           ),
                           child: Text(
                             runGoal!.title,
@@ -225,7 +253,11 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.touch_app_rounded, color: AppColors.textMuted, size: 20),
+                      const Icon(
+                        Icons.touch_app_rounded,
+                        color: AppColors.textMuted,
+                        size: 20,
+                      ),
                       const SizedBox(height: AppSpacing.s6),
                       Text(
                         'Double-tap anywhere to wake map',

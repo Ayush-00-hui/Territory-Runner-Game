@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../../models/runner_profile.dart';
 import '../../../models/territory.dart';
 import '../../../ui/ui.dart';
@@ -16,7 +18,10 @@ class WeeklySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double totalAreaM2 = territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+    final double totalAreaM2 = territories.fold(
+      0.0,
+      (sum, t) => sum + t.areaSqMeters,
+    );
     final String territoryDisplay = totalAreaM2 >= 10000
         ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} KM²'
         : (totalAreaM2 > 0 ? '${totalAreaM2.toStringAsFixed(0)} M²' : '0 M²');
@@ -26,7 +31,9 @@ class WeeklySummaryCard extends StatelessWidget {
         : 0.0;
     final int runsCount = territories.isNotEmpty
         ? territories.length
-        : (profile.totalDistanceKm > 0 ? (profile.totalDistanceKm / 3.2).ceil() : 0);
+        : (profile.totalDistanceKm > 0
+              ? (profile.totalDistanceKm / 3.2).ceil()
+              : 0);
 
     // Compute 7-day bar volumes based on captured territories & distance
     final now = DateTime.now();
@@ -59,10 +66,7 @@ class WeeklySummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Weekly summary',
-                style: AppText.labelSmall,
-              ),
+              Text('Weekly summary', style: AppText.labelSmall),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -88,7 +92,9 @@ class WeeklySummaryCard extends StatelessWidget {
               Expanded(
                 child: _buildMetricItem(
                   label: 'Distance',
-                  value: weeklyDistanceKm > 0 ? weeklyDistanceKm.toStringAsFixed(1) : '0.0',
+                  value: weeklyDistanceKm > 0
+                      ? weeklyDistanceKm.toStringAsFixed(1)
+                      : '0.0',
                   unit: 'km',
                 ),
               ),
@@ -97,7 +103,9 @@ class WeeklySummaryCard extends StatelessWidget {
                 child: _buildMetricItem(
                   label: 'Territory',
                   value: territoryDisplay.split(' ').first,
-                  unit: territoryDisplay.split(' ').length > 1 ? territoryDisplay.split(' ').last.toLowerCase() : 'm²',
+                  unit: territoryDisplay.split(' ').length > 1
+                      ? territoryDisplay.split(' ').last.toLowerCase()
+                      : 'm²',
                 ),
               ),
               Container(width: 1, height: 38, color: AppColors.border),
@@ -146,22 +154,14 @@ class WeeklySummaryCard extends StatelessWidget {
           children: [
             Text(
               value,
-              style: AppText.titleLarge.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: AppText.titleLarge.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(width: 3),
-            Text(
-              unit,
-              style: AppText.statUnit,
-            ),
+            Text(unit, style: AppText.statUnit),
           ],
         ),
         const SizedBox(height: AppSpacing.s4),
-        Text(
-          label,
-          style: AppText.labelSmall,
-        ),
+        Text(label, style: AppText.labelSmall),
       ],
     );
   }

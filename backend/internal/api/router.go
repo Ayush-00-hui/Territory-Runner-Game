@@ -90,6 +90,7 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 		v1.Get("/friends/requests", api.HandleGetFriendRequests)
 		v1.Post("/friends/request", api.HandleSendFriendRequest)
 		v1.Put("/friends/request/{id}", api.HandleRespondFriendRequest)
+		v1.Delete("/friends/{friendID}", api.HandleRemoveFriend)
 
 		v1.Get("/duels", api.HandleGetDuels)
 		v1.Post("/duels", api.HandleCreateDuel)

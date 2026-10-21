@@ -63,38 +63,43 @@ void main() {
       ),
     ];
 
-    testWidgets('ProfileHeroCard renders callsign, level, streak, and tier progress', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: Scaffold(
-            body: ProfileHeroCard(
-              profile: testProfile,
-              onEditCallsign: () {},
-              onSelectFaction: () {},
+    testWidgets(
+      'ProfileHeroCard renders callsign, level, streak, and tier progress',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: ProfileHeroCard(
+                profile: testProfile,
+                onEditCallsign: () {},
+                onSelectFaction: () {},
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Verify username/callsign and avatar
-      expect(find.text('KAI_VALKYRIE'), findsOneWidget);
-      expect(find.text('K'), findsOneWidget); // Avatar initial
+        // Verify username/callsign and avatar
+        expect(find.text('KAI_VALKYRIE'), findsOneWidget);
+        expect(find.text('K'), findsOneWidget); // Avatar initial
 
-      // Verify level and faction badges
-      expect(find.text('Level 5 athlete'), findsOneWidget);
-      expect(find.text('Cyber Vanguard'), findsOneWidget);
+        // Verify level and faction badges
+        expect(find.text('Level 5 athlete'), findsOneWidget);
+        expect(find.text('Cyber Vanguard'), findsOneWidget);
 
-      // Verify streak counter
-      expect(find.text('12'), findsOneWidget);
-      expect(find.byIcon(Icons.local_fire_department), findsOneWidget);
+        // Verify streak counter
+        expect(find.text('12'), findsOneWidget);
+        expect(find.byIcon(Icons.local_fire_department), findsOneWidget);
 
-      // Verify Tier progress text
-      expect(find.text('Tier progression'), findsOneWidget);
-      expect(find.text('1250 / 1250 XP'), findsOneWidget);
-    });
+        // Verify Tier progress text
+        expect(find.text('Tier progression'), findsOneWidget);
+        expect(find.text('1250 / 1250 XP'), findsOneWidget);
+      },
+    );
 
-    testWidgets('ChallengesShelf renders active quests and badge trophy case', (tester) async {
+    testWidgets('ChallengesShelf renders active quests and badge trophy case', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.darkTheme,
@@ -127,136 +132,184 @@ void main() {
       expect(find.text('10K Centurion'), findsOneWidget);
     });
 
-    testWidgets('FactionLeaderboard renders turf dominance meter and rank table', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: FactionLeaderboard(
-                profile: testProfile,
-                territories: testTerritories,
-                initialStandings: const FactionStandingsResponse(
-                  totalAreaSqm: 100000,
-                  standings: [
-                    FactionStanding(faction: 'Cyber Vanguard', totalAreaSqm: 50000, memberCount: 12, percentage: 50.0),
-                    FactionStanding(faction: 'Iron Syndicate', totalAreaSqm: 30000, memberCount: 8, percentage: 30.0),
-                    FactionStanding(faction: 'Neon Nomads', totalAreaSqm: 20000, memberCount: 5, percentage: 20.0),
+    testWidgets(
+      'FactionLeaderboard renders turf dominance meter and rank table',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: FactionLeaderboard(
+                  profile: testProfile,
+                  territories: testTerritories,
+                  initialStandings: const FactionStandingsResponse(
+                    totalAreaSqm: 100000,
+                    standings: [
+                      FactionStanding(
+                        faction: 'Cyber Vanguard',
+                        totalAreaSqm: 50000,
+                        memberCount: 12,
+                        percentage: 50.0,
+                      ),
+                      FactionStanding(
+                        faction: 'Iron Syndicate',
+                        totalAreaSqm: 30000,
+                        memberCount: 8,
+                        percentage: 30.0,
+                      ),
+                      FactionStanding(
+                        faction: 'Neon Nomads',
+                        totalAreaSqm: 20000,
+                        memberCount: 5,
+                        percentage: 20.0,
+                      ),
+                    ],
+                  ),
+                  initialLeaderboard: const [
+                    LeaderboardEntry(
+                      rank: 1,
+                      userId: 'u1',
+                      username: 'ACE_RUNNER',
+                      faction: 'Cyber Vanguard',
+                      totalAreaSqm: 50000,
+                      level: 10,
+                      totalRuns: 25,
+                    ),
+                    LeaderboardEntry(
+                      rank: 2,
+                      userId: 'u2',
+                      username: 'GRID_PHANTOM',
+                      faction: 'Iron Syndicate',
+                      totalAreaSqm: 30000,
+                      level: 8,
+                      totalRuns: 19,
+                    ),
+                    LeaderboardEntry(
+                      rank: 3,
+                      userId: 'athlete_unit_01',
+                      username: 'KAI_VALKYRIE',
+                      faction: 'Cyber Vanguard',
+                      totalAreaSqm: 20000,
+                      level: 5,
+                      totalRuns: 12,
+                    ),
                   ],
                 ),
-                initialLeaderboard: const [
-                  LeaderboardEntry(rank: 1, userId: 'u1', username: 'ACE_RUNNER', faction: 'Cyber Vanguard', totalAreaSqm: 50000, level: 10, totalRuns: 25),
-                  LeaderboardEntry(rank: 2, userId: 'u2', username: 'GRID_PHANTOM', faction: 'Iron Syndicate', totalAreaSqm: 30000, level: 8, totalRuns: 19),
-                  LeaderboardEntry(rank: 3, userId: 'athlete_unit_01', username: 'KAI_VALKYRIE', faction: 'Cyber Vanguard', totalAreaSqm: 20000, level: 5, totalRuns: 12),
-                ],
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Dominance meter headers
-      expect(find.text('Team Standings'), findsOneWidget);
-      expect(find.text('Contested'), findsOneWidget);
-      expect(find.text('Vanguard'), findsWidgets);
-      expect(find.text('Syndicate'), findsWidgets);
-      expect(find.text('Nomads'), findsWidgets);
+        // Dominance meter headers
+        expect(find.text('Team Standings'), findsOneWidget);
+        expect(find.text('Contested'), findsOneWidget);
+        expect(find.text('Vanguard'), findsWidgets);
+        expect(find.text('Syndicate'), findsWidgets);
+        expect(find.text('Nomads'), findsWidgets);
 
-      // Scope filter pills
-      expect(find.text('Global'), findsOneWidget);
-      expect(find.text('City'), findsOneWidget);
-      expect(find.text('Local'), findsOneWidget);
+        // Scope filter pills
+        expect(find.text('Global'), findsOneWidget);
+        expect(find.text('City'), findsOneWidget);
+        expect(find.text('Local'), findsOneWidget);
 
-      // Switch scope to City Grid
-      await tester.tap(find.text('City'));
-      await tester.pumpAndSettle();
+        // Switch scope to City Grid
+        await tester.tap(find.text('City'));
+        await tester.pumpAndSettle();
 
-      // Check leaderboard rankings
-      expect(find.text('Leaderboard'), findsOneWidget);
-      expect(find.text('ACE_RUNNER'), findsOneWidget);
-      expect(find.text('GRID_PHANTOM'), findsOneWidget);
-    });
+        // Check leaderboard rankings
+        expect(find.text('Leaderboard'), findsOneWidget);
+        expect(find.text('ACE_RUNNER'), findsOneWidget);
+        expect(find.text('GRID_PHANTOM'), findsOneWidget);
+      },
+    );
 
-    testWidgets('ProfileSettingsList renders tactical haptics and no voice coach controls', (tester) async {
-      final appPrefs = AppPreferences();
-      await appPrefs.init();
-      final initialHaptics = appPrefs.isHapticsEnabled;
+    testWidgets(
+      'ProfileSettingsList renders tactical haptics and no voice coach controls',
+      (tester) async {
+        final appPrefs = AppPreferences();
+        await appPrefs.init();
+        final initialHaptics = appPrefs.isHapticsEnabled;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: ProfileSettingsList(
-                firebaseService: FirebaseService(),
-                territoryService: TerritoryService(),
-                onOpenAuth: () {},
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ProfileSettingsList(
+                  firebaseService: FirebaseService(),
+                  territoryService: TerritoryService(),
+                  onOpenAuth: () {},
+                ),
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      // Voice Coach controls should be completely absent
-      expect(find.text('Voice Coach Audio Cues'), findsNothing);
-      expect(find.text('Audio & Haptics'), findsNothing);
+        // Voice Coach controls should be completely absent
+        expect(find.text('Voice Coach Audio Cues'), findsNothing);
+        expect(find.text('Audio & Haptics'), findsNothing);
 
-      // Haptics & battery saver should be present
-      expect(find.text('Haptics'), findsOneWidget);
-      expect(find.text('Haptic feedback'), findsOneWidget);
-      expect(find.text('Battery saver'), findsOneWidget);
+        // Haptics & battery saver should be present
+        expect(find.text('Haptics'), findsOneWidget);
+        expect(find.text('Haptic feedback'), findsOneWidget);
+        expect(find.text('Battery saver'), findsOneWidget);
 
-      // Tap haptic switch
-      final switchTiles = find.byType(Switch);
-      expect(switchTiles, findsNWidgets(2));
+        // Tap haptic switch
+        final switchTiles = find.byType(Switch);
+        expect(switchTiles, findsNWidgets(2));
 
-      await tester.tap(switchTiles.first);
-      await tester.pumpAndSettle();
-      expect(appPrefs.isHapticsEnabled, !initialHaptics);
+        await tester.tap(switchTiles.first);
+        await tester.pumpAndSettle();
+        expect(appPrefs.isHapticsEnabled, !initialHaptics);
 
-      // Restore
-      await appPrefs.toggleHaptics(initialHaptics);
-    });
+        // Restore
+        await appPrefs.toggleHaptics(initialHaptics);
+      },
+    );
 
-    testWidgets('ProfilePage switches tabs between Athlete Profile and Faction Turf War', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: ProfilePage(
-            initialProfile: testProfile,
-            initialTerritories: testTerritories,
+    testWidgets(
+      'ProfilePage switches tabs between Athlete Profile and Faction Turf War',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: ProfilePage(
+              initialProfile: testProfile,
+              initialTerritories: testTerritories,
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // All segment tab buttons exist
-      expect(find.text('Profile'), findsNWidgets(2));
-      expect(find.text('Teams'), findsOneWidget);
-      expect(find.text('League'), findsOneWidget);
-      expect(find.text('Friends'), findsOneWidget);
+        // All segment tab buttons exist
+        expect(find.text('Profile'), findsNWidgets(2));
+        expect(find.text('Teams'), findsOneWidget);
+        expect(find.text('League'), findsOneWidget);
+        expect(find.text('Friends'), findsOneWidget);
 
-      // In athlete tab, Hero and Settings are visible
-      expect(find.text('KAI_VALKYRIE'), findsOneWidget);
-      expect(find.text('Settings'), findsOneWidget);
+        // In athlete tab, Hero and Settings are visible
+        expect(find.text('KAI_VALKYRIE'), findsOneWidget);
+        expect(find.text('Settings'), findsOneWidget);
 
-      // Tap Faction Turf War tab
-      await tester.tap(find.text('Teams'));
-      await tester.pumpAndSettle();
+        // Tap Faction Turf War tab
+        await tester.tap(find.text('Teams'));
+        await tester.pumpAndSettle();
 
-      // In Turf War tab, Dominance Meter is visible
-      expect(find.text('Team Standings'), findsOneWidget);
-      expect(find.text('Leaderboard'), findsOneWidget);
+        // In Turf War tab, Dominance Meter is visible
+        expect(find.text('Team Standings'), findsOneWidget);
+        expect(find.text('Leaderboard'), findsOneWidget);
 
-      // Tap League tab
-      await tester.tap(find.text('League'));
-      await tester.pumpAndSettle();
+        // Tap League tab
+        await tester.tap(find.text('League'));
+        await tester.pumpAndSettle();
 
-      // Tap back to Athlete Profile
-      await tester.tap(find.text('Profile').first);
-      await tester.pumpAndSettle();
-      expect(find.text('Settings'), findsOneWidget);
-    });
+        // Tap back to Athlete Profile
+        await tester.tap(find.text('Profile').first);
+        await tester.pumpAndSettle();
+        expect(find.text('Settings'), findsOneWidget);
+      },
+    );
   });
 }

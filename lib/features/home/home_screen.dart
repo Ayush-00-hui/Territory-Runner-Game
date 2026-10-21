@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import '../gameplay/territory_service.dart';
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
@@ -15,10 +16,7 @@ import '../history/run_history_screen.dart';
 class HomeScreen extends StatelessWidget {
   final VoidCallback? onStartRun;
 
-  const HomeScreen({
-    super.key,
-    this.onStartRun,
-  });
+  const HomeScreen({super.key, this.onStartRun});
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +33,8 @@ class HomeScreen extends StatelessWidget {
           return ValueListenableBuilder(
             valueListenable: Hive.box<Territory>('territories_v3').listenable(),
             builder: (context, Box<Territory> territoryBox, _) {
-              final territories = territoryService.getCapturedTerritoryObjects();
+              final territories = territoryService
+                  .getCapturedTerritoryObjects();
 
               return SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -77,7 +76,9 @@ class HomeScreen extends StatelessWidget {
                         AppMotion.lightTick();
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const RunHistoryScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const RunHistoryScreen(),
+                          ),
                         );
                       },
                     ),

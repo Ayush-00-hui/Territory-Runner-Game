@@ -16,41 +16,142 @@ void main() {
       expect(goal.title, equals('5 KM TARGET'));
 
       // 0 km done
-      expect(goal.computeProgress(currentDistanceKm: 0.0, currentDurationSeconds: 0, currentAreaSqm: 0), equals(0.0));
-      expect(goal.formatRemaining(currentDistanceKm: 0.0, currentDurationSeconds: 0, currentAreaSqm: 0), equals('5.00 km remaining'));
+      expect(
+        goal.computeProgress(
+          currentDistanceKm: 0.0,
+          currentDurationSeconds: 0,
+          currentAreaSqm: 0,
+        ),
+        equals(0.0),
+      );
+      expect(
+        goal.formatRemaining(
+          currentDistanceKm: 0.0,
+          currentDurationSeconds: 0,
+          currentAreaSqm: 0,
+        ),
+        equals('5.00 km remaining'),
+      );
 
       // 2.5 km done (50%)
-      expect(goal.computeProgress(currentDistanceKm: 2.5, currentDurationSeconds: 600, currentAreaSqm: 0), equals(0.5));
-      expect(goal.formatRemaining(currentDistanceKm: 2.5, currentDurationSeconds: 600, currentAreaSqm: 0), equals('2.50 km remaining'));
+      expect(
+        goal.computeProgress(
+          currentDistanceKm: 2.5,
+          currentDurationSeconds: 600,
+          currentAreaSqm: 0,
+        ),
+        equals(0.5),
+      );
+      expect(
+        goal.formatRemaining(
+          currentDistanceKm: 2.5,
+          currentDurationSeconds: 600,
+          currentAreaSqm: 0,
+        ),
+        equals('2.50 km remaining'),
+      );
 
       // 5.0 km done (100%)
-      expect(goal.computeProgress(currentDistanceKm: 5.0, currentDurationSeconds: 1500, currentAreaSqm: 0), equals(1.0));
-      expect(goal.formatRemaining(currentDistanceKm: 5.0, currentDurationSeconds: 1500, currentAreaSqm: 0), equals('Goal achieved!'));
+      expect(
+        goal.computeProgress(
+          currentDistanceKm: 5.0,
+          currentDurationSeconds: 1500,
+          currentAreaSqm: 0,
+        ),
+        equals(1.0),
+      );
+      expect(
+        goal.formatRemaining(
+          currentDistanceKm: 5.0,
+          currentDurationSeconds: 1500,
+          currentAreaSqm: 0,
+        ),
+        equals('Goal achieved!'),
+      );
 
       // 6.0 km done (exceeded)
-      expect(goal.computeProgress(currentDistanceKm: 6.0, currentDurationSeconds: 1800, currentAreaSqm: 0), equals(1.2));
-      expect(goal.formatRemaining(currentDistanceKm: 6.0, currentDurationSeconds: 1800, currentAreaSqm: 0), equals('Goal achieved!'));
+      expect(
+        goal.computeProgress(
+          currentDistanceKm: 6.0,
+          currentDurationSeconds: 1800,
+          currentAreaSqm: 0,
+        ),
+        equals(1.2),
+      );
+      expect(
+        goal.formatRemaining(
+          currentDistanceKm: 6.0,
+          currentDurationSeconds: 1800,
+          currentAreaSqm: 0,
+        ),
+        equals('Goal achieved!'),
+      );
     });
 
     test('RunGoal duration and area computation', () {
       // 30 min duration goal (1800s)
-      const durationGoal = RunGoal(type: GoalType.duration, targetValue: 1800.0);
+      const durationGoal = RunGoal(
+        type: GoalType.duration,
+        targetValue: 1800.0,
+      );
       expect(durationGoal.isActive, isTrue);
       expect(durationGoal.title, equals('30 MIN TIME TARGET'));
-      expect(durationGoal.computeProgress(currentDistanceKm: 1.0, currentDurationSeconds: 900, currentAreaSqm: 0), equals(0.5));
-      expect(durationGoal.formatRemaining(currentDistanceKm: 1.0, currentDurationSeconds: 900, currentAreaSqm: 0), contains('15m 00s remaining'));
+      expect(
+        durationGoal.computeProgress(
+          currentDistanceKm: 1.0,
+          currentDurationSeconds: 900,
+          currentAreaSqm: 0,
+        ),
+        equals(0.5),
+      );
+      expect(
+        durationGoal.formatRemaining(
+          currentDistanceKm: 1.0,
+          currentDurationSeconds: 900,
+          currentAreaSqm: 0,
+        ),
+        contains('15m 00s remaining'),
+      );
 
       // 50,000 m² domain area goal
       const areaGoal = RunGoal(type: GoalType.area, targetValue: 50000.0);
       expect(areaGoal.isActive, isTrue);
       expect(areaGoal.title, equals('50K M² TURF GOAL'));
-      expect(areaGoal.computeProgress(currentDistanceKm: 2.0, currentDurationSeconds: 600, currentAreaSqm: 25000.0), equals(0.5));
-      expect(areaGoal.formatRemaining(currentDistanceKm: 2.0, currentDurationSeconds: 600, currentAreaSqm: 25000.0), equals('25000 m² to claim'));
+      expect(
+        areaGoal.computeProgress(
+          currentDistanceKm: 2.0,
+          currentDurationSeconds: 600,
+          currentAreaSqm: 25000.0,
+        ),
+        equals(0.5),
+      );
+      expect(
+        areaGoal.formatRemaining(
+          currentDistanceKm: 2.0,
+          currentDurationSeconds: 600,
+          currentAreaSqm: 25000.0,
+        ),
+        equals('25000 m² to claim'),
+      );
 
       // Open exploration (none)
       expect(RunGoal.none.isActive, isFalse);
-      expect(RunGoal.none.computeProgress(currentDistanceKm: 5.0, currentDurationSeconds: 1200, currentAreaSqm: 10000), equals(0.0));
-      expect(RunGoal.none.formatRemaining(currentDistanceKm: 5.0, currentDurationSeconds: 1200, currentAreaSqm: 10000), equals(''));
+      expect(
+        RunGoal.none.computeProgress(
+          currentDistanceKm: 5.0,
+          currentDurationSeconds: 1200,
+          currentAreaSqm: 10000,
+        ),
+        equals(0.0),
+      );
+      expect(
+        RunGoal.none.formatRemaining(
+          currentDistanceKm: 5.0,
+          currentDurationSeconds: 1200,
+          currentAreaSqm: 10000,
+        ),
+        equals(''),
+      );
     });
 
     test('AutoPauseEngine handles hysteresis correctly', () {
@@ -120,7 +221,9 @@ void main() {
       expect(pLondon.y, equals(10896));
     });
 
-    testWidgets('RunGoalSheet renders and allows goal selection', (tester) async {
+    testWidgets('RunGoalSheet renders and allows goal selection', (
+      tester,
+    ) async {
       RunGoal? selectedGoal;
 
       await tester.pumpWidget(
@@ -170,7 +273,9 @@ void main() {
       expect(selectedGoal!.targetValue, equals(10.0));
     });
 
-    testWidgets('RunHud displays campaign goal progress banner', (tester) async {
+    testWidgets('RunHud displays campaign goal progress banner', (
+      tester,
+    ) async {
       bool goalSelectorOpened = false;
 
       await tester.pumpWidget(

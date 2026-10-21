@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import 'app_colors.dart';
 import 'app_text.dart';
 import '../motion/motion.dart';
@@ -123,14 +124,19 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16.0),
           side: const BorderSide(color: AppColors.borderSubtle, width: 1.0),
         ),
-        contentTextStyle: AppText.bodyMedium.copyWith(color: AppColors.textPrimary),
+        contentTextStyle: AppText.bodyMedium.copyWith(
+          color: AppColors.textPrimary,
+        ),
       ),
 
       // Input Decoration Theme
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surface2,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16.0,
+          vertical: 14.0,
+        ),
         hintStyle: AppText.bodyMedium.copyWith(color: AppColors.textMuted),
         labelStyle: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
         border: OutlineInputBorder(

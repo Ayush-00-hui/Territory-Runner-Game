@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:territory_runner/models/privacy_zone.dart';
@@ -77,7 +78,9 @@ void main() {
       );
       await privacyService.addZone(homeZone);
 
-      final settingsService = UserSettingsService.custom(initial: LiveVisibility.nearby);
+      final settingsService = UserSettingsService.custom(
+        initial: LiveVisibility.nearby,
+      );
       final wsService = WebSocketService.custom(
         privacyZoneService: privacyService,
         userSettingsService: settingsService,
@@ -126,7 +129,9 @@ void main() {
 
       final wsService = WebSocketService.custom(
         privacyZoneService: privacyService,
-        userSettingsService: UserSettingsService.custom(initial: LiveVisibility.nearby),
+        userSettingsService: UserSettingsService.custom(
+          initial: LiveVisibility.nearby,
+        ),
       );
 
       final fakeChannel = _FakeWebSocketChannel();
@@ -159,34 +164,39 @@ void main() {
       expect(fakeChannel._sink.sentMessages.length, equals(2));
     });
 
-    test('Stationary jitter deduplication suppresses duplicate static updates', () async {
-      final privacyService = PrivacyZoneService();
-      final wsService = WebSocketService.custom(
-        privacyZoneService: privacyService,
-        userSettingsService: UserSettingsService.custom(initial: LiveVisibility.nearby),
-      );
+    test(
+      'Stationary jitter deduplication suppresses duplicate static updates',
+      () async {
+        final privacyService = PrivacyZoneService();
+        final wsService = WebSocketService.custom(
+          privacyZoneService: privacyService,
+          userSettingsService: UserSettingsService.custom(
+            initial: LiveVisibility.nearby,
+          ),
+        );
 
-      final fakeChannel = _FakeWebSocketChannel();
-      wsService.setMockChannel(fakeChannel);
+        final fakeChannel = _FakeWebSocketChannel();
+        wsService.setMockChannel(fakeChannel);
 
-      // First fix
-      final first = wsService.sendPresenceUpdate(
-        latitude: 40.7128,
-        longitude: -74.0060,
-        speed: 0.1, // stationary
-        force: true,
-      );
-      expect(first, isTrue);
+        // First fix
+        final first = wsService.sendPresenceUpdate(
+          latitude: 40.7128,
+          longitude: -74.0060,
+          speed: 0.1, // stationary
+          force: true,
+        );
+        expect(first, isTrue);
 
-      // Minor GPS jitter (< 1 meter away, speed < 0.5 m/s)
-      final jitter = wsService.sendPresenceUpdate(
-        latitude: 40.7128001,
-        longitude: -74.0060001,
-        speed: 0.1,
-      );
-      expect(jitter, isFalse);
-      expect(fakeChannel._sink.sentMessages.length, equals(1));
-    });
+        // Minor GPS jitter (< 1 meter away, speed < 0.5 m/s)
+        final jitter = wsService.sendPresenceUpdate(
+          latitude: 40.7128001,
+          longitude: -74.0060001,
+          speed: 0.1,
+        );
+        expect(jitter, isFalse);
+        expect(fakeChannel._sink.sentMessages.length, equals(1));
+      },
+    );
 
     test('Exponential backoff with jitter bounds and 15s ceiling', () {
       final minRandom = math.Random(0);
@@ -207,7 +217,10 @@ void main() {
       final delay4 = WebSocketService.computeBackoffDelay(4, random: minRandom);
       expect(delay4.inSeconds, inInclusiveRange(15, 16));
 
-      final delay10 = WebSocketService.computeBackoffDelay(10, random: minRandom);
+      final delay10 = WebSocketService.computeBackoffDelay(
+        10,
+        random: minRandom,
+      );
       expect(delay10.inSeconds, inInclusiveRange(15, 16));
     });
   });

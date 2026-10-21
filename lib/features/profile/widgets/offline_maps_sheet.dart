@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../core/utils/constants.dart';
 import '../../../services/tile_cache_service.dart';
 import '../../../ui/ui.dart';
 
 void showOfflineMapsSheet(BuildContext context) {
-  AppSheet.show(
-    context: context,
-    builder: (ctx) => const OfflineMapsSheet(),
-  );
+  AppSheet.show(context: context, builder: (ctx) => const OfflineMapsSheet());
 }
 
 class OfflineMapsSheet extends StatefulWidget {
@@ -55,7 +53,9 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
 
     try {
       final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.medium),
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.medium,
+        ),
       );
 
       final center = LatLng(pos.latitude, pos.longitude);
@@ -123,7 +123,10 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
             child: Container(
               width: 36,
               height: 4,
-              decoration: BoxDecoration(color: AppColors.disabled, borderRadius: AppRadius.brFull),
+              decoration: BoxDecoration(
+                color: AppColors.disabled,
+                borderRadius: AppRadius.brFull,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.s16),
@@ -137,7 +140,11 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                   color: AppColors.accent.withValues(alpha: 0.15),
                   borderRadius: AppSpacing.br10,
                 ),
-                child: const Icon(Icons.download_for_offline_rounded, color: AppColors.accent, size: 22),
+                child: const Icon(
+                  Icons.download_for_offline_rounded,
+                  color: AppColors.accent,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: AppSpacing.s10),
               Column(
@@ -153,7 +160,10 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                   ),
                   Text(
                     'Offline trail navigation',
-                    style: AppText.labelSmall.copyWith(color: AppColors.accent, fontSize: 10),
+                    style: AppText.labelSmall.copyWith(
+                      color: AppColors.accent,
+                      fontSize: 10,
+                    ),
                   ),
                 ],
               ),
@@ -165,7 +175,10 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
             AppConstants.allowTilePrefetch
                 ? 'Pre-download map sectors to continue claiming territories, viewing boundaries, and navigating when running in dead zones or cellular outages.'
                 : 'Map tiles viewed while exploring or running are automatically cached locally on your device for at least 7 days. Bulk sector pre-downloading is disabled under the OpenStreetMap Tile Usage Policy.',
-            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.4),
+            style: AppText.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: AppSpacing.s20),
 
@@ -182,7 +195,13 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
               children: [
                 Column(
                   children: [
-                    Text('Cached Tiles', style: AppText.labelSmall.copyWith(color: AppColors.textMuted, fontSize: 10)),
+                    Text(
+                      'Cached Tiles',
+                      style: AppText.labelSmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       _isLoading ? '...' : '$_tileCount',
@@ -198,7 +217,13 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                 Container(width: 1, height: 32, color: AppColors.border),
                 Column(
                   children: [
-                    Text('Disk Occupied', style: AppText.labelSmall.copyWith(color: AppColors.textMuted, fontSize: 10)),
+                    Text(
+                      'Disk Occupied',
+                      style: AppText.labelSmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       _isLoading ? '...' : _formatSize(_cacheSizeBytes),
@@ -223,16 +248,30 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Caching Sector Tiles...', style: TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Caching Sector Tiles...',
+                      style: TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     Text(
-                      _totalToDownload > 0 ? '$_downloaded / $_totalToDownload' : 'Preparing...',
-                      style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
+                      _totalToDownload > 0
+                          ? '$_downloaded / $_totalToDownload'
+                          : 'Preparing...',
+                      style: const TextStyle(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 LinearProgressIndicator(
-                  value: _totalToDownload > 0 ? (_downloaded / _totalToDownload) : null,
+                  value: _totalToDownload > 0
+                      ? (_downloaded / _totalToDownload)
+                      : null,
                   backgroundColor: AppColors.surface2,
                   color: AppColors.accent,
                   minHeight: 6,
@@ -275,12 +314,19 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.info_outline_rounded, color: AppColors.accent, size: 18),
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.accent,
+                    size: 18,
+                  ),
                   const SizedBox(width: AppSpacing.s10),
                   Expanded(
                     child: Text(
                       'OSM Tile Usage Policy viewing cache active. Viewed sectors remain cached offline.',
-                      style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ],
@@ -303,7 +349,9 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                 'Purge Offline Map Cache',
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
               ),
-              onPressed: (_tileCount == 0 || _isDownloading) ? null : _clearCache,
+              onPressed: (_tileCount == 0 || _isDownloading)
+                  ? null
+                  : _clearCache,
             ),
           ),
         ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/safety_service.dart';
 import '../../../ui/ui.dart';
 
@@ -13,7 +14,8 @@ class _EmergencyContactDialog extends StatefulWidget {
   const _EmergencyContactDialog();
 
   @override
-  State<_EmergencyContactDialog> createState() => _EmergencyContactDialogState();
+  State<_EmergencyContactDialog> createState() =>
+      _EmergencyContactDialogState();
 }
 
 class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
@@ -69,7 +71,9 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
     if (_isLoading) {
       return const AlertDialog(
         backgroundColor: AppColors.surface,
-        content: Center(child: CircularProgressIndicator(color: AppColors.accent)),
+        content: Center(
+          child: CircularProgressIndicator(color: AppColors.accent),
+        ),
       );
     }
 
@@ -87,7 +91,11 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
               color: AppColors.error.withValues(alpha: 0.15),
               borderRadius: AppSpacing.br10,
             ),
-            child: const Icon(Icons.emergency_rounded, color: AppColors.error, size: 20),
+            child: const Icon(
+              Icons.emergency_rounded,
+              color: AppColors.error,
+              size: 20,
+            ),
           ),
           const SizedBox(width: AppSpacing.s10),
           Text(
@@ -107,16 +115,28 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
           children: [
             Text(
               'Set a trusted contact to receive 1-tap distress SMS alerts with your real-time GPS coordinate link during runs:',
-              style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.4),
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: AppSpacing.s16),
 
             // Contact Name
-            Text('Contact Name', style: AppText.labelSmall.copyWith(fontSize: 11, color: AppColors.textMuted)),
+            Text(
+              'Contact Name',
+              style: AppText.labelSmall.copyWith(
+                fontSize: 11,
+                color: AppColors.textMuted,
+              ),
+            ),
             const SizedBox(height: 4),
             TextField(
               controller: _nameController,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+              ),
               decoration: InputDecoration(
                 hintText: 'e.g. Partner, Mom, Roommate',
                 hintStyle: const TextStyle(color: AppColors.textMuted),
@@ -126,18 +146,30 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
                   borderRadius: AppSpacing.br12,
                   borderSide: const BorderSide(color: AppColors.border),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.s12),
 
             // Contact Phone
-            Text('Phone Number (with Country Code)', style: AppText.labelSmall.copyWith(fontSize: 11, color: AppColors.textMuted)),
+            Text(
+              'Phone Number (with Country Code)',
+              style: AppText.labelSmall.copyWith(
+                fontSize: 11,
+                color: AppColors.textMuted,
+              ),
+            ),
             const SizedBox(height: 4),
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+              ),
               decoration: InputDecoration(
                 hintText: 'e.g. +1 555 123 4567',
                 hintStyle: const TextStyle(color: AppColors.textMuted),
@@ -147,18 +179,30 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
                   borderRadius: AppSpacing.br12,
                   borderSide: const BorderSide(color: AppColors.border),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.s12),
 
             // SOS Message template
-            Text('Distress Message Preview', style: AppText.labelSmall.copyWith(fontSize: 11, color: AppColors.textMuted)),
+            Text(
+              'Distress Message Preview',
+              style: AppText.labelSmall.copyWith(
+                fontSize: 11,
+                color: AppColors.textMuted,
+              ),
+            ),
             const SizedBox(height: 4),
             TextField(
               controller: _messageController,
               maxLines: 2,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 12,
+              ),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.surface2,
@@ -166,7 +210,10 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
                   borderRadius: AppSpacing.br12,
                   borderSide: const BorderSide(color: AppColors.border),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
               ),
             ),
           ],
@@ -177,10 +224,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
           label: 'Cancel',
           onPressed: () => Navigator.of(context).pop(),
         ),
-        PrimaryButton(
-          label: 'Save Settings',
-          onPressed: _save,
-        ),
+        PrimaryButton(label: 'Save Settings', onPressed: _save),
       ],
     );
   }

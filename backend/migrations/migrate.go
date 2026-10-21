@@ -2,9 +2,12 @@ package migrations
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
@@ -13,6 +16,38 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
 )
+
+// ErrLegacyDatabaseDetected is returned when pre-existing tables exist without a schema_migrations tracking table.
+var ErrLegacyDatabaseDetected = errors.New("database migration failed: legacy database detected (pre-existing tables exist without 'schema_migrations' tracking table). To baseline safely, run migrations with BASELINE_ON_LEGACY=true or initialize a fresh database")
+
+// DetectLegacySchema checks whether application tables exist in the public schema without a schema_migrations table.
+func DetectLegacySchema(ctx context.Context, db *sql.DB) (bool, error) {
+	var schemaMigrationsExists bool
+	err := db.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.tables 
+			WHERE table_schema = 'public' AND table_name = 'schema_migrations'
+		);
+	`).Scan(&schemaMigrationsExists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check schema_migrations existence: %w", err)
+	}
+
+	if schemaMigrationsExists {
+		return false, nil
+	}
+
+	var legacyTableCount int
+	err = db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM information_schema.tables 
+		WHERE table_schema = 'public' AND table_name IN ('users', 'territories', 'runs');
+	`).Scan(&legacyTableCount)
+	if err != nil {
+		return false, fmt.Errorf("failed to check legacy tables: %w", err)
+	}
+
+	return legacyTableCount > 0, nil
+}
 
 // Run applies all pending embedded database migrations against the given connection string.
 // It executes migrations inside an advisory lock (guarded by pg_advisory_lock via pgx driver)
@@ -41,6 +76,16 @@ func Run(ctx context.Context, connString string, logger *slog.Logger) error {
 		return fmt.Errorf("failed to ping database before running migrations: %w", err)
 	}
 
+	// Detect legacy schema created without schema_migrations
+	isLegacy, err := DetectLegacySchema(ctx, db)
+	if err != nil {
+		return err
+	}
+	allowBaseline := strings.ToLower(os.Getenv("BASELINE_ON_LEGACY")) == "true" || os.Getenv("BASELINE_ON_LEGACY") == "1"
+	if isLegacy && !allowBaseline {
+		return ErrLegacyDatabaseDetected
+	}
+
 	// pgx driver automatically acquires a PostgreSQL session-level advisory lock
 	driver, err := pgxmigrate.WithInstance(db, &pgxmigrate.Config{
 		MigrationsTable: pgxmigrate.DefaultMigrationsTable,
@@ -59,6 +104,13 @@ func Run(ctx context.Context, connString string, logger *slog.Logger) error {
 		return fmt.Errorf("failed to create migrate instance: %w", err)
 	}
 	defer m.Close()
+
+	if isLegacy && allowBaseline {
+		logger.Warn("legacy database detected without schema_migrations; baselining to version 1 as requested by BASELINE_ON_LEGACY")
+		if err := m.Force(1); err != nil {
+			return fmt.Errorf("failed to baseline legacy database to version 1: %w", err)
+		}
+	}
 
 	start := time.Now()
 	if err := m.Up(); err != nil {

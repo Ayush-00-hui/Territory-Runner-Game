@@ -605,25 +605,25 @@ func (m *MemoryStore) SendFriendRequest(ctx context.Context, requesterID, addres
 }
 
 // RespondFriendRequest accepts or declines a pending friend request.
-func (m *MemoryStore) RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) error {
+func (m *MemoryStore) RespondFriendRequest(ctx context.Context, friendshipID, userID, action string) (*Friendship, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	f, ok := m.friendships[friendshipID]
 	if !ok {
-		return fmt.Errorf("friend request not found: %s", friendshipID)
+		return nil, fmt.Errorf("friend request not found: %s", friendshipID)
 	}
 
 	if f.AddresseeID != userID {
-		return fmt.Errorf("unauthorized: only recipient can respond to friend request")
+		return nil, fmt.Errorf("unauthorized: only recipient can respond to friend request")
 	}
 
 	if f.Status != "pending" {
-		return fmt.Errorf("request already %s", f.Status)
+		return nil, fmt.Errorf("request already %s", f.Status)
 	}
 
 	if action != "accept" && action != "decline" {
-		return fmt.Errorf("invalid action: %s (must be 'accept' or 'decline')", action)
+		return nil, fmt.Errorf("invalid action: %s (must be 'accept' or 'decline')", action)
 	}
 
 	if action == "accept" {
@@ -632,7 +632,24 @@ func (m *MemoryStore) RespondFriendRequest(ctx context.Context, friendshipID, us
 		f.Status = "declined"
 	}
 	f.UpdatedAt = time.Now().UTC()
-	return nil
+	cpy := *f
+	return &cpy, nil
+}
+
+// RemoveFriend dissolves an accepted mutual friendship between userA and userB.
+func (m *MemoryStore) RemoveFriend(ctx context.Context, userA, userB string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for id, f := range m.friendships {
+		if (f.RequesterID == userA && f.AddresseeID == userB) || (f.RequesterID == userB && f.AddresseeID == userA) {
+			if f.Status == "accepted" {
+				delete(m.friendships, id)
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("friendship not found")
 }
 
 // GetFriends returns all accepted friends of the given user.

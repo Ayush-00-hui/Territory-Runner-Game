@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../ui/theme/app_colors.dart';
 
 class Territory {
@@ -17,8 +18,10 @@ class Territory {
 
   /// Retention & Decay Mechanics Constants
   static const double defaultInitialStrength = 100.0;
-  static const double decayPerDay = 15.0; // Loses 15.0 points per 24 hours since last defended
-  static const double weakThreshold = 30.0; // Below this threshold, rivals take weak territory with bonus XP
+  static const double decayPerDay =
+      15.0; // Loses 15.0 points per 24 hours since last defended
+  static const double weakThreshold =
+      30.0; // Below this threshold, rivals take weak territory with bonus XP
 
   Territory({
     required this.id,
@@ -31,9 +34,9 @@ class Territory {
     double? strength,
     this.color = AppColors.mine,
     this.isPendingReview = false,
-  })  : polygons = polygons ?? (polygon.isNotEmpty ? [polygon] : []),
-        lastDefendedAt = lastDefendedAt ?? capturedAt,
-        strength = (strength ?? defaultInitialStrength).clamp(0.0, 100.0);
+  }) : polygons = polygons ?? (polygon.isNotEmpty ? [polygon] : []),
+       lastDefendedAt = lastDefendedAt ?? capturedAt,
+       strength = (strength ?? defaultInitialStrength).clamp(0.0, 100.0);
 
   /// Computes real-time dynamic strength factoring in elapsed days since last defense
   double computeCurrentStrength({DateTime? now}) {
@@ -46,7 +49,8 @@ class Territory {
   }
 
   /// Returns true if dynamic strength has fallen below the weak fortification threshold
-  bool isWeak({DateTime? now}) => computeCurrentStrength(now: now) < weakThreshold;
+  bool isWeak({DateTime? now}) =>
+      computeCurrentStrength(now: now) < weakThreshold;
 
   Territory copyWith({
     String? id,
@@ -77,8 +81,15 @@ class Territory {
   Map<String, dynamic> toJson() => {
     'id': id,
     'ownerId': ownerId,
-    'polygon': polygon.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
-    'polygons': polygons.map((poly) => poly.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList()).toList(),
+    'polygon': polygon
+        .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+        .toList(),
+    'polygons': polygons
+        .map(
+          (poly) =>
+              poly.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
+        )
+        .toList(),
     'areaSqMeters': areaSqMeters,
     'capturedAt': capturedAt.toIso8601String(),
     'lastDefendedAt': lastDefendedAt.toIso8601String(),
@@ -91,7 +102,10 @@ class Territory {
     final rawPolygon = json['polygon'] as List<dynamic>? ?? [];
     final List<LatLng> points = rawPolygon.map((p) {
       final map = p as Map<String, dynamic>;
-      return LatLng((map['lat'] as num).toDouble(), (map['lng'] as num).toDouble());
+      return LatLng(
+        (map['lat'] as num).toDouble(),
+        (map['lng'] as num).toDouble(),
+      );
     }).toList();
 
     final rawPolygons = json['polygons'] as List<dynamic>?;
@@ -101,7 +115,10 @@ class Territory {
         final list = polyList as List<dynamic>;
         return list.map((p) {
           final map = p as Map<String, dynamic>;
-          return LatLng((map['lat'] as num).toDouble(), (map['lng'] as num).toDouble());
+          return LatLng(
+            (map['lat'] as num).toDouble(),
+            (map['lng'] as num).toDouble(),
+          );
         }).toList();
       }).toList();
     } else if (points.isNotEmpty) {
@@ -114,18 +131,23 @@ class Territory {
     final defended = json['lastDefendedAt'] != null
         ? DateTime.parse(json['lastDefendedAt'] as String)
         : captured;
-    final parsedStrength = (json['strength'] as num?)?.toDouble() ?? defaultInitialStrength;
+    final parsedStrength =
+        (json['strength'] as num?)?.toDouble() ?? defaultInitialStrength;
 
     return Territory(
       id: json['id'] as String,
       ownerId: json['ownerId'] as String? ?? 'anonymous_runner',
-      polygon: points.isNotEmpty ? points : (multiPolys.isNotEmpty ? multiPolys.first : []),
+      polygon: points.isNotEmpty
+          ? points
+          : (multiPolys.isNotEmpty ? multiPolys.first : []),
       polygons: multiPolys,
       areaSqMeters: (json['areaSqMeters'] as num?)?.toDouble() ?? 15047.0,
       capturedAt: captured,
       lastDefendedAt: defended,
       strength: parsedStrength,
-      color: json['color'] != null ? Color(json['color'] as int) : AppColors.mine,
+      color: json['color'] != null
+          ? Color(json['color'] as int)
+          : AppColors.mine,
       isPendingReview: json['isPendingReview'] as bool? ?? false,
     );
   }
@@ -146,7 +168,10 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
     final List<dynamic> rawPoly = (fields[2] as List?) ?? [];
     final List<LatLng> polyPoints = rawPoly.map((p) {
       if (p is Map) {
-        return LatLng((p['lat'] as num).toDouble(), (p['lng'] as num).toDouble());
+        return LatLng(
+          (p['lat'] as num).toDouble(),
+          (p['lng'] as num).toDouble(),
+        );
       }
       return const LatLng(0, 0);
     }).toList();
@@ -155,7 +180,8 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
     final lastDefendedAt = fields[7] != null
         ? DateTime.fromMillisecondsSinceEpoch(fields[7] as int)
         : capturedAt;
-    final strength = (fields[8] as num?)?.toDouble() ?? Territory.defaultInitialStrength;
+    final strength =
+        (fields[8] as num?)?.toDouble() ?? Territory.defaultInitialStrength;
 
     return Territory(
       id: fields[0] as String,
@@ -179,7 +205,11 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
       ..writeByte(1)
       ..write(obj.ownerId)
       ..writeByte(2)
-      ..write(obj.polygon.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList())
+      ..write(
+        obj.polygon
+            .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+            .toList(),
+      )
       ..writeByte(3)
       ..write(obj.areaSqMeters)
       ..writeByte(4)

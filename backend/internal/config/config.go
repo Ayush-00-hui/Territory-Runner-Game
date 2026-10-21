@@ -12,6 +12,8 @@ var (
 	ErrDevModeInProduction = errors.New("security violation: AUTH_MODE=dev is strictly forbidden when ENV=production")
 	// ErrMissingFirebaseProjectID is returned when AUTH_MODE=firebase without FIREBASE_PROJECT_ID.
 	ErrMissingFirebaseProjectID = errors.New("security violation: FIREBASE_PROJECT_ID is required when AUTH_MODE is not dev")
+	// ErrMissingAllowedOrigins is returned when ENV=production, ALLOWED_ORIGINS is empty, and ALLOW_ANY_ORIGIN!=true.
+	ErrMissingAllowedOrigins = errors.New("security violation: ALLOWED_ORIGINS must not be empty in production unless ALLOW_ANY_ORIGIN=true is explicitly set")
 )
 
 // Config encapsulates backend service configuration.
@@ -24,6 +26,7 @@ type Config struct {
 	GeminiAPIKey      string
 	GeminiModel       string
 	AllowedOrigins    []string
+	AllowAnyOrigin    bool
 	MaxPointsPerRun   int
 	MaxRunDurationSec int
 	RunMigrations     bool
@@ -39,6 +42,7 @@ func Load() (*Config, error) {
 	geminiKey := getEnv("GEMINI_API_KEY", "")
 	geminiModel := getEnv("GEMINI_MODEL", "gemini-2.5-flash")
 	runMigrations := strings.ToLower(getEnv("RUN_MIGRATIONS", "false")) == "true" || getEnv("RUN_MIGRATIONS", "false") == "1"
+	allowAnyOrigin := strings.ToLower(getEnv("ALLOW_ANY_ORIGIN", "false")) == "true" || getEnv("ALLOW_ANY_ORIGIN", "false") == "1"
 
 	allowedOriginsStr := os.Getenv("ALLOWED_ORIGINS")
 	var allowedOrigins []string
@@ -49,7 +53,7 @@ func Load() (*Config, error) {
 				allowedOrigins = append(allowedOrigins, o)
 			}
 		}
-	} else if env == "development" {
+	} else if env == "development" || allowAnyOrigin {
 		allowedOrigins = []string{"*"}
 	}
 
@@ -76,6 +80,7 @@ func Load() (*Config, error) {
 		GeminiAPIKey:      geminiKey,
 		GeminiModel:       geminiModel,
 		AllowedOrigins:    allowedOrigins,
+		AllowAnyOrigin:    allowAnyOrigin,
 		MaxPointsPerRun:   maxPoints,
 		MaxRunDurationSec: maxDuration,
 		RunMigrations:     runMigrations,
@@ -90,8 +95,13 @@ func Load() (*Config, error) {
 
 // Validate checks for security violations or invalid combinations.
 func (c *Config) Validate() error {
-	if c.Env == "production" && c.AuthMode == "dev" {
-		return ErrDevModeInProduction
+	if c.Env == "production" {
+		if c.AuthMode == "dev" {
+			return ErrDevModeInProduction
+		}
+		if len(c.AllowedOrigins) == 0 && !c.AllowAnyOrigin {
+			return ErrMissingAllowedOrigins
+		}
 	}
 	if c.AuthMode != "dev" && c.FirebaseProjectID == "" {
 		return ErrMissingFirebaseProjectID
@@ -106,4 +116,3 @@ func getEnv(key, defaultVal string) string {
 	}
 	return val
 }
-

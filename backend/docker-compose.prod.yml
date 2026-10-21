@@ -58,7 +58,9 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
     ports:
-      - "8080:8080"
+      # Bind to loopback (127.0.0.1) by default to prevent direct public internet exposure without
+      # a reverse proxy (e.g. Caddy, Nginx, or Traefik with TLS). To expose directly, change to "8080:8080".
+      - "127.0.0.1:8080:8080"
     deploy:
       resources:
         limits:

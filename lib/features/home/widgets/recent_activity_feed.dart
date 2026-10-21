@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+
 import '../../../models/territory.dart';
 import '../../../ui/ui.dart';
 import '../../gameplay/territory_service.dart';
@@ -26,7 +28,20 @@ class RecentActivityFeed extends StatelessWidget {
     } else if (diff.inDays <= 1) {
       return 'Yesterday';
     } else {
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${months[dt.month - 1]} ${dt.day}';
     }
   }
@@ -75,9 +90,17 @@ class RecentActivityFeed extends StatelessWidget {
                 children: [
                   _metricRow('Claimed area', areaDisplay),
                   const Divider(color: AppColors.borderSubtle, height: 16),
-                  _metricRow('Loop segments', '${territory.polygons.length} connected'),
+                  _metricRow(
+                    'Loop segments',
+                    '${territory.polygons.length} connected',
+                  ),
                   const Divider(color: AppColors.borderSubtle, height: 16),
-                  _metricRow('Status', territory.isPendingReview ? 'Pending review' : 'Verified territory'),
+                  _metricRow(
+                    'Status',
+                    territory.isPendingReview
+                        ? 'Pending review'
+                        : 'Verified territory',
+                  ),
                 ],
               ),
             ),
@@ -95,10 +118,16 @@ class RecentActivityFeed extends StatelessWidget {
                       const distance = Distance();
                       double meters = 0.0;
                       for (int i = 0; i < territory.polygon.length - 1; i++) {
-                        meters += distance(territory.polygon[i], territory.polygon[i + 1]);
+                        meters += distance(
+                          territory.polygon[i],
+                          territory.polygon[i + 1],
+                        );
                       }
                       if (territory.polygon.length > 2) {
-                        meters += distance(territory.polygon.last, territory.polygon.first);
+                        meters += distance(
+                          territory.polygon.last,
+                          territory.polygon.first,
+                        );
                       }
                       final km = meters / 1000.0;
 
@@ -148,7 +177,8 @@ class RecentActivityFeed extends StatelessWidget {
         child: EmptyState(
           icon: Icons.directions_run_rounded,
           title: 'No runs yet',
-          message: 'Lace up your shoes and run a closed loop to claim territory.',
+          message:
+              'Lace up your shoes and run a closed loop to claim territory.',
           actionLabel: 'Start Run',
           onAction: onStartRun,
         ),
@@ -180,7 +210,10 @@ class RecentActivityFeed extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.surface2,
                     borderRadius: AppRadius.br12,
-                    border: Border.all(color: AppColors.borderSubtle, width: 1.0),
+                    border: Border.all(
+                      color: AppColors.borderSubtle,
+                      width: 1.0,
+                    ),
                   ),
                   child: ClipRRect(
                     borderRadius: AppRadius.br12,
@@ -199,10 +232,7 @@ class RecentActivityFeed extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Closed loop',
-                            style: AppText.titleSmall,
-                          ),
+                          Text('Closed loop', style: AppText.titleSmall),
                           Text(
                             _formatDate(territory.capturedAt),
                             style: AppText.caption,
@@ -213,11 +243,16 @@ class RecentActivityFeed extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.accentContainer,
                               borderRadius: AppRadius.br8,
-                              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: AppColors.accent.withValues(alpha: 0.3),
+                              ),
                             ),
                             child: Text(
                               '+$areaDisplay',
@@ -263,8 +298,16 @@ class _MiniPolygonPainter extends CustomPainter {
       final p = Paint()
         ..color = AppColors.borderSubtle
         ..strokeWidth = 1.0;
-      canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), p);
-      canvas.drawLine(Offset(size.width / 2, 0), Offset(size.width / 2, size.height), p);
+      canvas.drawLine(
+        Offset(0, size.height / 2),
+        Offset(size.width, size.height / 2),
+        p,
+      );
+      canvas.drawLine(
+        Offset(size.width / 2, 0),
+        Offset(size.width / 2, size.height),
+        p,
+      );
       return;
     }
 
@@ -291,7 +334,8 @@ class _MiniPolygonPainter extends CustomPainter {
     for (int i = 0; i < points.length; i++) {
       final p = points[i];
       final x = padding + ((p.longitude - minLng) / lngSpan) * drawW;
-      final y = size.height - (padding + ((p.latitude - minLat) / latSpan) * drawH);
+      final y =
+          size.height - (padding + ((p.latitude - minLat) / latSpan) * drawH);
       if (i == 0) {
         path.moveTo(x, y);
       } else {

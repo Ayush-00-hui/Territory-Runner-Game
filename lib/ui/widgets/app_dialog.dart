@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -57,7 +58,8 @@ class AppDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveIcon = icon ?? (isDestructive ? Icons.warning_amber_rounded : null);
+    final effectiveIcon =
+        icon ?? (isDestructive ? Icons.warning_amber_rounded : null);
 
     return Dialog(
       backgroundColor: AppColors.surface,
@@ -66,7 +68,10 @@ class AppDialog extends StatelessWidget {
         borderRadius: AppRadius.br24,
         side: const BorderSide(color: AppColors.borderSubtle, width: 1.0),
       ),
-      insetPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.s24, vertical: AppSpacing.s24),
+      insetPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s24,
+        vertical: AppSpacing.s24,
+      ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.s24),
         child: Column(
@@ -99,14 +104,13 @@ class AppDialog extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.s16),
             ],
-            Text(
-              title,
-              style: AppText.titleLarge,
-            ),
+            Text(title, style: AppText.titleLarge),
             const SizedBox(height: AppSpacing.s8),
             Text(
               message,
-              style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.s24),
             Row(
@@ -114,16 +118,22 @@ class AppDialog extends StatelessWidget {
                 Expanded(
                   child: SecondaryButton(
                     label: cancelLabel,
-                    onPressed: onCancel ?? () => Navigator.of(context).pop(false),
+                    onPressed:
+                        onCancel ?? () => Navigator.of(context).pop(false),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s12),
                 Expanded(
                   child: PrimaryButton(
                     label: confirmLabel,
-                    backgroundColor: isDestructive ? AppColors.error : AppColors.accent,
-                    foregroundColor: isDestructive ? AppColors.textPrimary : AppColors.onAccent,
-                    onPressed: onConfirm ?? () => Navigator.of(context).pop(true),
+                    backgroundColor: isDestructive
+                        ? AppColors.error
+                        : AppColors.accent,
+                    foregroundColor: isDestructive
+                        ? AppColors.textPrimary
+                        : AppColors.onAccent,
+                    onPressed:
+                        onConfirm ?? () => Navigator.of(context).pop(true),
                   ),
                 ),
               ],

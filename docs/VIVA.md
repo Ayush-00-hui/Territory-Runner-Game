@@ -61,6 +61,18 @@ This document is the definitive technical examination guide for **Territory Runn
 
 ---
 
+### Q1.4: How does the WebSocket presence dispatcher prevent cascading deadlocks during high-concurrency friends lookup, and why use singleflight deduplication?
+**Examiner Defense Rationale (2-3 lines):**
+The presence hub uses a fine-grained `sync.RWMutex` for client connection snapshots and releases it *before* entering database or friendship cache operations, completely decoupling network framing from store I/O. Singleflight (`golang.org/x/sync/singleflight`) deduplicates concurrent cache-miss lookups per sender, eliminating cache-stampede database spikes while atomic invalidation preserves dynamic relationship updates.
+
+**Deep Defense:**
+- **Deadlock Mechanism with Naive Mutexes:** If a WebSocket hub holds a global connection mutex while synchronously evaluating `store.GetFriends(ctx, senderID)`, any database latency, connection acquisition delay, or store-level lock acquisition freezes the hub lock. Incoming client registrations (`Register`), disconnections (`Unregister`), and heartbeat pings (`ReadPump`) queue behind the blocked lock, resulting in an immediate server-wide goroutine leak and deadlock cascade.
+- **Decoupled Snapshotting:** `hub.broadcastPresence` takes a quick read-lock snapshot of connected clients and releases `hub.mu.RUnlock()` immediately before evaluating spatial or friendship filtering.
+- **Singleflight Miss Coalescing:** Under bursty multi-runner GPS presence broadcasts, multiple goroutines querying friendship for the same `senderID` coalesce through `hub.sfGroup.Do(senderID, ...)`. Exactly one database query fires, caching the result in an LRU / TTL slice while all waiting callers share the result.
+- **Cache Invalidation:** When a friend request is accepted (`PUT /v1/friends/request/{id}`) or removed (`DELETE /v1/friends/{friendID}`), the HTTP handler immediately notifies `hub.InvalidateFriends(userA, userB)`, evicting both cached sets with zero cache-staleness window.
+
+---
+
 ## 2. Spatial Computing, Topology & Algorithmic Parity
 
 ### Q2.1: Why use the planar Shoelace formula on the Flutter client while using PostGIS `ST_Area(geom::geography)` on the Go backend? How do you prevent discrepancies?

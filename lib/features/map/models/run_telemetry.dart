@@ -54,10 +54,15 @@ class RunTelemetry {
       movingSeconds: movingSeconds ?? this.movingSeconds,
       splitPace: splitPace ?? this.splitPace,
       currentSpeedKmh: currentSpeedKmh ?? this.currentSpeedKmh,
-      satelliteAccuracyMeters: satelliteAccuracyMeters ?? this.satelliteAccuracyMeters,
+      satelliteAccuracyMeters:
+          satelliteAccuracyMeters ?? this.satelliteAccuracyMeters,
       territoriesClaimed: territoriesClaimed ?? this.territoriesClaimed,
-      distanceToClosureMeters: clearClosure ? null : (distanceToClosureMeters ?? this.distanceToClosureMeters),
-      proximityToClosure: clearClosure ? null : (proximityToClosure ?? this.proximityToClosure),
+      distanceToClosureMeters: clearClosure
+          ? null
+          : (distanceToClosureMeters ?? this.distanceToClosureMeters),
+      proximityToClosure: clearClosure
+          ? null
+          : (proximityToClosure ?? this.proximityToClosure),
       currentAreaSqm: currentAreaSqm ?? this.currentAreaSqm,
       isRunActive: isRunActive ?? this.isRunActive,
       isAutoPaused: isAutoPaused ?? this.isAutoPaused,

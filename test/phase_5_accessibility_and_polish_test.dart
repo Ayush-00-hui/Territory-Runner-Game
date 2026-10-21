@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,48 +49,54 @@ void main() {
   });
 
   group('Phase 5: AMOLED Battery Saver Overlay Widget Tests', () {
-    testWidgets('Renders pure black screen with metrics and wakes on double tap', (tester) async {
-      bool woken = false;
+    testWidgets(
+      'Renders pure black screen with metrics and wakes on double tap',
+      (tester) async {
+        bool woken = false;
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: AmoledBatterySaverOverlay(
-              distanceKm: 5.42,
-              elapsedSeconds: 1530, // 25:30
-              splitPace: "4'42\"",
-              currentSpeedKmh: 12.8,
-              runGoal: const RunGoal(type: GoalType.distance, targetValue: 10.0),
-              onWake: () => woken = true,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: AmoledBatterySaverOverlay(
+                distanceKm: 5.42,
+                elapsedSeconds: 1530, // 25:30
+                splitPace: "4'42\"",
+                currentSpeedKmh: 12.8,
+                runGoal: const RunGoal(
+                  type: GoalType.distance,
+                  targetValue: 10.0,
+                ),
+                onWake: () => woken = true,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Verify pure black background
-      final containerFinder = find.byType(Container).first;
-      final container = tester.widget<Container>(containerFinder);
-      expect(container.color, equals(Colors.black));
+        // Verify pure black background
+        final containerFinder = find.byType(Container).first;
+        final container = tester.widget<Container>(containerFinder);
+        expect(container.color, equals(Colors.black));
 
-      // Verify telemetry display
-      expect(find.text('25:30'), findsOneWidget);
-      expect(find.text('5.42'), findsOneWidget);
-      expect(find.text('km'), findsOneWidget);
-      expect(find.text("4'42\""), findsOneWidget);
-      expect(find.text('12.8 km/h'), findsOneWidget);
-      expect(find.text('10 KM TARGET'), findsOneWidget);
-      expect(find.text('Battery saver active'), findsOneWidget);
+        // Verify telemetry display
+        expect(find.text('25:30'), findsOneWidget);
+        expect(find.text('5.42'), findsOneWidget);
+        expect(find.text('km'), findsOneWidget);
+        expect(find.text("4'42\""), findsOneWidget);
+        expect(find.text('12.8 km/h'), findsOneWidget);
+        expect(find.text('10 KM TARGET'), findsOneWidget);
+        expect(find.text('Battery saver active'), findsOneWidget);
 
-      // Double tap to wake
-      await tester.tap(find.byType(GestureDetector).first);
-      await tester.pump(const Duration(milliseconds: 50));
-      await tester.tap(find.byType(GestureDetector).first);
-      await tester.pumpAndSettle();
+        // Double tap to wake
+        await tester.tap(find.byType(GestureDetector).first);
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.tap(find.byType(GestureDetector).first);
+        await tester.pumpAndSettle();
 
-      expect(woken, isTrue);
-    });
+        expect(woken, isTrue);
+      },
+    );
 
     testWidgets('Wakes on exit button tap', (tester) async {
       bool woken = false;
@@ -118,48 +125,53 @@ void main() {
   });
 
   group('Phase 5: Accessibility & Semantics Tests', () {
-    testWidgets('HoldToFinishButton provides semantic labels in locked & active states', (tester) async {
-      // Locked state
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: HoldToFinishButton(
-              isRunActive: false,
-              onFinish: () {},
+    testWidgets(
+      'HoldToFinishButton provides semantic labels in locked & active states',
+      (tester) async {
+        // Locked state
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: HoldToFinishButton(isRunActive: false, onFinish: () {}),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(
-        find.byWidgetPredicate((w) =>
-            w is Semantics &&
-            w.properties.label == 'Run tracking inactive. Tap center play button to begin.'),
-        findsOneWidget,
-      );
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Semantics &&
+                w.properties.label ==
+                    'Run tracking inactive. Tap center play button to begin.',
+          ),
+          findsOneWidget,
+        );
 
-      // Active state
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: HoldToFinishButton(
-              isRunActive: true,
-              onFinish: () {},
+        // Active state
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: HoldToFinishButton(isRunActive: true, onFinish: () {}),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(
-        find.byWidgetPredicate((w) =>
-            w is Semantics &&
-            w.properties.button == true &&
-            w.properties.label == 'Hold for 1.5 seconds to finish and submit run'),
-        findsOneWidget,
-      );
-    });
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Semantics &&
+                w.properties.button == true &&
+                w.properties.label ==
+                    'Hold for 1.5 seconds to finish and submit run',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('RunHud action buttons have semantic button labels', (tester) async {
+    testWidgets('RunHud action buttons have semantic button labels', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -186,36 +198,45 @@ void main() {
 
       // Auto-pause banner semantics
       expect(
-        find.byWidgetPredicate((w) =>
-            w is Semantics &&
-            (w.properties.label?.contains('Run tracking auto-paused') ?? false)),
+        find.byWidgetPredicate(
+          (w) =>
+              w is Semantics &&
+              (w.properties.label?.contains('Run tracking auto-paused') ??
+                  false),
+        ),
         findsOneWidget,
       );
 
       // Seal shape button semantics
       expect(
-        find.byWidgetPredicate((w) =>
-            w is Semantics &&
-            w.properties.button == true &&
-            w.properties.label == 'Seal territory shape'),
+        find.byWidgetPredicate(
+          (w) =>
+              w is Semantics &&
+              w.properties.button == true &&
+              w.properties.label == 'Seal territory shape',
+        ),
         findsOneWidget,
       );
 
       // Pause button semantics
       expect(
-        find.byWidgetPredicate((w) =>
-            w is Semantics &&
-            w.properties.button == true &&
-            w.properties.label == 'Pause run tracking'),
+        find.byWidgetPredicate(
+          (w) =>
+              w is Semantics &&
+              w.properties.button == true &&
+              w.properties.label == 'Pause run tracking',
+        ),
         findsOneWidget,
       );
 
       // Goal banner semantics
       expect(
-        find.byWidgetPredicate((w) =>
-            w is Semantics &&
-            w.properties.button == true &&
-            (w.properties.label?.contains('5 KM TARGET') ?? false)),
+        find.byWidgetPredicate(
+          (w) =>
+              w is Semantics &&
+              w.properties.button == true &&
+              (w.properties.label?.contains('5 KM TARGET') ?? false),
+        ),
         findsOneWidget,
       );
     });
@@ -223,7 +244,8 @@ void main() {
     test('WCAG AA contrast verification for textMuted on dark surface', () {
       final lBg = AppColors.bgDeep.computeLuminance();
       final lMuted = AppColors.textMuted.computeLuminance();
-      final contrast = (math.max(lBg, lMuted) + 0.05) / (math.min(lBg, lMuted) + 0.05);
+      final contrast =
+          (math.max(lBg, lMuted) + 0.05) / (math.min(lBg, lMuted) + 0.05);
 
       // WCAG AA requirement for normal text is >= 4.5:1
       expect(contrast, greaterThanOrEqualTo(4.5));

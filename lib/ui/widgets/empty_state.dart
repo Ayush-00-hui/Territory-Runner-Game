@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -27,7 +28,10 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s32, vertical: AppSpacing.s40),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s32,
+          vertical: AppSpacing.s40,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -40,21 +44,17 @@ class EmptyState extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: AppColors.borderSubtle, width: 1.0),
               ),
-              child: Center(
-                child: Icon(icon, size: 28, color: iconColor),
-              ),
+              child: Center(child: Icon(icon, size: 28, color: iconColor)),
             ),
             const SizedBox(height: AppSpacing.s20),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: AppText.titleLarge,
-            ),
+            Text(title, textAlign: TextAlign.center, style: AppText.titleLarge),
             const SizedBox(height: AppSpacing.s8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.s24),

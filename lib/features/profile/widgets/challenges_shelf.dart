@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
 import 'profile_dialogs.dart';
@@ -38,7 +39,11 @@ class ChallengesShelf extends StatelessWidget {
                   Expanded(
                     child: Row(
                       children: [
-                        const Icon(Icons.bolt_rounded, color: AppColors.accent, size: 18),
+                        const Icon(
+                          Icons.bolt_rounded,
+                          color: AppColors.accent,
+                          size: 18,
+                        ),
                         const SizedBox(width: AppSpacing.s8),
                         Flexible(
                           child: Text(
@@ -152,13 +157,18 @@ class ChallengesShelf extends StatelessWidget {
                     style: AppText.bodyMedium.copyWith(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: isCompleted ? AppColors.accent : AppColors.textPrimary,
+                      color: isCompleted
+                          ? AppColors.accent
+                          : AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     description,
-                    style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+                    style: AppText.bodySmall.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
                   ),
                 ],
               ),
@@ -166,7 +176,9 @@ class ChallengesShelf extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: isCompleted ? AppColors.accentContainer : AppColors.surface2,
+                color: isCompleted
+                    ? AppColors.accentContainer
+                    : AppColors.surface2,
                 borderRadius: AppSpacing.br8,
                 border: Border.all(
                   color: isCompleted ? AppColors.accent : AppColors.border,
@@ -175,7 +187,9 @@ class ChallengesShelf extends StatelessWidget {
               child: Text(
                 isCompleted ? 'Claimed ✓' : '+$xpReward XP',
                 style: AppText.labelSmall.copyWith(
-                  color: isCompleted ? AppColors.accent : AppColors.textSecondary,
+                  color: isCompleted
+                      ? AppColors.accent
+                      : AppColors.textSecondary,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
@@ -191,7 +205,9 @@ class ChallengesShelf extends StatelessWidget {
             value: progress,
             backgroundColor: AppColors.surface2,
             valueColor: AlwaysStoppedAnimation<Color>(
-              isCompleted ? AppColors.accent : AppColors.accent.withValues(alpha: 0.6),
+              isCompleted
+                  ? AppColors.accent
+                  : AppColors.accent.withValues(alpha: 0.6),
             ),
             minHeight: 6,
           ),
@@ -228,7 +244,8 @@ class ChallengesShelf extends StatelessWidget {
         name: 'First Conquest',
         subtitle: 'Claimed 1st polygon loop',
         icon: Icons.emoji_events_rounded,
-        unlocked: profile.badges.contains('First Conquest') || territoriesCount >= 1,
+        unlocked:
+            profile.badges.contains('First Conquest') || territoriesCount >= 1,
         criteria: 'Enclose and claim at least 1 sovereign GPS loop.',
         reward: '+50 XP, "Pioneer Runner" Title',
       ),
@@ -236,7 +253,9 @@ class ChallengesShelf extends StatelessWidget {
         name: 'Territory Sovereign',
         subtitle: 'Conquered 10k m² ground',
         icon: Icons.military_tech_rounded,
-        unlocked: profile.badges.contains('Territory Sovereign') || totalAreaSqMeters >= 10000,
+        unlocked:
+            profile.badges.contains('Territory Sovereign') ||
+            totalAreaSqMeters >= 10000,
         criteria: 'Hold 10,000+ m² of sovereign territory.',
         reward: '+200 XP, "Sovereign Runner" Insignia',
       ),
@@ -244,7 +263,9 @@ class ChallengesShelf extends StatelessWidget {
         name: '10K Centurion',
         subtitle: 'Logged 10 km on foot',
         icon: Icons.directions_run_rounded,
-        unlocked: profile.badges.contains('10K Centurion') || profile.totalDistanceKm >= 10.0,
+        unlocked:
+            profile.badges.contains('10K Centurion') ||
+            profile.totalDistanceKm >= 10.0,
         criteria: 'Complete 10.0 cumulative km on foot.',
         reward: '+300 XP, Centurion Cyber Wings',
       ),
@@ -252,7 +273,9 @@ class ChallengesShelf extends StatelessWidget {
         name: 'Streak Flame',
         subtitle: '7-day conquest streak',
         icon: Icons.local_fire_department_rounded,
-        unlocked: profile.badges.contains('Streak Flame') || profile.currentStreak >= 7,
+        unlocked:
+            profile.badges.contains('Streak Flame') ||
+            profile.currentStreak >= 7,
         criteria: 'Maintain run momentum for 7 continuous days.',
         reward: '+150 XP, Burning Flame Avatar Aura',
       ),
@@ -274,10 +297,14 @@ class ChallengesShelf extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: b.unlocked ? AppColors.gold.withValues(alpha: 0.08) : AppColors.surface,
+        color: b.unlocked
+            ? AppColors.gold.withValues(alpha: 0.08)
+            : AppColors.surface,
         borderRadius: AppSpacing.br16,
         border: Border.all(
-          color: b.unlocked ? AppColors.gold.withValues(alpha: 0.3) : AppColors.border,
+          color: b.unlocked
+              ? AppColors.gold.withValues(alpha: 0.3)
+              : AppColors.border,
           width: 1.0,
         ),
       ),
@@ -305,10 +332,14 @@ class ChallengesShelf extends StatelessWidget {
                   height: 40,
                   width: 40,
                   decoration: BoxDecoration(
-                    color: b.unlocked ? AppColors.gold.withValues(alpha: 0.16) : AppColors.surface2,
+                    color: b.unlocked
+                        ? AppColors.gold.withValues(alpha: 0.16)
+                        : AppColors.surface2,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: b.unlocked ? AppColors.gold.withValues(alpha: 0.4) : AppColors.borderSubtle,
+                      color: b.unlocked
+                          ? AppColors.gold.withValues(alpha: 0.4)
+                          : AppColors.borderSubtle,
                     ),
                   ),
                   child: Icon(
@@ -328,7 +359,9 @@ class ChallengesShelf extends StatelessWidget {
                         style: AppText.bodyMedium.copyWith(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: b.unlocked ? AppColors.textPrimary : AppColors.disabled,
+                          color: b.unlocked
+                              ? AppColors.textPrimary
+                              : AppColors.disabled,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -337,7 +370,9 @@ class ChallengesShelf extends StatelessWidget {
                       Text(
                         b.unlocked ? 'Unlocked 🏆' : 'Locked',
                         style: AppText.labelSmall.copyWith(
-                          color: b.unlocked ? AppColors.gold : AppColors.textMuted,
+                          color: b.unlocked
+                              ? AppColors.gold
+                              : AppColors.textMuted,
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                         ),

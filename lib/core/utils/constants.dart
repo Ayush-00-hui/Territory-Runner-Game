@@ -2,7 +2,8 @@ class AppConstants {
   static const String mapApiKey = String.fromEnvironment('MAPBOX_API_KEY');
 
   // Tile provider default values
-  static const String defaultOsmUrlTemplate = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+  static const String defaultOsmUrlTemplate =
+      'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   static const String defaultOsmAttribution = '© OpenStreetMap contributors';
 
   /// Tile URL template configurable via --dart-define=TILE_URL_TEMPLATE=...
@@ -35,6 +36,6 @@ class AppConstants {
   static const int minTileCacheDays = 7;
 
   /// User-Agent identifying application and repository contact per OSM policy.
-  static const String userAgent = 'com.territoryrunner.app/1.0.0 (https://github.com/Ayush-00-hui/Territory-Runner-Game)';
+  static const String userAgent =
+      'com.territoryrunner.app/1.0.0 (https://github.com/Ayush-00-hui/Territory-Runner-Game)';
 }
-

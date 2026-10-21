@@ -106,7 +106,9 @@ class RunnerProfile {
       totalDistanceKm: (json['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
       xp: json['xp'] as int? ?? 0,
       level: json['level'] as int? ?? 1,
-      badges: (json['badges'] as List?)?.map((e) => e.toString()).toList() ?? const ['Cyber Rookie'],
+      badges:
+          (json['badges'] as List?)?.map((e) => e.toString()).toList() ??
+          const ['Cyber Rookie'],
       totalHexesClaimed: json['totalHexesClaimed'] as int? ?? 0,
       currentStreak: json['currentStreak'] as int? ?? 1,
     );

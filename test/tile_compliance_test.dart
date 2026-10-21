@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
@@ -14,26 +15,38 @@ void main() {
 
   group('Tile Compliance & OpenStreetMap Policy', () {
     test('AppConstants defaults enforce OSM compliance', () {
-      expect(AppConstants.tileUrlTemplate, equals('https://tile.openstreetmap.org/{z}/{x}/{y}.png'));
-      expect(AppConstants.tileAttribution, equals('© OpenStreetMap contributors'));
+      expect(
+        AppConstants.tileUrlTemplate,
+        equals('https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+      );
+      expect(
+        AppConstants.tileAttribution,
+        equals('© OpenStreetMap contributors'),
+      );
       expect(AppConstants.allowTilePrefetch, isFalse);
       expect(AppConstants.minTileCacheDays, equals(7));
       expect(AppConstants.userAgent, contains('com.territoryrunner.app'));
-      expect(AppConstants.userAgent, contains('https://github.com/Ayush-00-hui/Territory-Runner-Game'));
-    });
-
-    test('TileCacheService rejects preDownloadArea when prefetch is disabled', () async {
-      final service = TileCacheService();
-      expect(AppConstants.allowTilePrefetch, isFalse);
-
-      final downloaded = await service.preDownloadArea(
-        center: const LatLng(51.5074, -0.1278),
-        radiusKm: 1.0,
+      expect(
+        AppConstants.userAgent,
+        contains('https://github.com/Ayush-00-hui/Territory-Runner-Game'),
       );
-
-      // Must return 0 immediately without performing network requests
-      expect(downloaded, equals(0));
     });
+
+    test(
+      'TileCacheService rejects preDownloadArea when prefetch is disabled',
+      () async {
+        final service = TileCacheService();
+        expect(AppConstants.allowTilePrefetch, isFalse);
+
+        final downloaded = await service.preDownloadArea(
+          center: const LatLng(51.5074, -0.1278),
+          radiusKm: 1.0,
+        );
+
+        // Must return 0 immediately without performing network requests
+        expect(downloaded, equals(0));
+      },
+    );
 
     test('TileCacheService saves, reads count/size, and clears cache in test directory', () async {
       final tempDir = await Directory.systemTemp.createTemp('tile_cache_test_');
@@ -69,55 +82,64 @@ void main() {
 
       expect(layer.urlTemplate, equals(AppConstants.tileUrlTemplate));
       expect(layer.tileProvider, isA<OfflineFirstTileProvider>());
-      expect(layer.tileProvider.headers['User-Agent'], equals(AppConstants.userAgent));
-    });
-
-    testWidgets('OfflineMapsSheet renders policy compliance notice when prefetch is disabled', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: OfflineMapsSheet(),
-            ),
-          ),
-        ),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
-
-      // Check header and storage card
-      expect(find.text('Offline Map Storage'), findsOneWidget);
-      expect(find.text('Cached Tiles'), findsOneWidget);
-      expect(find.text('Disk Occupied'), findsOneWidget);
-
-      // Check policy notice
       expect(
-        find.text('OSM Tile Usage Policy viewing cache active. Viewed sectors remain cached offline.'),
-        findsOneWidget,
+        layer.tileProvider.headers['User-Agent'],
+        equals(AppConstants.userAgent),
       );
-
-      // Bulk download button should NOT be present when prefetch is disabled
-      expect(find.text('Pre-Cache Current Sector (1.2 km)'), findsNothing);
-
-      // Purge cache button should be present
-      expect(find.text('Purge Offline Map Cache'), findsOneWidget);
     });
 
-    testWidgets('Map Data & Attribution tile renders AppConstants.tileAttribution', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: ProfileOptionTile(
-              icon: Icons.map_outlined,
-              title: 'Map Data & Attribution',
-              subtitle: AppConstants.tileAttribution,
-              onTap: null,
+    testWidgets(
+      'OfflineMapsSheet renders policy compliance notice when prefetch is disabled',
+      (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(child: OfflineMapsSheet()),
             ),
           ),
-        ),
-      );
-      expect(find.text('Map Data & Attribution'), findsOneWidget);
-      expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
-    });
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // Check header and storage card
+        expect(find.text('Offline Map Storage'), findsOneWidget);
+        expect(find.text('Cached Tiles'), findsOneWidget);
+        expect(find.text('Disk Occupied'), findsOneWidget);
+
+        // Check policy notice
+        expect(
+          find.text(
+            'OSM Tile Usage Policy viewing cache active. Viewed sectors remain cached offline.',
+          ),
+          findsOneWidget,
+        );
+
+        // Bulk download button should NOT be present when prefetch is disabled
+        expect(find.text('Pre-Cache Current Sector (1.2 km)'), findsNothing);
+
+        // Purge cache button should be present
+        expect(find.text('Purge Offline Map Cache'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Map Data & Attribution tile renders AppConstants.tileAttribution',
+      (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: ProfileOptionTile(
+                icon: Icons.map_outlined,
+                title: 'Map Data & Attribution',
+                subtitle: AppConstants.tileAttribution,
+                onTap: null,
+              ),
+            ),
+          ),
+        );
+        expect(find.text('Map Data & Attribution'), findsOneWidget);
+        expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
+      },
+    );
   });
 }

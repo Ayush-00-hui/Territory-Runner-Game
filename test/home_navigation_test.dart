@@ -8,7 +8,9 @@ import 'package:territory_runner/models/territory.dart';
 
 void main() {
   group('Phase 1 Home & Navigation Widgets', () {
-    testWidgets('HomeHeader renders callsign, level, and streak', (tester) async {
+    testWidgets('HomeHeader renders callsign, level, and streak', (
+      tester,
+    ) async {
       final profile = RunnerProfile(
         id: 'test_athlete',
         username: 'VortexRunner',
@@ -23,9 +25,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: HomeHeader(profile: profile),
-          ),
+          home: Scaffold(body: HomeHeader(profile: profile)),
         ),
       );
 
@@ -35,7 +35,9 @@ void main() {
       expect(find.text('7'), findsOneWidget);
     });
 
-    testWidgets('WeeklySummaryCard renders distance, territory, and runs', (tester) async {
+    testWidgets('WeeklySummaryCard renders distance, territory, and runs', (
+      tester,
+    ) async {
       final profile = RunnerProfile(
         id: 'test_athlete',
         username: 'ApexStrider',
@@ -60,10 +62,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: WeeklySummaryCard(
-              profile: profile,
-              territories: territories,
-            ),
+            body: WeeklySummaryCard(profile: profile, territories: territories),
           ),
         ),
       );
@@ -75,14 +74,14 @@ void main() {
       expect(find.text('Runs'), findsOneWidget);
     });
 
-    testWidgets('QuickLaunchHero triggers onStartRun callback when tapped', (tester) async {
+    testWidgets('QuickLaunchHero triggers onStartRun callback when tapped', (
+      tester,
+    ) async {
       bool runStarted = false;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: QuickLaunchHero(
-              onStartRun: () => runStarted = true,
-            ),
+            body: QuickLaunchHero(onStartRun: () => runStarted = true),
           ),
         ),
       );

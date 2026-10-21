@@ -68,64 +68,70 @@ void main() {
       expect(core.points.length, equals(3));
     });
 
-    test('buildMarkerLayer creates tactical callsign and speed pill for rival', () {
-      final rival = RunnerPresenceEvent(
-        userId: 'rival_blaze',
-        username: 'BlazeRunner',
-        faction: 'Iron Legion',
-        position: const LatLng(51.509, -0.129),
-        speed: 3.0, // 10.8 km/h
-        heading: 90.0,
-        updatedAt: DateTime.now(),
-      );
+    test(
+      'buildMarkerLayer creates tactical callsign and speed pill for rival',
+      () {
+        final rival = RunnerPresenceEvent(
+          userId: 'rival_blaze',
+          username: 'BlazeRunner',
+          faction: 'Iron Legion',
+          position: const LatLng(51.509, -0.129),
+          speed: 3.0, // 10.8 km/h
+          heading: 90.0,
+          updatedAt: DateTime.now(),
+        );
 
-      final markerLayer = MapLayers.buildMarkerLayer(
-        currentLocation: const LatLng(51.505, -0.125),
-        activeRivalRunners: {'rival_blaze': rival},
-      );
+        final markerLayer = MapLayers.buildMarkerLayer(
+          currentLocation: const LatLng(51.505, -0.125),
+          activeRivalRunners: {'rival_blaze': rival},
+        );
 
-      // 1 user pin + 1 rival marker
-      expect(markerLayer.markers.length, equals(2));
+        // 1 user pin + 1 rival marker
+        expect(markerLayer.markers.length, equals(2));
 
-      final rivalMarker = markerLayer.markers[1];
-      expect(rivalMarker.point, equals(const LatLng(51.509, -0.129)));
-      expect(rivalMarker.width, equals(110));
-      expect(rivalMarker.height, equals(62));
-    });
+        final rivalMarker = markerLayer.markers[1];
+        expect(rivalMarker.point, equals(const LatLng(51.509, -0.129)));
+        expect(rivalMarker.width, equals(110));
+        expect(rivalMarker.height, equals(62));
+      },
+    );
 
-    testWidgets('Rival marker renders username and speed badge on widget canvas', (tester) async {
-      final rival = RunnerPresenceEvent(
-        userId: 'rival_blaze',
-        username: 'BlazeRunner',
-        faction: 'Cyber Vanguard',
-        position: const LatLng(51.509, -0.129),
-        speed: 3.5, // 12.6 km/h
-        heading: 45.0,
-        updatedAt: DateTime.now(),
-      );
+    testWidgets(
+      'Rival marker renders username and speed badge on widget canvas',
+      (tester) async {
+        final rival = RunnerPresenceEvent(
+          userId: 'rival_blaze',
+          username: 'BlazeRunner',
+          faction: 'Cyber Vanguard',
+          position: const LatLng(51.509, -0.129),
+          speed: 3.5, // 12.6 km/h
+          heading: 45.0,
+          updatedAt: DateTime.now(),
+        );
 
-      final markerLayer = MapLayers.buildMarkerLayer(
-        currentLocation: null,
-        activeRivalRunners: {'rival_blaze': rival},
-      );
+        final markerLayer = MapLayers.buildMarkerLayer(
+          currentLocation: null,
+          activeRivalRunners: {'rival_blaze': rival},
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: FlutterMap(
-              options: const MapOptions(
-                initialCenter: LatLng(51.509, -0.129),
-                initialZoom: 16.0,
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: FlutterMap(
+                options: const MapOptions(
+                  initialCenter: LatLng(51.509, -0.129),
+                  initialZoom: 16.0,
+                ),
+                children: [markerLayer],
               ),
-              children: [markerLayer],
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.text('BlazeRunner'), findsOneWidget);
-      expect(find.text('⚡12.6'), findsOneWidget);
-    });
+        expect(find.text('BlazeRunner'), findsOneWidget);
+        expect(find.text('⚡12.6'), findsOneWidget);
+      },
+    );
 
     test('Rival breadcrumb capping respects max 40 points window', () {
       final breadcrumbs = <String, List<LatLng>>{};

@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -24,99 +25,108 @@ void main() {
       SafetyService().resetForTesting();
     });
 
-    test('PrivacyZoneService adds, filters and toggles exclusion zones', () async {
-      final service = PrivacyZoneService();
-      await service.loadZones();
+    test(
+      'PrivacyZoneService adds, filters and toggles exclusion zones',
+      () async {
+        final service = PrivacyZoneService();
+        await service.loadZones();
 
-      final homeZone = PrivacyZone(
-        id: 'zone_home_1',
-        name: 'Home Sanctuary',
-        latitude: 37.7749,
-        longitude: -122.4194,
-        radiusMeters: 200.0,
-        isEnabled: true,
-        createdAt: DateTime.now(),
-      );
-
-      await service.addZone(homeZone);
-      expect(service.zones.length, equals(1));
-      expect(service.zones.first.name, equals('Home Sanctuary'));
-
-      // Coordinate directly at home (0m distance)
-      final atHome = const LatLng(37.7749, -122.4194);
-      expect(service.isPointInPrivacyZone(atHome), isTrue);
-
-      // Coordinate 500m away (outside 200m radius)
-      final outside = const LatLng(37.7795, -122.4194);
-      expect(service.isPointInPrivacyZone(outside), isFalse);
-
-      // Filter GPS track: points inside zone are redacted
-      final track = [
-        const LatLng(37.7700, -122.4194), // outside
-        const LatLng(37.7749, -122.4194), // inside home (must be removed)
-        const LatLng(37.7800, -122.4194), // outside
-      ];
-      final filteredTrack = service.filterGpsTrack(track);
-      expect(filteredTrack.length, equals(2));
-      expect(filteredTrack.contains(atHome), isFalse);
-
-      // Toggle zone off
-      await service.toggleZone('zone_home_1', false);
-      expect(service.isPointInPrivacyZone(atHome), isFalse);
-
-      // Delete zone
-      await service.deleteZone('zone_home_1');
-      expect(service.zones.isEmpty, isTrue);
-    });
-
-    test('ExportService generates valid GPX 1.1 XML and redacts privacy points', () async {
-      final privacyService = PrivacyZoneService();
-      await privacyService.loadZones();
-
-      // Configure a privacy zone
-      await privacyService.addZone(
-        PrivacyZone(
-          id: 'pz_1',
-          name: 'Home',
+        final homeZone = PrivacyZone(
+          id: 'zone_home_1',
+          name: 'Home Sanctuary',
           latitude: 37.7749,
           longitude: -122.4194,
           radiusMeters: 200.0,
           isEnabled: true,
           createdAt: DateTime.now(),
-        ),
-      );
+        );
 
-      final exportService = ExportService();
-      final track = [
-        const LatLng(37.7700, -122.4194),
-        const LatLng(37.7749, -122.4194), // inside privacy zone
-        const LatLng(37.7800, -122.4194),
-      ];
+        await service.addZone(homeZone);
+        expect(service.zones.length, equals(1));
+        expect(service.zones.first.name, equals('Home Sanctuary'));
 
-      final gpx = exportService.generateGpx(
-        runTitle: 'Golden Gate Sprint',
-        coordinates: track,
-        timestamps: [
-          DateTime.utc(2026, 10, 17, 8, 0, 0),
-          DateTime.utc(2026, 10, 17, 8, 5, 0),
-          DateTime.utc(2026, 10, 17, 8, 10, 0),
-        ],
-        applyPrivacyRedaction: true,
-      );
+        // Coordinate directly at home (0m distance)
+        final atHome = const LatLng(37.7749, -122.4194);
+        expect(service.isPointInPrivacyZone(atHome), isTrue);
 
-      // Verify GPX structure
-      expect(gpx.contains('<?xml version="1.0" encoding="UTF-8"?>'), isTrue);
-      expect(gpx.contains('<gpx version="1.1" creator="Territory Runner"'), isTrue);
-      expect(gpx.contains('<name>Golden Gate Sprint</name>'), isTrue);
-      expect(gpx.contains('<type>running</type>'), isTrue);
+        // Coordinate 500m away (outside 200m radius)
+        final outside = const LatLng(37.7795, -122.4194);
+        expect(service.isPointInPrivacyZone(outside), isFalse);
 
-      // Verify privacy point was redacted
-      expect(gpx.contains('lat="37.7749000"'), isFalse);
-      expect(gpx.contains('lat="37.7700000"'), isTrue);
-      expect(gpx.contains('lat="37.7800000"'), isTrue);
+        // Filter GPS track: points inside zone are redacted
+        final track = [
+          const LatLng(37.7700, -122.4194), // outside
+          const LatLng(37.7749, -122.4194), // inside home (must be removed)
+          const LatLng(37.7800, -122.4194), // outside
+        ];
+        final filteredTrack = service.filterGpsTrack(track);
+        expect(filteredTrack.length, equals(2));
+        expect(filteredTrack.contains(atHome), isFalse);
 
-      await privacyService.deleteZone('pz_1');
-    });
+        // Toggle zone off
+        await service.toggleZone('zone_home_1', false);
+        expect(service.isPointInPrivacyZone(atHome), isFalse);
+
+        // Delete zone
+        await service.deleteZone('zone_home_1');
+        expect(service.zones.isEmpty, isTrue);
+      },
+    );
+
+    test(
+      'ExportService generates valid GPX 1.1 XML and redacts privacy points',
+      () async {
+        final privacyService = PrivacyZoneService();
+        await privacyService.loadZones();
+
+        // Configure a privacy zone
+        await privacyService.addZone(
+          PrivacyZone(
+            id: 'pz_1',
+            name: 'Home',
+            latitude: 37.7749,
+            longitude: -122.4194,
+            radiusMeters: 200.0,
+            isEnabled: true,
+            createdAt: DateTime.now(),
+          ),
+        );
+
+        final exportService = ExportService();
+        final track = [
+          const LatLng(37.7700, -122.4194),
+          const LatLng(37.7749, -122.4194), // inside privacy zone
+          const LatLng(37.7800, -122.4194),
+        ];
+
+        final gpx = exportService.generateGpx(
+          runTitle: 'Golden Gate Sprint',
+          coordinates: track,
+          timestamps: [
+            DateTime.utc(2026, 10, 17, 8, 0, 0),
+            DateTime.utc(2026, 10, 17, 8, 5, 0),
+            DateTime.utc(2026, 10, 17, 8, 10, 0),
+          ],
+          applyPrivacyRedaction: true,
+        );
+
+        // Verify GPX structure
+        expect(gpx.contains('<?xml version="1.0" encoding="UTF-8"?>'), isTrue);
+        expect(
+          gpx.contains('<gpx version="1.1" creator="Territory Runner"'),
+          isTrue,
+        );
+        expect(gpx.contains('<name>Golden Gate Sprint</name>'), isTrue);
+        expect(gpx.contains('<type>running</type>'), isTrue);
+
+        // Verify privacy point was redacted
+        expect(gpx.contains('lat="37.7749000"'), isFalse);
+        expect(gpx.contains('lat="37.7700000"'), isTrue);
+        expect(gpx.contains('lat="37.7800000"'), isTrue);
+
+        await privacyService.deleteZone('pz_1');
+      },
+    );
 
     test('ExportService generates valid GeoJSON FeatureCollection', () async {
       final exportService = ExportService();
@@ -136,10 +146,7 @@ void main() {
 
       final geoJsonStr = exportService.generateGeoJson(
         territories: [territory],
-        runTrack: const [
-          LatLng(37.77, -122.41),
-          LatLng(37.78, -122.41),
-        ],
+        runTrack: const [LatLng(37.77, -122.41), LatLng(37.78, -122.41)],
         applyPrivacyRedaction: false,
       );
 
@@ -163,27 +170,35 @@ void main() {
       expect(lineFeature['properties']['type'], equals('run_track'));
     });
 
-    test('SafetyService persists emergency contact details and formats SMS URL', () async {
-      final safetyService = SafetyService();
-      await safetyService.saveSettings(
-        name: 'Alex Rivera',
-        phone: '+14155552671',
-        message: 'EMERGENCY: Need assistance on running route.',
-      );
+    test(
+      'SafetyService persists emergency contact details and formats SMS URL',
+      () async {
+        final safetyService = SafetyService();
+        await safetyService.saveSettings(
+          name: 'Alex Rivera',
+          phone: '+14155552671',
+          message: 'EMERGENCY: Need assistance on running route.',
+        );
 
-      expect(safetyService.contactName, equals('Alex Rivera'));
-      expect(safetyService.contactPhone, equals('+14155552671'));
-      expect(safetyService.hasContactConfigured, isTrue);
-    });
+        expect(safetyService.contactName, equals('Alex Rivera'));
+        expect(safetyService.contactPhone, equals('+14155552671'));
+        expect(safetyService.hasContactConfigured, isTrue);
+      },
+    );
 
-    test('SafetyService tracks siren state and handles stop gracefully', () async {
-      final safetyService = SafetyService();
-      expect(safetyService.isSirenPlaying, isFalse);
-      await safetyService.stopTacticalSiren();
-      expect(safetyService.isSirenPlaying, isFalse);
-    });
+    test(
+      'SafetyService tracks siren state and handles stop gracefully',
+      () async {
+        final safetyService = SafetyService();
+        expect(safetyService.isSirenPlaying, isFalse);
+        await safetyService.stopTacticalSiren();
+        expect(safetyService.isSirenPlaying, isFalse);
+      },
+    );
 
-    testWidgets('PrivacyZonesSheet renders list and allows adding a zone', (tester) async {
+    testWidgets('PrivacyZonesSheet renders list and allows adding a zone', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({});
 
       await tester.pumpWidget(
@@ -223,46 +238,55 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Home Base'), findsOneWidget);
-      expect(find.text('200m exclusion radius • Lat: 37.775, Lng: -122.419'), findsOneWidget);
-    });
-
-    testWidgets('SosBeaconSheet renders emergency dialer, contact SMS, and siren toggle', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: Builder(
-            builder: (context) {
-              return Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () => showSosBeaconSheet(context, const LatLng(37.7749, -122.4194)),
-                    child: const Text('OPEN SOS'),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
+      expect(
+        find.text('200m exclusion radius • Lat: 37.775, Lng: -122.419'),
+        findsOneWidget,
       );
-
-      await tester.tap(find.text('OPEN SOS'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Tactical SOS beacon'), findsOneWidget);
-      expect(find.text('GPS: 37.774900, -122.419400'), findsOneWidget);
-      expect(find.text('Call emergency (911)'), findsOneWidget);
-      expect(find.text('Set up emergency contact SMS'), findsOneWidget);
-      expect(find.text('Share GPS'), findsOneWidget);
-      expect(find.text('Siren alarm'), findsOneWidget);
-
-      // Tap siren button to toggle
-      await tester.tap(find.text('Siren alarm'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Stop siren'), findsOneWidget);
     });
+
+    testWidgets(
+      'SosBeaconSheet renders emergency dialer, contact SMS, and siren toggle',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      onPressed: () => showSosBeaconSheet(
+                        context,
+                        const LatLng(37.7749, -122.4194),
+                      ),
+                      child: const Text('OPEN SOS'),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('OPEN SOS'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tactical SOS beacon'), findsOneWidget);
+        expect(find.text('GPS: 37.774900, -122.419400'), findsOneWidget);
+        expect(find.text('Call emergency (911)'), findsOneWidget);
+        expect(find.text('Set up emergency contact SMS'), findsOneWidget);
+        expect(find.text('Share GPS'), findsOneWidget);
+        expect(find.text('Siren alarm'), findsOneWidget);
+
+        // Tap siren button to toggle
+        await tester.tap(find.text('Siren alarm'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Stop siren'), findsOneWidget);
+      },
+    );
 
     test('PrivacyZoneService limits max zones to 5 and enforces StateError on 6th zone', () async {
       final service = PrivacyZoneService();
@@ -336,7 +360,9 @@ void main() {
       );
 
       // filterTerritories must never redact or filter out territory polygons (they remain sovereign arena)
-      final filteredTerritories = service.filterTerritories([territoryInsideZone]);
+      final filteredTerritories = service.filterTerritories([
+        territoryInsideZone,
+      ]);
       expect(filteredTerritories.length, equals(1));
       expect(filteredTerritories.first.id, equals('poly_inside_zone'));
 
@@ -345,7 +371,10 @@ void main() {
       final geoJsonStr = exportService.generateGeoJson(
         territories: [territoryInsideZone],
         runTrack: const [
-          LatLng(37.7749, -122.4194), // inside privacy zone -> should be redacted from run track
+          LatLng(
+            37.7749,
+            -122.4194,
+          ), // inside privacy zone -> should be redacted from run track
           LatLng(37.7850, -122.4194), // outside privacy zone -> kept
         ],
         applyPrivacyRedaction: true,
@@ -355,12 +384,17 @@ void main() {
       final features = decoded['features'] as List<dynamic>;
 
       // Territory feature is intact
-      final polyFeature = features.firstWhere((f) => f['geometry']['type'] == 'Polygon');
+      final polyFeature = features.firstWhere(
+        (f) => f['geometry']['type'] == 'Polygon',
+      );
       expect(polyFeature['properties']['id'], equals('poly_inside_zone'));
 
       // Run track feature has the inside point redacted
-      final lineFeature = features.firstWhere((f) => f['geometry']['type'] == 'LineString');
-      final lineCoords = lineFeature['geometry']['coordinates'] as List<dynamic>;
+      final lineFeature = features.firstWhere(
+        (f) => f['geometry']['type'] == 'LineString',
+      );
+      final lineCoords =
+          lineFeature['geometry']['coordinates'] as List<dynamic>;
       expect(lineCoords.length, equals(1));
       expect(lineCoords[0][1], closeTo(37.7850, 0.0001));
     });
@@ -383,7 +417,8 @@ void main() {
       // Test successful sync with mock client
       bool putCalled = false;
       final successHttp = MockClient((request) async {
-        if (request.method == 'PUT' && request.url.path == '/v1/me/privacy-zones') {
+        if (request.method == 'PUT' &&
+            request.url.path == '/v1/me/privacy-zones') {
           putCalled = true;
           final body = jsonDecode(request.body) as Map<String, dynamic>;
           expect(body['privacy_zones'], isNotEmpty);
@@ -392,7 +427,10 @@ void main() {
         return http.Response('Not Found', 404);
       });
 
-      final successApi = ApiClient(httpClient: successHttp, baseUrl: 'http://mock');
+      final successApi = ApiClient(
+        httpClient: successHttp,
+        baseUrl: 'http://mock',
+      );
       final syncResult = await service.syncWithServer(successApi);
       expect(syncResult, isTrue);
       expect(putCalled, isTrue);
@@ -401,7 +439,10 @@ void main() {
       final offlineHttp = MockClient((request) async {
         throw http.ClientException('Network unreachable');
       });
-      final offlineApi = ApiClient(httpClient: offlineHttp, baseUrl: 'http://offline');
+      final offlineApi = ApiClient(
+        httpClient: offlineHttp,
+        baseUrl: 'http://offline',
+      );
       final offlineResult = await service.syncWithServer(offlineApi);
       expect(offlineResult, isFalse);
       // Local state is preserved
@@ -409,39 +450,43 @@ void main() {
       expect(service.zones.first.id, equals('sync_z1'));
     });
 
-    test('PrivacyZoneService fetchAndSyncFromServer loads zones from backend', () async {
-      final service = PrivacyZoneService();
-      await service.loadZones();
+    test(
+      'PrivacyZoneService fetchAndSyncFromServer loads zones from backend',
+      () async {
+        final service = PrivacyZoneService();
+        await service.loadZones();
 
-      final mockHttp = MockClient((request) async {
-        if (request.method == 'GET' && request.url.path == '/v1/me/privacy-zones') {
-          return http.Response(
-            jsonEncode({
-              'privacy_zones': [
-                {
-                  'id': 'remote_z1',
-                  'name': 'Remote Haven',
-                  'latitude': 37.7800,
-                  'longitude': -122.4200,
-                  'radius_meters': 300.0,
-                  'is_enabled': true,
-                  'created_at': '2026-10-17T12:00:00Z',
-                }
-              ]
-            }),
-            200,
-          );
-        }
-        return http.Response('Error', 500);
-      });
+        final mockHttp = MockClient((request) async {
+          if (request.method == 'GET' &&
+              request.url.path == '/v1/me/privacy-zones') {
+            return http.Response(
+              jsonEncode({
+                'privacy_zones': [
+                  {
+                    'id': 'remote_z1',
+                    'name': 'Remote Haven',
+                    'latitude': 37.7800,
+                    'longitude': -122.4200,
+                    'radius_meters': 300.0,
+                    'is_enabled': true,
+                    'created_at': '2026-10-17T12:00:00Z',
+                  },
+                ],
+              }),
+              200,
+            );
+          }
+          return http.Response('Error', 500);
+        });
 
-      final mockApi = ApiClient(httpClient: mockHttp, baseUrl: 'http://mock');
-      await service.fetchAndSyncFromServer(mockApi);
+        final mockApi = ApiClient(httpClient: mockHttp, baseUrl: 'http://mock');
+        await service.fetchAndSyncFromServer(mockApi);
 
-      expect(service.zones.length, equals(1));
-      expect(service.zones.first.id, equals('remote_z1'));
-      expect(service.zones.first.name, equals('Remote Haven'));
-      expect(service.zones.first.radiusMeters, equals(300.0));
-    });
+        expect(service.zones.length, equals(1));
+        expect(service.zones.first.id, equals('remote_z1'));
+        expect(service.zones.first.name, equals('Remote Haven'));
+        expect(service.zones.first.radiusMeters, equals(300.0));
+      },
+    );
   });
 }

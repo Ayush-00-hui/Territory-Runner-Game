@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../services/user_settings_service.dart';
 import '../../../ui/ui.dart';
 
@@ -19,10 +20,12 @@ class LiveVisibilitySheetContent extends StatefulWidget {
   const LiveVisibilitySheetContent({super.key});
 
   @override
-  State<LiveVisibilitySheetContent> createState() => _LiveVisibilitySheetContentState();
+  State<LiveVisibilitySheetContent> createState() =>
+      _LiveVisibilitySheetContentState();
 }
 
-class _LiveVisibilitySheetContentState extends State<LiveVisibilitySheetContent> {
+class _LiveVisibilitySheetContentState
+    extends State<LiveVisibilitySheetContent> {
   final UserSettingsService _settings = UserSettingsService();
 
   @override
@@ -56,18 +59,27 @@ class _LiveVisibilitySheetContentState extends State<LiveVisibilitySheetContent>
               ),
               Row(
                 children: [
-                  const Icon(Icons.visibility_outlined, color: AppColors.accent, size: 22),
+                  const Icon(
+                    Icons.visibility_outlined,
+                    color: AppColors.accent,
+                    size: 22,
+                  ),
                   const SizedBox(width: AppSpacing.s8),
                   Text(
                     'Live Location Visibility',
-                    style: AppText.titleMedium.copyWith(color: AppColors.textPrimary),
+                    style: AppText.titleMedium.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.s8),
               Text(
                 'Control who can observe your live position on the map while you are running. Location sharing is server-enforced and defaults to off.',
-                style: AppText.bodySmall.copyWith(color: AppColors.textMuted, height: 1.4),
+                style: AppText.bodySmall.copyWith(
+                  color: AppColors.textMuted,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: AppSpacing.s16),
               _buildOption(
@@ -87,8 +99,7 @@ class _LiveVisibilitySheetContentState extends State<LiveVisibilitySheetContent>
               _buildOption(
                 visibility: LiveVisibility.nearby,
                 title: 'Nearby runners',
-                description:
-                    'Nearby runners can see your position coarsened to ~25 m with a 5-second delay. Speed and heading are never shared.',
+                description: 'Nearby runners can see your position coarsened to ~25 m with a 5-second delay. Speed and heading are never shared.',
                 isSelected: current == LiveVisibility.nearby,
               ),
             ],
@@ -112,14 +123,19 @@ class _LiveVisibilitySheetContentState extends State<LiveVisibilitySheetContent>
       },
       borderRadius: AppRadius.br8,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s12, horizontal: AppSpacing.s4),
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.s12,
+          horizontal: AppSpacing.s4,
+        ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.only(top: 2),
               child: Icon(
-                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                isSelected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_off,
                 color: isSelected ? AppColors.accent : AppColors.textMuted,
                 size: 20,
               ),
@@ -132,7 +148,9 @@ class _LiveVisibilitySheetContentState extends State<LiveVisibilitySheetContent>
                   Text(
                     title,
                     style: AppText.bodyMedium.copyWith(
-                      color: isSelected ? AppColors.accent : AppColors.textPrimary,
+                      color: isSelected
+                          ? AppColors.accent
+                          : AppColors.textPrimary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

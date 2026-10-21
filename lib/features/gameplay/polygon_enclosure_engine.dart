@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:latlong2/latlong.dart';
+
 import '../../core/logging/app_logger.dart';
 import '../../models/activity_type.dart';
 
@@ -30,15 +32,21 @@ class PolygonEnclosureEngine {
   LatLng? _lastReceivedPosition;
   DateTime? _lastReceivedTimestamp;
   String? _lastInvalidReason;
-  
+
   // Enclosure configuration parameters
-  final double minClosureDistanceMeters; // Proximity threshold to trigger closed loop
+  final double
+  minClosureDistanceMeters; // Proximity threshold to trigger closed loop
   final int minPointsRequired; // Minimum path nodes for a valid loop
   final double? _minLoopDistanceMetersOverride; // Explicit override
   final double? _minLoopAreaSqMetersOverride; // Explicit override
   final double maxLoopAreaSqMeters; // Maximum single-loop area (matches Go server: 5,000,000 m²)
   final double? maxSpeedKmhOutlier; // Explicit outlier ceiling override
-  final double maxSignalGapSeconds; // Max gap before track segmentation (default: 15s)
+  final double
+  maxSignalGapSeconds; // Max gap before track segmentation (default: 15s)
+  final double
+  maxPauseDisplacementMeters; // Max straight-line displacement across gap to treat as pause (default: 50m)
+  final double
+  maxPauseDurationSeconds; // Max pause duration before reset (default: 600s / 10 min)
   ExerciseActivityType? activityType; // Activity mode calibrating thresholds
 
   /// Rejection messages matching Go backend's errors.
@@ -59,9 +67,11 @@ class PolygonEnclosureEngine {
     this.maxLoopAreaSqMeters = 5000000.0,
     this.maxSpeedKmhOutlier,
     this.maxSignalGapSeconds = 15.0,
+    this.maxPauseDisplacementMeters = 50.0,
+    this.maxPauseDurationSeconds = 600.0,
     this.activityType,
-  })  : _minLoopDistanceMetersOverride = minLoopDistanceMeters,
-        _minLoopAreaSqMetersOverride = minLoopAreaSqMeters;
+  }) : _minLoopDistanceMetersOverride = minLoopDistanceMeters,
+       _minLoopAreaSqMetersOverride = minLoopAreaSqMeters;
 
   void setActivityType(ExerciseActivityType type) {
     activityType = type;
@@ -83,7 +93,8 @@ class PolygonEnclosureEngine {
   /// Authoritative perimeter threshold (meters) for the active exercise modality:
   /// Walking: 40m, Running: 60m, Cycling: 150m
   double get effectiveMinLoopDistanceMeters {
-    if (_minLoopDistanceMetersOverride != null) return _minLoopDistanceMetersOverride;
+    if (_minLoopDistanceMetersOverride != null)
+      return _minLoopDistanceMetersOverride;
     switch (activityType ?? ExerciseActivityType.running) {
       case ExerciseActivityType.walking:
         return 40.0;
@@ -97,7 +108,8 @@ class PolygonEnclosureEngine {
   /// Authoritative loop area threshold (m²) for the active exercise modality:
   /// Walking: 100 m², Running: 200 m², Cycling: 1000 m²
   double get effectiveMinLoopAreaSqMeters {
-    if (_minLoopAreaSqMetersOverride != null) return _minLoopAreaSqMetersOverride;
+    if (_minLoopAreaSqMetersOverride != null)
+      return _minLoopAreaSqMetersOverride;
     switch (activityType ?? ExerciseActivityType.running) {
       case ExerciseActivityType.walking:
         return 100.0;
@@ -139,14 +151,20 @@ class PolygonEnclosureEngine {
 
     if (hasSelfIntersection(closedPoints)) {
       _lastInvalidReason = 'Loop crossed itself — try again';
-      AppLogger.debug('Manual seal rejected: $_lastInvalidReason', tag: 'PolygonEnclosureEngine');
+      AppLogger.debug(
+        'Manual seal rejected: $_lastInvalidReason',
+        tag: 'PolygonEnclosureEngine',
+      );
       return null;
     }
 
     final loopLength = _calculatePathDistance(closedPoints);
     if (loopLength < effectiveMinLoopDistanceMeters) {
       _lastInvalidReason = loopPerimeterTooSmallReason;
-      AppLogger.debug('Manual seal rejected: $_lastInvalidReason', tag: 'PolygonEnclosureEngine');
+      AppLogger.debug(
+        'Manual seal rejected: $_lastInvalidReason',
+        tag: 'PolygonEnclosureEngine',
+      );
       return null;
     }
 
@@ -155,13 +173,19 @@ class PolygonEnclosureEngine {
 
     if (areaSqM < effectiveMinLoopAreaSqMeters) {
       _lastInvalidReason = loopAreaTooSmallReason;
-      AppLogger.debug('Manual seal rejected: $_lastInvalidReason', tag: 'PolygonEnclosureEngine');
+      AppLogger.debug(
+        'Manual seal rejected: $_lastInvalidReason',
+        tag: 'PolygonEnclosureEngine',
+      );
       return null;
     }
 
     if (areaSqM > maxLoopAreaSqMeters) {
       _lastInvalidReason = loopTooLargeReason;
-      AppLogger.debug('Manual seal rejected: $_lastInvalidReason', tag: 'PolygonEnclosureEngine');
+      AppLogger.debug(
+        'Manual seal rejected: $_lastInvalidReason',
+        tag: 'PolygonEnclosureEngine',
+      );
       return null;
     }
 
@@ -190,35 +214,57 @@ class PolygonEnclosureEngine {
   /// Ingests a new GPS position and checks for arbitrary polygon loop enclosure.
   /// Returns [EnclosedLoopEvent] if a valid loop was closed, or null otherwise.
   EnclosedLoopEvent? addPosition(LatLng position, [DateTime? timestamp]) {
+    _lastInvalidReason = null;
     final now = timestamp ?? DateTime.now();
 
     // 0. GPS Signal Gap Guard: Gaps > maxSignalGapSeconds (15s) segment the track.
-    // No interpolation across dropouts: reset buffer so no loop closes across the broken gap.
-    if (_timestamps.isNotEmpty) {
-      final double gapSec = (now.difference(_timestamps.last).inMilliseconds / 1000.0).abs();
+    // Displacement-aware: if gap > 15s but straight-line distance from last path point <= 50m,
+    // treat as a pause: keep the path, do not reset, do not count the gap as movement.
+    // Reset if displacement > 50m or gap > 10 minutes (600s).
+    if (_timestamps.isNotEmpty && _path.isNotEmpty) {
+      final double gapSec =
+          (now.difference(_timestamps.last).inMilliseconds / 1000.0).abs();
       if (gapSec > maxSignalGapSeconds) {
-        _lastInvalidReason = signalGapReason;
-        _path.clear();
-        _timestamps.clear();
-        _path.add(position);
-        _timestamps.add(now);
-        _lastReceivedPosition = position;
-        _lastReceivedTimestamp = now;
-        AppLogger.info('GPS signal interrupted (${gapSec.toStringAsFixed(1)}s gap) — path reset', tag: 'PolygonEnclosureEngine');
-        return null;
+        final double displacement = haversineDistanceMeters(
+          _path.last,
+          position,
+        );
+        if (gapSec > maxPauseDurationSeconds ||
+            displacement > maxPauseDisplacementMeters) {
+          _lastInvalidReason = signalGapReason;
+          _path.clear();
+          _timestamps.clear();
+          _path.add(position);
+          _timestamps.add(now);
+          _lastReceivedPosition = position;
+          _lastReceivedTimestamp = now;
+          AppLogger.info(
+            'GPS signal interrupted (${gapSec.toStringAsFixed(1)}s gap, ${displacement.toStringAsFixed(1)}m displacement) — path reset',
+            tag: 'PolygonEnclosureEngine',
+          );
+          return null;
+        }
       }
     }
 
     // 1. Discard satellite multipath outlier jumps against immediately preceding sample
     if (_lastReceivedTimestamp != null && _lastReceivedPosition != null) {
-      final double dtSec = (now.difference(_lastReceivedTimestamp!).inMilliseconds / 1000.0).abs();
+      final double dtSec =
+          (now.difference(_lastReceivedTimestamp!).inMilliseconds / 1000.0)
+              .abs();
       if (dtSec >= 0.5 && dtSec <= 5.0) {
-        final double stepDist = haversineDistanceMeters(_lastReceivedPosition!, position);
+        final double stepDist = haversineDistanceMeters(
+          _lastReceivedPosition!,
+          position,
+        );
         final double speedKmh = (stepDist / dtSec) * 3.6;
         if (speedKmh > effectiveMaxSpeedOutlier) {
           _lastReceivedPosition = position;
           _lastReceivedTimestamp = now;
-          AppLogger.debug('Jitter outlier rejected: ${speedKmh.toStringAsFixed(1)} km/h (ceiling: $effectiveMaxSpeedOutlier km/h)', tag: 'PolygonEnclosureEngine');
+          AppLogger.debug(
+            'Jitter outlier rejected: ${speedKmh.toStringAsFixed(1)} km/h (ceiling: $effectiveMaxSpeedOutlier km/h)',
+            tag: 'PolygonEnclosureEngine',
+          );
           return null;
         }
       }
@@ -265,7 +311,12 @@ class PolygonEnclosureEngine {
         final pEarly2 = _path[j + 1];
 
         if (doSegmentsIntersect(pEarly1, pEarly2, pLast1, pLast2)) {
-          final intersection = computeIntersectionPoint(pEarly1, pEarly2, pLast1, pLast2);
+          final intersection = computeIntersectionPoint(
+            pEarly1,
+            pEarly2,
+            pLast1,
+            pLast2,
+          );
           if (intersection != null) {
             final lassoPoints = <LatLng>[intersection];
             for (int k = j + 1; k < currentIndex; k++) {
@@ -274,9 +325,12 @@ class PolygonEnclosureEngine {
             lassoPoints.add(intersection);
 
             final loopLength = _calculatePathDistance(lassoPoints);
-            if (loopLength >= effectiveMinLoopDistanceMeters && !hasSelfIntersection(lassoPoints)) {
+            if (loopLength >= effectiveMinLoopDistanceMeters &&
+                !hasSelfIntersection(lassoPoints)) {
               final areaSqM = computeGeodesicShoelaceArea(lassoPoints);
-              if (areaSqM >= effectiveMinLoopAreaSqMeters && areaSqM <= maxLoopAreaSqMeters && areaSqM > maxLassoArea) {
+              if (areaSqM >= effectiveMinLoopAreaSqMeters &&
+                  areaSqM <= maxLoopAreaSqMeters &&
+                  areaSqM > maxLassoArea) {
                 maxLassoArea = areaSqM;
                 bestLassoJ = j;
                 bestLassoIntersection = intersection;
@@ -293,7 +347,9 @@ class PolygonEnclosureEngine {
         }
       }
 
-      if (bestLassoEvent != null && bestLassoJ != null && bestLassoIntersection != null) {
+      if (bestLassoEvent != null &&
+          bestLassoJ != null &&
+          bestLassoIntersection != null) {
         AppLogger.info(
           'Lasso loop closed at intersection! Points: ${bestLassoEvent.polygon.length}, Perimeter: ${bestLassoEvent.loopDistanceMeters.toStringAsFixed(1)}m, Area: ${bestLassoEvent.areaSqMeters.toStringAsFixed(1)}m²',
           tag: 'PolygonEnclosureEngine',
@@ -307,13 +363,22 @@ class PolygonEnclosureEngine {
           newTimestamps.add(_timestamps[k]);
         }
         newPath.add(bestLassoIntersection);
-        final dTotal = haversineDistanceMeters(_path[bestLassoJ], _path[bestLassoJ + 1]);
-        final dPart = haversineDistanceMeters(_path[bestLassoJ], bestLassoIntersection);
+        final dTotal = haversineDistanceMeters(
+          _path[bestLassoJ],
+          _path[bestLassoJ + 1],
+        );
+        final dPart = haversineDistanceMeters(
+          _path[bestLassoJ],
+          bestLassoIntersection,
+        );
         final fraction = dTotal > 1e-6 ? (dPart / dTotal).clamp(0.0, 1.0) : 0.0;
         final tEarly1 = _timestamps[bestLassoJ];
         final tEarly2 = _timestamps[bestLassoJ + 1];
-        final intMillis = tEarly1.millisecondsSinceEpoch +
-            ((tEarly2.millisecondsSinceEpoch - tEarly1.millisecondsSinceEpoch) * fraction).round();
+        final intMillis =
+            tEarly1.millisecondsSinceEpoch +
+            ((tEarly2.millisecondsSinceEpoch - tEarly1.millisecondsSinceEpoch) *
+                    fraction)
+                .round();
         newTimestamps.add(DateTime.fromMillisecondsSinceEpoch(intMillis));
 
         _path.clear();
@@ -337,7 +402,9 @@ class PolygonEnclosureEngine {
       final distance = haversineDistanceMeters(currentPos, candidatePoint);
 
       if (distance <= minClosureDistanceMeters) {
-        final loopPoints = List<LatLng>.from(_path.sublist(i, currentIndex + 1));
+        final loopPoints = List<LatLng>.from(
+          _path.sublist(i, currentIndex + 1),
+        );
         final loopLength = _calculatePathDistance(loopPoints);
 
         if (loopLength < effectiveMinLoopDistanceMeters) {
@@ -398,7 +465,12 @@ class PolygonEnclosureEngine {
 
   /// Computes the exact 2D planar intersection point of segments (p1->p2) and (p3->p4).
   /// Returns null if the segments are parallel or do not properly intersect.
-  static LatLng? computeIntersectionPoint(LatLng p1, LatLng p2, LatLng p3, LatLng p4) {
+  static LatLng? computeIntersectionPoint(
+    LatLng p1,
+    LatLng p2,
+    LatLng p3,
+    LatLng p4,
+  ) {
     final x1 = p1.longitude;
     final y1 = p1.latitude;
     final x2 = p2.longitude;
@@ -449,7 +521,8 @@ class PolygonEnclosureEngine {
       final p1 = polygon[i];
       final p2 = polygon[i + 1];
       for (int j = i + 2; j < n - 1; j++) {
-        if (i == 0 && j == n - 2) continue; // Ignore shared start-end vertex in closed ring
+        if (i == 0 && j == n - 2)
+          continue; // Ignore shared start-end vertex in closed ring
         final p3 = polygon[j];
         final p4 = polygon[j + 1];
         if (doSegmentsIntersect(p1, p2, p3, p4)) {
@@ -477,8 +550,12 @@ class PolygonEnclosureEngine {
     final double lat1 = p1.latitude * (math.pi / 180.0);
     final double lat2 = p2.latitude * (math.pi / 180.0);
 
-    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.sin(dLng / 2) * math.sin(dLng / 2) * math.cos(lat1) * math.cos(lat2);
+    final double a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.sin(dLng / 2) *
+            math.sin(dLng / 2) *
+            math.cos(lat1) *
+            math.cos(lat2);
     final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
     return earthRadius * c;
   }
@@ -515,7 +592,10 @@ class PolygonEnclosureEngine {
       final double latRad = p.latitude * (math.pi / 180.0);
       final double lngRad = p.longitude * (math.pi / 180.0);
 
-      final double x = earthRadius * (lngRad - originLng) * math.cos((latRad + originLat) / 2.0);
+      final double x =
+          earthRadius *
+          (lngRad - originLng) *
+          math.cos((latRad + originLat) / 2.0);
       final double y = earthRadius * (latRad - originLat);
 
       metricPoints.add(math.Point<double>(x, y));

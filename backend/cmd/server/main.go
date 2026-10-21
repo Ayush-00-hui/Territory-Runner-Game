@@ -29,7 +29,7 @@ func main() {
 			port = "8080"
 		}
 		client := &http.Client{Timeout: 3 * time.Second}
-		resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%s/readyz", port))
+		resp, err := client.Get(fmt.Sprintf("http://127.0.0.1:%s/healthz", port))
 		if err != nil || resp.StatusCode != http.StatusOK {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "healthcheck failed: %v\n", err)
@@ -99,6 +99,24 @@ func main() {
 	defer wsHub.Stop()
 
 	fcmNotifier := notify.NewFCMClient(dataStore, logger)
+
+	// Periodic territory decay worker (runs hourly to decay inactive territory strength at 15.0%/day)
+	decayCtx, cancelDecay := context.WithCancel(context.Background())
+	defer cancelDecay()
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-decayCtx.Done():
+				return
+			case <-ticker.C:
+				if err := dataStore.ApplyTerritoryDecay(decayCtx, 15.0); err != nil && !errors.Is(err, context.Canceled) {
+					logger.Warn("periodic territory decay encountered error", "error", err)
+				}
+			}
+		}
+	}()
 
 	apiHandler := api.NewAPI(dataStore, logger,
 		api.WithCoachService(coachSvc),

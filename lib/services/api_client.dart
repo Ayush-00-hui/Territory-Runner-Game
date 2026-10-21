@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+
 import '../core/logging/app_logger.dart';
 import '../models/duel.dart';
 import '../models/faction_standing.dart';
@@ -43,7 +45,8 @@ class ApiClient {
 
   static String get defaultBaseUrl {
     if (kIsWeb) return 'http://localhost:8080';
-    if (defaultTargetPlatform == TargetPlatform.android) return 'http://10.0.2.2:8080';
+    if (defaultTargetPlatform == TargetPlatform.android)
+      return 'http://10.0.2.2:8080';
     return 'http://localhost:8080';
   }
 
@@ -53,7 +56,10 @@ class ApiClient {
     String? baseUrl,
     int maxRetries = 3,
   }) {
-    if (httpClient != null || firebaseService != null || baseUrl != null || maxRetries != 3) {
+    if (httpClient != null ||
+        firebaseService != null ||
+        baseUrl != null ||
+        maxRetries != 3) {
       return ApiClient.custom(
         httpClient: httpClient,
         firebaseService: firebaseService,
@@ -69,21 +75,28 @@ class ApiClient {
     FirebaseService? firebaseService,
     String? baseUrl,
     this.maxRetries = 3,
-  })  : _httpClient = httpClient ?? http.Client(),
-        _firebaseService = firebaseService ?? FirebaseService(),
-        baseUrl = (baseUrl != null && baseUrl.isNotEmpty)
-            ? baseUrl
-            : const String.fromEnvironment('API_BASE_URL', defaultValue: '').isNotEmpty
-                ? const String.fromEnvironment('API_BASE_URL')
-                : defaultBaseUrl;
+  }) : _httpClient = httpClient ?? http.Client(),
+       _firebaseService = firebaseService ?? FirebaseService(),
+       baseUrl = (baseUrl != null && baseUrl.isNotEmpty)
+           ? baseUrl
+           : const String.fromEnvironment(
+               'API_BASE_URL',
+               defaultValue: '',
+             ).isNotEmpty
+           ? const String.fromEnvironment('API_BASE_URL')
+           : defaultBaseUrl;
 
   ApiClient._internal()
-      : _httpClient = http.Client(),
-        _firebaseService = FirebaseService(),
-        maxRetries = 3,
-        baseUrl = const String.fromEnvironment('API_BASE_URL', defaultValue: '').isNotEmpty
-            ? const String.fromEnvironment('API_BASE_URL')
-            : defaultBaseUrl;
+    : _httpClient = http.Client(),
+      _firebaseService = FirebaseService(),
+      maxRetries = 3,
+      baseUrl =
+          const String.fromEnvironment(
+            'API_BASE_URL',
+            defaultValue: '',
+          ).isNotEmpty
+          ? const String.fromEnvironment('API_BASE_URL')
+          : defaultBaseUrl;
 
   /// Builds standard headers including Firebase ID token or dev header
   Future<Map<String, String>> _buildHeaders() async {
@@ -101,7 +114,11 @@ class ApiClient {
         }
       }
     } catch (e) {
-      AppLogger.warning('Error fetching auth token: $e', tag: 'ApiClient', error: e);
+      AppLogger.warning(
+        'Error fetching auth token: $e',
+        tag: 'ApiClient',
+        error: e,
+      );
     }
 
     // Include dev user header for local Go testing in AUTH_MODE=dev
@@ -128,16 +145,26 @@ class ApiClient {
         final response = await requestFn().timeout(timeout);
         // Only retry on transient 5xx server errors
         if (response.statusCode >= 500 && attempts <= retries) {
-          AppLogger.warning('Server error ${response.statusCode}, retry $attempts/$retries', tag: 'ApiClient');
+          AppLogger.warning(
+            'Server error ${response.statusCode}, retry $attempts/$retries',
+            tag: 'ApiClient',
+          );
         } else {
           return response;
         }
       } on Exception catch (e) {
         if (attempts > retries) {
-          AppLogger.error('Request failed after $attempts attempts: $e', tag: 'ApiClient', error: e);
+          AppLogger.error(
+            'Request failed after $attempts attempts: $e',
+            tag: 'ApiClient',
+            error: e,
+          );
           rethrow;
         }
-        AppLogger.debug('Transient failure ($e), retrying $attempts/$retries in ${delay.inMilliseconds}ms', tag: 'ApiClient');
+        AppLogger.debug(
+          'Transient failure ($e), retrying $attempts/$retries in ${delay.inMilliseconds}ms',
+          tag: 'ApiClient',
+        );
       }
 
       // Exponential backoff with jitter
@@ -151,7 +178,9 @@ class ApiClient {
   Future<bool> checkHealth() async {
     try {
       final uri = Uri.parse('$baseUrl/healthz');
-      final res = await _httpClient.get(uri).timeout(const Duration(seconds: 4));
+      final res = await _httpClient
+          .get(uri)
+          .timeout(const Duration(seconds: 4));
       return res.statusCode == 200;
     } catch (_) {
       return false;
@@ -248,7 +277,9 @@ class ApiClient {
     required double maxLng,
     required double maxLat,
   }) async {
-    final uri = Uri.parse('$baseUrl/v1/territories?bbox=$minLng,$minLat,$maxLng,$maxLat');
+    final uri = Uri.parse(
+      '$baseUrl/v1/territories?bbox=$minLng,$minLat,$maxLng,$maxLat',
+    );
     final headers = await _buildHeaders();
 
     final response = await _executeWithRetry(
@@ -278,7 +309,12 @@ class ApiClient {
               final ringPoints = <LatLng>[];
               for (final pt in ring) {
                 if (pt is List && pt.length >= 2) {
-                  ringPoints.add(LatLng((pt[1] as num).toDouble(), (pt[0] as num).toDouble()));
+                  ringPoints.add(
+                    LatLng(
+                      (pt[1] as num).toDouble(),
+                      (pt[0] as num).toDouble(),
+                    ),
+                  );
                 }
               }
               if (ringPoints.isNotEmpty) {
@@ -291,15 +327,17 @@ class ApiClient {
         final isSelf = ownerId == _firebaseService.currentUserId;
         final color = isSelf ? AppColors.accent : AppColors.rival;
 
-        territories.add(Territory(
-          id: id,
-          ownerId: ownerId,
-          polygon: multiPolys.isNotEmpty ? multiPolys.first : [],
-          polygons: multiPolys,
-          areaSqMeters: areaSqm,
-          capturedAt: DateTime.now(),
-          color: color,
-        ));
+        territories.add(
+          Territory(
+            id: id,
+            ownerId: ownerId,
+            polygon: multiPolys.isNotEmpty ? multiPolys.first : [],
+            polygons: multiPolys,
+            areaSqMeters: areaSqm,
+            capturedAt: DateTime.now(),
+            color: color,
+          ),
+        );
       }
       return territories;
     }
@@ -313,12 +351,16 @@ class ApiClient {
   }
 
   /// Fetches global leaderboard ranked by total captured territory area (GET /v1/leaderboard)
-  Future<List<LeaderboardEntry>> getLeaderboard({int limit = 50, String? activityType}) async {
+  Future<List<LeaderboardEntry>> getLeaderboard({
+    int limit = 50,
+    String? activityType,
+  }) async {
     final queryParams = <String, String>{'limit': limit.toString()};
     if (activityType != null && activityType.isNotEmpty) {
       queryParams['activity_type'] = activityType;
     }
-    final uri = Uri.parse('$baseUrl/v1/leaderboard').replace(queryParameters: queryParams);
+    final uri = Uri.parse('$baseUrl/v1/leaderboard')
+        .replace(queryParameters: queryParams);
     final headers = await _buildHeaders();
 
     final response = await _executeWithRetry(
@@ -328,7 +370,9 @@ class ApiClient {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final list = data['leaderboard'] as List<dynamic>? ?? [];
-      return list.map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => LeaderboardEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
 
     final errorBody = _parseError(response.body);
@@ -477,7 +521,9 @@ class ApiClient {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      return data.map((e) => FriendUser.fromJson(e as Map<String, dynamic>)).toList();
+      return data
+          .map((e) => FriendUser.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
   }
@@ -493,7 +539,9 @@ class ApiClient {
 
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
-      return data.map((e) => FriendRequestDetail.fromJson(e as Map<String, dynamic>)).toList();
+      return data
+          .map((e) => FriendRequestDetail.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
   }
@@ -605,7 +653,9 @@ class ApiClient {
     if (response.statusCode == 200) {
       final Map<String, dynamic> data = jsonDecode(response.body);
       final list = data['privacy_zones'] as List<dynamic>? ?? [];
-      return list.map((e) => PrivacyZone.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => PrivacyZone.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     return [];
   }
@@ -641,7 +691,9 @@ class ApiClient {
   }
 
   /// Updates user settings (PUT /v1/me/settings)
-  Future<Map<String, dynamic>?> updateSettings(Map<String, dynamic> settings) async {
+  Future<Map<String, dynamic>?> updateSettings(
+    Map<String, dynamic> settings,
+  ) async {
     final uri = Uri.parse('$baseUrl/v1/me/settings');
     final headers = await _buildHeaders();
     final body = jsonEncode(settings);
@@ -656,4 +708,3 @@ class ApiClient {
     return null;
   }
 }
-

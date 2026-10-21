@@ -9,11 +9,21 @@ class AppMotion {
   AppMotion._();
 
   // Durations (150 - 250 ms)
-  static const Duration fast = Duration(milliseconds: 150);      // Micro-interactions, press states, chips
-  static const Duration standard = Duration(milliseconds: 220);  // Tab switches, card reveals, HUD slide
-  static const Duration sheet = Duration(milliseconds: 250);     // Modal bottom sheets & dialogs
-  static const Duration countUp = Duration(milliseconds: 500);   // Tabular number roll-ups
-  static const Duration capture = Duration(milliseconds: 600);   // Single polygon fill celebration
+  static const Duration fast = Duration(
+    milliseconds: 150,
+  ); // Micro-interactions, press states, chips
+  static const Duration standard = Duration(
+    milliseconds: 220,
+  ); // Tab switches, card reveals, HUD slide
+  static const Duration sheet = Duration(
+    milliseconds: 250,
+  ); // Modal bottom sheets & dialogs
+  static const Duration countUp = Duration(
+    milliseconds: 500,
+  ); // Tabular number roll-ups
+  static const Duration capture = Duration(
+    milliseconds: 600,
+  ); // Single polygon fill celebration
 
   // Interactive Press State
   static const double pressScale = 0.97;
@@ -28,7 +38,8 @@ class AppMotion {
   }
 
   /// Ergonomic alias for [shouldReduceMotion]
-  static bool isReducedMotion(BuildContext context) => shouldReduceMotion(context);
+  static bool isReducedMotion(BuildContext context) =>
+      shouldReduceMotion(context);
 
   /// Scales duration to zero if reduced motion is enabled
   static Duration duration(BuildContext context, Duration baseDuration) {

@@ -831,6 +831,184 @@ ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	(cached)
 ```
 *(All 244 unit, widget, and integration tests passing)*
 
+---
+
+## 13. Critical Hardening: WebSocket Deadlock Resolution, Friends Cache Invalidation & Web Compilation
+
+### 13.1 Go WebSocket Hub & Friends Concurrency Verification
+- **Command**: `go test -v ./internal/ws/...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+=== RUN   TestWebSocket_SubprotocolEchoed
+--- PASS: TestWebSocket_SubprotocolEchoed (0.00s)
+=== RUN   TestWebSocket_OffSendsNothing
+--- PASS: TestWebSocket_OffSendsNothing (0.30s)
+=== RUN   TestWebSocket_FriendsOnly
+--- PASS: TestWebSocket_FriendsOnly (0.25s)
+=== RUN   TestWebSocket_NearbyCellDeliveryAndNonNeighbourExclusion
+--- PASS: TestWebSocket_NearbyCellDeliveryAndNonNeighbourExclusion (0.30s)
+=== RUN   TestWebSocket_PrivacyZoneSuppression
+--- PASS: TestWebSocket_PrivacyZoneSuppression (2.40s)
+=== RUN   TestWebSocket_RateLimit
+--- PASS: TestWebSocket_RateLimit (0.30s)
+=== RUN   TestWebSocket_SlowClientDropped
+--- PASS: TestWebSocket_SlowClientDropped (0.07s)
+=== RUN   TestWebSocket_MaxConnectionsPerUser
+--- PASS: TestWebSocket_MaxConnectionsPerUser (0.05s)
+=== RUN   TestWebSocketTargetedTerritoryCarvedAlert
+--- PASS: TestWebSocketTargetedTerritoryCarvedAlert (0.05s)
+=== RUN   TestWebSocket_FriendsDeadlockOnCacheMiss
+--- PASS: TestWebSocket_FriendsDeadlockOnCacheMiss (0.05s)
+=== RUN   TestWebSocket_FriendsDelivery_AddAndRemoveFriendDynamics
+--- PASS: TestWebSocket_FriendsDelivery_AddAndRemoveFriendDynamics (0.35s)
+=== RUN   TestWebSocket_FriendsDelivery_ConcurrentStress
+--- PASS: TestWebSocket_FriendsDelivery_ConcurrentStress (0.00s)
+PASS
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	4.943s
+```
+
+### 13.2 Entire Backend Suite Regression Run
+- **Command**: `go test ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	1.197s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	(cached)
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	1.026s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.430s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	4.935s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	(cached)
+```
+
+### 13.3 Shared Golden Test Fixtures (Dart Parity)
+- **Command**: `flutter test test/golden_fixtures_test.dart`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+00:00 +0: Shared Golden Test Fixtures Tests (Dart Engine) golden_valid_loop.json passes and area matches within 0.5% tolerance
+00:00 +1: Shared Golden Test Fixtures Tests (Dart Engine) golden_figure_8.json is rejected for self-intersection
+00:00 +2: Shared Golden Test Fixtures Tests (Dart Engine) golden_tiny_loop.json is rejected for insufficient perimeter
+00:00 +3: Shared Golden Test Fixtures Tests (Dart Engine) golden_lasso_loop.json closes lasso loop at stem crossing within 0.5% tolerance
+00:00 +4: Shared Golden Test Fixtures Tests (Dart Engine) golden_loop_with_crossing.json preserves valid loop despite subsequent path crossing
+00:00 +5: Shared Golden Test Fixtures Tests (Dart Engine) golden_two_loops.json detects both valid loops and sums area within 0.5% tolerance
+00:00 +6: Shared Golden Test Fixtures Tests (Dart Engine) golden_cycling_valid_loop.json is rejected in running mode but accepted in cycling mode
+00:00 +7: Shared Golden Test Fixtures Tests (Dart Engine) golden_walking_valid_loop.json closes successfully under walking mode
+00:00 +8: Shared Golden Test Fixtures Tests (Dart Engine) golden_broken_gap.json is segmented and rejected due to >15s GPS gap
+00:00 +9: Shared Golden Test Fixtures Tests (Dart Engine) golden_running_tiny_loop.json is valid in walking mode but rejected in running mode
+00:00 +10: Shared Golden Test Fixtures Tests (Dart Engine) golden_cycling_tiny_loop.json is valid in running mode but rejected in cycling mode
+00:00 +11: All tests passed!
+```
+
+### 13.4 Flutter Web Production Build Verification
+- **Command**: `flutter build web`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Compiling lib\main.dart for the Web...                             67.8s
+√ Built build\web
+```
+
+---
+
+## 14. Critical Hardening & Bug Fixes Verification (`v7-critical-fixes`)
+
+### 14.1 Flutter Package Resolution
+- **Command**: `flutter pub get`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Resolving dependencies...
+Got dependencies!
+50 packages have newer versions incompatible with dependency constraints.
+```
+
+### 14.2 Flutter Static Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `1` (0 errors, 6 informational style warnings)
+- **Output**:
+```text
+Analyzing territory_runner...
+
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\gameplay\polygon_enclosure_engine.dart:97:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\gameplay\polygon_enclosure_engine.dart:112:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\gameplay\polygon_enclosure_engine.dart:525:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\map\map_screen.dart:2006:19 - curly_braces_in_flow_control_structures
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._estimatedDurationMinutes') to initialize the field - lib\features\routing\route_service.dart:31:8 - prefer_initializing_formals
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\services\api_client.dart:49:7 - curly_braces_in_flow_control_structures
+
+6 issues found. (ran in 8.7s)
+```
+
+### 14.3 Full Flutter Test Suite
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Count**: 249 tests passed
+- **Output**:
+```text
+00:15 +249: All tests passed!
+```
+
+### 14.4 Go Static Analysis
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+(Clean exit; 0 errors, 0 warnings)
+```
+
+### 14.5 Full Backend Test Suite (No Caching)
+- **Command**: `go test -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Count**: 130 tests passed across 11 packages
+- **Output**:
+```text
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/cmd/server	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	0.669s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	1.406s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	1.393s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	1.099s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config	0.425s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	0.469s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	0.426s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	1.193s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.428s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	5.956s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	0.474s
+```
+
+### 14.6 Shared Golden Test Fixtures (Dart & Go Parity)
+- **Dart Fixture Runner**: `flutter test test/golden_fixtures_test.dart` $\rightarrow$ 14 golden fixtures passed
+- **Go Fixture Runner**: `go test -v -run "TestGolden" ./internal/geo` $\rightarrow$ 14 golden fixtures passed
+- **New Displacement-Aware Fixtures Verified**:
+  - `golden_pause_resume.json`: 30s gap with 6.9m displacement (stationary pause) $\rightarrow$ Loop preserved and closed successfully.
+  - `golden_gap_with_jump.json`: 30s gap with 97.0m displacement (>50m jump) $\rightarrow$ Path segmented and reset.
+  - `golden_very_long_gap.json`: 640s gap (>10 minutes) with 6.9m displacement $\rightarrow$ Path segmented and reset.
+
+### 14.7 Items Not Run Locally
+- **Go Race Detection (`go test -race ./...`)**:
+  - *Status*: NOT RUN locally.
+  - *Reason*: Host is Windows 11 without a C compiler (`gcc`/`clang` not installed in PATH).
+  - *CI Execution*: Executes in Linux environment via GitHub Actions CI (`.github/workflows/ci.yml`).
+- **Live Docker PostGIS Migration Tests**:
+  - *Status*: NOT RUN locally.
+  - *Reason*: Docker daemon is inactive on the local Windows host.
+  - *CI Execution*: Executes against ephemeral PostGIS services in Linux CI.
+
+
 
 
 

@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+
 import '../../../models/territory.dart';
 import '../../../ui/ui.dart';
 import 'run_share_card_modal.dart';
@@ -29,7 +31,20 @@ class HistoryRunCard extends StatelessWidget {
     } else if (diff.inDays <= 1) {
       return 'Yesterday';
     } else {
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
     }
   }
@@ -71,117 +86,147 @@ class HistoryRunCard extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.s16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Run dossier',
-                    style: AppText.headingSmall.copyWith(
-                      color: AppColors.textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.divider,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  Text(
-                    _formatDate(territory.capturedAt),
-                    style: AppText.bodySmall.copyWith(color: AppColors.textMuted),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.s16),
-
-              // Large Map Preview
-              Container(
-                height: 180,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: AppSpacing.br20,
-                  border: Border.all(color: AppColors.borderSubtle),
                 ),
-                child: ClipRRect(
-                  borderRadius: AppSpacing.br20,
-                  child: CustomPaint(
-                    painter: _HistoryPolygonPainter(points: territory.polygon),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppSpacing.s16),
-
-              // Metric details
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.s16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: AppSpacing.br16,
-                  border: Border.all(color: AppColors.borderSubtle),
-                ),
-                child: Column(
+                const SizedBox(height: AppSpacing.s16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _metricRow('Claimed territory', areaDisplay),
-                    const Divider(color: AppColors.borderSubtle, height: 16),
-                    _metricRow('Estimated distance', '${estimatedKm.toStringAsFixed(2)} km'),
-                    const Divider(color: AppColors.borderSubtle, height: 16),
-                    _metricRow('Polygon coordinates', '${territory.polygon.length} GPS points'),
-                    const Divider(color: AppColors.borderSubtle, height: 16),
-                    _metricRow('Verification', territory.isPendingReview ? 'Pending Review' : 'Verified Sovereign ✓'),
+                    Text(
+                      'Run dossier',
+                      style: AppText.headingSmall.copyWith(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      _formatDate(territory.capturedAt),
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
                   ],
                 ),
-              ),
+                const SizedBox(height: AppSpacing.s16),
 
-              const SizedBox(height: AppSpacing.s20),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.accent,
-                        side: const BorderSide(color: AppColors.accent, width: 1.5),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
+                // Large Map Preview
+                Container(
+                  height: 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: AppSpacing.br20,
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: AppSpacing.br20,
+                    child: CustomPaint(
+                      painter: _HistoryPolygonPainter(
+                        points: territory.polygon,
                       ),
-                      icon: const Icon(Icons.share_rounded, size: 18),
-                      label: const Text('Share run', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        RunShareCardModal.show(
-                          context: context,
-                          distanceKm: estimatedKm,
-                          durationSeconds: (estimatedKm * 330).round(), // Realistic pace proxy
-                          areaSqMeters: territory.areaSqMeters,
-                          points: territory.polygon,
-                          callsign: callsign,
-                          faction: faction,
-                          capturedAt: territory.capturedAt,
-                        );
-                      },
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.s12),
-                  Expanded(
-                    child: PrimaryButton(
-                      label: 'Done',
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
+                ),
+
+                const SizedBox(height: AppSpacing.s16),
+
+                // Metric details
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.s16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: AppSpacing.br16,
+                    border: Border.all(color: AppColors.borderSubtle),
                   ),
-                ],
-              ),
-            ],
+                  child: Column(
+                    children: [
+                      _metricRow('Claimed territory', areaDisplay),
+                      const Divider(color: AppColors.borderSubtle, height: 16),
+                      _metricRow(
+                        'Estimated distance',
+                        '${estimatedKm.toStringAsFixed(2)} km',
+                      ),
+                      const Divider(color: AppColors.borderSubtle, height: 16),
+                      _metricRow(
+                        'Polygon coordinates',
+                        '${territory.polygon.length} GPS points',
+                      ),
+                      const Divider(color: AppColors.borderSubtle, height: 16),
+                      _metricRow(
+                        'Verification',
+                        territory.isPendingReview
+                            ? 'Pending Review'
+                            : 'Verified Sovereign ✓',
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: AppSpacing.s20),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.accent,
+                          side: const BorderSide(
+                            color: AppColors.accent,
+                            width: 1.5,
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppSpacing.br16,
+                          ),
+                        ),
+                        icon: const Icon(Icons.share_rounded, size: 18),
+                        label: const Text(
+                          'Share run',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          RunShareCardModal.show(
+                            context: context,
+                            distanceKm: estimatedKm,
+                            durationSeconds: (estimatedKm * 330)
+                                .round(), // Realistic pace proxy
+                            areaSqMeters: territory.areaSqMeters,
+                            points: territory.polygon,
+                            callsign: callsign,
+                            faction: faction,
+                            capturedAt: territory.capturedAt,
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s12),
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'Done',
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    },
+        );
+      },
     );
   }
 
@@ -189,7 +234,13 @@ class HistoryRunCard extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 11)),
+        Text(
+          label,
+          style: AppText.label.copyWith(
+            color: AppColors.textMuted,
+            fontSize: 11,
+          ),
+        ),
         Text(
           value,
           style: AppText.bodyBold.copyWith(
@@ -245,7 +296,9 @@ class HistoryRunCard extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: AppSpacing.br14,
                     child: CustomPaint(
-                      painter: _HistoryPolygonPainter(points: territory.polygon),
+                      painter: _HistoryPolygonPainter(
+                        points: territory.polygon,
+                      ),
                     ),
                   ),
                 ),
@@ -287,11 +340,16 @@ class HistoryRunCard extends StatelessWidget {
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.accent.withValues(alpha: 0.12),
                               borderRadius: AppSpacing.br8,
-                              border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
+                              border: Border.all(
+                                color: AppColors.accent.withValues(alpha: 0.25),
+                              ),
                             ),
                             child: Text(
                               '+$areaDisplay claimed',
@@ -299,7 +357,9 @@ class HistoryRunCard extends StatelessWidget {
                                 color: AppColors.accent,
                                 fontSize: 9.5,
                                 fontWeight: FontWeight.w700,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ),
@@ -308,7 +368,9 @@ class HistoryRunCard extends StatelessWidget {
                             style: AppText.bodySmall.copyWith(
                               color: AppColors.textSecondary,
                               fontSize: 11,
-                              fontFeatures: const [FontFeature.tabularFigures()],
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                         ],
@@ -359,8 +421,16 @@ class _HistoryPolygonPainter extends CustomPainter {
       final p = Paint()
         ..color = AppColors.borderSubtle
         ..strokeWidth = 1.0;
-      canvas.drawLine(Offset(0, size.height / 2), Offset(size.width, size.height / 2), p);
-      canvas.drawLine(Offset(size.width / 2, 0), Offset(size.width / 2, size.height), p);
+      canvas.drawLine(
+        Offset(0, size.height / 2),
+        Offset(size.width, size.height / 2),
+        p,
+      );
+      canvas.drawLine(
+        Offset(size.width / 2, 0),
+        Offset(size.width / 2, size.height),
+        p,
+      );
       return;
     }
 
@@ -387,7 +457,8 @@ class _HistoryPolygonPainter extends CustomPainter {
     for (int i = 0; i < points.length; i++) {
       final p = points[i];
       final double x = padding + ((p.longitude - minLng) / lngSpan) * usableW;
-      final double y = padding + (1.0 - ((p.latitude - minLat) / latSpan)) * usableH;
+      final double y =
+          padding + (1.0 - ((p.latitude - minLat) / latSpan)) * usableH;
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -412,7 +483,8 @@ class _HistoryPolygonPainter extends CustomPainter {
     if (points.isNotEmpty) {
       final p0 = points.first;
       final double x0 = padding + ((p0.longitude - minLng) / lngSpan) * usableW;
-      final double y0 = padding + (1.0 - ((p0.latitude - minLat) / latSpan)) * usableH;
+      final double y0 =
+          padding + (1.0 - ((p0.latitude - minLat) / latSpan)) * usableH;
 
       final dotBorder = Paint()
         ..color = AppColors.bgDeep

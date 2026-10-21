@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
 
 class HomeHeader extends StatelessWidget {
   final RunnerProfile profile;
 
-  const HomeHeader({
-    super.key,
-    required this.profile,
-  });
+  const HomeHeader({super.key, required this.profile});
 
   Color _factionColor(String faction) {
     if (faction.contains('Solar')) return AppColors.warning;
@@ -58,10 +56,7 @@ class HomeHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                _greeting(),
-                style: AppText.labelSmall,
-              ),
+              Text(_greeting(), style: AppText.labelSmall),
               const SizedBox(height: AppSpacing.s2),
               Text(
                 callsign,
@@ -74,11 +69,17 @@ class HomeHeader extends StatelessWidget {
                 children: [
                   // Level capsule
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surface2,
                       borderRadius: AppRadius.br8,
-                      border: Border.all(color: AppColors.borderSubtle, width: 1.0),
+                      border: Border.all(
+                        color: AppColors.borderSubtle,
+                        width: 1.0,
+                      ),
                     ),
                     child: Text(
                       'Level ${profile.level}',
@@ -94,11 +95,16 @@ class HomeHeader extends StatelessWidget {
                   if (profile.faction.isNotEmpty)
                     Flexible(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: factionColor.withValues(alpha: 0.12),
                           borderRadius: AppRadius.br8,
-                          border: Border.all(color: factionColor.withValues(alpha: 0.3)),
+                          border: Border.all(
+                            color: factionColor.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Text(
                           profile.faction,
@@ -122,7 +128,10 @@ class HomeHeader extends StatelessWidget {
 
         // Streak badge with amber flame
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s10,
+            vertical: AppSpacing.s6,
+          ),
           decoration: BoxDecoration(
             color: AppColors.surface2,
             borderRadius: AppRadius.brFull,
@@ -139,9 +148,7 @@ class HomeHeader extends StatelessWidget {
               const SizedBox(width: AppSpacing.s4),
               Text(
                 '${profile.currentStreak}',
-                style: AppText.labelLarge.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppText.labelLarge.copyWith(fontWeight: FontWeight.w700),
               ),
             ],
           ),

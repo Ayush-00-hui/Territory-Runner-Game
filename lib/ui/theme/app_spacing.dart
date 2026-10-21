@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'app_colors.dart';
 
 /// Territory Runner Design System: Spacing Scale (4/8/12/16/24/32)
@@ -26,17 +27,36 @@ class AppSpacing {
   static const double s14 = 14.0;
 
   // Borders (1px hairlines)
-  static final Border cardBorder = Border.all(color: AppColors.border, width: 1.0);
-  static final Border cardBorderSubtle = Border.all(color: AppColors.borderSubtle, width: 1.0);
-  static final Border accentBorder = Border.all(color: AppColors.accent, width: 1.2);
-  static final Border rivalBorder = Border.all(color: AppColors.rival, width: 1.2);
-  static final Border warningBorder = Border.all(color: AppColors.warning, width: 1.2);
+  static final Border cardBorder = Border.all(
+    color: AppColors.border,
+    width: 1.0,
+  );
+  static final Border cardBorderSubtle = Border.all(
+    color: AppColors.borderSubtle,
+    width: 1.0,
+  );
+  static final Border accentBorder = Border.all(
+    color: AppColors.accent,
+    width: 1.2,
+  );
+  static final Border rivalBorder = Border.all(
+    color: AppColors.rival,
+    width: 1.2,
+  );
+  static final Border warningBorder = Border.all(
+    color: AppColors.warning,
+    width: 1.2,
+  );
 
   // Deprecated glow & shadow aliases remapped to neutral elevations (No colored shadows!)
   static List<BoxShadow> get cardShadow => const [];
   static List<BoxShadow> get hudShadow => AppElevation.floating;
   static List<BoxShadow> get subtleElevation => const [];
-  static List<BoxShadow> neonGlow(Color color, {double blur = 8.0, double spread = 0.0}) => const [];
+  static List<BoxShadow> neonGlow(
+    Color color, {
+    double blur = 8.0,
+    double spread = 0.0,
+  }) => const [];
 
   // Squircle radii tokens
   static const Radius r8 = AppRadius.r8;

@@ -990,14 +990,47 @@ func (a *API) HandleRespondFriendRequest(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := a.store.RespondFriendRequest(r.Context(), id, uid, req.Action); err != nil {
+	f, err := a.store.RespondFriendRequest(r.Context(), id, uid, req.Action)
+	if err != nil {
 		writeError(w, http.StatusBadRequest, "RESPOND_ERROR", err.Error())
 		return
+	}
+
+	if a.wsHub != nil && f != nil {
+		a.wsHub.InvalidateFriends(f.RequesterID, f.AddresseeID)
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{
 		"status": "ok",
 		"action": req.Action,
+	})
+}
+
+// HandleRemoveFriend handles DELETE /v1/friends/{friendID}.
+func (a *API) HandleRemoveFriend(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	friendID := chi.URLParam(r, "friendID")
+	if friendID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing friend ID")
+		return
+	}
+
+	if err := a.store.RemoveFriend(r.Context(), uid, friendID); err != nil {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", err.Error())
+		return
+	}
+
+	if a.wsHub != nil {
+		a.wsHub.InvalidateFriends(uid, friendID)
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{
+		"status": "removed",
 	})
 }
 

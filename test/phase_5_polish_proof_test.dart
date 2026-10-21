@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:territory_runner/ui/ui.dart';
@@ -29,18 +30,44 @@ void main() {
       final infoContrastBg = contrastRatio(AppColors.info, bgDeep);
       final warningContrastBg = contrastRatio(AppColors.warning, bgDeep);
       final rivalContrastBg = contrastRatio(AppColors.rival, bgDeep);
-      final textPrimaryContrastBg = contrastRatio(AppColors.textPrimary, bgDeep);
+      final textPrimaryContrastBg = contrastRatio(
+        AppColors.textPrimary,
+        bgDeep,
+      );
 
       // Verify WCAG AA Large (>3.0) and Normal (>4.5) minimum requirements
-      expect(accentContrastBg, greaterThan(5.0), reason: 'Accent must exceed WCAG AA (4.5)');
-      expect(infoContrastBg, greaterThan(4.5), reason: 'Info violet must exceed WCAG AA (4.5)');
-      expect(warningContrastBg, greaterThan(7.0), reason: 'Warning amber must exceed WCAG AAA (7.0)');
-      expect(rivalContrastBg, greaterThan(4.5), reason: 'Rival blue must exceed WCAG AA (4.5)');
-      expect(textPrimaryContrastBg, greaterThan(10.0), reason: 'Primary text on deep bg is ultra crisp');
+      expect(
+        accentContrastBg,
+        greaterThan(5.0),
+        reason: 'Accent must exceed WCAG AA (4.5)',
+      );
+      expect(
+        infoContrastBg,
+        greaterThan(4.5),
+        reason: 'Info violet must exceed WCAG AA (4.5)',
+      );
+      expect(
+        warningContrastBg,
+        greaterThan(7.0),
+        reason: 'Warning amber must exceed WCAG AAA (7.0)',
+      );
+      expect(
+        rivalContrastBg,
+        greaterThan(4.5),
+        reason: 'Rival blue must exceed WCAG AA (4.5)',
+      );
+      expect(
+        textPrimaryContrastBg,
+        greaterThan(10.0),
+        reason: 'Primary text on deep bg is ultra crisp',
+      );
 
       // Check contrast against surface cards
       final accentContrastSurface = contrastRatio(AppColors.accent, surface);
-      final textPrimaryContrastSurface = contrastRatio(AppColors.textPrimary, surface);
+      final textPrimaryContrastSurface = contrastRatio(
+        AppColors.textPrimary,
+        surface,
+      );
       expect(accentContrastSurface, greaterThan(5.0));
       expect(textPrimaryContrastSurface, greaterThan(8.0));
     });
@@ -56,9 +83,18 @@ void main() {
       expect(statDisplay.fontFamily, 'Inter');
 
       // Verify tabular figures font feature is applied
-      expect(statLarge.fontFeatures, contains(const FontFeature.tabularFigures()));
-      expect(statMedium.fontFeatures, contains(const FontFeature.tabularFigures()));
-      expect(statDisplay.fontFeatures, contains(const FontFeature.tabularFigures()));
+      expect(
+        statLarge.fontFeatures,
+        contains(const FontFeature.tabularFigures()),
+      );
+      expect(
+        statMedium.fontFeatures,
+        contains(const FontFeature.tabularFigures()),
+      );
+      expect(
+        statDisplay.fontFeatures,
+        contains(const FontFeature.tabularFigures()),
+      );
 
       // Body typography uses clean sans-serif Inter
       expect(AppText.bodyMedium.fontFamily, 'Inter');
@@ -74,12 +110,23 @@ void main() {
 
       for (final fontPath in requiredFonts) {
         final file = File(fontPath);
-        expect(file.existsSync(), isTrue, reason: 'Font file $fontPath must exist locally for 100% offline runners');
-        expect(file.lengthSync(), greaterThan(10000), reason: 'Font file $fontPath must be a valid non-empty TTF');
+        expect(
+          file.existsSync(),
+          isTrue,
+          reason:
+              'Font file $fontPath must exist locally for 100% offline runners',
+        );
+        expect(
+          file.lengthSync(),
+          greaterThan(10000),
+          reason: 'Font file $fontPath must be a valid non-empty TTF',
+        );
       }
     });
 
-    testWidgets('AppMotion respects reduced motion user preferences', (tester) async {
+    testWidgets('AppMotion respects reduced motion user preferences', (
+      tester,
+    ) async {
       late BuildContext capturedContext;
 
       // Normal mode (animations enabled)
@@ -96,8 +143,14 @@ void main() {
       );
 
       expect(AppMotion.shouldReduceMotion(capturedContext), isFalse);
-      expect(AppMotion.duration(capturedContext, AppMotion.standard), AppMotion.standard);
-      expect(AppMotion.duration(capturedContext, AppMotion.capture), AppMotion.capture);
+      expect(
+        AppMotion.duration(capturedContext, AppMotion.standard),
+        AppMotion.standard,
+      );
+      expect(
+        AppMotion.duration(capturedContext, AppMotion.capture),
+        AppMotion.capture,
+      );
 
       // Accessibility mode (animations disabled / reduced motion)
       await tester.pumpWidget(
@@ -113,8 +166,14 @@ void main() {
       );
 
       expect(AppMotion.shouldReduceMotion(capturedContext), isTrue);
-      expect(AppMotion.duration(capturedContext, AppMotion.standard), Duration.zero);
-      expect(AppMotion.duration(capturedContext, AppMotion.capture), Duration.zero);
+      expect(
+        AppMotion.duration(capturedContext, AppMotion.standard),
+        Duration.zero,
+      );
+      expect(
+        AppMotion.duration(capturedContext, AppMotion.capture),
+        Duration.zero,
+      );
     });
 
     test('Spacing and Radii design scale consistency', () {

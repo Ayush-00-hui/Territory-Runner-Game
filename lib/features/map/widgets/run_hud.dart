@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../ui/ui.dart';
 import 'hold_to_finish_button.dart';
 
@@ -70,7 +71,12 @@ class RunHud extends StatelessWidget {
 
     return RepaintBoundary(
       child: Container(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.s16, AppSpacing.s14, AppSpacing.s16, AppSpacing.s14),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.s16,
+          AppSpacing.s14,
+          AppSpacing.s16,
+          AppSpacing.s14,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surfaceGlass,
           borderRadius: AppSpacing.br28,
@@ -92,7 +98,10 @@ class RunHud extends StatelessWidget {
                 label: 'Run tracking auto-paused. Moving speed dropped below 1.8 kilometers per hour.',
                 child: Container(
                   margin: const EdgeInsets.only(bottom: AppSpacing.s10),
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s12,
+                    vertical: AppSpacing.s4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.warning.withValues(alpha: 0.16),
                     borderRadius: AppSpacing.brFull,
@@ -101,7 +110,11 @@ class RunHud extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.pause_circle_filled_rounded, color: AppColors.warning, size: 14),
+                      Icon(
+                        Icons.pause_circle_filled_rounded,
+                        color: AppColors.warning,
+                        size: 14,
+                      ),
                       SizedBox(width: AppSpacing.s6),
                       Text(
                         'Auto-paused • Speed < 1.8 km/h',
@@ -122,13 +135,17 @@ class RunHud extends StatelessWidget {
             if (runGoal != null && runGoal!.isActive) ...[
               Semantics(
                 button: true,
-                label: 'Run conquest goal: ${runGoal!.title}. Tap to configure.',
+                label:
+                    'Run conquest goal: ${runGoal!.title}. Tap to configure.',
                 child: GestureDetector(
                   onTap: onOpenGoalSelector,
                   behavior: HitTestBehavior.opaque,
                   child: Container(
                     margin: const EdgeInsets.only(bottom: AppSpacing.s10),
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s12,
+                      vertical: AppSpacing.s6,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.gold.withValues(alpha: 0.12),
                       borderRadius: AppSpacing.br12,
@@ -145,7 +162,11 @@ class RunHud extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                const Icon(Icons.flag_rounded, color: AppColors.gold, size: 13),
+                                const Icon(
+                                  Icons.flag_rounded,
+                                  color: AppColors.gold,
+                                  size: 13,
+                                ),
                                 const SizedBox(width: 5),
                                 Text(
                                   runGoal!.title,
@@ -161,7 +182,9 @@ class RunHud extends StatelessWidget {
                             Text(
                               runGoal!.formatRemaining(
                                 currentDistanceKm: distanceKm,
-                                currentDurationSeconds: movingSeconds > 0 ? movingSeconds : elapsedSeconds,
+                                currentDurationSeconds: movingSeconds > 0
+                                    ? movingSeconds
+                                    : elapsedSeconds,
                                 currentAreaSqm: currentAreaSqm,
                               ),
                               style: const TextStyle(
@@ -177,14 +200,20 @@ class RunHud extends StatelessWidget {
                         ClipRRect(
                           borderRadius: AppSpacing.br8,
                           child: LinearProgressIndicator(
-                            value: runGoal!.computeProgress(
-                              currentDistanceKm: distanceKm,
-                              currentDurationSeconds: movingSeconds > 0 ? movingSeconds : elapsedSeconds,
-                              currentAreaSqm: currentAreaSqm,
-                            ).clamp(0.0, 1.0),
+                            value: runGoal!
+                                .computeProgress(
+                                  currentDistanceKm: distanceKm,
+                                  currentDurationSeconds: movingSeconds > 0
+                                      ? movingSeconds
+                                      : elapsedSeconds,
+                                  currentAreaSqm: currentAreaSqm,
+                                )
+                                .clamp(0.0, 1.0),
                             minHeight: 4,
                             backgroundColor: AppColors.surface2,
-                            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppColors.gold,
+                            ),
                           ),
                         ),
                       ],
@@ -198,9 +227,13 @@ class RunHud extends StatelessWidget {
             if (isRunActive && closureDist != null && closureDist > 0) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: AppSpacing.s10),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s12,
+                  vertical: AppSpacing.s6,
+                ),
                 decoration: BoxDecoration(
-                  color: (isNearClosure ? AppColors.accent : AppColors.surface2).withValues(alpha: 0.18),
+                  color: (isNearClosure ? AppColors.accent : AppColors.surface2)
+                      .withValues(alpha: 0.18),
                   borderRadius: AppSpacing.br12,
                   border: Border.all(
                     color: isNearClosure ? AppColors.accent : AppColors.border,
@@ -227,7 +260,9 @@ class RunHud extends StatelessWidget {
                                     ? 'Ready to close loop'
                                     : 'Loop proximity',
                                 style: AppText.labelSmall.copyWith(
-                                  color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
+                                  color: isNearClosure
+                                      ? AppColors.accent
+                                      : AppColors.textSecondary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -235,10 +270,14 @@ class RunHud extends StatelessWidget {
                               Text(
                                 '${closureDist.round()} m to start',
                                 style: AppText.labelSmall.copyWith(
-                                  color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
+                                  color: isNearClosure
+                                      ? AppColors.accent
+                                      : AppColors.textSecondary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
                             ],
@@ -251,7 +290,9 @@ class RunHud extends StatelessWidget {
                               minHeight: 5,
                               backgroundColor: AppColors.surface2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                isNearClosure ? AppColors.accent : AppColors.info,
+                                isNearClosure
+                                    ? AppColors.accent
+                                    : AppColors.info,
                               ),
                             ),
                           ),
@@ -317,7 +358,11 @@ class RunHud extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       isRunActive
-                          ? _formatDuration(movingSeconds > 0 ? movingSeconds : elapsedSeconds)
+                          ? _formatDuration(
+                              movingSeconds > 0
+                                  ? movingSeconds
+                                  : elapsedSeconds,
+                            )
                           : '00:00',
                       style: AppText.timer.copyWith(
                         fontFeatures: const [FontFeature.tabularFigures()],
@@ -337,7 +382,10 @@ class RunHud extends StatelessWidget {
                         if (targetPace != null) ...[
                           const SizedBox(width: 4),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surface2,
                               borderRadius: AppSpacing.br8,
@@ -370,7 +418,10 @@ class RunHud extends StatelessWidget {
 
             // Secondary Telemetry Row
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s8),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s10,
+                vertical: AppSpacing.s8,
+              ),
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 borderRadius: AppSpacing.br14,
@@ -381,7 +432,11 @@ class RunHud extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.speed_rounded, color: AppColors.info, size: 14),
+                      const Icon(
+                        Icons.speed_rounded,
+                        color: AppColors.info,
+                        size: 14,
+                      ),
                       const SizedBox(width: AppSpacing.s4),
                       Text(
                         '${currentSpeedKmh.toStringAsFixed(1)} km/h',
@@ -394,7 +449,11 @@ class RunHud extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.local_fire_department_rounded, color: AppColors.rival, size: 14),
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        color: AppColors.rival,
+                        size: 14,
+                      ),
                       const SizedBox(width: AppSpacing.s4),
                       Text(
                         '+${(distanceKm * 65.0).round()} kcal',
@@ -411,7 +470,9 @@ class RunHud extends StatelessWidget {
                         Icons.satellite_alt_rounded,
                         color: satelliteAccuracyMeters <= 10.0
                             ? AppColors.accent
-                            : (satelliteAccuracyMeters <= 30.0 ? AppColors.warning : AppColors.rival),
+                            : (satelliteAccuracyMeters <= 30.0
+                                  ? AppColors.warning
+                                  : AppColors.rival),
                         size: 14,
                       ),
                       const SizedBox(width: AppSpacing.s4),
@@ -423,7 +484,9 @@ class RunHud extends StatelessWidget {
                           fontSize: 11,
                           color: satelliteAccuracyMeters <= 10.0
                               ? AppColors.textSecondary
-                              : (satelliteAccuracyMeters <= 30.0 ? AppColors.warning : AppColors.rival),
+                              : (satelliteAccuracyMeters <= 30.0
+                                    ? AppColors.warning
+                                    : AppColors.rival),
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
@@ -431,7 +494,11 @@ class RunHud extends StatelessWidget {
                   ),
                   Row(
                     children: [
-                      const Icon(Icons.shield_outlined, color: AppColors.accent, size: 14),
+                      const Icon(
+                        Icons.shield_outlined,
+                        color: AppColors.accent,
+                        size: 14,
+                      ),
                       const SizedBox(width: AppSpacing.s4),
                       Text(
                         '$territoriesClaimed territories',
@@ -464,12 +531,17 @@ class RunHud extends StatelessWidget {
                       },
                       behavior: HitTestBehavior.opaque,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s10,
+                          vertical: AppSpacing.s12,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surface,
                           borderRadius: AppSpacing.br16,
                           border: Border.all(
-                            color: isNearClosure ? AppColors.accent : AppColors.borderSubtle,
+                            color: isNearClosure
+                                ? AppColors.accent
+                                : AppColors.borderSubtle,
                             width: 1.2,
                           ),
                         ),
@@ -479,7 +551,9 @@ class RunHud extends StatelessWidget {
                           children: [
                             Icon(
                               Icons.shield_rounded,
-                              color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
+                              color: isNearClosure
+                                  ? AppColors.accent
+                                  : AppColors.textSecondary,
                               size: 16,
                             ),
                             const SizedBox(width: AppSpacing.s4),
@@ -506,7 +580,9 @@ class RunHud extends StatelessWidget {
                 // Center Confident Matte Play/Pause Action Button
                 Semantics(
                   button: true,
-                  label: isRunActive ? 'Pause run tracking' : 'Start run tracking',
+                  label: isRunActive
+                      ? 'Pause run tracking'
+                      : 'Start run tracking',
                   child: GestureDetector(
                     onTap: () {
                       AppMotion.heavyBurst();
@@ -522,7 +598,9 @@ class RunHud extends StatelessWidget {
                       ),
                       child: Center(
                         child: Icon(
-                          isRunActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          isRunActive
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
                           color: AppColors.onAccent,
                           size: 34,
                         ),

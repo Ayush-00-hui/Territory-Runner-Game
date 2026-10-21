@@ -42,7 +42,10 @@ void main() {
       final territory = Territory(
         id: '8a1072b59ffffff',
         ownerId: 'runner_99',
-        polygon: [const LatLng(37.7749, -122.4194), const LatLng(37.7750, -122.4190)],
+        polygon: [
+          const LatLng(37.7749, -122.4194),
+          const LatLng(37.7750, -122.4190),
+        ],
         areaSqMeters: 15047.0,
         capturedAt: DateTime(2026, 9, 19, 12, 0),
         isPendingReview: false,

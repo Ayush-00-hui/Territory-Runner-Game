@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -83,17 +84,10 @@ class _PrimaryButtonState extends State<PrimaryButton> {
           ),
           const SizedBox(width: AppSpacing.s12),
         ] else if (widget.icon != null) ...[
-          Icon(
-            widget.icon,
-            color: fgColor,
-            size: 20,
-          ),
+          Icon(widget.icon, color: fgColor, size: 20),
           const SizedBox(width: AppSpacing.s8),
         ],
-        Text(
-          widget.label,
-          style: AppText.button.copyWith(color: fgColor),
-        ),
+        Text(widget.label, style: AppText.button.copyWith(color: fgColor)),
       ],
     );
 
@@ -123,7 +117,9 @@ class _PrimaryButtonState extends State<PrimaryButton> {
                 border: Border.all(
                   color: _isFocused
                       ? AppColors.textPrimary
-                      : (widget.isOutlined ? widget.backgroundColor : Colors.transparent),
+                      : (widget.isOutlined
+                            ? widget.backgroundColor
+                            : Colors.transparent),
                   width: _isFocused ? 1.5 : (widget.isOutlined ? 1.2 : 0.0),
                 ),
               ),

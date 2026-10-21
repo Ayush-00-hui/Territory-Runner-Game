@@ -4,7 +4,9 @@ import 'package:territory_runner/ui/widgets/calm_error_screen.dart';
 
 void main() {
   group('CalmErrorScreen Widget Tests', () {
-    testWidgets('Renders calm error screen with recovery instructions', (tester) async {
+    testWidgets('Renders calm error screen with recovery instructions', (
+      tester,
+    ) async {
       final details = FlutterErrorDetails(
         exception: Exception('Simulation UI render fault'),
         stack: StackTrace.current,
@@ -26,7 +28,10 @@ void main() {
       );
 
       expect(find.text('RUNNER INTERFACE RECOVERED'), findsOneWidget);
-      expect(find.textContaining('Your telemetry, active GPS track'), findsOneWidget);
+      expect(
+        find.textContaining('Your telemetry, active GPS track'),
+        findsOneWidget,
+      );
       expect(find.text('RETURN TO NAVIGATION'), findsOneWidget);
 
       // Verify reset callback on tap
@@ -42,19 +47,23 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: CalmErrorScreen(details: details),
-        ),
+        MaterialApp(home: CalmErrorScreen(details: details)),
       );
 
       // Initial state: details collapsed
-      expect(find.textContaining('SpecificExceptionDetailsForDiagnostics'), findsNothing);
+      expect(
+        find.textContaining('SpecificExceptionDetailsForDiagnostics'),
+        findsNothing,
+      );
 
       // Tap disclosure
       await tester.tap(find.text('Show Diagnostics (Debug Only)'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('SpecificExceptionDetailsForDiagnostics'), findsOneWidget);
+      expect(
+        find.textContaining('SpecificExceptionDetailsForDiagnostics'),
+        findsOneWidget,
+      );
     });
   });
 }

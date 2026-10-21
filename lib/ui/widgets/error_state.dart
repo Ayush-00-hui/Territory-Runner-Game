@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -23,7 +24,10 @@ class ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s32, vertical: AppSpacing.s40),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s32,
+          vertical: AppSpacing.s40,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -34,10 +38,17 @@ class ErrorState extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.error.withValues(alpha: 0.3), width: 1.0),
+                border: Border.all(
+                  color: AppColors.error.withValues(alpha: 0.3),
+                  width: 1.0,
+                ),
               ),
               child: const Center(
-                child: Icon(Icons.error_outline_rounded, size: 28, color: AppColors.error),
+                child: Icon(
+                  Icons.error_outline_rounded,
+                  size: 28,
+                  color: AppColors.error,
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.s16),
@@ -50,7 +61,9 @@ class ErrorState extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.s20),

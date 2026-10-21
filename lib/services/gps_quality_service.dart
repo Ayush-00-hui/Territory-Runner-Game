@@ -3,10 +3,10 @@ import 'package:latlong2/latlong.dart';
 
 /// GNSS Signal Quality classification for tactical HUD telemetry.
 enum GpsQuality {
-  optimal,  // <= 10m accuracy (sub-meter or high precision)
-  fair,     // 10m - 30m accuracy (acceptable running GPS)
+  optimal, // <= 10m accuracy (sub-meter or high precision)
+  fair, // 10m - 30m accuracy (acceptable running GPS)
   degraded, // > 30m accuracy (dilution of precision / multipath)
-  lost,     // Signal timeout > 15s (tunnel, indoor, subway)
+  lost, // Signal timeout > 15s (tunnel, indoor, subway)
 }
 
 /// Helper service for GPS quality categorization, signal gap handling, and stationary auto-pause.

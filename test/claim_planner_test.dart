@@ -31,23 +31,32 @@ void main() {
       expect(d5k, greaterThan(d2k));
     });
 
-    test('suggestRouteForTargetArea generates valid closed loop matching budget', () async {
-      final routeService = RouteService();
-      const origin = LatLng(37.7749, -122.4194);
+    test(
+      'suggestRouteForTargetArea generates valid closed loop matching budget',
+      () async {
+        final routeService = RouteService();
+        const origin = LatLng(37.7749, -122.4194);
 
-      final route = await routeService.suggestRouteForTargetArea(
-        currentLocation: origin,
-        targetAreaSqM: 10000.0,
-      );
+        final route = await routeService.suggestRouteForTargetArea(
+          currentLocation: origin,
+          targetAreaSqM: 10000.0,
+        );
 
-      expect(route.polyline.length, greaterThanOrEqualTo(4));
-      // Loop is closed
-      expect(route.polyline.first.latitude, equals(route.polyline.last.latitude));
-      expect(route.polyline.first.longitude, equals(route.polyline.last.longitude));
-      expect(route.totalDistanceKm, greaterThan(0.1));
-      expect(route.estimatedNewTerritoryAreaSqM, greaterThan(500.0));
-      expect(route.estimatedDurationMinutes, greaterThanOrEqualTo(1));
-    });
+        expect(route.polyline.length, greaterThanOrEqualTo(4));
+        // Loop is closed
+        expect(
+          route.polyline.first.latitude,
+          equals(route.polyline.last.latitude),
+        );
+        expect(
+          route.polyline.first.longitude,
+          equals(route.polyline.last.longitude),
+        );
+        expect(route.totalDistanceKm, greaterThan(0.1));
+        expect(route.estimatedNewTerritoryAreaSqM, greaterThan(500.0));
+        expect(route.estimatedDurationMinutes, greaterThanOrEqualTo(1));
+      },
+    );
 
     test('Offline fallback flags isOffline and never throws', () {
       final routeService = RouteService();
@@ -81,7 +90,8 @@ void main() {
         const LatLng(centerLat - halfSideDeg, centerLng + halfSideDeg),
         const LatLng(centerLat - halfSideDeg, centerLng - halfSideDeg),
       ];
-      final double existingArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(existingSquare);
+      final double existingArea =
+          PolygonEnclosureEngine.computeGeodesicShoelaceArea(existingSquare);
 
       // Now propose a larger loop circumscribing the existing square (2x larger)
       const double outerHalfSide = 0.0010; // ~110m half-side
@@ -92,16 +102,22 @@ void main() {
         const LatLng(centerLat - outerHalfSide, centerLng + outerHalfSide),
         const LatLng(centerLat - outerHalfSide, centerLng - outerHalfSide),
       ];
-      final double totalOuterArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(outerSquare);
+      final double totalOuterArea =
+          PolygonEnclosureEngine.computeGeodesicShoelaceArea(outerSquare);
 
-      final double netNewArea = routeService.computeNetNewArea(outerSquare, [existingSquare]);
+      final double netNewArea = routeService.computeNetNewArea(outerSquare, [
+        existingSquare,
+      ]);
 
       // The net new area must be total outer area MINUS the existing square area
       expect(netNewArea, lessThan(totalOuterArea));
       expect(netNewArea, greaterThan(0.0));
       final double expectedNet = totalOuterArea - existingArea;
-      expect((netNewArea - expectedNet).abs(), lessThan(totalOuterArea * 0.05),
-          reason: 'Net new area should be outer area minus owned square within 5% tolerance');
+      expect(
+        (netNewArea - expectedNet).abs(),
+        lessThan(totalOuterArea * 0.05),
+        reason: 'Net new area should be outer area minus owned square within 5% tolerance',
+      );
     });
 
     test('Loop entirely inside owned territory yields zero net area', () {
@@ -129,39 +145,55 @@ void main() {
         const LatLng(centerLat - smallHalfSide, centerLng - smallHalfSide),
       ];
 
-      final double netNewArea = routeService.computeNetNewArea(innerSquare, [largeSquare]);
-      expect(netNewArea, equals(0.0),
-          reason: 'Running inside your own territory earns 0 net new area');
+      final double netNewArea = routeService.computeNetNewArea(innerSquare, [
+        largeSquare,
+      ]);
+      expect(
+        netNewArea,
+        equals(0.0),
+        reason: 'Running inside your own territory earns 0 net new area',
+      );
     });
   });
 
   group('MapLayers Hole Rendering Classification Tests', () {
-    test('Donut polygon correctly classifies into 1 outer shell with 1 hole', () {
-      // Outer ring: 200m x 200m
-      const double cLat = 37.7749;
-      const double cLng = -122.4194;
-      final outerRing = [
-        const LatLng(cLat - 0.001, cLng - 0.001),
-        const LatLng(cLat + 0.001, cLng - 0.001),
-        const LatLng(cLat + 0.001, cLng + 0.001),
-        const LatLng(cLat - 0.001, cLng + 0.001),
-        const LatLng(cLat - 0.001, cLng - 0.001),
-      ];
+    test(
+      'Donut polygon correctly classifies into 1 outer shell with 1 hole',
+      () {
+        // Outer ring: 200m x 200m
+        const double cLat = 37.7749;
+        const double cLng = -122.4194;
+        final outerRing = [
+          const LatLng(cLat - 0.001, cLng - 0.001),
+          const LatLng(cLat + 0.001, cLng - 0.001),
+          const LatLng(cLat + 0.001, cLng + 0.001),
+          const LatLng(cLat - 0.001, cLng + 0.001),
+          const LatLng(cLat - 0.001, cLng - 0.001),
+        ];
 
-      // Inner hole: 50m x 50m inside outer ring
-      final holeRing = [
-        const LatLng(cLat - 0.0003, cLng - 0.0003),
-        const LatLng(cLat + 0.0003, cLng - 0.0003),
-        const LatLng(cLat + 0.0003, cLng + 0.0003),
-        const LatLng(cLat - 0.0003, cLng + 0.0003),
-        const LatLng(cLat - 0.0003, cLng - 0.0003),
-      ];
+        // Inner hole: 50m x 50m inside outer ring
+        final holeRing = [
+          const LatLng(cLat - 0.0003, cLng - 0.0003),
+          const LatLng(cLat + 0.0003, cLng - 0.0003),
+          const LatLng(cLat + 0.0003, cLng + 0.0003),
+          const LatLng(cLat - 0.0003, cLng + 0.0003),
+          const LatLng(cLat - 0.0003, cLng - 0.0003),
+        ];
 
-      final shells = MapLayers.classifyRings([outerRing, holeRing]);
+        final shells = MapLayers.classifyRings([outerRing, holeRing]);
 
-      expect(shells.length, equals(1), reason: 'Donut should produce exactly 1 outer shell');
-      expect(shells.first.holes.length, equals(1), reason: 'Donut outer shell should contain 1 hole');
-    });
+        expect(
+          shells.length,
+          equals(1),
+          reason: 'Donut should produce exactly 1 outer shell',
+        );
+        expect(
+          shells.first.holes.length,
+          equals(1),
+          reason: 'Donut outer shell should contain 1 hole',
+        );
+      },
+    );
 
     test('Two disjoint territories classify into 2 separate outer shells with 0 holes', () {
       final ringA = [
@@ -186,23 +218,37 @@ void main() {
       expect(shells[1].holes, isEmpty);
     });
 
-    test('isPointInPolygon accurately detects interior and exterior points', () {
-      final polygon = [
-        const LatLng(10.0, 10.0),
-        const LatLng(20.0, 10.0),
-        const LatLng(20.0, 20.0),
-        const LatLng(10.0, 20.0),
-        const LatLng(10.0, 10.0),
-      ];
+    test(
+      'isPointInPolygon accurately detects interior and exterior points',
+      () {
+        final polygon = [
+          const LatLng(10.0, 10.0),
+          const LatLng(20.0, 10.0),
+          const LatLng(20.0, 20.0),
+          const LatLng(10.0, 20.0),
+          const LatLng(10.0, 10.0),
+        ];
 
-      expect(MapLayers.isPointInPolygon(const LatLng(15.0, 15.0), polygon), isTrue);
-      expect(MapLayers.isPointInPolygon(const LatLng(5.0, 5.0), polygon), isFalse);
-      expect(MapLayers.isPointInPolygon(const LatLng(25.0, 25.0), polygon), isFalse);
-    });
+        expect(
+          MapLayers.isPointInPolygon(const LatLng(15.0, 15.0), polygon),
+          isTrue,
+        );
+        expect(
+          MapLayers.isPointInPolygon(const LatLng(5.0, 5.0), polygon),
+          isFalse,
+        );
+        expect(
+          MapLayers.isPointInPolygon(const LatLng(25.0, 25.0), polygon),
+          isFalse,
+        );
+      },
+    );
   });
 
   group('ClaimPlannerSheet Widget Tests', () {
-    testWidgets('Renders presets, slider, telemetry grid, and start button', (tester) async {
+    testWidgets('Renders presets, slider, telemetry grid, and start button', (
+      tester,
+    ) async {
       final routeService = RouteService();
       const origin = LatLng(37.7749, -122.4194);
       final initialRoute = routeService.suggestRoute(
@@ -262,7 +308,9 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     });
 
-    testWidgets('Tapping a preset switches target area and updates route', (tester) async {
+    testWidgets('Tapping a preset switches target area and updates route', (
+      tester,
+    ) async {
       final routeService = RouteService();
       const origin = LatLng(37.7749, -122.4194);
       final initialRoute = routeService.suggestRoute(

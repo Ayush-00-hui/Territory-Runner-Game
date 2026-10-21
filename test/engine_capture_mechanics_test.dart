@@ -11,18 +11,21 @@ void main() {
   final DateTime t0 = DateTime.utc(2026, 10, 15, 10, 0, 0);
 
   List<LatLng> hugeSquare() => const [
-        LatLng(0.0, 0.0),
-        LatLng(0.0, d),
-        LatLng(d, d),
-        LatLng(d, 0.0),
-      ];
+    LatLng(0.0, 0.0),
+    LatLng(0.0, d),
+    LatLng(d, d),
+    LatLng(d, 0.0),
+  ];
 
   group('Max loop area guard', () {
     test('auto-closed loop above 5 km² is rejected with the shared reason', () {
       final engine = PolygonEnclosureEngine();
       final pts = hugeSquare();
       for (int i = 0; i < pts.length; i++) {
-        expect(engine.addPosition(pts[i], t0.add(Duration(seconds: i * 10))), isNull);
+        expect(
+          engine.addPosition(pts[i], t0.add(Duration(seconds: i * 10))),
+          isNull,
+        );
       }
       // Back near the start (~15 m away) -> would close, but area is too large.
       final event = engine.addPosition(
@@ -30,7 +33,10 @@ void main() {
         t0.add(const Duration(seconds: 40)),
       );
       expect(event, isNull);
-      expect(engine.lastInvalidReason, equals(PolygonEnclosureEngine.loopTooLargeReason));
+      expect(
+        engine.lastInvalidReason,
+        equals(PolygonEnclosureEngine.loopTooLargeReason),
+      );
     });
 
     test('manual seal above 5 km² is rejected and path is kept', () {
@@ -41,7 +47,10 @@ void main() {
       }
       final event = engine.sealCurrentPath();
       expect(event, isNull);
-      expect(engine.lastInvalidReason, equals(PolygonEnclosureEngine.loopTooLargeReason));
+      expect(
+        engine.lastInvalidReason,
+        equals(PolygonEnclosureEngine.loopTooLargeReason),
+      );
       expect(engine.pointCount, equals(4));
     });
 
@@ -66,7 +75,10 @@ void main() {
       expect(a, greaterThan(0));
       expect(b, lessThan(0));
       expect(a.abs(), closeTo(b.abs(), 1e-6));
-      expect(PolygonEnclosureEngine.computeGeodesicShoelaceArea(ccw), closeTo(a.abs(), 1e-6));
+      expect(
+        PolygonEnclosureEngine.computeGeodesicShoelaceArea(ccw),
+        closeTo(a.abs(), 1e-6),
+      );
     });
 
     test('a hole (opposite orientation) is subtracted from the outer ring', () {
@@ -84,7 +96,9 @@ void main() {
         LatLng(51.503 + h, -0.117 + h * 1.6),
         LatLng(51.503, -0.117 + h * 1.6),
       ];
-      final so = PolygonEnclosureEngine.computeSignedGeodesicShoelaceArea(outer);
+      final so = PolygonEnclosureEngine.computeSignedGeodesicShoelaceArea(
+        outer,
+      );
       final si = PolygonEnclosureEngine.computeSignedGeodesicShoelaceArea(hole);
       expect(so, greaterThan(0));
       expect(si, lessThan(0));

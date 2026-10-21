@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -42,7 +43,8 @@ void main() {
     expect(
       violations,
       isEmpty,
-      reason: 'Raw Colors.white or Color(0x...) found in non-whitelisted files:\n${violations.join('\n')}',
+      reason:
+          'Raw Colors.white or Color(0x...) found in non-whitelisted files:\n${violations.join('\n')}',
     );
   });
 }

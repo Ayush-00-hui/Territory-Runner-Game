@@ -394,3 +394,92 @@ func TestGoldenCyclingTinyLoop(t *testing.T) {
 	}
 }
 
+func TestGoldenPauseResume(t *testing.T) {
+	fixture := loadFixture(t, "golden_pause_resume.json")
+	require.True(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	engine := geo.NewEngine()
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, loops, 1, "Pause <= 50m displacement must not reset path; loop must close")
+
+	expected := fixture.ExpectedAreaSqM
+	delta := math.Abs(loops[0].AreaSqMeters - expected)
+	diffPercent := (delta / expected) * 100.0
+	assert.LessOrEqual(t, diffPercent, fixture.AreaTolerancePercent)
+}
+
+func TestGoldenGapWithJump(t *testing.T) {
+	fixture := loadFixture(t, "golden_gap_with_jump.json")
+	require.False(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	engine := geo.NewEngine()
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, geo.ErrSignalGapDetected)
+	assert.Empty(t, loops, "Gap with jump > 50m must produce 0 valid loops")
+}
+
+func TestGoldenVeryLongGap(t *testing.T) {
+	fixture := loadFixture(t, "golden_very_long_gap.json")
+	require.False(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	engine := geo.NewEngine()
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, geo.ErrSignalGapDetected)
+	assert.Empty(t, loops, "Gap > 10 minutes must produce 0 valid loops")
+}
+
+func TestRejectionReasonClearedOnNextAddPoint(t *testing.T) {
+	engine := geo.NewEngine()
+	t0 := time.Date(2026, 10, 20, 10, 0, 0, 0, time.UTC)
+	p1 := geo.TrackPoint{Latitude: 51.5000, Longitude: -0.1200, Timestamp: t0}
+	p2 := geo.TrackPoint{Latitude: 51.5009, Longitude: -0.1200, Timestamp: t0.Add(10 * time.Second)}
+
+	_, err := engine.AddPoint(p1)
+	require.NoError(t, err)
+	_, err = engine.AddPoint(p2)
+	require.NoError(t, err)
+
+	// Trigger signal gap error with jump > 50m
+	pJump := geo.TrackPoint{Latitude: 51.5009, Longitude: -0.1214, Timestamp: t0.Add(40 * time.Second)}
+	_, err = engine.AddPoint(pJump)
+	require.NoError(t, err)
+	require.ErrorIs(t, engine.LastInvalidError(), geo.ErrSignalGapDetected)
+
+	// Next normal point 3s later, 14m displacement
+	pNormal := geo.TrackPoint{Latitude: 51.5009, Longitude: -0.1216, Timestamp: t0.Add(43 * time.Second)}
+	_, err = engine.AddPoint(pNormal)
+	require.NoError(t, err)
+
+	// MUST be cleared!
+	assert.Nil(t, engine.LastInvalidError(), "LastInvalidError must be nil on subsequent call without error")
+}

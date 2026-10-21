@@ -17,16 +17,28 @@
 # Geolocator Background Location Service
 -keep class com.baseflow.geolocator.** { *; }
 -keepclassmembers class com.baseflow.geolocator.** { *; }
+-keep class com.baseflow.geolocator.GeolocatorPlugin { *; }
+-dontwarn com.baseflow.geolocator.**
 
-# Firebase Services (Auth, Firestore, Messaging)
+# Firebase Services (Auth, Firestore, Crashlytics, FCM Messaging)
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 -dontwarn javax.annotation.**
 -dontwarn java.lang.invoke.**
 -keep class com.google.firebase.** { *; }
+-keep class com.google.firebase.messaging.** { *; }
+-keep class com.google.firebase.crashlytics.** { *; }
 -keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+
+# Clipper2 Polygon Engine (JNI / Reflection / Native)
+-keep class clipper2.** { *; }
+-keep class org.clipper2.** { *; }
+-keep class * implements clipper2.** { *; }
+-dontwarn clipper2.**
 
 # Hive & Persistence Serialization
--keepattributes EnclosingMethod
+-keep class * implements io.hive.** { *; }
+-keep class io.hive.** { *; }
 -keepclassmembers enum * {
     public static **[] values();
     public static ** valueOf(java.lang.String);

@@ -5,14 +5,9 @@ void main() {
   testWidgets('App basic UI rendering test', (WidgetTester tester) async {
     await tester.pumpWidget(
       const MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Text('TERRITORY RUNNER'),
-          ),
-        ),
+        home: Scaffold(body: Center(child: Text('TERRITORY RUNNER'))),
       ),
     );
     expect(find.text('TERRITORY RUNNER'), findsOneWidget);
   });
 }
-

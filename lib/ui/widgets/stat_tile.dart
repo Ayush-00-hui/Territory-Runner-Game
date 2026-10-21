@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -26,17 +27,24 @@ class StatTile extends StatelessWidget {
     this.icon,
     this.accentColor = AppColors.accent,
     this.precision = 0,
-  }) : assert(numericValue != null || stringValue != null, 'Provide either numericValue or stringValue');
+  }) : assert(
+         numericValue != null || stringValue != null,
+         'Provide either numericValue or stringValue',
+       );
 
   @override
   Widget build(BuildContext context) {
-    final semanticValue = '${numericValue != null ? numericValue!.toStringAsFixed(precision) : stringValue} ${unit ?? ''}';
+    final semanticValue =
+        '${numericValue != null ? numericValue!.toStringAsFixed(precision) : stringValue} ${unit ?? ''}';
 
     return Semantics(
       container: true,
       label: '$label: $semanticValue',
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s14),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s16,
+          vertical: AppSpacing.s14,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: AppRadius.br16,
@@ -66,7 +74,10 @@ class StatTile extends StatelessWidget {
               children: [
                 if (numericValue != null)
                   TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0.0, end: numericValue!.toDouble()),
+                    tween: Tween<double>(
+                      begin: 0.0,
+                      end: numericValue!.toDouble(),
+                    ),
                     duration: AppMotion.duration(context, AppMotion.countUp),
                     curve: AppMotion.easeOut,
                     builder: (context, val, _) {
@@ -80,10 +91,7 @@ class StatTile extends StatelessWidget {
                   Text(stringValue ?? '', style: AppText.displaySmall),
                 if (unit != null) ...[
                   const SizedBox(width: AppSpacing.s4),
-                  Text(
-                    unit!,
-                    style: AppText.statUnit,
-                  ),
+                  Text(unit!, style: AppText.statUnit),
                 ],
               ],
             ),

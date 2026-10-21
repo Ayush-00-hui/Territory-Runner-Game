@@ -1,16 +1,15 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+
 import '../../../ui/ui.dart';
 
 /// Performance-first Home Hero Card featuring Today's Goal Ring, GPS Status, and primary Start Run CTA.
 class QuickLaunchHero extends StatefulWidget {
   final VoidCallback? onStartRun;
 
-  const QuickLaunchHero({
-    super.key,
-    this.onStartRun,
-  });
+  const QuickLaunchHero({super.key, this.onStartRun});
 
   @override
   State<QuickLaunchHero> createState() => _QuickLaunchHeroState();
@@ -25,7 +24,10 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
   void initState() {
     super.initState();
     _checkGpsStatus();
-    _checkTimer = Timer.periodic(const Duration(seconds: 8), (_) => _checkGpsStatus());
+    _checkTimer = Timer.periodic(
+      const Duration(seconds: 8),
+      (_) => _checkGpsStatus(),
+    );
   }
 
   @override
@@ -48,7 +50,8 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
       }
 
       final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied || permission == LocationPermission.deniedForever) {
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
         if (mounted) {
           setState(() {
             _gpsStatus = 'Location Denied';
@@ -120,7 +123,10 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                       children: [
                         Text('$currentDayKm', style: AppText.displaySmall),
                         const SizedBox(width: AppSpacing.s4),
-                        Text('/ ${goalTargetKm.toStringAsFixed(1)} km', style: AppText.statUnit),
+                        Text(
+                          '/ ${goalTargetKm.toStringAsFixed(1)} km',
+                          style: AppText.statUnit,
+                        ),
                       ],
                     ),
                   ],
@@ -129,12 +135,17 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
 
               // GPS Status Pill
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s10,
+                  vertical: AppSpacing.s6,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
                   borderRadius: AppRadius.brFull,
                   border: Border.all(
-                    color: _isGpsReady ? AppColors.success.withValues(alpha: 0.4) : AppColors.warning.withValues(alpha: 0.4),
+                    color: _isGpsReady
+                        ? AppColors.success.withValues(alpha: 0.4)
+                        : AppColors.warning.withValues(alpha: 0.4),
                     width: 1.0,
                   ),
                 ),
@@ -146,14 +157,18 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                       height: 6,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _isGpsReady ? AppColors.success : AppColors.warning,
+                        color: _isGpsReady
+                            ? AppColors.success
+                            : AppColors.warning,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.s6),
                     Text(
                       _gpsStatus,
                       style: AppText.labelSmall.copyWith(
-                        color: _isGpsReady ? AppColors.success : AppColors.warning,
+                        color: _isGpsReady
+                            ? AppColors.success
+                            : AppColors.warning,
                         fontSize: 10,
                         letterSpacing: 0.2,
                       ),

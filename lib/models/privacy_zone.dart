@@ -44,14 +44,14 @@ class PrivacyZone {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'latitude': latitude,
-        'longitude': longitude,
-        'radius_meters': radiusMeters,
-        'is_enabled': isEnabled,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'name': name,
+    'latitude': latitude,
+    'longitude': longitude,
+    'radius_meters': radiusMeters,
+    'is_enabled': isEnabled,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   factory PrivacyZone.fromJson(Map<String, dynamic> json) {
     return PrivacyZone(

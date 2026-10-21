@@ -12,73 +12,85 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('NotificationService initializes gracefully when Firebase unconfigured', () async {
-      final service = NotificationService();
-      expect(service.isFirebaseAvailable, isFalse);
+    test(
+      'NotificationService initializes gracefully when Firebase unconfigured',
+      () async {
+        final service = NotificationService();
+        expect(service.isFirebaseAvailable, isFalse);
 
-      await service.initialize();
-      expect(service.isInitialized, isTrue);
-    });
+        await service.initialize();
+        expect(service.isInitialized, isTrue);
+      },
+    );
 
-    test('onAttackedTerritoryTapped stream receives simulated attack tap events', () async {
-      final service = NotificationService();
-      String? receivedTerritoryId;
+    test(
+      'onAttackedTerritoryTapped stream receives simulated attack tap events',
+      () async {
+        final service = NotificationService();
+        String? receivedTerritoryId;
 
-      final sub = service.onAttackedTerritoryTapped.listen((id) {
-        receivedTerritoryId = id;
-      });
+        final sub = service.onAttackedTerritoryTapped.listen((id) {
+          receivedTerritoryId = id;
+        });
 
-      service.simulateAttackedTerritoryTap('sector_alpha_99');
-      await pumpEventQueue();
+        service.simulateAttackedTerritoryTap('sector_alpha_99');
+        await pumpEventQueue();
 
-      expect(receivedTerritoryId, equals('sector_alpha_99'));
-      await sub.cancel();
-    });
+        expect(receivedTerritoryId, equals('sector_alpha_99'));
+        await sub.cancel();
+      },
+    );
 
-    testWidgets('Permission primer bottom sheet renders radar title and action buttons', (tester) async {
-      SharedPreferences.setMockInitialValues({});
+    testWidgets(
+      'Permission primer bottom sheet renders radar title and action buttons',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: Builder(
-            builder: (context) {
-              return Scaffold(
-                body: Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      NotificationService().showPermissionPrimerIfNeeded(context, force: true);
-                    },
-                    child: const Text('OPEN PRIMER'),
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Builder(
+              builder: (context) {
+                return Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        NotificationService().showPermissionPrimerIfNeeded(
+                          context,
+                          force: true,
+                        );
+                      },
+                      child: const Text('OPEN PRIMER'),
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
-      );
+        );
 
-      // Tap button to open primer
-      await tester.tap(find.text('OPEN PRIMER'));
-      await tester.pumpAndSettle();
+        // Tap button to open primer
+        await tester.tap(find.text('OPEN PRIMER'));
+        await tester.pumpAndSettle();
 
-      // Verify sheet title and features
-      expect(find.text('TACTICAL RADAR ALERTS'), findsOneWidget);
-      expect(find.text('EARLY WARNING DEFENSE SYSTEM'), findsOneWidget);
-      expect(find.text('Real-Time Attack Radar'), findsOneWidget);
-      expect(find.text('Direct Tactical Deep-Link'), findsOneWidget);
-      expect(find.text('Weekly League Cutoffs'), findsOneWidget);
+        // Verify sheet title and features
+        expect(find.text('TACTICAL RADAR ALERTS'), findsOneWidget);
+        expect(find.text('EARLY WARNING DEFENSE SYSTEM'), findsOneWidget);
+        expect(find.text('Real-Time Attack Radar'), findsOneWidget);
+        expect(find.text('Direct Tactical Deep-Link'), findsOneWidget);
+        expect(find.text('Weekly League Cutoffs'), findsOneWidget);
 
-      // Verify buttons
-      expect(find.text('MAYBE LATER'), findsOneWidget);
-      expect(find.text('ENABLE RADAR ALERTS'), findsOneWidget);
+        // Verify buttons
+        expect(find.text('MAYBE LATER'), findsOneWidget);
+        expect(find.text('ENABLE RADAR ALERTS'), findsOneWidget);
 
-      // Tap Maybe Later to dismiss
-      await tester.tap(find.text('MAYBE LATER'));
-      await tester.pumpAndSettle();
+        // Tap Maybe Later to dismiss
+        await tester.tap(find.text('MAYBE LATER'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('TACTICAL RADAR ALERTS'), findsNothing);
-    });
+        expect(find.text('TACTICAL RADAR ALERTS'), findsNothing);
+      },
+    );
 
     testWidgets('Permission primer sheet can be accepted', (tester) async {
       SharedPreferences.setMockInitialValues({});
@@ -92,7 +104,10 @@ void main() {
                 body: Center(
                   child: ElevatedButton(
                     onPressed: () {
-                      NotificationService().showPermissionPrimerIfNeeded(context, force: true);
+                      NotificationService().showPermissionPrimerIfNeeded(
+                        context,
+                        force: true,
+                      );
                     },
                     child: const Text('OPEN PRIMER'),
                   ),

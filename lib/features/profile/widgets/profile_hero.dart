@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
 
@@ -47,7 +48,9 @@ class ProfileHeroCard extends StatelessWidget {
                   ),
                   child: Center(
                     child: Text(
-                      profile.username.isNotEmpty ? profile.username[0].toUpperCase() : 'R',
+                      profile.username.isNotEmpty
+                          ? profile.username[0].toUpperCase()
+                          : 'R',
                       style: const TextStyle(
                         color: AppColors.onAccent,
                         fontSize: 22,
@@ -66,7 +69,9 @@ class ProfileHeroCard extends StatelessWidget {
                       children: [
                         Flexible(
                           child: Text(
-                            profile.username.isNotEmpty ? profile.username : 'Athlete',
+                            profile.username.isNotEmpty
+                                ? profile.username
+                                : 'Athlete',
                             style: AppText.headlineMedium.copyWith(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -85,7 +90,11 @@ class ProfileHeroCard extends StatelessWidget {
                               shape: BoxShape.circle,
                               border: Border.all(color: AppColors.border),
                             ),
-                            child: const Icon(Icons.edit_rounded, color: AppColors.textSecondary, size: 12),
+                            child: const Icon(
+                              Icons.edit_rounded,
+                              color: AppColors.textSecondary,
+                              size: 12,
+                            ),
                           ),
                         ),
                       ],
@@ -96,11 +105,16 @@ class ProfileHeroCard extends StatelessWidget {
                       runSpacing: 4,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.accentContainer,
                             borderRadius: AppSpacing.br8,
-                            border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: AppColors.accent.withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Text(
                             'Level ${profile.level} athlete',
@@ -115,7 +129,10 @@ class ProfileHeroCard extends StatelessWidget {
                         GestureDetector(
                           onTap: onSelectFaction,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surface2,
                               borderRadius: AppSpacing.br8,
@@ -124,10 +141,16 @@ class ProfileHeroCard extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.shield_rounded, color: AppColors.accent, size: 12),
+                                const Icon(
+                                  Icons.shield_rounded,
+                                  color: AppColors.accent,
+                                  size: 12,
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  profile.faction.isNotEmpty ? profile.faction : 'Faction',
+                                  profile.faction.isNotEmpty
+                                      ? profile.faction
+                                      : 'Faction',
                                   style: AppText.labelSmall.copyWith(
                                     color: AppColors.textPrimary,
                                     fontSize: 10,
@@ -153,7 +176,9 @@ class ProfileHeroCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.warning.withValues(alpha: 0.12),
                   borderRadius: AppSpacing.br12,
-                  border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                  border: Border.all(
+                    color: AppColors.warning.withValues(alpha: 0.3),
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

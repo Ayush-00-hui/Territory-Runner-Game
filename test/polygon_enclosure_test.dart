@@ -79,72 +79,127 @@ void main() {
 
     test('Under 3 points returns 0 area', () {
       expect(PolygonEnclosureEngine.computeGeodesicShoelaceArea([]), 0.0);
-      expect(PolygonEnclosureEngine.computeGeodesicShoelaceArea([LatLng(0, 0)]), 0.0);
-      expect(PolygonEnclosureEngine.computeGeodesicShoelaceArea([LatLng(0, 0), LatLng(1, 1)]), 0.0);
+      expect(
+        PolygonEnclosureEngine.computeGeodesicShoelaceArea([LatLng(0, 0)]),
+        0.0,
+      );
+      expect(
+        PolygonEnclosureEngine.computeGeodesicShoelaceArea([
+          LatLng(0, 0),
+          LatLng(1, 1),
+        ]),
+        0.0,
+      );
     });
 
-    test('Self-intersecting loop (figure-8) is rejected with clear error reason', () {
+    test(
+      'Self-intersecting loop (figure-8) is rejected with clear error reason',
+      () {
+        final engine = PolygonEnclosureEngine();
+        // Pure figure-8 loop intersecting in the center with lobes < 40m
+        final p1 = LatLng(51.50000, -0.12000);
+        final p2 = LatLng(51.50016, -0.12016);
+        final p3 = LatLng(51.50016, -0.12000);
+        final p4 = LatLng(51.50000, -0.12016);
+
+        expect(
+          PolygonEnclosureEngine.hasSelfIntersection([p1, p2, p3, p4, p1]),
+          isTrue,
+        );
+
+        engine.addPosition(p1);
+        engine.addPosition(p2);
+        engine.addPosition(p3);
+        engine.addPosition(p4);
+
+        final manualEvent = engine.sealCurrentPath();
+        expect(manualEvent, isNull);
+        expect(
+          engine.lastInvalidReason,
+          equals('Loop crossed itself — try again'),
+        );
+      },
+    );
+
+    test(
+      'Lasso closure captures loop and retains tail for continued running',
+      () {
+        final engine = PolygonEnclosureEngine();
+        // Stem: p0 -> p1
+        // Loop: p1 -> p2 -> p3 -> crosses stem
+        final p0 = LatLng(51.50000, -0.12000);
+        final p1 = LatLng(51.50050, -0.12000);
+        final p2 = LatLng(51.50050, -0.12150);
+        final p3 = LatLng(51.50020, -0.12150);
+        final p4 = LatLng(
+          51.50020,
+          -0.11950,
+        ); // crosses p0->p1 at (51.50020, -0.12000)
+
+        expect(engine.addPosition(p0), isNull);
+        expect(engine.addPosition(p1), isNull);
+        expect(engine.addPosition(p2), isNull);
+        expect(engine.addPosition(p3), isNull);
+        final lassoEvent = engine.addPosition(p4);
+
+        expect(
+          lassoEvent,
+          isNotNull,
+          reason: 'Crossing stem must trigger lasso loop enclosure',
+        );
+        expect(lassoEvent!.areaSqMeters, greaterThan(3000.0));
+        // Remaining path must keep the tail: [p0, intersection]
+        expect(engine.currentPath.length, equals(2));
+        expect(engine.currentPath.first, equals(p0));
+        expect(engine.currentPath.last.latitude, closeTo(51.50020, 1e-4));
+        expect(engine.currentPath.last.longitude, closeTo(-0.12000, 1e-4));
+      },
+    );
+
+    test(
+      'Multi-candidate proximity closure selects candidate maximizing area',
+      () {
+        final engine = PolygonEnclosureEngine(minClosureDistanceMeters: 35.0);
+        final pStart = LatLng(51.50000, -0.12000);
+        final p1 = LatLng(51.50080, -0.12000);
+        final p2 = LatLng(51.50080, -0.12140);
+        final p3 = LatLng(51.50000, -0.12140);
+        final p4 = LatLng(51.50005, -0.12005); // near pStart (~8m)
+
+        expect(engine.addPosition(pStart), isNull);
+        expect(engine.addPosition(p1), isNull);
+        expect(engine.addPosition(p2), isNull);
+        expect(engine.addPosition(p3), isNull);
+        final event = engine.addPosition(p4);
+
+        expect(event, isNotNull);
+        expect(event!.areaSqMeters, greaterThan(7000.0));
+      },
+    );
+
+    test('Rejection reason is cleared at start of subsequent addPosition call', () {
       final engine = PolygonEnclosureEngine();
-      // Pure figure-8 loop intersecting in the center with lobes < 40m
-      final p1 = LatLng(51.50000, -0.12000);
-      final p2 = LatLng(51.50016, -0.12016);
-      final p3 = LatLng(51.50016, -0.12000);
-      final p4 = LatLng(51.50000, -0.12016);
+      final t0 = DateTime(2026, 10, 20, 10, 0, 0);
+      final p1 = LatLng(51.5000, -0.1200);
+      final p2 = LatLng(51.5009, -0.1200);
+      engine.addPosition(p1, t0);
+      engine.addPosition(p2, t0.add(const Duration(seconds: 10)));
 
-      expect(PolygonEnclosureEngine.hasSelfIntersection([p1, p2, p3, p4, p1]), isTrue);
+      // Trigger gap rejection (> 50m jump after 30s gap)
+      final pJump = LatLng(51.5009, -0.1214);
+      engine.addPosition(pJump, t0.add(const Duration(seconds: 40)));
+      expect(engine.lastInvalidReason, equals(PolygonEnclosureEngine.signalGapReason));
 
-      engine.addPosition(p1);
-      engine.addPosition(p2);
-      engine.addPosition(p3);
-      engine.addPosition(p4);
+      // Subsequent normal tick within valid parameters
+      final pNormal = LatLng(51.5009, -0.1216);
+      engine.addPosition(pNormal, t0.add(const Duration(seconds: 43)));
 
-      final manualEvent = engine.sealCurrentPath();
-      expect(manualEvent, isNull);
-      expect(engine.lastInvalidReason, equals('Loop crossed itself — try again'));
-    });
-
-    test('Lasso closure captures loop and retains tail for continued running', () {
-      final engine = PolygonEnclosureEngine();
-      // Stem: p0 -> p1
-      // Loop: p1 -> p2 -> p3 -> crosses stem
-      final p0 = LatLng(51.50000, -0.12000);
-      final p1 = LatLng(51.50050, -0.12000);
-      final p2 = LatLng(51.50050, -0.12150);
-      final p3 = LatLng(51.50020, -0.12150);
-      final p4 = LatLng(51.50020, -0.11950); // crosses p0->p1 at (51.50020, -0.12000)
-
-      expect(engine.addPosition(p0), isNull);
-      expect(engine.addPosition(p1), isNull);
-      expect(engine.addPosition(p2), isNull);
-      expect(engine.addPosition(p3), isNull);
-      final lassoEvent = engine.addPosition(p4);
-
-      expect(lassoEvent, isNotNull, reason: 'Crossing stem must trigger lasso loop enclosure');
-      expect(lassoEvent!.areaSqMeters, greaterThan(3000.0));
-      // Remaining path must keep the tail: [p0, intersection]
-      expect(engine.currentPath.length, equals(2));
-      expect(engine.currentPath.first, equals(p0));
-      expect(engine.currentPath.last.latitude, closeTo(51.50020, 1e-4));
-      expect(engine.currentPath.last.longitude, closeTo(-0.12000, 1e-4));
-    });
-
-    test('Multi-candidate proximity closure selects candidate maximizing area', () {
-      final engine = PolygonEnclosureEngine(minClosureDistanceMeters: 35.0);
-      final pStart = LatLng(51.50000, -0.12000);
-      final p1 = LatLng(51.50080, -0.12000);
-      final p2 = LatLng(51.50080, -0.12140);
-      final p3 = LatLng(51.50000, -0.12140);
-      final p4 = LatLng(51.50005, -0.12005); // near pStart (~8m)
-
-      expect(engine.addPosition(pStart), isNull);
-      expect(engine.addPosition(p1), isNull);
-      expect(engine.addPosition(p2), isNull);
-      expect(engine.addPosition(p3), isNull);
-      final event = engine.addPosition(p4);
-
-      expect(event, isNotNull);
-      expect(event!.areaSqMeters, greaterThan(7000.0));
+      // MUST be cleared! Reason should only be exposed for the call that produced it.
+      expect(
+        engine.lastInvalidReason,
+        isNull,
+        reason: 'Rejection reason must be cleared on the next call if no rejection occurred',
+      );
     });
   });
 }
-

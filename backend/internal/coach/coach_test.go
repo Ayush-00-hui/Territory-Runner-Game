@@ -153,4 +153,3 @@ func TestCoachCustomModel(t *testing.T) {
 	assert.Equal(t, "Great job!", insight.Summary)
 	assert.Equal(t, "analytical", insight.MoodTag)
 }
-

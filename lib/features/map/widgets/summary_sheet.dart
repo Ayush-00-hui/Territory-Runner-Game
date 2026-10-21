@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+
 import '../../../models/runner_profile.dart';
 import '../../../models/territory.dart';
 import '../../../services/export_service.dart';
@@ -134,15 +136,27 @@ class SummarySheet extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: (rejectionReason != null ? AppColors.error : AppColors.accent).withValues(alpha: 0.15),
+                      color:
+                          (rejectionReason != null
+                                  ? AppColors.error
+                                  : AppColors.accent)
+                              .withValues(alpha: 0.15),
                       borderRadius: AppSpacing.br12,
                       border: Border.all(
-                        color: (rejectionReason != null ? AppColors.error : AppColors.accent).withValues(alpha: 0.35),
+                        color:
+                            (rejectionReason != null
+                                    ? AppColors.error
+                                    : AppColors.accent)
+                                .withValues(alpha: 0.35),
                       ),
                     ),
                     child: Icon(
-                      rejectionReason != null ? Icons.cancel_outlined : Icons.emoji_events_rounded,
-                      color: rejectionReason != null ? AppColors.error : AppColors.accent,
+                      rejectionReason != null
+                          ? Icons.cancel_outlined
+                          : Icons.emoji_events_rounded,
+                      color: rejectionReason != null
+                          ? AppColors.error
+                          : AppColors.accent,
                       size: 20,
                     ),
                   ),
@@ -151,24 +165,34 @@ class SummarySheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        rejectionReason != null ? 'Run rejected' : 'Run complete',
+                        rejectionReason != null
+                            ? 'Run rejected'
+                            : 'Run complete',
                         style: AppText.headingSmall.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: rejectionReason != null ? AppColors.error : AppColors.textPrimary,
+                          color: rejectionReason != null
+                              ? AppColors.error
+                              : AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${profile.username} • ${profile.faction}',
-                        style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+                        style: AppText.bodySmall.copyWith(
+                          color: AppColors.textMuted,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: AppColors.textSecondary,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -181,12 +205,18 @@ class SummarySheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.error.withValues(alpha: 0.12),
                 borderRadius: AppSpacing.br12,
-                border: Border.all(color: AppColors.error.withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: AppColors.error.withValues(alpha: 0.5),
+                ),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 20),
+                  const Icon(
+                    Icons.warning_amber_rounded,
+                    color: AppColors.error,
+                    size: 20,
+                  ),
                   const SizedBox(width: AppSpacing.s10),
                   Expanded(
                     child: Column(
@@ -230,13 +260,29 @@ class SummarySheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMetricColumn('Distance', '${distanceKm.toStringAsFixed(2)} km', AppColors.accent),
+                _buildMetricColumn(
+                  'Distance',
+                  '${distanceKm.toStringAsFixed(2)} km',
+                  AppColors.accent,
+                ),
                 Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn('Time', _formatDuration(), AppColors.textPrimary),
+                _buildMetricColumn(
+                  'Time',
+                  _formatDuration(),
+                  AppColors.textPrimary,
+                ),
                 Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn('Pace', '${_formatPace()}/km', AppColors.textPrimary),
+                _buildMetricColumn(
+                  'Pace',
+                  '${_formatPace()}/km',
+                  AppColors.textPrimary,
+                ),
                 Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn('Territory', '+$territoriesClaimed', AppColors.accent),
+                _buildMetricColumn(
+                  'Territory',
+                  '+$territoriesClaimed',
+                  AppColors.accent,
+                ),
               ],
             ),
           ),
@@ -265,7 +311,10 @@ class SummarySheet extends StatelessWidget {
                     bottom: 8,
                     left: 12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.bgDeep.withValues(alpha: 0.8),
                         borderRadius: AppSpacing.br8,
@@ -310,17 +359,25 @@ class SummarySheet extends StatelessWidget {
                 child: snapshot.connectionState == ConnectionState.waiting
                     ? const Center(
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: AppSpacing.s8),
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppSpacing.s8,
+                          ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               SizedBox(
                                 height: 16,
                                 width: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.accent,
+                                ),
                               ),
                               SizedBox(width: AppSpacing.s12),
-                              Text('AI Coach analyzing telemetry...', style: AppText.bodySmall),
+                              Text(
+                                'AI Coach analyzing telemetry...',
+                                style: AppText.bodySmall,
+                              ),
                             ],
                           ),
                         ),
@@ -330,7 +387,11 @@ class SummarySheet extends StatelessWidget {
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.auto_awesome, color: AppColors.accent, size: 16),
+                              const Icon(
+                                Icons.auto_awesome,
+                                color: AppColors.accent,
+                                size: 16,
+                              ),
                               const SizedBox(width: AppSpacing.s8),
                               Text(
                                 'AI Coach debrief • ${insight?.moodTag.name.toUpperCase() ?? 'COACH'}',
@@ -346,11 +407,17 @@ class SummarySheet extends StatelessWidget {
                           const SizedBox(height: AppSpacing.s6),
                           Text(
                             insight?.summary ?? 'Conquest complete! Every closed loop expands your territorial perimeter.',
-                            style: AppText.body.copyWith(fontSize: 12.5, color: AppColors.textPrimary),
+                            style: AppText.body.copyWith(
+                              fontSize: 12.5,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.s8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surface2,
                               borderRadius: AppSpacing.br10,
@@ -359,11 +426,17 @@ class SummarySheet extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('💡 ', style: TextStyle(fontSize: 12)),
+                                const Text(
+                                  '💡 ',
+                                  style: TextStyle(fontSize: 12),
+                                ),
                                 Expanded(
                                   child: Text(
                                     insight?.tip ?? 'Keep up the rhythm! Regular runs compound territory sovereignty.',
-                                    style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                                    style: AppText.bodySmall.copyWith(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -386,7 +459,9 @@ class SummarySheet extends StatelessWidget {
                     foregroundColor: AppColors.accent,
                     side: const BorderSide(color: AppColors.accent, width: 1.5),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.br16,
+                    ),
                   ),
                   icon: const Icon(Icons.share_rounded, size: 18),
                   label: const Text(
@@ -431,10 +506,19 @@ class SummarySheet extends StatelessWidget {
                     foregroundColor: AppColors.textSecondary,
                     side: const BorderSide(color: AppColors.borderSubtle),
                     padding: const EdgeInsets.symmetric(vertical: 11),
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.br14,
+                    ),
                   ),
-                  icon: const Icon(Icons.file_download_outlined, size: 16, color: AppColors.accent),
-                  label: const Text('Export GPX', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
+                  icon: const Icon(
+                    Icons.file_download_outlined,
+                    size: 16,
+                    color: AppColors.accent,
+                  ),
+                  label: const Text(
+                    'Export GPX',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                  ),
                   onPressed: () async {
                     AppMotion.lightTick();
                     await ExportService().exportAndShareGpx(
@@ -451,10 +535,19 @@ class SummarySheet extends StatelessWidget {
                     foregroundColor: AppColors.textSecondary,
                     side: const BorderSide(color: AppColors.borderSubtle),
                     padding: const EdgeInsets.symmetric(vertical: 11),
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.br14,
+                    ),
                   ),
-                  icon: const Icon(Icons.polyline_rounded, size: 16, color: AppColors.info),
-                  label: const Text('Export GeoJSON', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11)),
+                  icon: const Icon(
+                    Icons.polyline_rounded,
+                    size: 16,
+                    color: AppColors.info,
+                  ),
+                  label: const Text(
+                    'Export GeoJSON',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                  ),
                   onPressed: () async {
                     AppMotion.lightTick();
                     await ExportService().exportAndShareGeoJson(
@@ -485,7 +578,10 @@ class SummarySheet extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 9.5),
+          style: AppText.label.copyWith(
+            color: AppColors.textMuted,
+            fontSize: 9.5,
+          ),
         ),
         const SizedBox(height: 3),
         Text(
@@ -537,7 +633,8 @@ class _VictoryMapPainter extends CustomPainter {
     for (int i = 0; i < points.length; i++) {
       final p = points[i];
       final double x = padding + ((p.longitude - minLng) / lngSpan) * usableW;
-      final double y = padding + (1.0 - ((p.latitude - minLat) / latSpan)) * usableH;
+      final double y =
+          padding + (1.0 - ((p.latitude - minLat) / latSpan)) * usableH;
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -564,7 +661,8 @@ class _VictoryMapPainter extends CustomPainter {
     final cy = size.height / 2;
     final r = math.min(size.width, size.height) * 0.32;
 
-    final path = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r));
+    final path = Path()
+      ..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r));
 
     final fillPaint = Paint()
       ..color = AppColors.territoryMineFill
