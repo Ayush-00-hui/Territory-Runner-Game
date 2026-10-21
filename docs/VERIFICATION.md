@@ -917,6 +917,97 @@ Compiling lib\main.dart for the Web...                             67.8s
 √ Built build\web
 ```
 
+---
+
+## 14. Critical Hardening & Bug Fixes Verification (`v7-critical-fixes`)
+
+### 14.1 Flutter Package Resolution
+- **Command**: `flutter pub get`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Resolving dependencies...
+Got dependencies!
+50 packages have newer versions incompatible with dependency constraints.
+```
+
+### 14.2 Flutter Static Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `1` (0 errors, 6 informational style warnings)
+- **Output**:
+```text
+Analyzing territory_runner...
+
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\gameplay\polygon_enclosure_engine.dart:97:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\gameplay\polygon_enclosure_engine.dart:112:7 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\gameplay\polygon_enclosure_engine.dart:525:11 - curly_braces_in_flow_control_structures
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\features\map\map_screen.dart:2006:19 - curly_braces_in_flow_control_structures
+   info - Use an initializing formal to assign a parameter to a field. Try using an initialing formal ('this._estimatedDurationMinutes') to initialize the field - lib\features\routing\route_service.dart:31:8 - prefer_initializing_formals
+   info - Statements in an if should be enclosed in a block. Try wrapping the statement in a block - lib\services\api_client.dart:49:7 - curly_braces_in_flow_control_structures
+
+6 issues found. (ran in 8.7s)
+```
+
+### 14.3 Full Flutter Test Suite
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Count**: 249 tests passed
+- **Output**:
+```text
+00:15 +249: All tests passed!
+```
+
+### 14.4 Go Static Analysis
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+(Clean exit; 0 errors, 0 warnings)
+```
+
+### 14.5 Full Backend Test Suite (No Caching)
+- **Command**: `go test -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Count**: 130 tests passed across 11 packages
+- **Output**:
+```text
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/cmd/server	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	0.669s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	1.406s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	1.393s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	1.099s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config	0.425s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	0.469s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	0.426s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	1.193s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.428s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	5.956s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	0.474s
+```
+
+### 14.6 Shared Golden Test Fixtures (Dart & Go Parity)
+- **Dart Fixture Runner**: `flutter test test/golden_fixtures_test.dart` $\rightarrow$ 14 golden fixtures passed
+- **Go Fixture Runner**: `go test -v -run "TestGolden" ./internal/geo` $\rightarrow$ 14 golden fixtures passed
+- **New Displacement-Aware Fixtures Verified**:
+  - `golden_pause_resume.json`: 30s gap with 6.9m displacement (stationary pause) $\rightarrow$ Loop preserved and closed successfully.
+  - `golden_gap_with_jump.json`: 30s gap with 97.0m displacement (>50m jump) $\rightarrow$ Path segmented and reset.
+  - `golden_very_long_gap.json`: 640s gap (>10 minutes) with 6.9m displacement $\rightarrow$ Path segmented and reset.
+
+### 14.7 Items Not Run Locally
+- **Go Race Detection (`go test -race ./...`)**:
+  - *Status*: NOT RUN locally.
+  - *Reason*: Host is Windows 11 without a C compiler (`gcc`/`clang` not installed in PATH).
+  - *CI Execution*: Executes in Linux environment via GitHub Actions CI (`.github/workflows/ci.yml`).
+- **Live Docker PostGIS Migration Tests**:
+  - *Status*: NOT RUN locally.
+  - *Reason*: Docker daemon is inactive on the local Windows host.
+  - *CI Execution*: Executes against ephemeral PostGIS services in Linux CI.
+
 
 
 
