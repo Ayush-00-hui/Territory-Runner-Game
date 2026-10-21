@@ -50,3 +50,10 @@ func TestEmbeddedMigrationsCompleteness(t *testing.T) {
 		assert.Contains(t, downFiles, i, "missing down migration for sequence %d", i)
 	}
 }
+
+func TestLegacyDatabaseDetectedError(t *testing.T) {
+	require.NotNil(t, ErrLegacyDatabaseDetected)
+	assert.Contains(t, ErrLegacyDatabaseDetected.Error(), "legacy database detected")
+	assert.Contains(t, ErrLegacyDatabaseDetected.Error(), "schema_migrations")
+	assert.Contains(t, ErrLegacyDatabaseDetected.Error(), "BASELINE_ON_LEGACY=true")
+}
