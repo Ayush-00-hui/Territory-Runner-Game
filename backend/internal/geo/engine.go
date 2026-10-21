@@ -33,6 +33,8 @@ type Config struct {
 	MinStationaryDistanceMeters float64
 	MaxSpeedKmhOutlier          float64
 	MaxSignalGapSeconds         float64
+	MaxPauseDisplacementMeters  float64
+	MaxPauseDurationSeconds     float64
 	ActivityName                string
 }
 
@@ -47,6 +49,8 @@ func DefaultConfig() Config {
 		MinStationaryDistanceMeters: 1.8,
 		MaxSpeedKmhOutlier:          35.0,
 		MaxSignalGapSeconds:         15.0,
+		MaxPauseDisplacementMeters:  50.0,
+		MaxPauseDurationSeconds:     600.0,
 		ActivityName:                "running",
 	}
 }
@@ -65,6 +69,8 @@ func ConfigForActivity(activity string) Config {
 			MinStationaryDistanceMeters: 1.8,
 			MaxSpeedKmhOutlier:          15.0,
 			MaxSignalGapSeconds:         15.0,
+			MaxPauseDisplacementMeters:  50.0,
+			MaxPauseDurationSeconds:     600.0,
 			ActivityName:                "walking",
 		}
 	case "cycling":
@@ -77,6 +83,8 @@ func ConfigForActivity(activity string) Config {
 			MinStationaryDistanceMeters: 1.8,
 			MaxSpeedKmhOutlier:          60.0,
 			MaxSignalGapSeconds:         15.0,
+			MaxPauseDisplacementMeters:  50.0,
+			MaxPauseDurationSeconds:     600.0,
 			ActivityName:                "cycling",
 		}
 	case "running":
@@ -91,6 +99,8 @@ func ConfigForActivity(activity string) Config {
 			MinStationaryDistanceMeters: 1.8,
 			MaxSpeedKmhOutlier:          35.0,
 			MaxSignalGapSeconds:         15.0,
+			MaxPauseDisplacementMeters:  50.0,
+			MaxPauseDurationSeconds:     600.0,
 			ActivityName:                "running",
 		}
 	}
@@ -142,16 +152,28 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 	}
 
 	// 0. GPS Signal Gap Guard: Gaps > MaxSignalGapSeconds (15s) segment the track.
-	// No interpolation across dropouts: reset buffer so no loop closes across the broken gap.
-	if e.cfg.MaxSignalGapSeconds > 0 && len(e.timestamps) > 0 {
+	// Displacement-aware: if gap > 15s but straight-line distance from last path point <= 50m,
+	// treat as a pause: keep path, do not reset. Reset if displacement > 50m or gap > 10m (600s).
+	if e.cfg.MaxSignalGapSeconds > 0 && len(e.timestamps) > 0 && len(e.path) > 0 {
 		gapSec := math.Abs(now.Sub(e.timestamps[len(e.timestamps)-1]).Seconds())
 		if gapSec > e.cfg.MaxSignalGapSeconds {
-			e.lastInvalidErr = ErrSignalGapDetected
-			e.path = []LatLng{pos}
-			e.timestamps = []time.Time{now}
-			e.lastReceivedPos = &pos
-			e.lastReceivedTime = &now
-			return nil, nil
+			displacement := HaversineDistanceMeters(e.path[len(e.path)-1], pos)
+			maxPauseDur := e.cfg.MaxPauseDurationSeconds
+			if maxPauseDur <= 0 {
+				maxPauseDur = 600.0
+			}
+			maxPauseDisp := e.cfg.MaxPauseDisplacementMeters
+			if maxPauseDisp <= 0 {
+				maxPauseDisp = 50.0
+			}
+			if gapSec > maxPauseDur || displacement > maxPauseDisp {
+				e.lastInvalidErr = ErrSignalGapDetected
+				e.path = []LatLng{pos}
+				e.timestamps = []time.Time{now}
+				e.lastReceivedPos = &pos
+				e.lastReceivedTime = &now
+				return nil, nil
+			}
 		}
 	}
 

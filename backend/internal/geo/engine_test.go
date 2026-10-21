@@ -394,3 +394,66 @@ func TestGoldenCyclingTinyLoop(t *testing.T) {
 	}
 }
 
+func TestGoldenPauseResume(t *testing.T) {
+	fixture := loadFixture(t, "golden_pause_resume.json")
+	require.True(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	engine := geo.NewEngine()
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.NoError(t, err)
+	require.Len(t, loops, 1, "Pause <= 50m displacement must not reset path; loop must close")
+
+	expected := fixture.ExpectedAreaSqM
+	delta := math.Abs(loops[0].AreaSqMeters - expected)
+	diffPercent := (delta / expected) * 100.0
+	assert.LessOrEqual(t, diffPercent, fixture.AreaTolerancePercent)
+}
+
+func TestGoldenGapWithJump(t *testing.T) {
+	fixture := loadFixture(t, "golden_gap_with_jump.json")
+	require.False(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	engine := geo.NewEngine()
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, geo.ErrSignalGapDetected)
+	assert.Empty(t, loops, "Gap with jump > 50m must produce 0 valid loops")
+}
+
+func TestGoldenVeryLongGap(t *testing.T) {
+	fixture := loadFixture(t, "golden_very_long_gap.json")
+	require.False(t, fixture.IsValid)
+
+	trackPoints := make([]geo.TrackPoint, len(fixture.Points))
+	for i, p := range fixture.Points {
+		trackPoints[i] = geo.TrackPoint{
+			Latitude:  p.Latitude,
+			Longitude: p.Longitude,
+			Timestamp: p.Timestamp,
+		}
+	}
+
+	engine := geo.NewEngine()
+	loops, err := engine.ProcessTrack(trackPoints)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, geo.ErrSignalGapDetected)
+	assert.Empty(t, loops, "Gap > 10 minutes must produce 0 valid loops")
+}

@@ -1,0 +1,19 @@
+{
+  "name": "golden_pause_resume",
+  "description": "Standard 100m x 100m rectangular running loop containing a 30-second stationary pause (<= 50m displacement). Must keep path and close loop successfully.",
+  "min_closure_distance_meters": 35.0,
+  "min_points_required": 4,
+  "min_loop_distance_meters": 40.0,
+  "max_loop_area_sqm": 5000000.0,
+  "is_valid": true,
+  "expected_area_sqm": 9179.8,
+  "area_tolerance_percent": 0.5,
+  "points": [
+    { "latitude": 51.5000, "longitude": -0.1200, "timestamp": "2026-10-13T10:00:00Z" },
+    { "latitude": 51.5009, "longitude": -0.1200, "timestamp": "2026-10-13T10:00:10Z" },
+    { "latitude": 51.5009, "longitude": -0.1201, "timestamp": "2026-10-13T10:00:40Z" },
+    { "latitude": 51.5009, "longitude": -0.1214, "timestamp": "2026-10-13T10:00:50Z" },
+    { "latitude": 51.5000, "longitude": -0.1214, "timestamp": "2026-10-13T10:01:00Z" },
+    { "latitude": 51.5001, "longitude": -0.1201, "timestamp": "2026-10-13T10:01:10Z" }
+  ]
+}
