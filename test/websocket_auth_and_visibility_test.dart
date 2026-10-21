@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -105,7 +106,9 @@ class _FakeApiClient implements ApiClient {
   Future<Map<String, dynamic>?> getSettings() async => mockSettings;
 
   @override
-  Future<Map<String, dynamic>?> updateSettings(Map<String, dynamic> settings) async {
+  Future<Map<String, dynamic>?> updateSettings(
+    Map<String, dynamic> settings,
+  ) async {
     updatedSettings = settings;
     return settings;
   }
@@ -126,7 +129,9 @@ void main() {
     test('Authenticated user sends ID token via Sec-WebSocket-Protocol and strips query params', () async {
       final fakeUser = _FakeUser(token: 'header_token_secret');
       final fakeFirebase = _FakeFirebaseService(mockUser: fakeUser);
-      final fakeApi = _FakeApiClient(baseUrl: 'https://api.territoryrunner.com');
+      final fakeApi = _FakeApiClient(
+        baseUrl: 'https://api.territoryrunner.com',
+      );
 
       final ws = WebSocketService.custom(
         firebaseService: fakeFirebase,
@@ -138,28 +143,38 @@ void main() {
       expect(params.uri.scheme, equals('wss'));
       expect(params.uri.host, equals('api.territoryrunner.com'));
       expect(params.uri.path, equals('/v1/ws'));
-      expect(params.uri.query, isEmpty, reason: 'Tokens and user IDs must never leak into query strings in production');
+      expect(
+        params.uri.query,
+        isEmpty,
+        reason: 'Tokens and user IDs must never leak into query strings in production',
+      );
       expect(params.protocols, equals(['bearer', 'header_token_secret']));
       expect(fakeUser.forceRefreshPassed, isFalse);
     });
 
-    test('Reconnect forces token refresh to handle expired credentials', () async {
-      final fakeUser = _FakeUser(token: 'refreshed_token');
-      final fakeFirebase = _FakeFirebaseService(mockUser: fakeUser);
-      final fakeApi = _FakeApiClient(baseUrl: 'http://10.0.2.2:8080');
+    test(
+      'Reconnect forces token refresh to handle expired credentials',
+      () async {
+        final fakeUser = _FakeUser(token: 'refreshed_token');
+        final fakeFirebase = _FakeFirebaseService(mockUser: fakeUser);
+        final fakeApi = _FakeApiClient(baseUrl: 'http://10.0.2.2:8080');
 
-      final ws = WebSocketService.custom(
-        firebaseService: fakeFirebase,
-        apiClient: fakeApi,
-      );
+        final ws = WebSocketService.custom(
+          firebaseService: fakeFirebase,
+          apiClient: fakeApi,
+        );
 
-      final params = await ws.buildConnectionParams(forceRefresh: true);
-      expect(fakeUser.forceRefreshPassed, isTrue);
-      expect(params.protocols, equals(['bearer', 'refreshed_token']));
-    });
+        final params = await ws.buildConnectionParams(forceRefresh: true);
+        expect(fakeUser.forceRefreshPassed, isTrue);
+        expect(params.protocols, equals(['bearer', 'refreshed_token']));
+      },
+    );
 
     test('Unauthenticated / Dev runner connects via ?dev_user with no subprotocols', () async {
-      final fakeFirebase = _FakeFirebaseService(mockUser: null, mockUserId: 'local_dev_tester');
+      final fakeFirebase = _FakeFirebaseService(
+        mockUser: null,
+        mockUserId: 'local_dev_tester',
+      );
       final fakeApi = _FakeApiClient(baseUrl: 'http://localhost:8080');
 
       final ws = WebSocketService.custom(
@@ -170,7 +185,10 @@ void main() {
       final params = await ws.buildConnectionParams();
 
       expect(params.uri.scheme, equals('ws'));
-      expect(params.uri.queryParameters, equals({'dev_user': 'local_dev_tester'}));
+      expect(
+        params.uri.queryParameters,
+        equals({'dev_user': 'local_dev_tester'}),
+      );
       expect(params.protocols, isNull);
     });
   });
@@ -183,17 +201,29 @@ void main() {
       expect(service.liveVisibility.description, contains('never shared'));
     });
 
-    test('Enum serialization round-trips correctly with safe default fallback', () {
-      expect(LiveVisibility.fromString('off'), equals(LiveVisibility.off));
-      expect(LiveVisibility.fromString('friends'), equals(LiveVisibility.friends));
-      expect(LiveVisibility.fromString('nearby'), equals(LiveVisibility.nearby));
-      expect(LiveVisibility.fromString('invalid_mode'), equals(LiveVisibility.off));
-      expect(LiveVisibility.fromString(null), equals(LiveVisibility.off));
+    test(
+      'Enum serialization round-trips correctly with safe default fallback',
+      () {
+        expect(LiveVisibility.fromString('off'), equals(LiveVisibility.off));
+        expect(
+          LiveVisibility.fromString('friends'),
+          equals(LiveVisibility.friends),
+        );
+        expect(
+          LiveVisibility.fromString('nearby'),
+          equals(LiveVisibility.nearby),
+        );
+        expect(
+          LiveVisibility.fromString('invalid_mode'),
+          equals(LiveVisibility.off),
+        );
+        expect(LiveVisibility.fromString(null), equals(LiveVisibility.off));
 
-      expect(LiveVisibility.off.toApiValue(), equals('off'));
-      expect(LiveVisibility.friends.toApiValue(), equals('friends'));
-      expect(LiveVisibility.nearby.toApiValue(), equals('nearby'));
-    });
+        expect(LiveVisibility.off.toApiValue(), equals('off'));
+        expect(LiveVisibility.friends.toApiValue(), equals('friends'));
+        expect(LiveVisibility.nearby.toApiValue(), equals('nearby'));
+      },
+    );
 
     test('setLiveVisibility updates memory, persists to SharedPreferences, and calls API', () async {
       final fakeApi = _FakeApiClient();
@@ -209,8 +239,13 @@ void main() {
     });
 
     test('syncWithServer loads remote visibility preference and syncs to SharedPreferences', () async {
-      final fakeApi = _FakeApiClient(mockSettings: {'live_visibility': 'friends'});
-      final service = UserSettingsService.custom(apiClient: fakeApi, initial: LiveVisibility.off);
+      final fakeApi = _FakeApiClient(
+        mockSettings: {'live_visibility': 'friends'},
+      );
+      final service = UserSettingsService.custom(
+        apiClient: fakeApi,
+        initial: LiveVisibility.off,
+      );
 
       await service.syncWithServer();
 
@@ -221,35 +256,46 @@ void main() {
   });
 
   group('WebSocketService Presence Suppression by Consent', () {
-    test('Suppresses outbound presence packet entirely when liveVisibility is off', () async {
-      final privacyService = PrivacyZoneService();
-      await privacyService.loadZones();
+    test(
+      'Suppresses outbound presence packet entirely when liveVisibility is off',
+      () async {
+        final privacyService = PrivacyZoneService();
+        await privacyService.loadZones();
 
-      final settingsService = UserSettingsService.custom(initial: LiveVisibility.off);
-      final ws = WebSocketService.custom(
-        privacyZoneService: privacyService,
-        userSettingsService: settingsService,
-      );
+        final settingsService = UserSettingsService.custom(
+          initial: LiveVisibility.off,
+        );
+        final ws = WebSocketService.custom(
+          privacyZoneService: privacyService,
+          userSettingsService: settingsService,
+        );
 
-      final channel = _FakeChannel();
-      ws.setMockChannel(channel);
+        final channel = _FakeChannel();
+        ws.setMockChannel(channel);
 
-      final dispatched = ws.sendPresenceUpdate(
-        latitude: 37.7749,
-        longitude: -122.4194,
-        speed: 3.5,
-        force: true,
-      );
+        final dispatched = ws.sendPresenceUpdate(
+          latitude: 37.7749,
+          longitude: -122.4194,
+          speed: 3.5,
+          force: true,
+        );
 
-      expect(dispatched, isFalse, reason: 'Outbound presence must be dropped on client when visibility is off');
-      expect(channel._sink.sentMessages, isEmpty);
-    });
+        expect(
+          dispatched,
+          isFalse,
+          reason: 'Outbound presence must be dropped on client when visibility is off',
+        );
+        expect(channel._sink.sentMessages, isEmpty);
+      },
+    );
 
     test('Dispatches presence update when liveVisibility is nearby and outside privacy zone', () async {
       final privacyService = PrivacyZoneService();
       await privacyService.loadZones();
 
-      final settingsService = UserSettingsService.custom(initial: LiveVisibility.nearby);
+      final settingsService = UserSettingsService.custom(
+        initial: LiveVisibility.nearby,
+      );
       final ws = WebSocketService.custom(
         privacyZoneService: privacyService,
         userSettingsService: settingsService,
@@ -281,7 +327,11 @@ void main() {
       final center = '9q8yyk';
       final n = GeohashUtils.neighbors(center);
       expect(n.length, equals(8));
-      expect(n.toSet().length, equals(8), reason: 'All 8 neighbors must be unique');
+      expect(
+        n.toSet().length,
+        equals(8),
+        reason: 'All 8 neighbors must be unique',
+      );
       expect(n.contains(center), isFalse);
     });
 
@@ -292,48 +342,50 @@ void main() {
       expect(-122.4194, inInclusiveRange(bounds.minLng, bounds.maxLng));
     });
 
-    test('computeViewportCells returns center plus 8 neighbors (9 cells total)', () {
-      final cells = GeohashUtils.computeViewportCells(const LatLng(37.7749, -122.4194));
-      expect(cells.length, equals(9));
-      expect(cells.first, equals('9q8yyk'));
-      expect(cells.toSet().length, equals(9));
-    });
+    test(
+      'computeViewportCells returns center plus 8 neighbors (9 cells total)',
+      () {
+        final cells = GeohashUtils.computeViewportCells(
+          const LatLng(37.7749, -122.4194),
+        );
+        expect(cells.length, equals(9));
+        expect(cells.first, equals('9q8yyk'));
+        expect(cells.toSet().length, equals(9));
+      },
+    );
   });
 
   group('LiveVisibilitySheet UI Widget Tests', () {
-    testWidgets('Renders all visibility options and displays default off state', (tester) async {
+    testWidgets(
+      'Renders all visibility options and displays default off state',
+      (tester) async {
+        final settings = UserSettingsService();
+        settings.resetForTesting(initial: LiveVisibility.off);
+
+        await tester.pumpWidget(
+          const MaterialApp(home: Scaffold(body: LiveVisibilitySheetContent())),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Live Location Visibility'), findsOneWidget);
+        expect(find.text('Off (Recommended)'), findsOneWidget);
+        expect(find.text('Friends only'), findsOneWidget);
+        expect(find.text('Nearby runners'), findsOneWidget);
+
+        // Verify that radio icon is checked for Off
+        expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
+        expect(find.byIcon(Icons.radio_button_off), findsNWidgets(2));
+      },
+    );
+
+    testWidgets('Tapping Nearby runners option updates UserSettingsService', (
+      tester,
+    ) async {
       final settings = UserSettingsService();
       settings.resetForTesting(initial: LiveVisibility.off);
 
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LiveVisibilitySheetContent(),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Live Location Visibility'), findsOneWidget);
-      expect(find.text('Off (Recommended)'), findsOneWidget);
-      expect(find.text('Friends only'), findsOneWidget);
-      expect(find.text('Nearby runners'), findsOneWidget);
-
-      // Verify that radio icon is checked for Off
-      expect(find.byIcon(Icons.radio_button_checked), findsOneWidget);
-      expect(find.byIcon(Icons.radio_button_off), findsNWidgets(2));
-    });
-
-    testWidgets('Tapping Nearby runners option updates UserSettingsService', (tester) async {
-      final settings = UserSettingsService();
-      settings.resetForTesting(initial: LiveVisibility.off);
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: LiveVisibilitySheetContent(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: LiveVisibilitySheetContent())),
       );
       await tester.pumpAndSettle();
 

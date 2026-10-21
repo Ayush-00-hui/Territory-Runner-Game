@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
+
 import '../core/logging/app_logger.dart';
 import '../core/utils/constants.dart';
 
@@ -63,7 +65,11 @@ class TileCacheService {
     final n = math.pow(2.0, zoom);
     final x = ((lng + 180.0) / 360.0 * n).floor();
     final latRad = lat * math.pi / 180.0;
-    final y = ((1.0 - math.log(math.tan(latRad) + 1.0 / math.cos(latRad)) / math.pi) / 2.0 * n).floor();
+    final y =
+        ((1.0 - math.log(math.tan(latRad) + 1.0 / math.cos(latRad)) / math.pi) /
+                2.0 *
+                n)
+            .floor();
     return math.Point<int>(x, y);
   }
 
@@ -86,7 +92,12 @@ class TileCacheService {
       await file.parent.create(recursive: true);
       await file.writeAsBytes(bytes, flush: true);
     } catch (e, st) {
-      AppLogger.error('Error saving tile $z/$x/$y', error: e, stackTrace: st, tag: 'TileCacheService');
+      AppLogger.error(
+        'Error saving tile $z/$x/$y',
+        error: e,
+        stackTrace: st,
+        tag: 'TileCacheService',
+      );
     }
   }
 
@@ -109,7 +120,8 @@ class TileCacheService {
 
     // Earth radius approximation: 1 deg lat ~= 111 km
     final double dLat = radiusKm / 111.0;
-    final double dLng = radiusKm / (111.0 * math.cos(center.latitude * math.pi / 180.0));
+    final double dLng =
+        radiusKm / (111.0 * math.cos(center.latitude * math.pi / 180.0));
 
     final double minLat = center.latitude - dLat;
     final double maxLat = center.latitude + dLat;
@@ -152,9 +164,12 @@ class TileCacheService {
               .replaceAll('{apiKey}', AppConstants.tileApiKey)
               .replaceAll('{accessToken}', AppConstants.tileApiKey);
 
-          final resp = await http.get(Uri.parse(url), headers: {
-            'User-Agent': AppConstants.userAgent,
-          }).timeout(const Duration(seconds: 4));
+          final resp = await http
+              .get(
+                Uri.parse(url),
+                headers: {'User-Agent': AppConstants.userAgent},
+              )
+              .timeout(const Duration(seconds: 4));
 
           if (resp.statusCode == 200) {
             await saveTile(z, x, y, resp.bodyBytes);
@@ -213,7 +228,12 @@ class TileCacheService {
         await dir.create(recursive: true);
       }
     } catch (e, st) {
-      AppLogger.error('Error clearing cache', error: e, stackTrace: st, tag: 'TileCacheService');
+      AppLogger.error(
+        'Error clearing cache',
+        error: e,
+        stackTrace: st,
+        tag: 'TileCacheService',
+      );
     }
   }
 }
@@ -243,7 +263,8 @@ class OfflineFirstTileProvider extends TileProvider {
   }
 }
 
-class _OfflineFirstImageProvider extends ImageProvider<_OfflineFirstImageProvider> {
+class _OfflineFirstImageProvider
+    extends ImageProvider<_OfflineFirstImageProvider> {
   final String url;
   final int z;
   final int x;
@@ -261,12 +282,17 @@ class _OfflineFirstImageProvider extends ImageProvider<_OfflineFirstImageProvide
   });
 
   @override
-  Future<_OfflineFirstImageProvider> obtainKey(ImageConfiguration configuration) {
+  Future<_OfflineFirstImageProvider> obtainKey(
+    ImageConfiguration configuration,
+  ) {
     return SynchronousFuture<_OfflineFirstImageProvider>(this);
   }
 
   @override
-  ImageStreamCompleter loadImage(_OfflineFirstImageProvider key, ImageDecoderCallback decode) {
+  ImageStreamCompleter loadImage(
+    _OfflineFirstImageProvider key,
+    ImageDecoderCallback decode,
+  ) {
     return MultiFrameImageStreamCompleter(
       codec: _loadAsync(decode),
       scale: 1.0,
@@ -293,11 +319,13 @@ class _OfflineFirstImageProvider extends ImageProvider<_OfflineFirstImageProvide
     }
 
     // 1. If we have a fresh cached tile (< minTileCacheDays old), serve immediately.
-    final bool isCacheFresh = hasCachedFile &&
+    final bool isCacheFresh =
+        hasCachedFile &&
         cachedBytes != null &&
         cachedBytes.isNotEmpty &&
         lastModified != null &&
-        DateTime.now().difference(lastModified).inDays < AppConstants.minTileCacheDays;
+        DateTime.now().difference(lastModified).inDays <
+            AppConstants.minTileCacheDays;
 
     if (isCacheFresh) {
       final buffer = await ui.ImmutableBuffer.fromUint8List(cachedBytes);
@@ -320,9 +348,13 @@ class _OfflineFirstImageProvider extends ImageProvider<_OfflineFirstImageProvide
       if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
         // Cache asynchronously in background
         cacheService.saveTile(z, x, y, response.bodyBytes);
-        final buffer = await ui.ImmutableBuffer.fromUint8List(response.bodyBytes);
+        final buffer = await ui.ImmutableBuffer.fromUint8List(
+          response.bodyBytes,
+        );
         return await decode(buffer);
-      } else if (response.statusCode == 304 && cachedBytes != null && cachedBytes.isNotEmpty) {
+      } else if (response.statusCode == 304 &&
+          cachedBytes != null &&
+          cachedBytes.isNotEmpty) {
         // Not Modified: touch timestamp to extend cache freshness
         try {
           await file.setLastModified(DateTime.now());
@@ -346,12 +378,73 @@ class _OfflineFirstImageProvider extends ImageProvider<_OfflineFirstImageProvide
 
     // 3. Fallback: 1x1 transparent pixel so map rendering doesn't crash
     final transparentPng = Uint8List.fromList([
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-      0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
-      0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
-      0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
-      0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+      0x89,
+      0x50,
+      0x4E,
+      0x47,
+      0x0D,
+      0x0A,
+      0x1A,
+      0x0A,
+      0x00,
+      0x00,
+      0x00,
+      0x0D,
+      0x49,
+      0x48,
+      0x44,
+      0x52,
+      0x00,
+      0x00,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x01,
+      0x08,
+      0x06,
+      0x00,
+      0x00,
+      0x00,
+      0x1F,
+      0x15,
+      0xC4,
+      0x89,
+      0x00,
+      0x00,
+      0x00,
+      0x0A,
+      0x49,
+      0x44,
+      0x41,
+      0x54,
+      0x78,
+      0x9C,
+      0x63,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x05,
+      0x00,
+      0x01,
+      0x0D,
+      0x0A,
+      0x2D,
+      0xB4,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x49,
+      0x45,
+      0x4E,
+      0x44,
+      0xAE,
+      0x42,
+      0x60,
+      0x82,
     ]);
     final buffer = await ui.ImmutableBuffer.fromUint8List(transparentPng);
     return await decode(buffer);

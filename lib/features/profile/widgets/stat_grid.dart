@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../gameplay/territory_service.dart';
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
@@ -17,7 +18,10 @@ class ProfileStatGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final captured = territoryService.getCapturedTerritoryObjects();
-    final double totalAreaM2 = captured.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+    final double totalAreaM2 = captured.fold(
+      0.0,
+      (sum, t) => sum + t.areaSqMeters,
+    );
     final String territoryVal = totalAreaM2 >= 10000
         ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
         : '${totalAreaM2.toStringAsFixed(0)} m²';
@@ -43,8 +47,15 @@ class ProfileStatGrid extends StatelessWidget {
               value: '${profile.totalDistanceKm.toStringAsFixed(2)} km',
               description: 'Cumulative GPS route distance logged on foot across urban and wilderness sectors.',
               metrics: [
-                {'label': 'Lifetime Distance', 'val': '${profile.totalDistanceKm.toStringAsFixed(2)} km'},
-                {'label': 'Weekly Estimated', 'val': '${(profile.totalDistanceKm / 4).toStringAsFixed(1)} km/wk'},
+                {
+                  'label': 'Lifetime Distance',
+                  'val': '${profile.totalDistanceKm.toStringAsFixed(2)} km',
+                },
+                {
+                  'label': 'Weekly Estimated',
+                  'val':
+                      '${(profile.totalDistanceKm / 4).toStringAsFixed(1)} km/wk',
+                },
                 {'label': 'Pace Rating', 'val': 'Active Runner'},
               ],
             );
@@ -63,8 +74,14 @@ class ProfileStatGrid extends StatelessWidget {
               value: '${profile.currentStreak} days',
               description: 'Continuous daily conquest momentum. Running and claiming territory daily keeps your streak active.',
               metrics: [
-                {'label': 'Active Streak Days', 'val': '${profile.currentStreak} days'},
-                {'label': 'Streak Multiplier Bonus', 'val': '+${(profile.currentStreak * 2).clamp(0, 50)}% XP'},
+                {
+                  'label': 'Active Streak Days',
+                  'val': '${profile.currentStreak} days',
+                },
+                {
+                  'label': 'Streak Multiplier Bonus',
+                  'val': '+${(profile.currentStreak * 2).clamp(0, 50)}% XP',
+                },
                 {'label': 'Status', 'val': 'Active Momentum'},
               ],
             );
@@ -83,9 +100,18 @@ class ProfileStatGrid extends StatelessWidget {
               value: '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} km²',
               description: 'Post-union sovereign territory polygons permanently claimed on foot.',
               metrics: [
-                {'label': 'Captured Polygons', 'val': '${captured.length} sectors'},
-                {'label': 'Controlled Area', 'val': '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} km²'},
-                {'label': 'Square Meters', 'val': '${totalAreaM2.toStringAsFixed(0)} m²'},
+                {
+                  'label': 'Captured Polygons',
+                  'val': '${captured.length} sectors',
+                },
+                {
+                  'label': 'Controlled Area',
+                  'val': '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} km²',
+                },
+                {
+                  'label': 'Square Meters',
+                  'val': '${totalAreaM2.toStringAsFixed(0)} m²',
+                },
               ],
             );
           },
@@ -104,8 +130,14 @@ class ProfileStatGrid extends StatelessWidget {
               description: 'Athlete experience tier. Progressing tiers grants improved sector claim speed and prestige insignia.',
               metrics: [
                 {'label': 'Current Level', 'val': 'Level ${profile.level}'},
-                {'label': 'Experience Points', 'val': '${profile.xp} / ${profile.level * 250} XP'},
-                {'label': 'Perks Unlocked', 'val': 'Territory Sovereign, Speed Burst'},
+                {
+                  'label': 'Experience Points',
+                  'val': '${profile.xp} / ${profile.level * 250} XP',
+                },
+                {
+                  'label': 'Perks Unlocked',
+                  'val': 'Territory Sovereign, Speed Burst',
+                },
               ],
             );
           },
@@ -156,7 +188,11 @@ class ProfileStatCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, color: iconColor, size: 20),
-                const Icon(Icons.info_outline_rounded, color: AppColors.textMuted, size: 14),
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: AppColors.textMuted,
+                  size: 14,
+                ),
               ],
             ),
             const Spacer(),

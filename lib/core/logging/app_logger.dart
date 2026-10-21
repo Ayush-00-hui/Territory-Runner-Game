@@ -35,18 +35,51 @@ class AppLogger {
   static bool get isCrashlyticsEnabled => _crashlyticsEnabled;
 
   /// Logs verbose diagnostic messages. Silent in release builds.
-  static void debug(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
-    _log(LogLevel.debug, message, tag: tag, error: error, stackTrace: stackTrace);
+  static void debug(
+    String message, {
+    String? tag,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    _log(
+      LogLevel.debug,
+      message,
+      tag: tag,
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
   /// Logs general operational information. Silent in release builds.
-  static void info(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
-    _log(LogLevel.info, message, tag: tag, error: error, stackTrace: stackTrace);
+  static void info(
+    String message, {
+    String? tag,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    _log(
+      LogLevel.info,
+      message,
+      tag: tag,
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
   /// Logs unusual conditions or transient recoverable failures.
-  static void warning(String message, {String? tag, Object? error, StackTrace? stackTrace}) {
-    _log(LogLevel.warning, message, tag: tag, error: error, stackTrace: stackTrace);
+  static void warning(
+    String message, {
+    String? tag,
+    Object? error,
+    StackTrace? stackTrace,
+  }) {
+    _log(
+      LogLevel.warning,
+      message,
+      tag: tag,
+      error: error,
+      stackTrace: stackTrace,
+    );
   }
 
   /// Logs unexpected errors or caught exceptions.
@@ -58,7 +91,14 @@ class AppLogger {
     StackTrace? stackTrace,
     bool fatal = false,
   }) {
-    _log(LogLevel.error, message, tag: tag, error: error, stackTrace: stackTrace, fatal: fatal);
+    _log(
+      LogLevel.error,
+      message,
+      tag: tag,
+      error: error,
+      stackTrace: stackTrace,
+      fatal: fatal,
+    );
   }
 
   static void _log(

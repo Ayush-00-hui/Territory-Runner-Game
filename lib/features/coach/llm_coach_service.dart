@@ -20,13 +20,17 @@ class CoachInsight {
     required int hexesClaimed,
     required int durationSeconds,
   }) {
-    final double pace = (distanceKm > 0) ? (durationSeconds / 60.0) / distanceKm : 0.0;
+    final double pace = (distanceKm > 0)
+        ? (durationSeconds / 60.0) / distanceKm
+        : 0.0;
     final int paceMin = pace.floor();
     final int paceSec = ((pace - paceMin) * 60).round();
 
     return CoachInsight(
-      summary: "Outstanding run! You logged ${distanceKm.toStringAsFixed(2)} km in ${(durationSeconds / 60).toStringAsFixed(1)} min and conquered $hexesClaimed new territory sectors.",
-      tip: "Pace recorded at $paceMin'${paceSec.toString().padLeft(2, '0')}\"/km. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-hex loops.",
+      summary:
+          "Outstanding run! You logged ${distanceKm.toStringAsFixed(2)} km in ${(durationSeconds / 60).toStringAsFixed(1)} min and conquered $hexesClaimed new territory sectors.",
+      tip:
+          "Pace recorded at $paceMin'${paceSec.toString().padLeft(2, '0')}\"/km. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-hex loops.",
       moodTag: hexesClaimed > 5 ? CoachMood.celebratory : CoachMood.encouraging,
     );
   }
@@ -77,7 +81,11 @@ class LLMCoachService {
 
       final summary = res['summary'] as String? ?? '';
       final tip = res['tip'] as String? ?? '';
-      final moodStr = (res['mood_tag'] as String? ?? res['moodTag'] as String? ?? 'encouraging').toLowerCase();
+      final moodStr =
+          (res['mood_tag'] as String? ??
+                  res['moodTag'] as String? ??
+                  'encouraging')
+              .toLowerCase();
 
       CoachMood mood = CoachMood.encouraging;
       if (moodStr == 'celebratory') mood = CoachMood.celebratory;
@@ -87,7 +95,10 @@ class LLMCoachService {
         return CoachInsight(summary: summary, tip: tip, moodTag: mood);
       }
     } catch (e) {
-      AppLogger.info('Backend coach proxy unavailable ($e); using smart on-device coaching heuristic.', tag: 'LLMCoachService');
+      AppLogger.info(
+        'Backend coach proxy unavailable ($e); using smart on-device coaching heuristic.',
+        tag: 'LLMCoachService',
+      );
     }
 
     return CoachInsight.fallback(

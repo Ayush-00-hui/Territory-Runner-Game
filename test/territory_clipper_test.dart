@@ -32,16 +32,26 @@ void main() {
         fillRule: FillRule.nonZero,
       );
 
-      expect(unionPaths.length, 1, reason: 'Overlapping squares should merge into 1 polygon ring');
-      
+      expect(
+        unionPaths.length,
+        1,
+        reason: 'Overlapping squares should merge into 1 polygon ring',
+      );
+
       final mergedPolygon = TerritoryService.path64ToLatLngs(unionPaths.first);
       final areaA = PolygonEnclosureEngine.computeGeodesicShoelaceArea(squareA);
       final areaB = PolygonEnclosureEngine.computeGeodesicShoelaceArea(squareB);
-      final mergedArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(mergedPolygon);
+      final mergedArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(
+        mergedPolygon,
+      );
 
       expect(mergedArea, greaterThan(areaA));
       expect(mergedArea, greaterThan(areaB));
-      expect(mergedArea, lessThan(areaA + areaB), reason: 'Merged area should eliminate overlapping union region');
+      expect(
+        mergedArea,
+        lessThan(areaA + areaB),
+        reason: 'Merged area should eliminate overlapping union region',
+      );
     });
 
     test('One player loop cuts into and shrinks rival player claimed area', () {
@@ -71,15 +81,23 @@ void main() {
       );
 
       expect(clippedRivalPaths, isNotEmpty);
-      
-      final clippedMultiPolys = clippedRivalPaths.map(TerritoryService.path64ToLatLngs).toList();
-      final initialRivalArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(rivalSquare);
+
+      final clippedMultiPolys = clippedRivalPaths
+          .map(TerritoryService.path64ToLatLngs)
+          .toList();
+      final initialRivalArea =
+          PolygonEnclosureEngine.computeGeodesicShoelaceArea(rivalSquare);
       final remainingRivalArea = clippedMultiPolys.fold(
         0.0,
-        (acc, poly) => acc + PolygonEnclosureEngine.computeGeodesicShoelaceArea(poly),
+        (acc, poly) =>
+            acc + PolygonEnclosureEngine.computeGeodesicShoelaceArea(poly),
       );
 
-      expect(remainingRivalArea, lessThan(initialRivalArea), reason: 'Rival territory area must shrink when contested');
+      expect(
+        remainingRivalArea,
+        lessThan(initialRivalArea),
+        reason: 'Rival territory area must shrink when contested',
+      );
       expect(remainingRivalArea, greaterThan(0.0));
     });
   });

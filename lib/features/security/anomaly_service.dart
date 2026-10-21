@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:geolocator/geolocator.dart';
+
 import '../../core/logging/app_logger.dart';
 import '../../models/activity_type.dart';
 
@@ -54,52 +56,78 @@ class AnomalyService {
   bool get isConfigLoaded => _isConfigLoaded;
 
   /// Loads baseline statistical parameters from the asset JSON configuration
-  Future<void> loadModelConfig([String assetPath = 'assets/models/gps_anomaly_detector.json']) async {
+  Future<void> loadModelConfig([
+    String assetPath = 'assets/models/gps_anomaly_detector.json',
+  ]) async {
     try {
       final String jsonStr = await rootBundle.loadString(assetPath);
-      final Map<String, dynamic> data = jsonDecode(jsonStr) as Map<String, dynamic>;
+      final Map<String, dynamic> data =
+          jsonDecode(jsonStr) as Map<String, dynamic>;
 
       if (data.containsKey('means') && data['means'] is List) {
-        _means = (data['means'] as List).map((e) => (e as num).toDouble()).toList();
+        _means = (data['means'] as List)
+            .map((e) => (e as num).toDouble())
+            .toList();
       }
       if (data.containsKey('stds') && data['stds'] is List) {
-        _stds = (data['stds'] as List).map((e) => (e as num).toDouble()).toList();
+        _stds = (data['stds'] as List)
+            .map((e) => (e as num).toDouble())
+            .toList();
       }
-      if (data.containsKey('feature_weights') && data['feature_weights'] is List) {
-        _weights = (data['feature_weights'] as List).map((e) => (e as num).toDouble()).toList();
+      if (data.containsKey('feature_weights') &&
+          data['feature_weights'] is List) {
+        _weights = (data['feature_weights'] as List)
+            .map((e) => (e as num).toDouble())
+            .toList();
       }
-      if (data.containsKey('anomaly_threshold') && data['anomaly_threshold'] is num) {
+      if (data.containsKey('anomaly_threshold') &&
+          data['anomaly_threshold'] is num) {
         _anomalyThreshold = (data['anomaly_threshold'] as num).toDouble();
       }
       if (data.containsKey('hard_rules') && data['hard_rules'] is Map) {
         final hardRules = data['hard_rules'] as Map;
         if (hardRules.containsKey('max_human_speed_kmh')) {
-          _maxHumanSpeedKmh = (hardRules['max_human_speed_kmh'] as num).toDouble();
+          _maxHumanSpeedKmh = (hardRules['max_human_speed_kmh'] as num)
+              .toDouble();
         }
       }
       _isConfigLoaded = true;
-      AppLogger.info('Statistical anomaly detector configured from $assetPath', tag: 'AnomalyService');
+      AppLogger.info(
+        'Statistical anomaly detector configured from $assetPath',
+        tag: 'AnomalyService',
+      );
     } catch (e) {
-      AppLogger.debug('Using calibrated in-memory baseline parameters (asset load deferred): $e', tag: 'AnomalyService');
+      AppLogger.debug(
+        'Using calibrated in-memory baseline parameters (asset load deferred): $e',
+        tag: 'AnomalyService',
+      );
     }
   }
 
   /// Scores a sliding window of recent GPS positions with activity-specific calibration.
-  AnomalyResult scoreSegment(List<Position> positions, [ExerciseActivityType? activityType]) {
+  AnomalyResult scoreSegment(
+    List<Position> positions, [
+    ExerciseActivityType? activityType,
+  ]) {
     if (positions.isEmpty) return AnomalyResult.genuine;
 
     final activity = activityType ?? ExerciseActivityType.running;
-    final double maxInstantSpeedKmh = activity == ExerciseActivityType.running ? _maxHumanSpeedKmh : activity.maxSpeedKmh;
+    final double maxInstantSpeedKmh = activity == ExerciseActivityType.running
+        ? _maxHumanSpeedKmh
+        : activity.maxSpeedKmh;
     final double maxTeleportSpeedKmh = activity == ExerciseActivityType.cycling
         ? 65.0
         : (activity == ExerciseActivityType.walking ? 15.0 : 35.0);
 
     // --- Tier 1: Fast Rule-Based Hard Checks ---
     final Position latest = positions.last;
-    
+
     // Check 1: Android/iOS isMocked ground-truth indicator
     if (latest.isMocked) {
-      AppLogger.warning('CHEAT DETECTED: Device reported isMocked=true', tag: 'AnomalyService');
+      AppLogger.warning(
+        'CHEAT DETECTED: Device reported isMocked=true',
+        tag: 'AnomalyService',
+      );
       return const AnomalyResult(
         isAnomaly: true,
         anomalyScore: 99.0,
@@ -118,7 +146,8 @@ class AnomalyService {
       return AnomalyResult(
         isAnomaly: true,
         anomalyScore: 10.0 + (instantSpeedKmh - maxInstantSpeedKmh),
-        reason: 'Instantaneous speed exceeded ${maxInstantSpeedKmh.toStringAsFixed(0)} km/h ($instantSpeedKmh km/h)',
+        reason:
+            'Instantaneous speed exceeded ${maxInstantSpeedKmh.toStringAsFixed(0)} km/h ($instantSpeedKmh km/h)',
         features: {'speed_kmh': instantSpeedKmh},
       );
     }
@@ -126,7 +155,9 @@ class AnomalyService {
     // Check 3: Teleport check against previous position
     if (positions.length >= 2) {
       final Position prev = positions[positions.length - 2];
-      final double dtSeconds = (latest.timestamp.difference(prev.timestamp).inMilliseconds / 1000.0).abs();
+      final double dtSeconds =
+          (latest.timestamp.difference(prev.timestamp).inMilliseconds / 1000.0)
+              .abs();
       if (dtSeconds > 0 && dtSeconds <= 3.0) {
         final double distMeters = Geolocator.distanceBetween(
           prev.latitude,
@@ -135,7 +166,8 @@ class AnomalyService {
           latest.longitude,
         );
         final double stepSpeedKmh = (distMeters / dtSeconds) * 3.6;
-        if (stepSpeedKmh > maxTeleportSpeedKmh || (distMeters > 50.0 && dtSeconds <= 1.0)) {
+        if (stepSpeedKmh > maxTeleportSpeedKmh ||
+            (distMeters > 50.0 && dtSeconds <= 1.0)) {
           AppLogger.warning(
             'CHEAT DETECTED: Teleport jump of ${distMeters.toStringAsFixed(1)}m in ${dtSeconds}s ($stepSpeedKmh km/h)',
             tag: 'AnomalyService',
@@ -143,7 +175,8 @@ class AnomalyService {
           return AnomalyResult(
             isAnomaly: true,
             anomalyScore: 15.0,
-            reason: 'Position teleportation detected ($distMeters m jump in ${dtSeconds}s)',
+            reason:
+                'Position teleportation detected ($distMeters m jump in ${dtSeconds}s)',
             features: {'stepSpeedKmh': stepSpeedKmh, 'distMeters': distMeters},
           );
         }
@@ -152,7 +185,9 @@ class AnomalyService {
         if (dtSeconds > 0.2 && dtSeconds <= 3.0) {
           final double dv = (latest.speed - prev.speed).abs();
           final double accel = dv / dtSeconds;
-          final double maxAccelLimit = activity == ExerciseActivityType.cycling ? 12.0 : 8.0;
+          final double maxAccelLimit = activity == ExerciseActivityType.cycling
+              ? 12.0
+              : 8.0;
           if (accel > maxAccelLimit) {
             AppLogger.warning(
               'CHEAT DETECTED: Acceleration ${accel.toStringAsFixed(2)} m/s² exceeds ${activity.displayName.toLowerCase()} limit (${maxAccelLimit.toStringAsFixed(1)} m/s²)',
@@ -161,7 +196,8 @@ class AnomalyService {
             return AnomalyResult(
               isAnomaly: true,
               anomalyScore: 45.0 + (accel - maxAccelLimit),
-              reason: 'Biomechanical acceleration limit exceeded: ${accel.toStringAsFixed(2)} m/s² (max ${maxAccelLimit.toStringAsFixed(1)} m/s² for ${activity.displayName.toLowerCase()})',
+              reason:
+                  'Biomechanical acceleration limit exceeded: ${accel.toStringAsFixed(2)} m/s² (max ${maxAccelLimit.toStringAsFixed(1)} m/s² for ${activity.displayName.toLowerCase()})',
               features: {'max_accel': accel},
             );
           }
@@ -171,7 +207,12 @@ class AnomalyService {
 
     // Check 4: Average speed ceiling check across window
     if (positions.length >= 3) {
-      final double totalTimeSeconds = (latest.timestamp.difference(positions.first.timestamp).inMilliseconds / 1000.0).abs();
+      final double totalTimeSeconds =
+          (latest.timestamp
+                      .difference(positions.first.timestamp)
+                      .inMilliseconds /
+                  1000.0)
+              .abs();
       if (totalTimeSeconds >= 3.0) {
         double totalDist = 0.0;
         for (int i = 0; i < positions.length - 1; i++) {
@@ -190,8 +231,10 @@ class AnomalyService {
           );
           return AnomalyResult(
             isAnomaly: true,
-            anomalyScore: 50.0 + (windowAvgSpeedKmh - activity.maxAverageSpeedKmh),
-            reason: 'Average speed ${windowAvgSpeedKmh.toStringAsFixed(1)} km/h exceeds ${activity.displayName.toLowerCase()} endurance ceiling (${activity.maxAverageSpeedKmh.toStringAsFixed(1)} km/h)',
+            anomalyScore:
+                50.0 + (windowAvgSpeedKmh - activity.maxAverageSpeedKmh),
+            reason:
+                'Average speed ${windowAvgSpeedKmh.toStringAsFixed(1)} km/h exceeds ${activity.displayName.toLowerCase()} endurance ceiling (${activity.maxAverageSpeedKmh.toStringAsFixed(1)} km/h)',
             features: {'avg_speed_kmh': windowAvgSpeedKmh},
           );
         }
@@ -209,7 +252,10 @@ class AnomalyService {
         }
       }
       if (identicalSteps >= positions.length / 2) {
-        AppLogger.warning('CHEAT DETECTED: Excessive frozen GPS replay breadcrumbs', tag: 'AnomalyService');
+        AppLogger.warning(
+          'CHEAT DETECTED: Excessive frozen GPS replay breadcrumbs',
+          tag: 'AnomalyService',
+        );
         return const AnomalyResult(
           isAnomaly: true,
           anomalyScore: 8.0,
@@ -246,7 +292,10 @@ class AnomalyService {
         : 'Genuine running gait';
 
     if (isAnomaly) {
-      AppLogger.warning('Suspicious telemetry segment scored: ${normalizedScore.toStringAsFixed(2)} > $_anomalyThreshold', tag: 'AnomalyService');
+      AppLogger.warning(
+        'Suspicious telemetry segment scored: ${normalizedScore.toStringAsFixed(2)} > $_anomalyThreshold',
+        tag: 'AnomalyService',
+      );
     }
 
     return AnomalyResult(
@@ -264,7 +313,12 @@ class AnomalyService {
     // Max acceleration
     double maxAccel = 0.0;
     for (int i = 0; i < window.length - 1; i++) {
-      final dt = (window[i + 1].timestamp.difference(window[i].timestamp).inMilliseconds / 1000.0).abs();
+      final dt =
+          (window[i + 1].timestamp
+                      .difference(window[i].timestamp)
+                      .inMilliseconds /
+                  1000.0)
+              .abs();
       if (dt > 0) {
         final dv = (window[i + 1].speed - window[i].speed).abs();
         final accel = dv / dt;

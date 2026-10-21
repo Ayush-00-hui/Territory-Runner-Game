@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -129,14 +130,15 @@ void main() {
                 'level': 4,
                 'xp': 4000,
                 'total_runs': 12,
-              }
+              },
             ]),
             200,
             headers: {'content-type': 'application/json'},
           );
         }
 
-        if (request.url.path == '/v1/friends/requests' && request.method == 'GET') {
+        if (request.url.path == '/v1/friends/requests' &&
+            request.method == 'GET') {
           return http.Response(
             jsonEncode([
               {
@@ -149,25 +151,30 @@ void main() {
                 'status': 'pending',
                 'created_at': DateTime.now().toIso8601String(),
                 'is_incoming': true,
-              }
+              },
             ]),
             200,
             headers: {'content-type': 'application/json'},
           );
         }
 
-        if (request.url.path == '/v1/friends/request' && request.method == 'POST') {
+        if (request.url.path == '/v1/friends/request' &&
+            request.method == 'POST') {
           return http.Response(jsonEncode({'status': 'pending'}), 201);
         }
 
-        if (request.url.path.startsWith('/v1/friends/request/') && request.method == 'PUT') {
+        if (request.url.path.startsWith('/v1/friends/request/') &&
+            request.method == 'PUT') {
           return http.Response(jsonEncode({'status': 'ok'}), 200);
         }
 
         return http.Response('Not Found', 404);
       });
 
-      final apiClient = ApiClient.custom(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient.custom(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       final friends = await apiClient.getFriends();
       expect(friends.length, equals(1));
@@ -201,9 +208,11 @@ void main() {
                 'challenger_progress': 2500.0,
                 'opponent_progress': 1200.0,
                 'xp_stake': 500,
-                'expires_at': DateTime.now().add(const Duration(hours: 12)).toIso8601String(),
+                'expires_at': DateTime.now()
+                    .add(const Duration(hours: 12))
+                    .toIso8601String(),
                 'created_at': DateTime.now().toIso8601String(),
-              }
+              },
             ]),
             200,
             headers: {'content-type': 'application/json'},
@@ -225,7 +234,9 @@ void main() {
               'challenger_progress': 0.0,
               'opponent_progress': 0.0,
               'xp_stake': body['xp_stake'],
-              'expires_at': DateTime.now().add(const Duration(hours: 24)).toIso8601String(),
+              'expires_at': DateTime.now()
+                  .add(const Duration(hours: 24))
+                  .toIso8601String(),
               'created_at': DateTime.now().toIso8601String(),
             }),
             201,
@@ -233,18 +244,23 @@ void main() {
           );
         }
 
-        if (request.url.path == '/v1/duels/duel_123/accept' && request.method == 'PUT') {
+        if (request.url.path == '/v1/duels/duel_123/accept' &&
+            request.method == 'PUT') {
           return http.Response(jsonEncode({'status': 'ok'}), 200);
         }
 
-        if (request.url.path == '/v1/duels/duel_123/decline' && request.method == 'PUT') {
+        if (request.url.path == '/v1/duels/duel_123/decline' &&
+            request.method == 'PUT') {
           return http.Response(jsonEncode({'status': 'ok'}), 200);
         }
 
         return http.Response('Not Found', 404);
       });
 
-      final apiClient = ApiClient.custom(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient.custom(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       final duels = await apiClient.getDuels();
       expect(duels.length, equals(1));
@@ -269,7 +285,9 @@ void main() {
   });
 
   group('Phase 4: SocialHubView Widget Tests', () {
-    testWidgets('Renders Squad members and allows tab switching to Duels', (tester) async {
+    testWidgets('Renders Squad members and allows tab switching to Duels', (
+      tester,
+    ) async {
       final mockClient = MockClient((request) async {
         if (request.url.path == '/v1/friends') {
           return http.Response(
@@ -282,7 +300,7 @@ void main() {
                 'level': 5,
                 'xp': 8200,
                 'total_runs': 19,
-              }
+              },
             ]),
             200,
           );
@@ -305,9 +323,11 @@ void main() {
                 'challenger_progress': 6000.0,
                 'opponent_progress': 3000.0,
                 'xp_stake': 500,
-                'expires_at': DateTime.now().add(const Duration(hours: 18)).toIso8601String(),
+                'expires_at': DateTime.now()
+                    .add(const Duration(hours: 18))
+                    .toIso8601String(),
                 'created_at': DateTime.now().toIso8601String(),
-              }
+              },
             ]),
             200,
           );
@@ -315,15 +335,15 @@ void main() {
         return http.Response('[]', 200);
       });
 
-      final apiClient = ApiClient.custom(httpClient: mockClient, baseUrl: 'http://test.local');
+      final apiClient = ApiClient.custom(
+        httpClient: mockClient,
+        baseUrl: 'http://test.local',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: SocialHubView(
-              apiClient: apiClient,
-              currentUserId: 'test_me',
-            ),
+            body: SocialHubView(apiClient: apiClient, currentUserId: 'test_me'),
           ),
         ),
       );
@@ -348,59 +368,70 @@ void main() {
       expect(find.textContaining('VS ValkyrieRunner'), findsOneWidget);
     });
 
-    testWidgets('Shows incoming friend request with Accept and Decline actions', (tester) async {
-      final mockClient = MockClient((request) async {
-        if (request.url.path == '/v1/friends') {
-          return http.Response(jsonEncode([]), 200);
-        }
-        if (request.url.path == '/v1/friends/requests') {
-          return http.Response(
-            jsonEncode([
-              {
-                'id': 'req_incoming',
-                'requester_id': 'req_alex',
-                'requester_name': 'AlexStriker',
-                'requester_faction': 'Neon Syndicate',
-                'addressee_id': 'test_me',
-                'addressee_name': 'Me',
-                'status': 'pending',
-                'created_at': DateTime.now().toIso8601String(),
-                'is_incoming': true,
-              }
-            ]),
-            200,
-          );
-        }
-        if (request.url.path == '/v1/duels') {
-          return http.Response(jsonEncode([]), 200);
-        }
-        return http.Response('[]', 200);
-      });
+    testWidgets(
+      'Shows incoming friend request with Accept and Decline actions',
+      (tester) async {
+        final mockClient = MockClient((request) async {
+          if (request.url.path == '/v1/friends') {
+            return http.Response(jsonEncode([]), 200);
+          }
+          if (request.url.path == '/v1/friends/requests') {
+            return http.Response(
+              jsonEncode([
+                {
+                  'id': 'req_incoming',
+                  'requester_id': 'req_alex',
+                  'requester_name': 'AlexStriker',
+                  'requester_faction': 'Neon Syndicate',
+                  'addressee_id': 'test_me',
+                  'addressee_name': 'Me',
+                  'status': 'pending',
+                  'created_at': DateTime.now().toIso8601String(),
+                  'is_incoming': true,
+                },
+              ]),
+              200,
+            );
+          }
+          if (request.url.path == '/v1/duels') {
+            return http.Response(jsonEncode([]), 200);
+          }
+          return http.Response('[]', 200);
+        });
 
-      final apiClient = ApiClient.custom(httpClient: mockClient, baseUrl: 'http://test.local');
+        final apiClient = ApiClient.custom(
+          httpClient: mockClient,
+          baseUrl: 'http://test.local',
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SocialHubView(
-              apiClient: apiClient,
-              currentUserId: 'test_me',
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SocialHubView(
+                apiClient: apiClient,
+                currentUserId: 'test_me',
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.textContaining('Incoming squad invitations (1)'), findsOneWidget);
-      expect(find.text('AlexStriker'), findsOneWidget);
-      expect(find.text('Neon Syndicate'), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.cancel_rounded), findsOneWidget);
-    });
+        expect(
+          find.textContaining('Incoming squad invitations (1)'),
+          findsOneWidget,
+        );
+        expect(find.text('AlexStriker'), findsOneWidget);
+        expect(find.text('Neon Syndicate'), findsOneWidget);
+        expect(find.byIcon(Icons.check_circle_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.cancel_rounded), findsOneWidget);
+      },
+    );
 
-    testWidgets('Renders cached friends and duels when network is offline', (tester) async {
+    testWidgets('Renders cached friends and duels when network is offline', (
+      tester,
+    ) async {
       SharedPreferences.setMockInitialValues({
         'territory_runner_cached_friends': jsonEncode([
           {
@@ -411,7 +442,7 @@ void main() {
             'level': 3,
             'xp': 3000,
             'total_runs': 10,
-          }
+          },
         ]),
         'territory_runner_cached_duels': jsonEncode([
           {
@@ -426,9 +457,11 @@ void main() {
             'challenger_progress': 4500.0,
             'opponent_progress': 2000.0,
             'xp_stake': 250,
-            'expires_at': DateTime.now().add(const Duration(hours: 12)).toIso8601String(),
+            'expires_at': DateTime.now()
+                .add(const Duration(hours: 12))
+                .toIso8601String(),
             'created_at': DateTime.now().toIso8601String(),
-          }
+          },
         ]),
       });
 
@@ -446,10 +479,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: SocialHubView(
-              apiClient: apiClient,
-              currentUserId: 'test_me',
-            ),
+            body: SocialHubView(apiClient: apiClient, currentUserId: 'test_me'),
           ),
         ),
       );
@@ -457,7 +487,10 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify offline banner is shown
-      expect(find.text('Network offline: displaying cached syndicates'), findsOneWidget);
+      expect(
+        find.text('Network offline: displaying cached syndicates'),
+        findsOneWidget,
+      );
 
       // Verify cached friend is displayed
       expect(find.text('OfflinePacer'), findsOneWidget);

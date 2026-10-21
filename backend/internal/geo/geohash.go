@@ -134,10 +134,10 @@ func GeohashNeighbors(hash string) []string {
 
 	// Offsets for 8 compass neighbors: N, S, E, W, NE, NW, SE, SW
 	offsets := [][2]float64{
-		{latSpan, 0},        // N
-		{-latSpan, 0},       // S
-		{0, lngSpan},        // E
-		{0, -lngSpan},       // W
+		{latSpan, 0},         // N
+		{-latSpan, 0},        // S
+		{0, lngSpan},         // E
+		{0, -lngSpan},        // W
 		{latSpan, lngSpan},   // NE
 		{latSpan, -lngSpan},  // NW
 		{-latSpan, lngSpan},  // SE

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import '../../gameplay/territory_service.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/battery_saver_service.dart';
@@ -43,7 +44,11 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         _buildSectionTitle('Haptics'),
         _buildSettingsGroup([
           SwitchListTile(
-            secondary: const Icon(Icons.vibration_rounded, color: AppColors.accent, size: 20),
+            secondary: const Icon(
+              Icons.vibration_rounded,
+              color: AppColors.accent,
+              size: 20,
+            ),
             title: Text(
               'Haptic feedback',
               style: AppText.bodyMedium.copyWith(
@@ -54,7 +59,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             ),
             subtitle: Text(
               'Vibration on loop closure and territory claimed',
-              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
             ),
             activeThumbColor: AppColors.accent,
             activeTrackColor: AppColors.accentContainer,
@@ -74,7 +82,11 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         _buildSectionTitle('Run Experience'),
         _buildSettingsGroup([
           SwitchListTile(
-            secondary: const Icon(Icons.battery_saver_rounded, color: AppColors.accent, size: 20),
+            secondary: const Icon(
+              Icons.battery_saver_rounded,
+              color: AppColors.accent,
+              size: 20,
+            ),
             title: Text(
               'Battery saver',
               style: AppText.bodyMedium.copyWith(
@@ -85,7 +97,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             ),
             subtitle: Text(
               'AMOLED black HUD, reduced animations, optimized GPS',
-              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
             ),
             activeThumbColor: AppColors.accent,
             activeTrackColor: AppColors.accentContainer,
@@ -101,10 +116,14 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           ProfileOptionTile(
             icon: Icons.notifications_active_rounded,
             title: 'Rival alerts',
-            subtitle: 'Alerts when nearby runners enter or contest your territory',
+            subtitle:
+                'Alerts when nearby runners enter or contest your territory',
             onTap: () {
               AppMotion.selectionTick();
-              NotificationService().showPermissionPrimerIfNeeded(context, force: true);
+              NotificationService().showPermissionPrimerIfNeeded(
+                context,
+                force: true,
+              );
             },
           ),
           const Divider(height: 1, color: AppColors.border),
@@ -114,7 +133,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             subtitle: 'Review GPS accuracy and background location access',
             onTap: () {
               AppMotion.selectionTick();
-              PermissionPrimerSheet.show(context, type: PermissionPrimerType.location);
+              PermissionPrimerSheet.show(
+                context,
+                type: PermissionPrimerType.location,
+              );
             },
           ),
         ]),
@@ -133,8 +155,16 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 ? 'Runs synced to cloud'
                 : 'Connect account to sync runs across devices',
             trailing: widget.firebaseService.isInitialized
-                ? const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16)
-                : const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 14),
+                ? const Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.success,
+                    size: 16,
+                  )
+                : const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: AppColors.textMuted,
+                    size: 14,
+                  ),
             onTap: widget.onOpenAuth,
           ),
         ]),
@@ -145,7 +175,11 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         _buildSectionTitle('Measurement Units'),
         _buildSettingsGroup([
           ListTile(
-            leading: const Icon(Icons.straighten_rounded, color: AppColors.accent, size: 20),
+            leading: const Icon(
+              Icons.straighten_rounded,
+              color: AppColors.accent,
+              size: 20,
+            ),
             title: Text(
               'Distance & Pace Units',
               style: AppText.bodyMedium.copyWith(
@@ -155,13 +189,24 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               ),
             ),
             subtitle: Text(
-              _appPrefs.unit == DistanceUnit.metric ? 'Metric (Kilometers, m²)' : 'Imperial (Miles, Acres)',
-              style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+              _appPrefs.unit == DistanceUnit.metric
+                  ? 'Metric (Kilometers, m²)'
+                  : 'Imperial (Miles, Acres)',
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
             ),
             trailing: SegmentedButton<DistanceUnit>(
               segments: const [
-                ButtonSegment(value: DistanceUnit.metric, label: Text('KM', style: TextStyle(fontSize: 11))),
-                ButtonSegment(value: DistanceUnit.imperial, label: Text('MI', style: TextStyle(fontSize: 11))),
+                ButtonSegment(
+                  value: DistanceUnit.metric,
+                  label: Text('KM', style: TextStyle(fontSize: 11)),
+                ),
+                ButtonSegment(
+                  value: DistanceUnit.imperial,
+                  label: Text('MI', style: TextStyle(fontSize: 11)),
+                ),
               ],
               selected: {_appPrefs.unit},
               style: SegmentedButton.styleFrom(
@@ -237,7 +282,9 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         _buildSettingsGroup([
           ProfileOptionTile(
             icon: Icons.download_for_offline_rounded,
-            title: AppConstants.allowTilePrefetch ? 'Offline maps' : 'Map cache & storage',
+            title: AppConstants.allowTilePrefetch
+                ? 'Offline maps'
+                : 'Map cache & storage',
             subtitle: AppConstants.allowTilePrefetch
                 ? 'Download map sectors for running without cellular signal'
                 : 'Local viewing cache (bulk prefetch disabled under OSM policy)',
@@ -311,7 +358,9 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               onTap: () {
                 AppMotion.selectionTick();
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const DesignGalleryScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => const DesignGalleryScreen(),
+                  ),
                 );
               },
             ),
@@ -336,12 +385,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
 
   Widget _buildSectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(left: AppSpacing.s4, bottom: AppSpacing.s8),
+      padding: const EdgeInsets.only(
+        left: AppSpacing.s4,
+        bottom: AppSpacing.s8,
+      ),
       child: Text(
         title,
-        style: AppText.label.copyWith(
-          color: AppColors.textMuted,
-        ),
+        style: AppText.label.copyWith(color: AppColors.textMuted),
       ),
     );
   }
@@ -356,9 +406,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           borderRadius: AppSpacing.br16,
           border: Border.all(color: AppColors.border),
         ),
-        child: Column(
-          children: children,
-        ),
+        child: Column(children: children),
       ),
     );
   }
@@ -397,10 +445,14 @@ class ProfileOptionTile extends StatelessWidget {
         subtitle: subtitle != null
             ? Text(
                 subtitle!,
-                style: AppText.bodySmall.copyWith(color: AppColors.textMuted, fontSize: 11),
+                style: AppText.bodySmall.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                ),
               )
             : null,
-        trailing: trailing ??
+        trailing:
+            trailing ??
             (onTap != null
                 ? const Icon(
                     Icons.arrow_forward_ios_rounded,

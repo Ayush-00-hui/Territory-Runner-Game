@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/location_service.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/theme/app_spacing.dart';
@@ -65,7 +66,12 @@ class VirtualPacerSheet extends StatelessWidget {
     return StatefulBuilder(
       builder: (context, setModalState) {
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s16, AppSpacing.s20, AppSpacing.s32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.s20,
+            AppSpacing.s16,
+            AppSpacing.s20,
+            AppSpacing.s32,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,

@@ -4,25 +4,31 @@ import 'package:territory_runner/services/gps_quality_service.dart';
 
 void main() {
   group('GpsQualityService Tests', () {
-    test('evaluateQuality returns optimal when accuracy <= 10m and fix is recent', () {
-      final now = DateTime.now();
-      final quality = GpsQualityService.evaluateQuality(
-        accuracyMeters: 4.5,
-        lastFixTimestamp: now.subtract(const Duration(seconds: 2)),
-        now: now,
-      );
-      expect(quality, equals(GpsQuality.optimal));
-    });
+    test(
+      'evaluateQuality returns optimal when accuracy <= 10m and fix is recent',
+      () {
+        final now = DateTime.now();
+        final quality = GpsQualityService.evaluateQuality(
+          accuracyMeters: 4.5,
+          lastFixTimestamp: now.subtract(const Duration(seconds: 2)),
+          now: now,
+        );
+        expect(quality, equals(GpsQuality.optimal));
+      },
+    );
 
-    test('evaluateQuality returns fair when accuracy is between 10m and 30m', () {
-      final now = DateTime.now();
-      final quality = GpsQualityService.evaluateQuality(
-        accuracyMeters: 18.0,
-        lastFixTimestamp: now.subtract(const Duration(seconds: 3)),
-        now: now,
-      );
-      expect(quality, equals(GpsQuality.fair));
-    });
+    test(
+      'evaluateQuality returns fair when accuracy is between 10m and 30m',
+      () {
+        final now = DateTime.now();
+        final quality = GpsQualityService.evaluateQuality(
+          accuracyMeters: 18.0,
+          lastFixTimestamp: now.subtract(const Duration(seconds: 3)),
+          now: now,
+        );
+        expect(quality, equals(GpsQuality.fair));
+      },
+    );
 
     test('evaluateQuality returns degraded when accuracy > 30m', () {
       final now = DateTime.now();
@@ -44,14 +50,17 @@ void main() {
       expect(quality, equals(GpsQuality.lost));
     });
 
-    test('isSignalGap accurately identifies intervals exceeding 15 seconds', () {
-      final t1 = DateTime(2026, 10, 16, 12, 0, 0);
-      final t2Normal = DateTime(2026, 10, 16, 12, 0, 5);
-      final t2Gap = DateTime(2026, 10, 16, 12, 0, 25);
+    test(
+      'isSignalGap accurately identifies intervals exceeding 15 seconds',
+      () {
+        final t1 = DateTime(2026, 10, 16, 12, 0, 0);
+        final t2Normal = DateTime(2026, 10, 16, 12, 0, 5);
+        final t2Gap = DateTime(2026, 10, 16, 12, 0, 25);
 
-      expect(GpsQualityService.isSignalGap(t1, t2Normal), isFalse);
-      expect(GpsQualityService.isSignalGap(t1, t2Gap), isTrue);
-    });
+        expect(GpsQualityService.isSignalGap(t1, t2Normal), isFalse);
+        expect(GpsQualityService.isSignalGap(t1, t2Gap), isTrue);
+      },
+    );
 
     test('isUnrealisticJump flags teleportation speeds across signal gaps', () {
       const p1 = LatLng(51.5000, -0.1200);

@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:latlong2/latlong.dart';
@@ -30,40 +31,49 @@ void main() {
       expect(territory.isWeak(now: now), isFalse);
 
       // After 5 days at 15 points/day: 100 - (5 * 15) = 25.0 (< 30.0, weak!)
-      final now5 = now.subtract(const Duration(days: 2)).add(const Duration(days: 5));
+      final now5 = now
+          .subtract(const Duration(days: 2))
+          .add(const Duration(days: 5));
       final s5 = territory.computeCurrentStrength(now: now5);
       expect(s5, closeTo(25.0, 0.1));
       expect(territory.isWeak(now: now5), isTrue);
 
       // After 10 days: clamped at 0.0
-      final now10 = now.subtract(const Duration(days: 2)).add(const Duration(days: 10));
+      final now10 = now
+          .subtract(const Duration(days: 2))
+          .add(const Duration(days: 10));
       final s10 = territory.computeCurrentStrength(now: now10);
       expect(s10, equals(0.0));
       expect(territory.isWeak(now: now10), isTrue);
     });
 
-    test('Defending territory resets strength to 100% and updates lastDefendedAt', () {
-      final initialDefended = DateTime.now().subtract(const Duration(days: 4));
-      final territory = Territory(
-        id: 'poly_defend_test',
-        ownerId: 'runner_1',
-        polygon: [const LatLng(51.5, -0.12)],
-        areaSqMeters: 1000.0,
-        capturedAt: initialDefended,
-        lastDefendedAt: initialDefended,
-        strength: 40.0,
-      );
+    test(
+      'Defending territory resets strength to 100% and updates lastDefendedAt',
+      () {
+        final initialDefended = DateTime.now().subtract(
+          const Duration(days: 4),
+        );
+        final territory = Territory(
+          id: 'poly_defend_test',
+          ownerId: 'runner_1',
+          polygon: [const LatLng(51.5, -0.12)],
+          areaSqMeters: 1000.0,
+          capturedAt: initialDefended,
+          lastDefendedAt: initialDefended,
+          strength: 40.0,
+        );
 
-      final defendTime = DateTime.now();
-      final defended = territory.copyWith(
-        strength: 100.0,
-        lastDefendedAt: defendTime,
-      );
+        final defendTime = DateTime.now();
+        final defended = territory.copyWith(
+          strength: 100.0,
+          lastDefendedAt: defendTime,
+        );
 
-      expect(defended.strength, equals(100.0));
-      expect(defended.computeCurrentStrength(now: defendTime), equals(100.0));
-      expect(defended.isWeak(now: defendTime), isFalse);
-    });
+        expect(defended.strength, equals(100.0));
+        expect(defended.computeCurrentStrength(now: defendTime), equals(100.0));
+        expect(defended.isWeak(now: defendTime), isFalse);
+      },
+    );
 
     test('Backward compatibility: legacy JSON without strength or lastDefendedAt deserializes safely', () {
       final legacyJson = {
@@ -80,7 +90,10 @@ void main() {
       final territory = Territory.fromJson(legacyJson);
       expect(territory.id, equals('poly_legacy_001'));
       expect(territory.strength, equals(100.0));
-      expect(territory.lastDefendedAt, equals(DateTime.parse('2026-10-10T10:00:00.000Z')));
+      expect(
+        territory.lastDefendedAt,
+        equals(DateTime.parse('2026-10-10T10:00:00.000Z')),
+      );
     });
 
     test('Hive TerritoryAdapter serialization preserves strength and lastDefendedAt', () async {

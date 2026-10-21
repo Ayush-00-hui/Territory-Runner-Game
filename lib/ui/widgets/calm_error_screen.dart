@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 
@@ -11,11 +12,7 @@ class CalmErrorScreen extends StatefulWidget {
   final FlutterErrorDetails details;
   final VoidCallback? onReset;
 
-  const CalmErrorScreen({
-    super.key,
-    required this.details,
-    this.onReset,
-  });
+  const CalmErrorScreen({super.key, required this.details, this.onReset});
 
   @override
   State<CalmErrorScreen> createState() => _CalmErrorScreenState();
@@ -31,7 +28,10 @@ class _CalmErrorScreenState extends State<CalmErrorScreen> {
       child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s24, vertical: AppSpacing.s32),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s24,
+              vertical: AppSpacing.s32,
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -121,7 +121,9 @@ class _CalmErrorScreenState extends State<CalmErrorScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          _showDetails ? 'Hide Diagnostics' : 'Show Diagnostics (Debug Only)',
+                          _showDetails
+                              ? 'Hide Diagnostics'
+                              : 'Show Diagnostics (Debug Only)',
                           style: const TextStyle(
                             color: AppColors.textMuted,
                             fontSize: 12,

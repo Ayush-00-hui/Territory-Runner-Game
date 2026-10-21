@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/theme/app_spacing.dart';
 import '../../../ui/theme/app_text.dart';
@@ -34,10 +35,7 @@ class DemoControlsLab extends StatelessWidget {
           children: [
             Icon(Icons.science_rounded, color: AppColors.info, size: 20),
             SizedBox(width: AppSpacing.s8),
-            Text(
-              'CLASSROOM & VIVA DEMO LAB',
-              style: AppText.headingSmall,
-            ),
+            Text('CLASSROOM & VIVA DEMO LAB', style: AppText.headingSmall),
           ],
         ),
         const SizedBox(height: AppSpacing.s12),
@@ -60,7 +58,8 @@ class DemoControlsLab extends StatelessWidget {
         _buildDemoActionTile(
           context: context,
           title: '🚨 Test Anti-Cheat Speed Anomaly',
-          subtitle: 'Injects vehicle velocity (>40 km/h) to verify Z-score rejection',
+          subtitle:
+              'Injects vehicle velocity (>40 km/h) to verify Z-score rejection',
           icon: Icons.warning_amber_rounded,
           color: AppColors.warning,
           onTap: onSimulateAnomaly,
@@ -68,7 +67,8 @@ class DemoControlsLab extends StatelessWidget {
         _buildDemoActionTile(
           context: context,
           title: '🤖 Instant Gemini AI Coach Debrief',
-          subtitle: 'Simulates completed 3.5km workout with LLM tactical insights',
+          subtitle:
+              'Simulates completed 3.5km workout with LLM tactical insights',
           icon: Icons.psychology_rounded,
           color: AppColors.info,
           onTap: onSimulateCoachDebrief,
@@ -90,7 +90,9 @@ class DemoControlsLab extends StatelessWidget {
             subtitle: isRivalSimulating
                 ? 'Halt simulated rival movement and breadcrumbs'
                 : 'Streams real-time moving rival marker with live trail breadcrumbs',
-            icon: isRivalSimulating ? Icons.stop_circle_rounded : Icons.radar_rounded,
+            icon: isRivalSimulating
+                ? Icons.stop_circle_rounded
+                : Icons.radar_rounded,
             color: isRivalSimulating ? AppColors.warning : AppColors.rival,
             onTap: onToggleRivalSimulation!,
           ),
@@ -118,7 +120,10 @@ class DemoControlsLab extends StatelessWidget {
             onTap();
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s14, vertical: AppSpacing.s12),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s14,
+              vertical: AppSpacing.s12,
+            ),
             decoration: BoxDecoration(
               color: AppColors.surface2,
               borderRadius: AppSpacing.br16,
@@ -147,7 +152,11 @@ class DemoControlsLab extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.textMuted, size: 12),
+                const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: AppColors.textMuted,
+                  size: 12,
+                ),
               ],
             ),
           ),

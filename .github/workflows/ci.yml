@@ -42,6 +42,9 @@ jobs:
       - name: Display Flutter Environment
         run: flutter --version
 
+      - name: Verify Dart Formatting
+        run: dart format --output=none --set-exit-if-changed .
+
       - name: Install Flutter Dependencies
         run: flutter pub get
 
@@ -51,10 +54,67 @@ jobs:
       - name: Run Flutter Unit, Widget & Golden Tests
         run: flutter test --coverage --timeout 120s
 
+      - name: Upload Flutter Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: coverage/lcov.info
+          if-no-files-found: ignore
+
   go_backend:
-    name: Go Backend Quality & PostGIS Parity
+    name: Go Backend Quality & Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: backend/go.sum
+
+      - name: Display Go Environment
+        run: go version
+
+      - name: Verify Go Formatting (gofmt)
+        working-directory: backend
+        run: |
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "ERROR: The following Go files are not formatted with gofmt:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+
+      - name: Run Go Static Code Analysis (go vet)
+        working-directory: backend
+        run: go vet ./...
+
+      - name: Run govulncheck
+        working-directory: backend
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+      - name: Run Go Unit Tests & Race Detection
+        working-directory: backend
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload Go Backend Coverage Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-backend-coverage
+          path: backend/coverage.out
+          if-no-files-found: ignore
+
+  postgres_integration:
+    name: PostGIS Service Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [go_backend]
 
     services:
       postgis:
@@ -81,17 +141,6 @@ jobs:
           go-version: '1.22'
           cache-dependency-path: backend/go.sum
 
-      - name: Display Go Environment
-        run: go version
-
-      - name: Run Go Static Code Analysis (go vet)
-        working-directory: backend
-        run: go vet ./...
-
-      - name: Run Go Unit Tests & Race Detection
-        working-directory: backend
-        run: go test -v -race -cover ./...
-
       - name: Run PostGIS Integration Tests
         working-directory: backend
         env:
@@ -102,7 +151,7 @@ jobs:
     name: Backend Docker Container Build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [go_backend]
+    needs: [go_backend, postgres_integration]
 
     steps:
       - name: Checkout Repository

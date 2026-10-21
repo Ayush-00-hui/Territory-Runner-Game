@@ -61,15 +61,27 @@ void main() {
       expect(settings.distanceFilter, equals(10));
     });
 
-    test('Tracking mode switches dynamically and updates currentTrackingMode', () async {
-      await locationService.setTrackingMode(GpsTrackingMode.activeRun);
-      expect(locationService.currentTrackingMode, equals(GpsTrackingMode.activeRun));
+    test(
+      'Tracking mode switches dynamically and updates currentTrackingMode',
+      () async {
+        await locationService.setTrackingMode(GpsTrackingMode.activeRun);
+        expect(
+          locationService.currentTrackingMode,
+          equals(GpsTrackingMode.activeRun),
+        );
 
-      await locationService.setTrackingMode(GpsTrackingMode.paused);
-      expect(locationService.currentTrackingMode, equals(GpsTrackingMode.paused));
+        await locationService.setTrackingMode(GpsTrackingMode.paused);
+        expect(
+          locationService.currentTrackingMode,
+          equals(GpsTrackingMode.paused),
+        );
 
-      await locationService.setTrackingMode(GpsTrackingMode.idle);
-      expect(locationService.currentTrackingMode, equals(GpsTrackingMode.idle));
-    });
+        await locationService.setTrackingMode(GpsTrackingMode.idle);
+        expect(
+          locationService.currentTrackingMode,
+          equals(GpsTrackingMode.idle),
+        );
+      },
+    );
   });
 }

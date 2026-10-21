@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hive/hive.dart';
@@ -22,66 +23,72 @@ void main() {
   });
 
   group('RunRecoveryService Tests', () {
-    test('saveActiveRun persists snapshot and hasRecoverableRun returns true', () async {
-      final service = RunRecoveryService();
-      await service.init();
+    test(
+      'saveActiveRun persists snapshot and hasRecoverableRun returns true',
+      () async {
+        final service = RunRecoveryService();
+        await service.init();
 
-      expect(service.hasRecoverableRun(), isFalse);
+        expect(service.hasRecoverableRun(), isFalse);
 
-      final now = DateTime.now().toUtc();
-      final pos1 = Position(
-        latitude: 51.5000,
-        longitude: -0.1200,
-        timestamp: now,
-        accuracy: 4.0,
-        altitude: 15.0,
-        altitudeAccuracy: 1.0,
-        heading: 90.0,
-        headingAccuracy: 2.0,
-        speed: 2.8,
-        speedAccuracy: 0.2,
-        isMocked: false,
-      );
-      final pos2 = Position(
-        latitude: 51.5010,
-        longitude: -0.1210,
-        timestamp: now.add(const Duration(minutes: 1)),
-        accuracy: 4.5,
-        altitude: 16.0,
-        altitudeAccuracy: 1.0,
-        heading: 95.0,
-        headingAccuracy: 2.0,
-        speed: 3.1,
-        speedAccuracy: 0.2,
-        isMocked: false,
-      );
+        final now = DateTime.now().toUtc();
+        final pos1 = Position(
+          latitude: 51.5000,
+          longitude: -0.1200,
+          timestamp: now,
+          accuracy: 4.0,
+          altitude: 15.0,
+          altitudeAccuracy: 1.0,
+          heading: 90.0,
+          headingAccuracy: 2.0,
+          speed: 2.8,
+          speedAccuracy: 0.2,
+          isMocked: false,
+        );
+        final pos2 = Position(
+          latitude: 51.5010,
+          longitude: -0.1210,
+          timestamp: now.add(const Duration(minutes: 1)),
+          accuracy: 4.5,
+          altitude: 16.0,
+          altitudeAccuracy: 1.0,
+          heading: 95.0,
+          headingAccuracy: 2.0,
+          speed: 3.1,
+          speedAccuracy: 0.2,
+          isMocked: false,
+        );
 
-      await service.saveActiveRun(
-        positions: [pos1, pos2],
-        coordinates: [const LatLng(51.5000, -0.1200), const LatLng(51.5010, -0.1210)],
-        startTime: now,
-        elapsedDurationSeconds: 180,
-        movingDurationSeconds: 175,
-        distanceKm: 0.45,
-        territoriesClaimed: 2,
-        accumulatedPreviewArea: 6500.0,
-        accumulatedPreviewXp: 325,
-      );
+        await service.saveActiveRun(
+          positions: [pos1, pos2],
+          coordinates: [
+            const LatLng(51.5000, -0.1200),
+            const LatLng(51.5010, -0.1210),
+          ],
+          startTime: now,
+          elapsedDurationSeconds: 180,
+          movingDurationSeconds: 175,
+          distanceKm: 0.45,
+          territoriesClaimed: 2,
+          accumulatedPreviewArea: 6500.0,
+          accumulatedPreviewXp: 325,
+        );
 
-      expect(service.hasRecoverableRun(), isTrue);
+        expect(service.hasRecoverableRun(), isTrue);
 
-      final snapshot = service.getRecoverableRun();
-      expect(snapshot, isNotNull);
-      expect(snapshot!.distanceKm, closeTo(0.45, 0.001));
-      expect(snapshot.elapsedDurationSeconds, equals(180));
-      expect(snapshot.movingDurationSeconds, equals(175));
-      expect(snapshot.territoriesClaimed, equals(2));
-      expect(snapshot.coordinates.length, equals(2));
-      expect(snapshot.positions.length, equals(2));
-      expect(snapshot.positions.first.latitude, equals(51.5000));
-      expect(snapshot.accumulatedPreviewArea, equals(6500.0));
-      expect(snapshot.accumulatedPreviewXp, equals(325));
-    });
+        final snapshot = service.getRecoverableRun();
+        expect(snapshot, isNotNull);
+        expect(snapshot!.distanceKm, closeTo(0.45, 0.001));
+        expect(snapshot.elapsedDurationSeconds, equals(180));
+        expect(snapshot.movingDurationSeconds, equals(175));
+        expect(snapshot.territoriesClaimed, equals(2));
+        expect(snapshot.coordinates.length, equals(2));
+        expect(snapshot.positions.length, equals(2));
+        expect(snapshot.positions.first.latitude, equals(51.5000));
+        expect(snapshot.accumulatedPreviewArea, equals(6500.0));
+        expect(snapshot.accumulatedPreviewXp, equals(325));
+      },
+    );
 
     test('clearRecovery deletes active snapshot and hasRecoverableRun returns false', () async {
       final service = RunRecoveryService();
@@ -117,7 +124,10 @@ void main() {
             isMocked: false,
           ),
         ],
-        coordinates: [const LatLng(37.77, -122.41), const LatLng(37.78, -122.42)],
+        coordinates: [
+          const LatLng(37.77, -122.41),
+          const LatLng(37.78, -122.42),
+        ],
         startTime: now,
         elapsedDurationSeconds: 60,
         movingDurationSeconds: 60,

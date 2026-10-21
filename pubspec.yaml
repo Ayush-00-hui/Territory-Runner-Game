@@ -41,7 +41,6 @@ dependencies:
   firebase_core: ^4.14.0
   firebase_auth: ^6.6.1
   cloud_firestore: ^6.9.0
-  google_generative_ai: ^0.4.7
   audioplayers: ^6.8.1
   hive: ^2.2.3
   hive_flutter: ^1.1.0

@@ -1,12 +1,10 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
+
 import '../core/logging/app_logger.dart';
 
 /// Supported distance and area measurement systems
-enum DistanceUnit {
-  metric,
-  imperial,
-}
+enum DistanceUnit { metric, imperial }
 
 /// Global Application Preferences & Hardware Feedback Service
 ///
@@ -38,7 +36,9 @@ class AppPreferences {
       final prefs = await SharedPreferences.getInstance();
       _isHapticsEnabled = prefs.getBool(_prefHapticsKey) ?? true;
       final unitStr = prefs.getString(_prefUnitKey) ?? 'metric';
-      _unit = unitStr == 'imperial' ? DistanceUnit.imperial : DistanceUnit.metric;
+      _unit = unitStr == 'imperial'
+          ? DistanceUnit.imperial
+          : DistanceUnit.metric;
       _isInitialized = true;
     } catch (e) {
       AppLogger.debug('Init note: $e', tag: 'AppPreferences');
@@ -59,7 +59,10 @@ class AppPreferences {
     _unit = unit;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_prefUnitKey, unit == DistanceUnit.imperial ? 'imperial' : 'metric');
+      await prefs.setString(
+        _prefUnitKey,
+        unit == DistanceUnit.imperial ? 'imperial' : 'metric',
+      );
     } catch (_) {}
   }
 
@@ -84,7 +87,8 @@ class AppPreferences {
   String get distanceUnitLabel => _unit == DistanceUnit.imperial ? 'mi' : 'km';
 
   /// Returns full unit singular noun: "mile" or "kilometer"
-  String get distanceUnitNoun => _unit == DistanceUnit.imperial ? 'mile' : 'kilometer';
+  String get distanceUnitNoun =>
+      _unit == DistanceUnit.imperial ? 'mile' : 'kilometer';
 
   /// Returns pace label: "/km" or "/mi"
   String get paceUnitLabel => _unit == DistanceUnit.imperial ? '/mi' : '/km';
@@ -123,7 +127,11 @@ class AppPreferences {
         Vibration.vibrate(pattern: pattern);
       }
     } catch (e) {
-      AppLogger.warning('Haptic vibration error: $e', tag: 'AppPreferences', error: e);
+      AppLogger.warning(
+        'Haptic vibration error: $e',
+        tag: 'AppPreferences',
+        error: e,
+      );
     }
   }
 
@@ -131,9 +139,11 @@ class AppPreferences {
   Future<void> triggerRunStartHaptic() => triggerHaptic([0, 150, 100, 150]);
   Future<void> triggerMilestoneHaptic() => triggerHaptic([0, 200, 150, 200]);
   Future<void> triggerLoopClosedHaptic() => triggerHaptic([0, 80, 80, 80]);
-  Future<void> triggerAttackHaptic() => triggerHaptic([0, 250, 100, 250, 100, 250]);
+  Future<void> triggerAttackHaptic() =>
+      triggerHaptic([0, 250, 100, 250, 100, 250]);
   Future<void> triggerRunCompleteHaptic() => triggerHaptic([0, 300, 150, 300]);
-  Future<void> triggerGoalAchievedHaptic() => triggerHaptic([0, 150, 80, 150, 80, 250]);
+  Future<void> triggerGoalAchievedHaptic() =>
+      triggerHaptic([0, 150, 80, 150, 80, 250]);
   Future<void> triggerAutoPauseHaptic() => triggerHaptic([0, 100, 100, 100]);
   Future<void> triggerAutoResumeHaptic() => triggerHaptic([0, 80]);
 }

@@ -90,11 +90,17 @@ class LeagueStanding {
       totalParticipants: (json['total_participants'] as num?)?.toInt() ?? 0,
       weeklyAreaSqm: (json['weekly_area_sqm'] as num?)?.toDouble() ?? 0.0,
       weeklyRuns: (json['weekly_runs'] as num?)?.toInt() ?? 0,
-      promotionRankCutoff: (json['promotion_rank_cutoff'] as num?)?.toInt() ?? 0,
-      relegationRankCutoff: (json['relegation_rank_cutoff'] as num?)?.toInt() ?? 0,
-      resetAt: json['reset_at'] != null ? DateTime.tryParse(json['reset_at'] as String) ?? DateTime.now() : DateTime.now(),
+      promotionRankCutoff:
+          (json['promotion_rank_cutoff'] as num?)?.toInt() ?? 0,
+      relegationRankCutoff:
+          (json['relegation_rank_cutoff'] as num?)?.toInt() ?? 0,
+      resetAt: json['reset_at'] != null
+          ? DateTime.tryParse(json['reset_at'] as String) ?? DateTime.now()
+          : DateTime.now(),
       secondsUntilReset: (json['seconds_until_reset'] as num?)?.toInt() ?? 0,
-      standings: rawStandings.map((e) => LeagueParticipant.fromJson(e as Map<String, dynamic>)).toList(),
+      standings: rawStandings
+          .map((e) => LeagueParticipant.fromJson(e as Map<String, dynamic>))
+          .toList(),
     );
   }
 

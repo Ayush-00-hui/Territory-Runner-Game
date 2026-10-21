@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -7,50 +8,56 @@ import 'package:territory_runner/services/api_client.dart';
 
 void main() {
   group('ApiClient Tests', () {
-    test('submitRun successfully posts GPS track and returns capture result', () async {
-      int requestCount = 0;
-      final mockClient = MockClient((request) async {
-        requestCount++;
-        expect(request.url.path, '/v1/runs');
-        expect(request.headers['Content-Type'], 'application/json');
-        expect(request.headers['X-Dev-User'], isNotEmpty);
+    test(
+      'submitRun successfully posts GPS track and returns capture result',
+      () async {
+        int requestCount = 0;
+        final mockClient = MockClient((request) async {
+          requestCount++;
+          expect(request.url.path, '/v1/runs');
+          expect(request.headers['Content-Type'], 'application/json');
+          expect(request.headers['X-Dev-User'], isNotEmpty);
 
-        final body = jsonDecode(request.body) as Map<String, dynamic>;
-        expect(body['idempotency_key'], 'test_key_123');
-        expect(body['points'], isNotEmpty);
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['idempotency_key'], 'test_key_123');
+          expect(body['points'], isNotEmpty);
 
-        return http.Response(
-          jsonEncode({
-            'run_id': 'run_mock_001',
-            'idempotency_key': 'test_key_123',
-            'status': 'accepted',
-            'loop_detected': true,
-            'area_claimed_sqm': 9180.0,
-            'xp_awarded': 459,
-            'player_total_area_sqm': 9180.0,
-          }),
-          201,
+          return http.Response(
+            jsonEncode({
+              'run_id': 'run_mock_001',
+              'idempotency_key': 'test_key_123',
+              'status': 'accepted',
+              'loop_detected': true,
+              'area_claimed_sqm': 9180.0,
+              'xp_awarded': 459,
+              'player_total_area_sqm': 9180.0,
+            }),
+            201,
+          );
+        });
+
+        final apiClient = ApiClient(
+          httpClient: mockClient,
+          baseUrl: 'http://mockbackend',
         );
-      });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+        final result = await apiClient.submitRun(
+          idempotencyKey: 'test_key_123',
+          points: [
+            const LatLng(51.5000, -0.1200),
+            const LatLng(51.5009, -0.1200),
+            const LatLng(51.5009, -0.1214),
+            const LatLng(51.5000, -0.1214),
+          ],
+          durationSeconds: 300,
+          distanceMeters: 400.0,
+        );
 
-      final result = await apiClient.submitRun(
-        idempotencyKey: 'test_key_123',
-        points: [
-          const LatLng(51.5000, -0.1200),
-          const LatLng(51.5009, -0.1200),
-          const LatLng(51.5009, -0.1214),
-          const LatLng(51.5000, -0.1214),
-        ],
-        durationSeconds: 300,
-        distanceMeters: 400.0,
-      );
-
-      expect(requestCount, equals(1));
-      expect(result['run_id'], equals('run_mock_001'));
-      expect(result['area_claimed_sqm'], equals(9180.0));
-    });
+        expect(requestCount, equals(1));
+        expect(result['run_id'], equals('run_mock_001'));
+        expect(result['area_claimed_sqm'], equals(9180.0));
+      },
+    );
 
     test('submitRun retries on transient 500 error and recovers', () async {
       int requestCount = 0;
@@ -71,7 +78,10 @@ void main() {
         );
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://mockbackend',
+      );
 
       final result = await apiClient.submitRun(
         idempotencyKey: 'test_retry_key',
@@ -80,14 +90,21 @@ void main() {
         distanceMeters: 100.0,
       );
 
-      expect(requestCount, equals(2), reason: 'Should have retried after initial 500 error');
+      expect(
+        requestCount,
+        equals(2),
+        reason: 'Should have retried after initial 500 error',
+      );
       expect(result['run_id'], equals('run_recovered'));
     });
 
     test('getTerritoriesInBBox parses GeoJSON FeatureCollection', () async {
       final mockClient = MockClient((request) async {
         expect(request.url.path, '/v1/territories');
-        expect(request.url.queryParameters['bbox'], equals('-0.13,51.49,-0.11,51.51'));
+        expect(
+          request.url.queryParameters['bbox'],
+          equals('-0.13,51.49,-0.11,51.51'),
+        );
 
         return http.Response(
           jsonEncode({
@@ -112,18 +129,21 @@ void main() {
                         [-0.1210, 51.5010],
                         [-0.1210, 51.5000],
                         [-0.1200, 51.5000],
-                      ]
-                    ]
+                      ],
+                    ],
                   ],
                 },
-              }
+              },
             ],
           }),
           200,
         );
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://mockbackend',
+      );
       final territories = await apiClient.getTerritoriesInBBox(
         minLng: -0.13,
         minLat: 51.49,
@@ -174,7 +194,10 @@ void main() {
         );
       });
 
-      final apiClient = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      final apiClient = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://mockbackend',
+      );
       final entries = await apiClient.getLeaderboard(limit: 10);
 
       expect(entries.length, equals(2));
@@ -187,40 +210,46 @@ void main() {
       expect(entries[1].username, equals('ShadowSprint'));
     });
 
-    test('getFactionStandings parses GET /v1/factions/standings payload correctly', () async {
-      final mockClient = MockClient((request) async {
-        expect(request.url.path, '/v1/factions/standings');
-        return http.Response(
-          jsonEncode({
-            'total_area_sqm': 100000.0,
-            'standings': [
-              {
-                'faction': 'Cyber Vanguard',
-                'total_area_sqm': 50000.0,
-                'member_count': 10,
-                'percentage': 50.0,
-              },
-              {
-                'faction': 'Iron Syndicate',
-                'total_area_sqm': 30000.0,
-                'member_count': 6,
-                'percentage': 30.0,
-              },
-            ],
-          }),
-          200,
+    test(
+      'getFactionStandings parses GET /v1/factions/standings payload correctly',
+      () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, '/v1/factions/standings');
+          return http.Response(
+            jsonEncode({
+              'total_area_sqm': 100000.0,
+              'standings': [
+                {
+                  'faction': 'Cyber Vanguard',
+                  'total_area_sqm': 50000.0,
+                  'member_count': 10,
+                  'percentage': 50.0,
+                },
+                {
+                  'faction': 'Iron Syndicate',
+                  'total_area_sqm': 30000.0,
+                  'member_count': 6,
+                  'percentage': 30.0,
+                },
+              ],
+            }),
+            200,
+          );
+        });
+
+        final client = ApiClient(
+          httpClient: mockClient,
+          baseUrl: 'http://mockbackend',
         );
-      });
+        final standings = await client.getFactionStandings();
 
-      final client = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
-      final standings = await client.getFactionStandings();
-
-      expect(standings, isNotNull);
-      expect(standings!.totalAreaSqm, equals(100000.0));
-      expect(standings.standings.length, equals(2));
-      expect(standings.standings[0].faction, equals('Cyber Vanguard'));
-      expect(standings.standings[0].percentage, equals(50.0));
-    });
+        expect(standings, isNotNull);
+        expect(standings!.totalAreaSqm, equals(100000.0));
+        expect(standings.standings.length, equals(2));
+        expect(standings.standings[0].faction, equals('Cyber Vanguard'));
+        expect(standings.standings[0].percentage, equals(50.0));
+      },
+    );
 
     test('updateUserFaction sends PUT /v1/me/faction payload', () async {
       final mockClient = MockClient((request) async {
@@ -231,7 +260,10 @@ void main() {
         return http.Response(jsonEncode({'status': 'ok'}), 200);
       });
 
-      final client = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      final client = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://mockbackend',
+      );
       final success = await client.updateUserFaction('Neon Nomads');
       expect(success, isTrue);
     });
@@ -245,9 +277,11 @@ void main() {
         return http.Response(jsonEncode({'status': 'registered'}), 200);
       });
 
-      final client = ApiClient(httpClient: mockClient, baseUrl: 'http://mockbackend');
+      final client = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://mockbackend',
+      );
       await client.registerDeviceToken('fcm_mock_device_token_abc123');
     });
   });
 }
-

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../models/run_telemetry.dart';
 import '../../../models/run_goal.dart';
 
@@ -12,7 +13,9 @@ class RunTelemetryNotifier extends ValueNotifier<RunTelemetry> {
   void tick({required bool isAutoPaused}) {
     value = value.copyWith(
       elapsedSeconds: value.elapsedSeconds + 1,
-      movingSeconds: isAutoPaused ? value.movingSeconds : value.movingSeconds + 1,
+      movingSeconds: isAutoPaused
+          ? value.movingSeconds
+          : value.movingSeconds + 1,
       isAutoPaused: isAutoPaused,
     );
   }

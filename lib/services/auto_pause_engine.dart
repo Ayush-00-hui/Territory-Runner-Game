@@ -1,8 +1,4 @@
-enum AutoPauseTransition {
-  none,
-  paused,
-  resumed,
-}
+enum AutoPauseTransition { none, paused, resumed }
 
 /// Athletic auto-pause engine with hysteresis to avoid erratic start/stop toggling.
 ///

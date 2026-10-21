@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import '../../ui/ui.dart';
 
 /// Debug-only Design Gallery showcasing all Charcoal + Ember design tokens,
@@ -19,9 +20,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
   @override
   Widget build(BuildContext context) {
     if (!kDebugMode) {
-      return const Scaffold(
-        body: Center(child: Text('Debug Mode Only')),
-      );
+      return const Scaffold(body: Center(child: Text('Debug Mode Only')));
     }
 
     return Scaffold(
@@ -34,7 +33,10 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s20),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s16,
+          vertical: AppSpacing.s20,
+        ),
         children: [
           // 1. Color Palette
           const SectionHeader(
@@ -66,7 +68,8 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
           const SectionHeader(
             title: 'Typography & Tabular Readouts',
             overline: 'TYPE SCALE',
-            subtitle: 'Inter w600-w700 with tabular figures and negative tracking',
+            subtitle:
+                'Inter w600-w700 with tabular figures and negative tracking',
           ),
           const SizedBox(height: AppSpacing.s8),
           AppCard(
@@ -109,13 +112,25 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                   ],
                 ),
                 const Divider(height: AppSpacing.s24),
-                const Text('titleLarge / titleMedium / bodyMedium', style: AppText.labelSmall),
+                const Text(
+                  'titleLarge / titleMedium / bodyMedium',
+                  style: AppText.labelSmall,
+                ),
                 const SizedBox(height: AppSpacing.s4),
-                const Text('Conquest Sector 04-A Active', style: AppText.titleLarge),
+                const Text(
+                  'Conquest Sector 04-A Active',
+                  style: AppText.titleLarge,
+                ),
                 const SizedBox(height: AppSpacing.s4),
-                const Text('Territory Claim Completed', style: AppText.titleMedium),
+                const Text(
+                  'Territory Claim Completed',
+                  style: AppText.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.s4),
-                const Text('Your GPS tracking has sealed the perimeter with 99.4% precision accuracy.', style: AppText.bodyMedium),
+                const Text(
+                  'Your GPS tracking has sealed the perimeter with 99.4% precision accuracy.',
+                  style: AppText.bodyMedium,
+                ),
               ],
             ),
           ),
@@ -133,7 +148,11 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
             label: 'Start Conquest Run',
             icon: Icons.play_arrow_rounded,
             onPressed: () {
-              AppToast.show(context, 'Primary Button Triggered', type: AppToastType.success);
+              AppToast.show(
+                context,
+                'Primary Button Triggered',
+                type: AppToastType.success,
+              );
             },
           ),
           const SizedBox(height: AppSpacing.s12),
@@ -141,7 +160,11 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
             label: 'View Division Standings',
             icon: Icons.leaderboard_rounded,
             onPressed: () {
-              AppToast.show(context, 'Secondary Button Triggered', type: AppToastType.info);
+              AppToast.show(
+                context,
+                'Secondary Button Triggered',
+                type: AppToastType.info,
+              );
             },
           ),
           const SizedBox(height: AppSpacing.s12),
@@ -158,10 +181,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
               ),
               const SizedBox(width: AppSpacing.s12),
               const Expanded(
-                child: PrimaryButton(
-                  label: 'Disabled',
-                  onPressed: null,
-                ),
+                child: PrimaryButton(label: 'Disabled', onPressed: null),
               ),
             ],
           ),
@@ -172,7 +192,8 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
           const SectionHeader(
             title: 'Chips & Status Badges',
             overline: 'SELECTORS',
-            subtitle: 'Clean subtle fills, hairline borders, no colored shadows',
+            subtitle:
+                'Clean subtle fills, hairline borders, no colored shadows',
           ),
           const SizedBox(height: AppSpacing.s8),
           Wrap(
@@ -252,13 +273,28 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Daily Sector Goal', style: AppText.titleMedium),
+                      const Text(
+                        'Daily Sector Goal',
+                        style: AppText.titleMedium,
+                      ),
                       const SizedBox(height: AppSpacing.s4),
-                      const Text('3.4 / 5.0 km completed today', style: AppText.bodySmall),
+                      const Text(
+                        '3.4 / 5.0 km completed today',
+                        style: AppText.bodySmall,
+                      ),
                       const SizedBox(height: AppSpacing.s8),
                       GestureDetector(
-                        onTap: () => setState(() => _progressVal = (_progressVal >= 1.0) ? 0.3 : _progressVal + 0.2),
-                        child: Text('Simulate Progress', style: AppText.labelLarge.copyWith(color: AppColors.accent)),
+                        onTap: () => setState(
+                          () => _progressVal = (_progressVal >= 1.0)
+                              ? 0.3
+                              : _progressVal + 0.2,
+                        ),
+                        child: Text(
+                          'Simulate Progress',
+                          style: AppText.labelLarge.copyWith(
+                            color: AppColors.accent,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -273,7 +309,8 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
           const SectionHeader(
             title: 'Modals, Sheets & Toasts',
             overline: 'OVERLAYS',
-            subtitle: 'Unified squircle dialogs, bottom sheets, and floating toasts',
+            subtitle:
+                'Unified squircle dialogs, bottom sheets, and floating toasts',
           ),
           const SizedBox(height: AppSpacing.s8),
           Wrap(
@@ -334,7 +371,11 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                     isDestructive: true,
                   );
                   if (context.mounted && confirmed == true) {
-                    AppToast.show(context, 'Run discarded', type: AppToastType.error);
+                    AppToast.show(
+                      context,
+                      'Run discarded',
+                      type: AppToastType.error,
+                    );
                   }
                 },
               ),
@@ -356,7 +397,11 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
               title: 'GPS Signal Lost',
               message: 'Check outdoor line of sight or location permissions to continue.',
               onRetry: () {
-                AppToast.show(context, 'Retrying GPS acquisition...', type: AppToastType.info);
+                AppToast.show(
+                  context,
+                  'Retrying GPS acquisition...',
+                  type: AppToastType.info,
+                );
               },
             ),
           ),
@@ -401,10 +446,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              Text(
-                s.hex,
-                style: AppText.caption.copyWith(fontSize: 9),
-              ),
+              Text(s.hex, style: AppText.caption.copyWith(fontSize: 9)),
             ],
           ),
         );

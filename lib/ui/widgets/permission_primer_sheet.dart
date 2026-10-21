@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import 'app_sheet.dart';
 
-enum PermissionPrimerType {
-  notifications,
-  location,
-  backgroundLocation,
-}
+enum PermissionPrimerType { notifications, location, backgroundLocation }
 
 /// Athletic system permission primer bottom sheet.
 /// Educates the athlete on why permissions are required before invoking native OS dialogs.
@@ -63,7 +60,12 @@ class PermissionPrimerSheet extends StatelessWidget {
     final config = _PrimerConfig.forType(type);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.s24, AppSpacing.s20, AppSpacing.s24, AppSpacing.s32),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s24,
+        AppSpacing.s20,
+        AppSpacing.s24,
+        AppSpacing.s32,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -158,7 +160,9 @@ class PermissionPrimerSheet extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textSecondary,
                     side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.br14,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -170,7 +174,10 @@ class PermissionPrimerSheet extends StatelessWidget {
                   },
                   child: Text(
                     config.secondaryButtonText,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),
@@ -181,7 +188,9 @@ class PermissionPrimerSheet extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.accent,
                     foregroundColor: AppColors.onAccent,
-                    shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.br14,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -220,11 +229,17 @@ class PermissionPrimerSheet extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: AppText.bodyBold.copyWith(fontSize: 12, color: AppColors.textPrimary),
+                style: AppText.bodyBold.copyWith(
+                  fontSize: 12,
+                  color: AppColors.textPrimary,
+                ),
               ),
               Text(
                 description,
-                style: AppText.bodySmall.copyWith(fontSize: 10.5, color: AppColors.textMuted),
+                style: AppText.bodySmall.copyWith(
+                  fontSize: 10.5,
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -268,8 +283,7 @@ class _PrimerConfig {
           headerIcon: Icons.notifications_active_rounded,
           title: 'TACTICAL RADAR ALERTS',
           subtitle: 'EARLY WARNING DEFENSE SYSTEM',
-          description:
-              'Rival runner syndicates can attack your captured sectors in real-time. Enable radar alerts to receive instant notifications when your territory is under attack, carved, or contested.',
+          description: 'Rival runner syndicates can attack your captured sectors in real-time. Enable radar alerts to receive instant notifications when your territory is under attack, carved, or contested.',
           features: [
             _FeatureItem(
               Icons.shield_rounded,
@@ -296,8 +310,7 @@ class _PrimerConfig {
           headerIcon: Icons.gps_fixed_rounded,
           title: 'HIGH-PRECISION SATELLITE GPS',
           subtitle: 'TERRITORY LOCK & ENCLOSURE',
-          description:
-              'Territory Runner requires precise GPS location to track your real-world path, calculate polygon enclosures, and award sovereign territory. Telemetry stays secure on your device.',
+          description: 'Territory Runner requires precise GPS location to track your real-world path, calculate polygon enclosures, and award sovereign territory. Telemetry stays secure on your device.',
           features: [
             _FeatureItem(
               Icons.polyline_rounded,
@@ -324,8 +337,7 @@ class _PrimerConfig {
           headerIcon: Icons.screen_lock_portrait_rounded,
           title: 'BACKGROUND TRACKING SENSING',
           subtitle: 'CONTINUOUS ENCLOSURE RADAR',
-          description:
-              'To record loops while your phone is locked in your pocket or when using AMOLED battery saver, background location access is required. No telemetry is logged when not running.',
+          description: 'To record loops while your phone is locked in your pocket or when using AMOLED battery saver, background location access is required. No telemetry is logged when not running.',
           features: [
             _FeatureItem(
               Icons.lock_clock_rounded,

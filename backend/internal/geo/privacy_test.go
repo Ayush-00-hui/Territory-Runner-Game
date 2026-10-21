@@ -80,11 +80,11 @@ func TestMaskPath_TrimsStartAndEndInsidePrivacyZone(t *testing.T) {
 	// Point 3: 800m from Home (outside zone)
 	// Point 4: returning to 80m from Home (inside zone)
 	track := []geo.LatLng{
-		{Latitude: 37.7955, Longitude: -122.3937},         // inside
-		{Latitude: 37.7958, Longitude: -122.3937},         // ~33m away, inside
-		{Latitude: 37.8010, Longitude: -122.3937},         // ~610m away, outside
-		{Latitude: 37.8030, Longitude: -122.3937},         // ~830m away, outside
-		{Latitude: 37.7956, Longitude: -122.3937},         // ~11m away, inside
+		{Latitude: 37.7955, Longitude: -122.3937}, // inside
+		{Latitude: 37.7958, Longitude: -122.3937}, // ~33m away, inside
+		{Latitude: 37.8010, Longitude: -122.3937}, // ~610m away, outside
+		{Latitude: 37.8030, Longitude: -122.3937}, // ~830m away, outside
+		{Latitude: 37.7956, Longitude: -122.3937}, // ~11m away, inside
 	}
 
 	masked := geo.MaskPath(track, []geo.PrivacyZoneEvaluator{zone})

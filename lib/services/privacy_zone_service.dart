@@ -1,6 +1,8 @@
 import 'dart:convert';
+
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../core/logging/app_logger.dart';
 import '../models/privacy_zone.dart';
 import '../models/territory.dart';
@@ -53,7 +55,12 @@ class PrivacyZoneService {
       }
       _isLoaded = true;
     } catch (e, st) {
-      AppLogger.error('Error loading privacy zones', error: e, stackTrace: st, tag: 'PrivacyZoneService');
+      AppLogger.error(
+        'Error loading privacy zones',
+        error: e,
+        stackTrace: st,
+        tag: 'PrivacyZoneService',
+      );
     }
     return zones;
   }
@@ -64,7 +71,11 @@ class PrivacyZoneService {
       final encoded = jsonEncode(_zones.map((z) => z.toJson()).toList());
       await prefs.setString(_storageKey, encoded);
     } catch (e) {
-      AppLogger.error('Error saving privacy zones: $e', tag: 'PrivacyZoneService', error: e);
+      AppLogger.error(
+        'Error saving privacy zones: $e',
+        tag: 'PrivacyZoneService',
+        error: e,
+      );
     }
   }
 
@@ -76,11 +87,17 @@ class PrivacyZoneService {
     try {
       final success = await client.putPrivacyZones(_zones);
       if (success) {
-        AppLogger.info('Successfully synchronized ${_zones.length} privacy zones with server', tag: 'PrivacyZoneService');
+        AppLogger.info(
+          'Successfully synchronized ${_zones.length} privacy zones with server',
+          tag: 'PrivacyZoneService',
+        );
         return true;
       }
     } catch (e) {
-      AppLogger.warning('Server sync skipped or failed (offline-first preserved): $e', tag: 'PrivacyZoneService');
+      AppLogger.warning(
+        'Server sync skipped or failed (offline-first preserved): $e',
+        tag: 'PrivacyZoneService',
+      );
     }
     return false;
   }
@@ -97,7 +114,10 @@ class PrivacyZoneService {
         _isLoaded = true;
       }
     } catch (e) {
-      AppLogger.warning('Failed to fetch privacy zones from server: $e', tag: 'PrivacyZoneService');
+      AppLogger.warning(
+        'Failed to fetch privacy zones from server: $e',
+        tag: 'PrivacyZoneService',
+      );
     }
   }
 
@@ -115,7 +135,10 @@ class PrivacyZoneService {
   }
 
   /// Update an existing privacy zone (e.g. adjust radius or rename)
-  Future<void> updateZone(PrivacyZone updatedZone, {ApiClient? apiClient}) async {
+  Future<void> updateZone(
+    PrivacyZone updatedZone, {
+    ApiClient? apiClient,
+  }) async {
     if (!_isLoaded) await loadZones();
     final idx = _zones.indexWhere((z) => z.id == updatedZone.id);
     if (idx != -1) {
@@ -138,7 +161,11 @@ class PrivacyZoneService {
   }
 
   /// Enable or disable a privacy zone
-  Future<void> toggleZone(String id, bool isEnabled, {ApiClient? apiClient}) async {
+  Future<void> toggleZone(
+    String id,
+    bool isEnabled, {
+    ApiClient? apiClient,
+  }) async {
     if (!_isLoaded) await loadZones();
     final idx = _zones.indexWhere((z) => z.id == id);
     if (idx != -1) {
@@ -209,4 +236,3 @@ class PrivacyZoneService {
     return territories;
   }
 }
-

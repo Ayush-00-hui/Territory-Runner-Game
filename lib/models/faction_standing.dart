@@ -22,11 +22,11 @@ class FactionStanding {
   }
 
   Map<String, dynamic> toJson() => {
-        'faction': faction,
-        'total_area_sqm': totalAreaSqm,
-        'member_count': memberCount,
-        'percentage': percentage,
-      };
+    'faction': faction,
+    'total_area_sqm': totalAreaSqm,
+    'member_count': memberCount,
+    'percentage': percentage,
+  };
 }
 
 /// Global turf war statistics response from GET /v1/factions/standings
@@ -40,7 +40,8 @@ class FactionStandingsResponse {
   });
 
   factory FactionStandingsResponse.fromJson(Map<String, dynamic> json) {
-    final list = (json['standings'] as List<dynamic>?)
+    final list =
+        (json['standings'] as List<dynamic>?)
             ?.map((e) => FactionStanding.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [];
@@ -51,7 +52,7 @@ class FactionStandingsResponse {
   }
 
   Map<String, dynamic> toJson() => {
-        'total_area_sqm': totalAreaSqm,
-        'standings': standings.map((s) => s.toJson()).toList(),
-      };
+    'total_area_sqm': totalAreaSqm,
+    'standings': standings.map((s) => s.toJson()).toList(),
+  };
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import 'features/gameplay/territory_service.dart';
 import 'features/profile/widgets/auth_modal.dart';
 import 'features/profile/widgets/challenges_shelf.dart';
@@ -21,17 +22,14 @@ class ProfilePage extends StatefulWidget {
   final RunnerProfile? initialProfile;
   final List<Territory>? initialTerritories;
 
-  const ProfilePage({
-    super.key,
-    this.initialProfile,
-    this.initialTerritories,
-  });
+  const ProfilePage({super.key, this.initialProfile, this.initialTerritories});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
+class _ProfilePageState extends State<ProfilePage>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _pageController;
   late final Animation<double> _fadeAnimation;
   ProfileTab _activeTab = ProfileTab.athlete;
@@ -86,7 +84,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.cloud_sync_outlined, color: AppColors.accent),
+            icon: const Icon(
+              Icons.cloud_sync_outlined,
+              color: AppColors.accent,
+            ),
             onPressed: _openAuthDialog,
             tooltip: 'Cloud Sync',
           ),
@@ -103,9 +104,11 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                 final profile = _territoryService.getProfile();
 
                 return ValueListenableBuilder(
-                  valueListenable: Hive.box<Territory>('territories_v3').listenable(),
+                  valueListenable: Hive.box<Territory>('territories_v3')
+                      .listenable(),
                   builder: (context, Box<Territory> territoryBox, _) {
-                    final territories = _territoryService.getCapturedTerritoryObjects();
+                    final territories = _territoryService
+                        .getCapturedTerritoryObjects();
                     return _buildProfileContent(profile, territories);
                   },
                 );
@@ -114,8 +117,14 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     );
   }
 
-  Widget _buildProfileContent(RunnerProfile profile, List<Territory> territories) {
-    final double totalAreaM2 = territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+  Widget _buildProfileContent(
+    RunnerProfile profile,
+    List<Territory> territories,
+  ) {
+    final double totalAreaM2 = territories.fold(
+      0.0,
+      (sum, t) => sum + t.areaSqMeters,
+    );
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -243,19 +252,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
               ),
             ] else if (_activeTab == ProfileTab.turfWar) ...[
               // --- FACTION LEADERBOARD & TURF WAR DOMINANCE ---
-              FactionLeaderboard(
-                profile: profile,
-                territories: territories,
-              ),
+              FactionLeaderboard(profile: profile, territories: territories),
             ] else if (_activeTab == ProfileTab.league) ...[
               // --- WEEKLY LEAGUE STANDINGS & CUTOFFS ---
               const WeeklyLeagueView(),
             ] else ...[
               // --- SQUAD & DUELS HUB ---
-              const SizedBox(
-                height: 600,
-                child: SocialHubView(),
-              ),
+              const SizedBox(height: 600, child: SocialHubView()),
             ],
           ],
         ),

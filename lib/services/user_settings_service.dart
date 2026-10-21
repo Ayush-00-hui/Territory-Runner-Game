@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../core/logging/app_logger.dart';
 import 'api_client.dart';
 
@@ -62,20 +64,21 @@ class UserSettingsService extends ChangeNotifier {
   bool get isInitialized => _isInitialized;
 
   UserSettingsService._internal({ApiClient? apiClient})
-      : _apiClient = apiClient ?? ApiClient();
+    : _apiClient = apiClient ?? ApiClient();
 
   @visibleForTesting
-  UserSettingsService.custom({ApiClient? apiClient, LiveVisibility initial = LiveVisibility.off})
-      : _apiClient = apiClient ?? ApiClient(),
-        _liveVisibility = initial,
-        _isInitialized = true;
+  UserSettingsService.custom({
+    ApiClient? apiClient,
+    LiveVisibility initial = LiveVisibility.off,
+  }) : _apiClient = apiClient ?? ApiClient(),
+       _liveVisibility = initial,
+       _isInitialized = true;
 
   @visibleForTesting
   void resetForTesting({LiveVisibility initial = LiveVisibility.off}) {
     _liveVisibility = initial;
     _isInitialized = false;
   }
-
 
   /// Initializes settings from local offline storage and schedules background server sync
   Future<void> init() async {
@@ -90,7 +93,10 @@ class UserSettingsService extends ChangeNotifier {
       // Background sync with server if online
       unawaited(syncWithServer());
     } catch (e) {
-      AppLogger.warning('Failed to load user settings: $e', tag: 'UserSettingsService');
+      AppLogger.warning(
+        'Failed to load user settings: $e',
+        tag: 'UserSettingsService',
+      );
       _liveVisibility = LiveVisibility.off;
       _isInitialized = true;
     }
@@ -105,15 +111,26 @@ class UserSettingsService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefLiveVisibilityKey, visibility.toApiValue());
     } catch (e) {
-      AppLogger.warning('Failed to persist visibility locally: $e', tag: 'UserSettingsService');
+      AppLogger.warning(
+        'Failed to persist visibility locally: $e',
+        tag: 'UserSettingsService',
+      );
     }
 
     try {
-      await _apiClient.updateSettings({'live_visibility': visibility.toApiValue()});
-      AppLogger.info('Updated live_visibility on server to ${visibility.toApiValue()}', tag: 'UserSettingsService');
+      await _apiClient.updateSettings({
+        'live_visibility': visibility.toApiValue(),
+      });
+      AppLogger.info(
+        'Updated live_visibility on server to ${visibility.toApiValue()}',
+        tag: 'UserSettingsService',
+      );
     } catch (e) {
       // Offline-first: failure is non-fatal
-      AppLogger.warning('Failed to sync live_visibility to server (offline-first preserved): $e', tag: 'UserSettingsService');
+      AppLogger.warning(
+        'Failed to sync live_visibility to server (offline-first preserved): $e',
+        tag: 'UserSettingsService',
+      );
     }
   }
 
@@ -122,7 +139,9 @@ class UserSettingsService extends ChangeNotifier {
     try {
       final data = await _apiClient.getSettings();
       if (data != null && data.containsKey('live_visibility')) {
-        final serverVis = LiveVisibility.fromString(data['live_visibility'] as String?);
+        final serverVis = LiveVisibility.fromString(
+          data['live_visibility'] as String?,
+        );
         if (_liveVisibility != serverVis) {
           _liveVisibility = serverVis;
           final prefs = await SharedPreferences.getInstance();
@@ -131,7 +150,10 @@ class UserSettingsService extends ChangeNotifier {
         }
       }
     } catch (e) {
-      AppLogger.debug('Server settings sync skipped (device offline): $e', tag: 'UserSettingsService');
+      AppLogger.debug(
+        'Server settings sync skipped (device offline): $e',
+        tag: 'UserSettingsService',
+      );
     }
   }
 }

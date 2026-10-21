@@ -7,7 +7,8 @@ class Duel {
   final String activityType; // 'running', 'walking', 'cycling'
   final String targetType; // 'area' or 'distance'
   final double targetValue; // sqm or meters
-  final String status; // 'pending', 'active', 'completed', 'declined', 'expired'
+  final String
+  status; // 'pending', 'active', 'completed', 'declined', 'expired'
   final double challengerProgress;
   final double opponentProgress;
   final String? winnerId;
@@ -46,7 +47,8 @@ class Duel {
       targetType: json['target_type'] as String? ?? 'area',
       targetValue: (json['target_value'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] as String? ?? 'pending',
-      challengerProgress: (json['challenger_progress'] as num?)?.toDouble() ?? 0.0,
+      challengerProgress:
+          (json['challenger_progress'] as num?)?.toDouble() ?? 0.0,
       opponentProgress: (json['opponent_progress'] as num?)?.toDouble() ?? 0.0,
       winnerId: json['winner_id'] as String?,
       xpStake: (json['xp_stake'] as num?)?.toInt() ?? 500,
@@ -108,5 +110,6 @@ class Duel {
   bool get isDeclined => status == 'declined';
   bool get isExpired => status == 'expired';
 
-  bool didIWin(String currentUserId) => isCompleted && winnerId == currentUserId;
+  bool didIWin(String currentUserId) =>
+      isCompleted && winnerId == currentUserId;
 }

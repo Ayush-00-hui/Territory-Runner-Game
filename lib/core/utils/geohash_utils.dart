@@ -94,7 +94,8 @@ class GeohashUtils {
   }
 
   /// Decodes bounding box for a geohash.
-  static ({double minLat, double maxLat, double minLng, double maxLng}) decodeBounds(String hash) {
+  static ({double minLat, double maxLat, double minLng, double maxLng})
+  decodeBounds(String hash) {
     double minLat = -90.0, maxLat = 90.0;
     double minLng = -180.0, maxLng = 180.0;
     bool isLng = true;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../services/sync_queue.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -62,17 +63,25 @@ class SyncChip extends StatelessWidget {
                         ? 'All runs synced with server authority.'
                         : 'Triggering background cloud sync...',
                     icon: icon,
-                    type: status == SyncStatus.synced ? AppToastType.success : AppToastType.info,
+                    type: status == SyncStatus.synced
+                        ? AppToastType.success
+                        : AppToastType.info,
                   );
                 },
                 behavior: HitTestBehavior.opaque,
                 child: AnimatedContainer(
                   duration: AppMotion.duration(context, AppMotion.fast),
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s10,
+                    vertical: AppSpacing.s6,
+                  ),
                   decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.12),
                     borderRadius: AppRadius.brFull,
-                    border: Border.all(color: color.withValues(alpha: 0.4), width: 1.0),
+                    border: Border.all(
+                      color: color.withValues(alpha: 0.4),
+                      width: 1.0,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,

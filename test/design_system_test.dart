@@ -31,9 +31,15 @@ void main() {
 
     test('AppText enforces tabular figures on athletic metrics and timers with Inter', () {
       expect(AppText.statHero.fontFamily, 'Inter');
-      expect(AppText.statHero.fontFeatures, contains(const FontFeature.tabularFigures()));
+      expect(
+        AppText.statHero.fontFeatures,
+        contains(const FontFeature.tabularFigures()),
+      );
       expect(AppText.timer.fontFamily, 'Inter');
-      expect(AppText.timer.fontFeatures, contains(const FontFeature.tabularFigures()));
+      expect(
+        AppText.timer.fontFeatures,
+        contains(const FontFeature.tabularFigures()),
+      );
       expect(AppText.body.fontFamily, 'Inter');
     });
   });
@@ -58,7 +64,9 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('StatTile renders title, unit and formatted value', (tester) async {
+    testWidgets('StatTile renders title, unit and formatted value', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -103,7 +111,9 @@ void main() {
       expect(selected, isTrue);
     });
 
-    testWidgets('EmptyState renders icon, title and description', (tester) async {
+    testWidgets('EmptyState renders icon, title and description', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
@@ -118,7 +128,10 @@ void main() {
 
       expect(find.byIcon(Icons.map_rounded), findsOneWidget);
       expect(find.text('No Active Route'), findsOneWidget);
-      expect(find.text('Start running to claim your first sector.'), findsOneWidget);
+      expect(
+        find.text('Start running to claim your first sector.'),
+        findsOneWidget,
+      );
     });
   });
 }

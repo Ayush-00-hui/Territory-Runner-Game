@@ -1,7 +1,9 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../core/utils/constants.dart';
 import '../../../models/territory.dart';
 import '../../../models/ws_events.dart';
@@ -31,7 +33,9 @@ class MapLayers {
       urlTemplate = AppConstants.defaultOsmUrlTemplate;
     }
 
-    final bool isMapboxDark = urlTemplate.contains('mapbox.com/styles/v1/mapbox/dark-v11');
+    final bool isMapboxDark = urlTemplate.contains(
+      'mapbox.com/styles/v1/mapbox/dark-v11',
+    );
 
     return TileLayer(
       urlTemplate: urlTemplate,
@@ -39,9 +43,7 @@ class MapLayers {
       maxZoom: 19,
       userAgentPackageName: 'com.territoryrunner.app',
       tileProvider: OfflineFirstTileProvider(
-        headers: {
-          'User-Agent': AppConstants.userAgent,
-        },
+        headers: {'User-Agent': AppConstants.userAgent},
       ),
       tileBuilder: (context, tileWidget, tile) {
         if (isMapboxDark) {
@@ -49,10 +51,26 @@ class MapLayers {
         }
         return ColorFiltered(
           colorFilter: const ColorFilter.matrix(<double>[
-            -0.85, 0, 0, 0, 220,
-            0, -0.85, 0, 0, 220,
-            0, 0, -0.85, 0, 220,
-            0, 0, 0, 1.0, 0,
+            -0.85,
+            0,
+            0,
+            0,
+            220,
+            0,
+            -0.85,
+            0,
+            0,
+            220,
+            0,
+            0,
+            -0.85,
+            0,
+            220,
+            0,
+            0,
+            0,
+            1.0,
+            0,
           ]),
           child: tileWidget,
         );
@@ -71,11 +89,15 @@ class MapLayers {
     for (final territory in territories) {
       final double currentStrength = territory.computeCurrentStrength();
       // Strength shown as outline opacity (from 0.25 at 0% strength to 1.0 at 100%)
-      final double outlineAlpha = (0.25 + 0.75 * (currentStrength / 100.0)).clamp(0.20, 1.0);
+      final double outlineAlpha = (0.25 + 0.75 * (currentStrength / 100.0))
+          .clamp(0.20, 1.0);
       final bool isHighlighted = territory.id == highlightedTerritoryId;
-      final bool isRival = territory.color == AppColors.rival ||
+      final bool isRival =
+          territory.color == AppColors.rival ||
           territory.id.contains('rival') ||
-          (currentUserId != null && territory.ownerId.isNotEmpty && territory.ownerId != currentUserId);
+          (currentUserId != null &&
+              territory.ownerId.isNotEmpty &&
+              territory.ownerId != currentUserId);
 
       final Color borderColor;
       final Color fillColor;
@@ -86,12 +108,20 @@ class MapLayers {
         fillColor = AppColors.gold.withValues(alpha: 0.35);
         strokeWidth = 3.0;
       } else if (isRival) {
-        borderColor = AppColors.territoryRivalBorder.withValues(alpha: outlineAlpha);
-        fillColor = AppColors.territoryRivalFill.withValues(alpha: (0.14 * (currentStrength / 100.0)).clamp(0.08, 0.20));
+        borderColor = AppColors.territoryRivalBorder.withValues(
+          alpha: outlineAlpha,
+        );
+        fillColor = AppColors.territoryRivalFill.withValues(
+          alpha: (0.14 * (currentStrength / 100.0)).clamp(0.08, 0.20),
+        );
         strokeWidth = 1.5;
       } else {
-        borderColor = AppColors.territoryMineBorder.withValues(alpha: outlineAlpha);
-        fillColor = AppColors.territoryMineFill.withValues(alpha: (0.16 * (currentStrength / 100.0)).clamp(0.10, 0.25));
+        borderColor = AppColors.territoryMineBorder.withValues(
+          alpha: outlineAlpha,
+        );
+        fillColor = AppColors.territoryMineFill.withValues(
+          alpha: (0.16 * (currentStrength / 100.0)).clamp(0.10, 0.25),
+        );
         strokeWidth = 1.5;
       }
 
@@ -126,8 +156,8 @@ class MapLayers {
       final double xj = polygon[j].longitude;
       final double yj = polygon[j].latitude;
 
-      final bool intersect = ((yi > y) != (yj > y)) &&
-          (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+      final bool intersect =
+          ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
       if (intersect) inside = !inside;
     }
     return inside;
@@ -168,7 +198,10 @@ class MapLayers {
 
     // For each ring, count how many other rings strictly enclose it
     final List<int> enclosureCounts = List.filled(validRings.length, 0);
-    final List<List<int>> enclosingRings = List.generate(validRings.length, (_) => []);
+    final List<List<int>> enclosingRings = List.generate(
+      validRings.length,
+      (_) => [],
+    );
 
     for (int i = 0; i < validRings.length; i++) {
       for (int j = 0; j < validRings.length; j++) {
@@ -237,7 +270,10 @@ class MapLayers {
             decoration: BoxDecoration(
               color: AppColors.surfaceGlass,
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: badgeColor.withValues(alpha: 0.8), width: 1.0),
+              border: Border.all(
+                color: badgeColor.withValues(alpha: 0.8),
+                width: 1.0,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -315,7 +351,8 @@ class MapLayers {
             strokeWidth: 2.0,
           ),
         // AI Suggested Route: Clean 2.5px line, NO glow
-        if (suggestedRouteCoordinates != null && suggestedRouteCoordinates.length >= 2)
+        if (suggestedRouteCoordinates != null &&
+            suggestedRouteCoordinates.length >= 2)
           Polyline(
             points: suggestedRouteCoordinates,
             color: AppColors.accent.withValues(alpha: 0.6),
@@ -379,11 +416,17 @@ class MapLayers {
             children: [
               // Clean Callsign & Speed Badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 6,
+                  vertical: 2.5,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: rivalColor.withValues(alpha: 0.6), width: 1.0),
+                  border: Border.all(
+                    color: rivalColor.withValues(alpha: 0.6),
+                    width: 1.0,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -445,10 +488,14 @@ class MapLayers {
   /// Maps faction name to dedicated cyber aesthetic accent color
   static Color getFactionColor(String faction) {
     final lower = faction.toLowerCase();
-    if (lower.contains('vanguard') || lower.contains('cyan') || lower.contains('cyber')) {
+    if (lower.contains('vanguard') ||
+        lower.contains('cyan') ||
+        lower.contains('cyber')) {
       return AppColors.info;
     }
-    if (lower.contains('iron') || lower.contains('legion') || lower.contains('solar')) {
+    if (lower.contains('iron') ||
+        lower.contains('legion') ||
+        lower.contains('solar')) {
       return AppColors.secondary;
     }
     return AppColors.rival;

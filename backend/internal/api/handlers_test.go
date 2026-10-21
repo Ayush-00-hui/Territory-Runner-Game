@@ -1744,7 +1744,3 @@ func buildTestJWT(privKey *rsa.PrivateKey, kid, projectID, subject string, exp t
 	}
 	return signed + "." + base64.RawURLEncoding.EncodeToString(sig), nil
 }
-
-
-
-

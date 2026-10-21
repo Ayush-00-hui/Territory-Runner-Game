@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import '../motion/motion.dart';
 
-enum AppToastType {
-  info,
-  success,
-  warning,
-  error,
-}
+enum AppToastType { info, success, warning, error }
 
 /// Athletic floating toast pill replacing raw SnackBars.
 /// Always pairs color with icon + text for accessibility and clarity.
@@ -30,7 +26,8 @@ class AppToast extends StatelessWidget {
   });
 
   /// Root scaffold messenger key for showing toasts without a BuildContext
-  static final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
+  static final GlobalKey<ScaffoldMessengerState> messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   /// Displays the toast globally via the root ScaffoldMessenger key
   static void showGlobal(
@@ -51,7 +48,10 @@ class AppToast extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+        margin: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s16,
+          vertical: AppSpacing.s12,
+        ),
         padding: EdgeInsets.zero,
         duration: duration,
         content: AppToast(
@@ -86,7 +86,10 @@ class AppToast extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+        margin: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s16,
+          vertical: AppSpacing.s12,
+        ),
         padding: EdgeInsets.zero,
         duration: duration,
         content: AppToast(
@@ -135,7 +138,10 @@ class AppToast extends StatelessWidget {
       liveRegion: true,
       label: message,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s16,
+          vertical: AppSpacing.s12,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surface2,
           borderRadius: AppRadius.br16,
@@ -165,7 +171,10 @@ class AppToast extends StatelessWidget {
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s4, vertical: AppSpacing.s2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s4,
+                    vertical: AppSpacing.s2,
+                  ),
                   child: Text(
                     actionLabel!,
                     style: AppText.labelLarge.copyWith(color: AppColors.accent),

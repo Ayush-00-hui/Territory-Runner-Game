@@ -12,7 +12,9 @@ class BatterySaverService {
   static const String _prefBatterySaverKey = 'pref_battery_saver_enabled';
 
   final ValueNotifier<bool> isBatterySaverNotifier = ValueNotifier<bool>(false);
-  final ValueNotifier<bool> isAmoledHudActiveNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> isAmoledHudActiveNotifier = ValueNotifier<bool>(
+    false,
+  );
 
   bool _isInitialized = false;
 

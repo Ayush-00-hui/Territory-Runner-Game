@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/auth/auth_screen.dart';
 import 'profile_page.dart';
@@ -12,71 +15,88 @@ import 'models/territory.dart';
 import 'models/runner_profile.dart';
 import 'services/firebase_service.dart';
 import 'services/notification_service.dart';
+
 import 'package:flutter/foundation.dart';
+
 import 'features/home/home_screen.dart';
 import 'ui/ui.dart';
 export 'ui/ui.dart';
 
 void main() {
-  runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+  runZonedGuarded(
+    () async {
+      WidgetsFlutterBinding.ensureInitialized();
 
-    // 1. Intercept Flutter framework rendering and layout errors
-    FlutterError.onError = (FlutterErrorDetails details) {
-      AppLogger.error(
-        'FlutterError: ${details.exceptionAsString()}',
-        tag: 'FlutterError',
-        error: details.exception,
-        stackTrace: details.stack,
+      // Configure edge-to-edge system UI styling for Android 15/16 and modern devices
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SystemChrome.setSystemUIOverlayStyle(
+        const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          systemNavigationBarColor: Colors.transparent,
+          systemNavigationBarDividerColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          systemNavigationBarIconBrightness: Brightness.light,
+        ),
       );
-      if (kDebugMode) {
-        FlutterError.dumpErrorToConsole(details);
+
+      // 1. Intercept Flutter framework rendering and layout errors
+      FlutterError.onError = (FlutterErrorDetails details) {
+        AppLogger.error(
+          'FlutterError: ${details.exceptionAsString()}',
+          tag: 'FlutterError',
+          error: details.exception,
+          stackTrace: details.stack,
+        );
+        if (kDebugMode) {
+          FlutterError.dumpErrorToConsole(details);
+        }
+      };
+
+      // 2. Present calm, non-red fallback screen
+      ErrorWidget.builder = (FlutterErrorDetails details) {
+        return CalmErrorScreen(details: details);
+      };
+
+      // 3. Intercept uncaught platform and asynchronous dispatcher errors
+      PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+        AppLogger.error(
+          'PlatformDispatcher unhandled error: $error',
+          tag: 'PlatformDispatcher',
+          error: error,
+          stackTrace: stack,
+        );
+        return true; // Marked as handled
+      };
+
+      await Hive.initFlutter();
+      if (!Hive.isAdapterRegistered(0)) {
+        Hive.registerAdapter(TerritoryAdapter());
       }
-    };
+      if (!Hive.isAdapterRegistered(1)) {
+        Hive.registerAdapter(RunnerProfileAdapter());
+      }
+      await Hive.openBox<Territory>('territories_v3');
+      await Hive.openBox<RunnerProfile>('profile');
+      await Hive.openBox<String>('active_run_recovery');
 
-    // 2. Present calm, non-red fallback screen
-    ErrorWidget.builder = (FlutterErrorDetails details) {
-      return CalmErrorScreen(details: details);
-    };
+      // Load package metadata
+      unawaited(AppVersion.init());
 
-    // 3. Intercept uncaught platform and asynchronous dispatcher errors
-    PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+      // Immediately render UI — zero splash screen blocking!
+      runApp(const TerritoryApp());
+
+      // Initialize Firebase and push notifications asynchronously in background
+      _initServicesAsync();
+    },
+    (Object error, StackTrace stack) {
       AppLogger.error(
-        'PlatformDispatcher unhandled error: $error',
-        tag: 'PlatformDispatcher',
+        'Zone-level unhandled exception: $error',
+        tag: 'ZoneGuard',
         error: error,
         stackTrace: stack,
       );
-      return true; // Marked as handled
-    };
-
-    await Hive.initFlutter();
-    if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(TerritoryAdapter());
-    }
-    if (!Hive.isAdapterRegistered(1)) {
-      Hive.registerAdapter(RunnerProfileAdapter());
-    }
-    await Hive.openBox<Territory>('territories_v3');
-    await Hive.openBox<RunnerProfile>('profile');
-    await Hive.openBox<String>('active_run_recovery');
-
-    // Load package metadata
-    unawaited(AppVersion.init());
-
-    // Immediately render UI — zero splash screen blocking!
-    runApp(const TerritoryApp());
-
-    // Initialize Firebase and push notifications asynchronously in background
-    _initServicesAsync();
-  }, (Object error, StackTrace stack) {
-    AppLogger.error(
-      'Zone-level unhandled exception: $error',
-      tag: 'ZoneGuard',
-      error: error,
-      stackTrace: stack,
-    );
-  });
+    },
+  );
 }
 
 void _initServicesAsync() async {
@@ -85,12 +105,24 @@ void _initServicesAsync() async {
     // Enable Crashlytics in production when Firebase is initialized
     AppLogger.setCrashlyticsEnabled(true);
   } catch (e, st) {
-    AppLogger.warning('Firebase init skipped/timed out: $e', tag: 'main', error: e, stackTrace: st);
+    AppLogger.warning(
+      'Firebase init skipped/timed out: $e',
+      tag: 'main',
+      error: e,
+      stackTrace: st,
+    );
   }
   try {
-    await NotificationService().initialize().timeout(const Duration(seconds: 3));
+    await NotificationService().initialize().timeout(
+      const Duration(seconds: 3),
+    );
   } catch (e, st) {
-    AppLogger.warning('NotificationService init skipped/timed out: $e', tag: 'main', error: e, stackTrace: st);
+    AppLogger.warning(
+      'NotificationService init skipped/timed out: $e',
+      tag: 'main',
+      error: e,
+      stackTrace: st,
+    );
   }
 }
 
@@ -212,7 +244,12 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
           child: Container(
             width: 320,
             margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s24),
-            padding: const EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s24, AppSpacing.s20, AppSpacing.s20),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.s20,
+              AppSpacing.s24,
+              AppSpacing.s20,
+              AppSpacing.s20,
+            ),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: AppRadius.br24,
@@ -233,7 +270,11 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, size: 20, color: AppColors.textSecondary),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      ),
                       onPressed: () => Navigator.of(context).pop(),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -259,7 +300,10 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
                             if (metrics.isEmpty) {
                               return const SizedBox.shrink();
                             }
-                            return _runnerStack(metrics.first, _controller.value);
+                            return _runnerStack(
+                              metrics.first,
+                              _controller.value,
+                            );
                           },
                         ),
                       );
@@ -270,7 +314,9 @@ class _RunStartOverlayState extends State<_RunStartOverlay>
                 Text(
                   'Connecting to GPS & preparing your run...',
                   textAlign: TextAlign.center,
-                  style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+                  style: AppText.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.s20),
                 PrimaryButton(
@@ -355,7 +401,8 @@ class _TerritoryAppState extends State<TerritoryApp> {
 
     // Check onboarding completion for unauthenticated runners
     SharedPreferences.getInstance().then((prefs) {
-      final completed = prefs.getBool(OnboardingScreen.prefsKeyCompleted) ?? false;
+      final completed =
+          prefs.getBool(OnboardingScreen.prefsKeyCompleted) ?? false;
       if (mounted && !completed && !_isAuthenticated) {
         setState(() {
           _hasCompletedOnboarding = false;
@@ -423,7 +470,9 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void initState() {
     super.initState();
-    _notificationSub = NotificationService().onAttackedTerritoryTapped.listen((_) {
+    _notificationSub = NotificationService().onAttackedTerritoryTapped.listen((
+      _,
+    ) {
       if (mounted) {
         setState(() {
           _selectedIndex = 1;
@@ -446,10 +495,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgDeep,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: _buildPremiumBottomNav(context),
     );
   }
@@ -468,7 +514,10 @@ class _MainScreenState extends State<MainScreen> {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16, vertical: AppSpacing.s6),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s16,
+            vertical: AppSpacing.s6,
+          ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -543,7 +592,9 @@ class _MainScreenState extends State<MainScreen> {
             color: isSelected ? AppColors.accentContainer : Colors.transparent,
             borderRadius: AppRadius.brFull,
             border: Border.all(
-              color: isSelected ? AppColors.accent.withValues(alpha: 0.3) : Colors.transparent,
+              color: isSelected
+                  ? AppColors.accent.withValues(alpha: 0.3)
+                  : Colors.transparent,
               width: 1.0,
             ),
           ),
@@ -576,10 +627,7 @@ class _CenterRunAction extends StatefulWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  const _CenterRunAction({
-    required this.isSelected,
-    required this.onTap,
-  });
+  const _CenterRunAction({required this.isSelected, required this.onTap});
 
   @override
   State<_CenterRunAction> createState() => _CenterRunActionState();

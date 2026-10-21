@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+
 import '../models/territory.dart';
 import 'privacy_zone_service.dart';
 
@@ -34,7 +36,9 @@ class ExportService {
     final nowIso = DateTime.now().toUtc().toIso8601String();
 
     buffer.writeln('<?xml version="1.0" encoding="UTF-8"?>');
-    buffer.writeln('<gpx version="1.1" creator="Territory Runner" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">');
+    buffer.writeln(
+      '<gpx version="1.1" creator="Territory Runner" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">',
+    );
     buffer.writeln('  <metadata>');
     buffer.writeln('    <name>${_escapeXml(runTitle)}</name>');
     buffer.writeln('    <time>$nowIso</time>');
@@ -46,7 +50,9 @@ class ExportService {
 
     for (int i = 0; i < effectivePoints.length; i++) {
       final pt = effectivePoints[i];
-      buffer.write('      <trkpt lat="${pt.latitude.toStringAsFixed(7)}" lon="${pt.longitude.toStringAsFixed(7)}">');
+      buffer.write(
+        '      <trkpt lat="${pt.latitude.toStringAsFixed(7)}" lon="${pt.longitude.toStringAsFixed(7)}">',
+      );
 
       if (elevations != null && i < elevations.length) {
         buffer.write('<ele>${elevations[i].toStringAsFixed(1)}</ele>');
@@ -90,7 +96,9 @@ class ExportService {
       if (territory.polygon.length < 3) continue;
 
       // Ensure ring is closed in GeoJSON specification
-      final ring = territory.polygon.map((p) => [p.longitude, p.latitude]).toList();
+      final ring = territory.polygon
+          .map((p) => [p.longitude, p.latitude])
+          .toList();
       if (ring.first[0] != ring.last[0] || ring.first[1] != ring.last[1]) {
         ring.add([ring.first[0], ring.first[1]]);
       }
@@ -103,7 +111,8 @@ class ExportService {
           'owner_id': territory.ownerId,
           'area_sq_meters': territory.areaSqMeters,
           'captured_at': territory.capturedAt.toUtc().toIso8601String(),
-          'color_hex': '#${territory.color.toARGB32().toRadixString(16).padLeft(8, '0')}',
+          'color_hex':
+              '#${territory.color.toARGB32().toRadixString(16).padLeft(8, '0')}',
         },
         'geometry': {
           'type': 'Polygon',
@@ -123,7 +132,9 @@ class ExportService {
         },
         'geometry': {
           'type': 'LineString',
-          'coordinates': effectiveTrack.map((p) => [p.longitude, p.latitude]).toList(),
+          'coordinates': effectiveTrack
+              .map((p) => [p.longitude, p.latitude])
+              .toList(),
         },
       });
     }
@@ -155,7 +166,8 @@ class ExportService {
     );
 
     final tempDir = await getTemporaryDirectory();
-    final fileName = 'territory_run_${DateTime.now().millisecondsSinceEpoch}.gpx';
+    final fileName =
+        'territory_run_${DateTime.now().millisecondsSinceEpoch}.gpx';
     final file = File('${tempDir.path}/$fileName');
     await file.writeAsString(gpxContent, flush: true);
 
@@ -183,7 +195,8 @@ class ExportService {
     );
 
     final tempDir = await getTemporaryDirectory();
-    final fileName = 'territories_${DateTime.now().millisecondsSinceEpoch}.geojson';
+    final fileName =
+        'territories_${DateTime.now().millisecondsSinceEpoch}.geojson';
     final file = File('${tempDir.path}/$fileName');
     await file.writeAsString(geoJsonContent, flush: true);
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../services/firebase_service.dart';
 import '../gameplay/territory_service.dart';
 import '../../ui/ui.dart';
@@ -86,11 +87,16 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       final cred = await _firebaseService.signInWithGoogle();
       if (cred != null) {
-        final name = cred.user?.displayName ?? cred.user?.email?.split('@').first ?? 'Runner';
+        final name =
+            cred.user?.displayName ??
+            cred.user?.email?.split('@').first ??
+            'Runner';
         _finishAuth(name);
       }
     } catch (e) {
-      _showError('Google Sign-In notice: $e\n\n(Tip: Ensure SHA-1 is added in Firebase Console)');
+      _showError(
+        'Google Sign-In notice: $e\n\n(Tip: Ensure SHA-1 is added in Firebase Console)',
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -462,14 +468,20 @@ class _AuthScreenState extends State<AuthScreen> {
                             color: AppColors.textMuted,
                           ),
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                         ),
                       ),
                       const SizedBox(height: AppSpacing.s20),
                       PrimaryButton(
-                        label: _isSignUp ? 'Create Athlete Account' : 'Log In with Email',
-                        icon: _isSignUp ? Icons.person_add_alt_1_rounded : Icons.login_rounded,
+                        label: _isSignUp
+                            ? 'Create Athlete Account'
+                            : 'Log In with Email',
+                        icon: _isSignUp
+                            ? Icons.person_add_alt_1_rounded
+                            : Icons.login_rounded,
                         isLoading: _isLoading,
                         onPressed: _handleEmailAuth,
                       ),
@@ -564,18 +576,27 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                             filled: true,
                             fillColor: AppColors.surface2,
-                            contentPadding: const EdgeInsets.symmetric(vertical: AppSpacing.s16),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.s16,
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: AppRadius.br12,
-                              borderSide: const BorderSide(color: AppColors.borderSubtle),
+                              borderSide: const BorderSide(
+                                color: AppColors.borderSubtle,
+                              ),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: AppRadius.br12,
-                              borderSide: const BorderSide(color: AppColors.borderSubtle),
+                              borderSide: const BorderSide(
+                                color: AppColors.borderSubtle,
+                              ),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: AppRadius.br12,
-                              borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+                              borderSide: const BorderSide(
+                                color: AppColors.accent,
+                                width: 1.5,
+                              ),
                             ),
                           ),
                         ),
@@ -624,9 +645,16 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     Row(
                       children: [
-                        const Expanded(child: Divider(color: AppColors.borderSubtle, height: 1)),
+                        const Expanded(
+                          child: Divider(
+                            color: AppColors.borderSubtle,
+                            height: 1,
+                          ),
+                        ),
                         Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s12,
+                          ),
                           child: Text(
                             'OR',
                             style: AppText.labelSmall.copyWith(
@@ -636,7 +664,12 @@ class _AuthScreenState extends State<AuthScreen> {
                             ),
                           ),
                         ),
-                        const Expanded(child: Divider(color: AppColors.borderSubtle, height: 1)),
+                        const Expanded(
+                          child: Divider(
+                            color: AppColors.borderSubtle,
+                            height: 1,
+                          ),
+                        ),
                       ],
                     ),
                     const SizedBox(height: AppSpacing.s16),
@@ -750,7 +783,9 @@ class _AuthScreenState extends State<AuthScreen> {
               Text(
                 label,
                 style: AppText.label.copyWith(
-                  color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
+                  color: isSelected
+                      ? AppColors.textPrimary
+                      : AppColors.textMuted,
                   fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
                   fontSize: 11.5,
                 ),

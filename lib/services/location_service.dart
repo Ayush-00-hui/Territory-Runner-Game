@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/activity_type.dart';
 import '../core/logging/app_logger.dart';
 import 'battery_saver_service.dart';
@@ -39,13 +41,14 @@ class LocationService {
   LocationService._internal();
 
   StreamSubscription<Position>? _positionStreamSubscription;
-  final StreamController<Position> _locationController = StreamController<Position>.broadcast();
-  
+  final StreamController<Position> _locationController =
+      StreamController<Position>.broadcast();
+
   bool isSimulationMode = false;
   VirtualPacerMode _pacerMode = VirtualPacerMode.none;
   GpsTrackingMode _currentTrackingMode = GpsTrackingMode.idle;
   Timer? _simulationTimer;
-  
+
   // Default simulation start point (e.g., San Francisco)
   double _simLat = 37.7749;
   double _simLng = -122.4194;
@@ -90,11 +93,14 @@ class LocationService {
         isSimulationMode = true;
         return false;
       }
-      
+
       isSimulationMode = false;
       return true;
     } catch (e) {
-      AppLogger.warning('Location permission check failed or unsupported: $e', tag: 'LocationService');
+      AppLogger.warning(
+        'Location permission check failed or unsupported: $e',
+        tag: 'LocationService',
+      );
       isSimulationMode = true;
       return false;
     }
@@ -106,7 +112,7 @@ class LocationService {
     }
 
     final hasPermission = await requestPermission();
-    
+
     if (!hasPermission || isSimulationMode) {
       isSimulationMode = true;
       return _generateSimulatedPosition();
@@ -133,7 +139,12 @@ class LocationService {
   /// 1. Reject fixes with satellite accuracy dilution > 30 meters.
   /// 2. Suppress stationary GPS wandering (displacement < 1.8m when velocity < 2.0 km/h).
   /// 3. Discard satellite multipath outliers exceeding activity speed ceiling (unless Zero-G mode is active).
-  bool isValidFix(Position newPos, Position? lastPos, {bool isZeroG = false, ExerciseActivityType exerciseActivity = ExerciseActivityType.running}) {
+  bool isValidFix(
+    Position newPos,
+    Position? lastPos, {
+    bool isZeroG = false,
+    ExerciseActivityType exerciseActivity = ExerciseActivityType.running,
+  }) {
     // 1. Accuracy dilution gate
     if (newPos.accuracy > 30.0) {
       return false;
@@ -150,17 +161,24 @@ class LocationService {
       newPos.longitude,
     );
 
-    final double timeDeltaSeconds = (newPos.timestamp.difference(lastPos.timestamp).inMilliseconds / 1000.0).abs();
-    final double calculatedSpeedKmh = timeDeltaSeconds > 0 ? (distanceMeters / timeDeltaSeconds) * 3.6 : 0.0;
+    final double timeDeltaSeconds =
+        (newPos.timestamp.difference(lastPos.timestamp).inMilliseconds / 1000.0)
+            .abs();
+    final double calculatedSpeedKmh = timeDeltaSeconds > 0
+        ? (distanceMeters / timeDeltaSeconds) * 3.6
+        : 0.0;
 
     // 2. Stationary jitter gate: ignore small wandering < 1.8m if speed < 2.0 km/h
-    if (distanceMeters < 1.8 && (newPos.speed * 3.6 < 2.0 || calculatedSpeedKmh < 2.0)) {
+    if (distanceMeters < 1.8 &&
+        (newPos.speed * 3.6 < 2.0 || calculatedSpeedKmh < 2.0)) {
       return false;
     }
 
     // 3. Activity-specific speed ceiling gate (with 2.0 km/h buffer for GNSS precision noise)
     final maxSpeed = exerciseActivity.maxSpeedKmh + 2.0;
-    if (!isZeroG && (calculatedSpeedKmh > maxSpeed || (newPos.speed * 3.6 > maxSpeed && timeDeltaSeconds < 5.0))) {
+    if (!isZeroG &&
+        (calculatedSpeedKmh > maxSpeed ||
+            (newPos.speed * 3.6 > maxSpeed && timeDeltaSeconds < 5.0))) {
       return false;
     }
 
@@ -171,19 +189,27 @@ class LocationService {
   LocationSettings createLocationSettings({
     GpsTrackingMode mode = GpsTrackingMode.activeRun,
     String notificationTitle = "Territory Runner",
-    String notificationText = "Tracking your running route in the background...",
+    String notificationText =
+        "Tracking your running route in the background...",
     bool? isBatterySaverActive,
   }) {
-    final bool batterySaver = isBatterySaverActive ?? BatterySaverService().isBatterySaverEnabled;
+    final bool batterySaver =
+        isBatterySaverActive ?? BatterySaverService().isBatterySaverEnabled;
     final accuracy = (mode == GpsTrackingMode.activeRun)
-        ? (batterySaver ? LocationAccuracy.high : LocationAccuracy.bestForNavigation)
+        ? (batterySaver
+              ? LocationAccuracy.high
+              : LocationAccuracy.bestForNavigation)
         : LocationAccuracy.medium;
     final int distanceFilter = (mode == GpsTrackingMode.activeRun)
         ? (batterySaver ? 8 : 2)
         : (mode == GpsTrackingMode.paused ? 10 : 15);
     final Duration interval = (mode == GpsTrackingMode.activeRun)
-        ? (batterySaver ? const Duration(seconds: 3) : const Duration(seconds: 1))
-        : (mode == GpsTrackingMode.paused ? const Duration(seconds: 5) : const Duration(seconds: 10));
+        ? (batterySaver
+              ? const Duration(seconds: 3)
+              : const Duration(seconds: 1))
+        : (mode == GpsTrackingMode.paused
+              ? const Duration(seconds: 5)
+              : const Duration(seconds: 10));
 
     final bool showNotification = mode != GpsTrackingMode.idle;
 
@@ -200,7 +226,9 @@ class LocationService {
               )
             : null,
       );
-    } else if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS)) {
+    } else if (!kIsWeb &&
+        (defaultTargetPlatform == TargetPlatform.iOS ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
       return AppleSettings(
         accuracy: accuracy,
         distanceFilter: distanceFilter,
@@ -231,7 +259,10 @@ class LocationService {
     if (activityType != null) {
       currentActivity = activityType;
     }
-    AppLogger.info('GPS tracking mode set to: ${mode.name}', tag: 'LocationService');
+    AppLogger.info(
+      'GPS tracking mode set to: ${mode.name}',
+      tag: 'LocationService',
+    );
 
     if (mode == GpsTrackingMode.idle) {
       _positionStreamSubscription?.cancel();
@@ -257,9 +288,11 @@ class LocationService {
       final notificationTitle = mode == GpsTrackingMode.paused
           ? "Territory Runner - Run Paused"
           : "Territory Runner - Run Active";
-      final notificationText = liveStatusText ?? (mode == GpsTrackingMode.paused
-          ? "Run paused — GPS throttled to conserve battery"
-          : "Tracking your running route in the background...");
+      final notificationText =
+          liveStatusText ??
+          (mode == GpsTrackingMode.paused
+              ? "Run paused — GPS throttled to conserve battery"
+              : "Tracking your running route in the background...");
 
       final locationSettings = createLocationSettings(
         mode: mode,
@@ -268,27 +301,46 @@ class LocationService {
       );
 
       _positionStreamSubscription?.cancel();
-      _positionStreamSubscription = Geolocator.getPositionStream(
-        locationSettings: locationSettings,
-      ).listen((Position position) {
-        if (isValidFix(position, _lastValidPosition, isZeroG: isZeroG, exerciseActivity: currentActivity)) {
-          _lastValidPosition = position;
-          _locationController.add(position);
-        }
-      }, onError: (e) {
-        AppLogger.warning('Hardware GPS stream error: $e. Falling back to simulation.', tag: 'LocationService');
-        isSimulationMode = true;
-        _startSimulation();
-      });
+      _positionStreamSubscription =
+          Geolocator.getPositionStream(
+            locationSettings: locationSettings,
+          ).listen(
+            (Position position) {
+              if (isValidFix(
+                position,
+                _lastValidPosition,
+                isZeroG: isZeroG,
+                exerciseActivity: currentActivity,
+              )) {
+                _lastValidPosition = position;
+                _locationController.add(position);
+              }
+            },
+            onError: (e) {
+              AppLogger.warning(
+                'Hardware GPS stream error: $e. Falling back to simulation.',
+                tag: 'LocationService',
+              );
+              isSimulationMode = true;
+              _startSimulation();
+            },
+          );
     } catch (e) {
-      AppLogger.warning('Failed to attach location settings: $e', tag: 'LocationService');
+      AppLogger.warning(
+        'Failed to attach location settings: $e',
+        tag: 'LocationService',
+      );
       isSimulationMode = true;
       _startSimulation();
     }
   }
 
   /// Backward-compatible entrypoint defaulting to active running tracking.
-  void startTracking({bool isZeroG = false, String? liveStatusText, ExerciseActivityType? activityType}) {
+  void startTracking({
+    bool isZeroG = false,
+    String? liveStatusText,
+    ExerciseActivityType? activityType,
+  }) {
     setTrackingMode(
       GpsTrackingMode.activeRun,
       isZeroG: isZeroG,
@@ -300,7 +352,7 @@ class LocationService {
   void stopTracking() {
     _positionStreamSubscription?.cancel();
     _positionStreamSubscription = null;
-    
+
     _simulationTimer?.cancel();
     _simulationTimer = null;
   }
@@ -319,14 +371,20 @@ class LocationService {
   }
 
   /// Interactive keyboard simulation movement (W/A/S/D and Arrow keys)
-  void moveSimulatedRunner({double forwardMeters = 0.0, double turnDegrees = 0.0}) {
+  void moveSimulatedRunner({
+    double forwardMeters = 0.0,
+    double turnDegrees = 0.0,
+  }) {
     _simHeading = (_simHeading + turnDegrees) % 360.0;
     if (_simHeading < 0) _simHeading += 360.0;
 
     if (forwardMeters != 0.0) {
-      final double deltaLat = (forwardMeters / 111139.0) * math.cos(_simHeading * math.pi / 180.0);
-      final double deltaLng = (forwardMeters / (111139.0 * math.cos(_simLat * math.pi / 180.0))) * math.sin(_simHeading * math.pi / 180.0);
-      
+      final double deltaLat =
+          (forwardMeters / 111139.0) * math.cos(_simHeading * math.pi / 180.0);
+      final double deltaLng =
+          (forwardMeters / (111139.0 * math.cos(_simLat * math.pi / 180.0))) *
+          math.sin(_simHeading * math.pi / 180.0);
+
       _simLat += deltaLat;
       _simLng += deltaLng;
 
@@ -366,15 +424,18 @@ class LocationService {
 
       // Natural micro-oscillation heading drift for lifelike athletic curves
       _simHeading += (math.Random.secure().nextDouble() - 0.5) * 8.0;
-      
+
       // 1 deg lat ~= 111,139 meters
       final double distanceMeters = targetSpeedMps;
-      final double deltaLat = (distanceMeters / 111139.0) * math.cos(_simHeading * math.pi / 180.0);
-      final double deltaLng = (distanceMeters / (111139.0 * math.cos(_simLat * math.pi / 180.0))) * math.sin(_simHeading * math.pi / 180.0);
-      
+      final double deltaLat =
+          (distanceMeters / 111139.0) * math.cos(_simHeading * math.pi / 180.0);
+      final double deltaLng =
+          (distanceMeters / (111139.0 * math.cos(_simLat * math.pi / 180.0))) *
+          math.sin(_simHeading * math.pi / 180.0);
+
       _simLat += deltaLat;
       _simLng += deltaLng;
-      
+
       final simPos = _generateSimulatedPosition(speedMps: targetSpeedMps);
       _lastValidPosition = simPos;
       _locationController.add(simPos);

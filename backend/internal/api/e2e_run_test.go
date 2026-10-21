@@ -17,17 +17,17 @@ import (
 )
 
 // TestE2EFullRunLifecycle verifies the complete end-to-end run lifecycle:
-// 1. Initial State: Athletes exist (usr_rival and usr_runner).
-// 2. Rival executes Run 1 via POST /v1/runs to claim initial sovereign territory.
-// 3. Runner executes Run 2 via POST /v1/runs with activity_type "running",
-//    traversing an overlapping loop that conquers and carves part of Rival's sector.
-// 4. Server-authoritative anti-cheat validates realistic speeds (below 25 km/h ceiling).
-// 5. Store atomically commits MultiPolygon union, differences rival polygon, and awards XP.
-// 6. Verify CaptureResult response (loop detected, net area claimed, XP, affected rivals).
-// 7. Verify GET /v1/territories?bbox=... returns active sovereign geometries for both athletes.
-// 8. Verify GET /v1/me returns updated athlete stats (XP, level, total area, runs count).
-// 9. Verify GET /v1/leaderboard reflects updated rankings.
-// 10. Verify idempotent replay: resubmitting Run 2 returns HTTP 200 without double-counting area or XP.
+//  1. Initial State: Athletes exist (usr_rival and usr_runner).
+//  2. Rival executes Run 1 via POST /v1/runs to claim initial sovereign territory.
+//  3. Runner executes Run 2 via POST /v1/runs with activity_type "running",
+//     traversing an overlapping loop that conquers and carves part of Rival's sector.
+//  4. Server-authoritative anti-cheat validates realistic speeds (below 25 km/h ceiling).
+//  5. Store atomically commits MultiPolygon union, differences rival polygon, and awards XP.
+//  6. Verify CaptureResult response (loop detected, net area claimed, XP, affected rivals).
+//  7. Verify GET /v1/territories?bbox=... returns active sovereign geometries for both athletes.
+//  8. Verify GET /v1/me returns updated athlete stats (XP, level, total area, runs count).
+//  9. Verify GET /v1/leaderboard reflects updated rankings.
+//  10. Verify idempotent replay: resubmitting Run 2 returns HTTP 200 without double-counting area or XP.
 func TestE2EFullRunLifecycle(t *testing.T) {
 	router, st := setupTestServer()
 	ctx := context.Background()

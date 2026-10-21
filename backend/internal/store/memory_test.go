@@ -815,6 +815,3 @@ func TestWeakTerritoryCaptureBonusAndDefenseReset(t *testing.T) {
 	require.NoError(t, err)
 	assert.InDelta(t, 100.0, attackerT.Strength, 0.01, "Freshly captured/defended territory must reset to 100.0 strength")
 }
-
-
-

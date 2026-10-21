@@ -1,21 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
+
 import '../core/logging/app_logger.dart';
 import '../models/territory.dart';
 import '../features/gameplay/territory_service.dart';
 import 'api_client.dart';
 
 /// Connection and synchronization state with the Go backend
-enum SyncStatus {
-  synced,
-  pending,
-  syncing,
-  offline,
-}
+enum SyncStatus { synced, pending, syncing, offline }
 
 /// A serialized offline run record awaiting synchronization
 class QueuedRun {
@@ -44,7 +41,9 @@ class QueuedRun {
   Map<String, dynamic> toJson() => {
     'idempotencyKey': idempotencyKey,
     'activityType': activityType,
-    'points': points.map((p) => {'lat': p.latitude, 'lng': p.longitude}).toList(),
+    'points': points
+        .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+        .toList(),
     'durationSeconds': durationSeconds,
     'distanceMeters': distanceMeters,
     'clientPreviewArea': clientPreviewArea,
@@ -164,10 +163,14 @@ class SyncQueueService {
   final TerritoryService _territoryService;
   final Uuid _uuid = const Uuid();
 
-  final ValueNotifier<SyncStatus> statusNotifier = ValueNotifier<SyncStatus>(SyncStatus.synced);
+  final ValueNotifier<SyncStatus> statusNotifier = ValueNotifier<SyncStatus>(
+    SyncStatus.synced,
+  );
   final ValueNotifier<int> unsettledCountNotifier = ValueNotifier<int>(0);
-  final ValueNotifier<RejectedRun?> lastRejectionNotifier = ValueNotifier<RejectedRun?>(null);
-  final ValueNotifier<String?> reconciliationToastNotifier = ValueNotifier<String?>(null);
+  final ValueNotifier<RejectedRun?> lastRejectionNotifier =
+      ValueNotifier<RejectedRun?>(null);
+  final ValueNotifier<String?> reconciliationToastNotifier =
+      ValueNotifier<String?>(null);
 
   static const String _boxName = 'unsynced_runs_v2';
   static const String _rejectedBoxName = 'rejected_runs_v1';
@@ -195,7 +198,10 @@ class SyncQueueService {
     Box<String>? overrideBox,
     Box<String>? overrideRejectedBox,
   }) {
-    if (apiClient != null || territoryService != null || overrideBox != null || overrideRejectedBox != null) {
+    if (apiClient != null ||
+        territoryService != null ||
+        overrideBox != null ||
+        overrideRejectedBox != null) {
       return SyncQueueService.custom(
         apiClient: apiClient,
         territoryService: territoryService,
@@ -211,16 +217,16 @@ class SyncQueueService {
     TerritoryService? territoryService,
     Box<String>? overrideBox,
     Box<String>? overrideRejectedBox,
-  })  : _apiClient = apiClient ?? ApiClient(),
-        _territoryService = territoryService ?? TerritoryService(),
-        _box = overrideBox,
-        _rejectedBox = overrideRejectedBox {
+  }) : _apiClient = apiClient ?? ApiClient(),
+       _territoryService = territoryService ?? TerritoryService(),
+       _box = overrideBox,
+       _rejectedBox = overrideRejectedBox {
     _initBox();
   }
 
   SyncQueueService._internal()
-      : _apiClient = ApiClient(),
-        _territoryService = TerritoryService() {
+    : _apiClient = ApiClient(),
+      _territoryService = TerritoryService() {
     _initBox();
   }
 
@@ -246,7 +252,9 @@ class SyncQueueService {
     unsettledCountNotifier.value = count;
     if (count == 0 && statusNotifier.value != SyncStatus.offline) {
       statusNotifier.value = SyncStatus.synced;
-    } else if (count > 0 && statusNotifier.value != SyncStatus.syncing && statusNotifier.value != SyncStatus.offline) {
+    } else if (count > 0 &&
+        statusNotifier.value != SyncStatus.syncing &&
+        statusNotifier.value != SyncStatus.offline) {
       statusNotifier.value = SyncStatus.pending;
     }
   }
@@ -327,7 +335,10 @@ class SyncQueueService {
           clientPreviewXp: run.clientPreviewXp,
         );
 
-        AppLogger.info('Run ${run.idempotencyKey} successfully synced with backend!', tag: 'SyncQueueService');
+        AppLogger.info(
+          'Run ${run.idempotencyKey} successfully synced with backend!',
+          tag: 'SyncQueueService',
+        );
 
         // Authoritative Server Reconciliation:
         // Replace optimistic local Clipper2 territory with authoritative PostGIS MultiPolygon
@@ -339,7 +350,10 @@ class SyncQueueService {
         if (isPermanentFailure(e)) {
           final apiErr = e as ApiException;
           final humanMsg = formatRejectionReason(apiErr.code, apiErr.message);
-          AppLogger.warning('Run ${run.idempotencyKey} permanently rejected (${apiErr.code}): $humanMsg', tag: 'SyncQueueService');
+          AppLogger.warning(
+            'Run ${run.idempotencyKey} permanently rejected (${apiErr.code}): $humanMsg',
+            tag: 'SyncQueueService',
+          );
 
           final rejectedRun = RejectedRun(
             run: run,
@@ -355,7 +369,10 @@ class SyncQueueService {
           lastRejectionNotifier.value = rejectedRun;
           // Continue processing subsequent runs in queue
         } else {
-          AppLogger.warning('Transient sync failure for ${run.idempotencyKey}: $e', tag: 'SyncQueueService');
+          AppLogger.warning(
+            'Transient sync failure for ${run.idempotencyKey}: $e',
+            tag: 'SyncQueueService',
+          );
           allSucceeded = false;
 
           // Increment retry count
@@ -379,9 +396,13 @@ class SyncQueueService {
   }
 
   /// Updates local state with authoritative server calculations and notifies on area discrepancies
-  Future<void> _reconcileServerResponse(Map<String, dynamic> response, QueuedRun run) async {
+  Future<void> _reconcileServerResponse(
+    Map<String, dynamic> response,
+    QueuedRun run,
+  ) async {
     try {
-      final double? serverClaimedArea = (response['area_claimed_sqm'] as num?)?.toDouble();
+      final double? serverClaimedArea = (response['area_claimed_sqm'] as num?)
+          ?.toDouble();
       final double clientPreview = run.clientPreviewArea;
 
       if (serverClaimedArea != null && clientPreview > 0) {
@@ -397,7 +418,8 @@ class SyncQueueService {
         }
       }
 
-      final double? serverTotalArea = (response['player_total_area_sqm'] as num?)?.toDouble();
+      final double? serverTotalArea =
+          (response['player_total_area_sqm'] as num?)?.toDouble();
       final String? geoJsonStr = response['territory_geojson'] as String?;
 
       if (geoJsonStr != null && geoJsonStr.isNotEmpty) {
@@ -416,7 +438,12 @@ class SyncQueueService {
                     final ringPoints = <LatLng>[];
                     for (final pt in ring) {
                       if (pt is List && pt.length >= 2) {
-                        ringPoints.add(LatLng((pt[1] as num).toDouble(), (pt[0] as num).toDouble()));
+                        ringPoints.add(
+                          LatLng(
+                            (pt[1] as num).toDouble(),
+                            (pt[0] as num).toDouble(),
+                          ),
+                        );
                       }
                     }
                     if (ringPoints.isNotEmpty) {
@@ -433,7 +460,12 @@ class SyncQueueService {
                 final ringPoints = <LatLng>[];
                 for (final pt in ring) {
                   if (pt is List && pt.length >= 2) {
-                    ringPoints.add(LatLng((pt[1] as num).toDouble(), (pt[0] as num).toDouble()));
+                    ringPoints.add(
+                      LatLng(
+                        (pt[1] as num).toDouble(),
+                        (pt[0] as num).toDouble(),
+                      ),
+                    );
                   }
                 }
                 if (ringPoints.isNotEmpty) {
@@ -452,17 +484,26 @@ class SyncQueueService {
               ownerId: profile.id,
               polygon: multiPolys.first,
               polygons: multiPolys,
-              areaSqMeters: serverTotalArea ?? multiPolys.fold(0.0, (acc, p) => acc + p.length),
+              areaSqMeters:
+                  serverTotalArea ??
+                  multiPolys.fold(0.0, (acc, p) => acc + p.length),
               capturedAt: DateTime.now(),
             );
 
             await _territoryService.saveTerritory(authoritativeTerritory);
-            AppLogger.info('Local territory reconciled to server authoritative MultiPolygon (${authoritativeTerritory.areaSqMeters.toStringAsFixed(1)} m²)', tag: 'SyncQueueService');
+            AppLogger.info(
+              'Local territory reconciled to server authoritative MultiPolygon (${authoritativeTerritory.areaSqMeters.toStringAsFixed(1)} m²)',
+              tag: 'SyncQueueService',
+            );
           }
         }
       }
     } catch (e) {
-      AppLogger.error('Reconciliation error: $e', tag: 'SyncQueueService', error: e);
+      AppLogger.error(
+        'Reconciliation error: $e',
+        tag: 'SyncQueueService',
+        error: e,
+      );
     }
   }
 
@@ -481,7 +522,11 @@ class SyncQueueService {
       final box = await _getRejectedBox();
       await box.put(rejected.run.idempotencyKey, jsonEncode(rejected.toJson()));
     } catch (e) {
-      AppLogger.error('Could not persist rejected run: $e', tag: 'SyncQueueService', error: e);
+      AppLogger.error(
+        'Could not persist rejected run: $e',
+        tag: 'SyncQueueService',
+        error: e,
+      );
     }
   }
 
@@ -490,7 +535,9 @@ class SyncQueueService {
     try {
       final box = await _getRejectedBox();
       return box.values
-          .map((v) => RejectedRun.fromJson(jsonDecode(v) as Map<String, dynamic>))
+          .map(
+            (v) => RejectedRun.fromJson(jsonDecode(v) as Map<String, dynamic>),
+          )
           .toList();
     } catch (_) {
       return [];

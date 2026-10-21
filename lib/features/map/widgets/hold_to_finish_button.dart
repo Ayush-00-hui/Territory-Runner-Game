@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../ui/ui.dart';
 
 class HoldToFinishButton extends StatefulWidget {
@@ -72,7 +73,10 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
         button: false,
         label: 'Run tracking inactive. Tap center play button to begin.',
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s12),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s12,
+            vertical: AppSpacing.s12,
+          ),
           decoration: BoxDecoration(
             color: AppColors.surface2,
             borderRadius: AppSpacing.br16,
@@ -82,7 +86,11 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.lock_outline_rounded, color: AppColors.disabled, size: 16),
+              const Icon(
+                Icons.lock_outline_rounded,
+                color: AppColors.disabled,
+                size: 16,
+              ),
               const SizedBox(width: AppSpacing.s4),
               Text(
                 'Locked',
@@ -106,61 +114,69 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
         onPointerUp: _onPointerUp,
         onPointerCancel: _onPointerCancel,
         behavior: HitTestBehavior.opaque,
-      child: AnimatedBuilder(
-        animation: _holdController,
-        builder: (context, child) {
-          final progress = _holdController.value;
+        child: AnimatedBuilder(
+          animation: _holdController,
+          builder: (context, child) {
+            final progress = _holdController.value;
 
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s10),
-            decoration: BoxDecoration(
-              color: AppColors.rival.withValues(alpha: 0.15 + (progress * 0.4)),
-              borderRadius: AppSpacing.br16,
-              border: Border.all(
-                color: AppColors.rival,
-                width: 1.5,
+            return Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s10,
+                vertical: AppSpacing.s10,
               ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        value: progress,
-                        strokeWidth: 2.5,
-                        backgroundColor: AppColors.rival.withValues(alpha: 0.25),
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.textPrimary),
+              decoration: BoxDecoration(
+                color: AppColors.rival.withValues(
+                  alpha: 0.15 + (progress * 0.4),
+                ),
+                borderRadius: AppSpacing.br16,
+                border: Border.all(color: AppColors.rival, width: 1.5),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: 2.5,
+                          backgroundColor: AppColors.rival.withValues(
+                            alpha: 0.25,
+                          ),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.textPrimary,
+                          ),
+                        ),
                       ),
-                    ),
-                    const Icon(
-                      Icons.stop_rounded,
-                      color: AppColors.rival,
-                      size: 14,
-                    ),
-                  ],
-                ),
-                const SizedBox(width: AppSpacing.s6),
-                Text(
-                  _isHolding ? 'Hold ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s' : 'Hold stop',
-                  style: AppText.labelSmall.copyWith(
-                    color: AppColors.rival,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
+                      const Icon(
+                        Icons.stop_rounded,
+                        color: AppColors.rival,
+                        size: 14,
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                  const SizedBox(width: AppSpacing.s6),
+                  Text(
+                    _isHolding
+                        ? 'Hold ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s'
+                        : 'Hold stop',
+                    style: AppText.labelSmall.copyWith(
+                      color: AppColors.rival,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

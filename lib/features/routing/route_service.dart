@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:latlong2/latlong.dart';
 import 'package:clipper2/clipper2.dart';
+
 import '../../core/logging/app_logger.dart';
 import '../gameplay/territory_service.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
@@ -26,14 +28,18 @@ class SuggestedRoute {
     this.targetAreaSqM = 0.0,
     this.isOffline = false,
     int? estimatedDurationMinutes,
-  }) : _estimatedDurationMinutes = estimatedDurationMinutes; // ignore: prefer_initializing_formals
+  }) : _estimatedDurationMinutes =
+           estimatedDurationMinutes; // ignore: prefer_initializing_formals
 
   int get estimatedDurationMinutes =>
       _estimatedDurationMinutes ??
-      (totalDistanceKm <= 0 ? 1 : (totalDistanceKm * 6.0).round().clamp(1, 180));
+      (totalDistanceKm <= 0
+          ? 1
+          : (totalDistanceKm * 6.0).round().clamp(1, 180));
 
   /// Approximate territory claim count for UI backwards compatibility
-  int get estimatedNewTerritoryCount => math.max(1, (estimatedNewTerritoryAreaSqM / 20.0).round());
+  int get estimatedNewTerritoryCount =>
+      math.max(1, (estimatedNewTerritoryAreaSqM / 20.0).round());
 }
 
 /// AI Route Recommendation Engine.
@@ -83,9 +89,14 @@ class RouteService {
 
   /// Computes the net new area in m² by subtracting the runner's already-owned
   /// territories using Clipper2 difference.
-  double computeNetNewArea(List<LatLng> loopPolyline, [List<List<LatLng>>? existingOwnedPolygons]) {
+  double computeNetNewArea(
+    List<LatLng> loopPolyline, [
+    List<List<LatLng>>? existingOwnedPolygons,
+  ]) {
     if (loopPolyline.length < 3) return 0.0;
-    final double rawArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(loopPolyline);
+    final double rawArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(
+      loopPolyline,
+    );
     if (rawArea <= 0) return 0.0;
 
     final Paths64 playerExistingPaths = [];
@@ -128,7 +139,9 @@ class RouteService {
       double netArea = 0.0;
       for (final path in diff) {
         final ring = TerritoryService.path64ToLatLngs(path);
-        netArea += PolygonEnclosureEngine.computeSignedGeodesicShoelaceArea(ring);
+        netArea += PolygonEnclosureEngine.computeSignedGeodesicShoelaceArea(
+          ring,
+        );
       }
       return math.max(0.0, netArea.abs());
     } catch (e) {
@@ -145,7 +158,8 @@ class RouteService {
     double? targetAreaSqM,
     Duration timeout = const Duration(milliseconds: 2500),
   }) async {
-    final effectiveTargetArea = targetAreaSqM ??
+    final effectiveTargetArea =
+        targetAreaSqM ??
         (math.pow(targetDistanceKm * 1000.0 / 3.8, 2.0).toDouble());
 
     if (forceOffline) {
@@ -158,7 +172,7 @@ class RouteService {
     }
 
     final ownedTerritories = _territoryService.getCapturedTerritoryObjects();
-    
+
     // 1. Attempt Real-Road OSRM pedestrian loop generation
     try {
       final osrmRoute = await _fetchOsrmLoop(
@@ -172,7 +186,10 @@ class RouteService {
         return osrmRoute;
       }
     } catch (e) {
-      AppLogger.info('OSRM query failed or offline ($e). Falling back to synthetic geodesic loop.', tag: 'RouteService');
+      AppLogger.info(
+        'OSRM query failed or offline ($e). Falling back to synthetic geodesic loop.',
+        tag: 'RouteService',
+      );
     }
 
     // 2. Offline Fallback: Geodesic loop synthesis
@@ -191,7 +208,8 @@ class RouteService {
     double? targetAreaSqM,
     bool isOffline = true,
   }) {
-    final effectiveTargetArea = targetAreaSqM ??
+    final effectiveTargetArea =
+        targetAreaSqM ??
         (math.pow(targetDistanceKm * 1000.0 / 3.8, 2.0).toDouble());
     final ownedTerritories = _territoryService.getCapturedTerritoryObjects();
     final polyline = _generateBiasedWaypoints(
@@ -231,8 +249,15 @@ class RouteService {
     );
 
     // Build OSRM walking route query: lng,lat;lng,lat;...
-    final coordsParam = waypoints.map((p) => '${p.longitude.toStringAsFixed(6)},${p.latitude.toStringAsFixed(6)}').join(';');
-    final url = Uri.parse('https://router.project-osrm.org/route/v1/walking/$coordsParam?overview=full&geometries=geojson');
+    final coordsParam = waypoints
+        .map(
+          (p) =>
+              '${p.longitude.toStringAsFixed(6)},${p.latitude.toStringAsFixed(6)}',
+        )
+        .join(';');
+    final url = Uri.parse(
+      'https://router.project-osrm.org/route/v1/walking/$coordsParam?overview=full&geometries=geojson',
+    );
 
     final client = HttpClient();
     client.connectionTimeout = timeout;
@@ -248,19 +273,26 @@ class RouteService {
 
         if (routes != null && routes.isNotEmpty) {
           final firstRoute = routes.first as Map<String, dynamic>;
-          final double distanceMeters = (firstRoute['distance'] as num).toDouble();
+          final double distanceMeters = (firstRoute['distance'] as num)
+              .toDouble();
           final geometry = firstRoute['geometry'] as Map<String, dynamic>;
           final rawCoords = geometry['coordinates'] as List<dynamic>;
 
           final List<LatLng> osrmPolyline = rawCoords.map((c) {
             final coord = c as List<dynamic>;
-            return LatLng((coord[1] as num).toDouble(), (coord[0] as num).toDouble());
+            return LatLng(
+              (coord[1] as num).toDouble(),
+              (coord[0] as num).toDouble(),
+            );
           }).toList();
 
           final double netAreaSqM = computeNetNewArea(osrmPolyline);
           final double totalKm = distanceMeters / 1000.0;
 
-          AppLogger.debug('OSRM street route synthesized: ${totalKm.toStringAsFixed(2)}km with ${osrmPolyline.length} street vertices', tag: 'RouteService');
+          AppLogger.debug(
+            'OSRM street route synthesized: ${totalKm.toStringAsFixed(2)}km with ${osrmPolyline.length} street vertices',
+            tag: 'RouteService',
+          );
 
           return SuggestedRoute(
             polyline: osrmPolyline,
@@ -286,9 +318,14 @@ class RouteService {
     required int nodeCount,
   }) {
     // Radius of the circumscribed loop circle
-    final double radiusKm = (targetDistanceKm / (2.0 * math.pi)).clamp(0.02, 10.0);
+    final double radiusKm = (targetDistanceKm / (2.0 * math.pi)).clamp(
+      0.02,
+      10.0,
+    );
     final double radiusDegLat = radiusKm / 111.32;
-    final double radiusDegLng = radiusKm / (111.32 * math.cos(currentLocation.latitude * math.pi / 180.0));
+    final double radiusDegLng =
+        radiusKm /
+        (111.32 * math.cos(currentLocation.latitude * math.pi / 180.0));
 
     // Determine centroid of already-owned territory to bias loop in opposite direction
     double biasAngleRad = 0.0;
@@ -319,8 +356,10 @@ class RouteService {
       final double theta = biasAngleRad + (2.0 * math.pi * i / nodeCount);
       // Add slight organic curve wobble
       final double rMod = 1.0 + 0.12 * math.sin(3.0 * theta);
-      final double lat = currentLocation.latitude + (radiusDegLat * rMod * math.sin(theta));
-      final double lng = currentLocation.longitude + (radiusDegLng * rMod * math.cos(theta));
+      final double lat =
+          currentLocation.latitude + (radiusDegLat * rMod * math.sin(theta));
+      final double lng =
+          currentLocation.longitude + (radiusDegLng * rMod * math.cos(theta));
       loop.add(LatLng(lat, lng));
     }
     // Close back to start
@@ -344,11 +383,14 @@ class RouteService {
     final double lat1Rad = p1.latitude * math.pi / 180.0;
     final double lat2Rad = p2.latitude * math.pi / 180.0;
 
-    final double a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.sin(dLng / 2) * math.sin(dLng / 2) * math.cos(lat1Rad) * math.cos(lat2Rad);
+    final double a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.sin(dLng / 2) *
+            math.sin(dLng / 2) *
+            math.cos(lat1Rad) *
+            math.cos(lat2Rad);
     final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
 
     return earthRadiusKm * c;
   }
 }
-

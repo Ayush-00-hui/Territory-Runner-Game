@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+
 import '../core/logging/app_logger.dart';
 import '../models/ws_events.dart';
 import 'api_client.dart';
@@ -42,18 +44,21 @@ class WebSocketService {
   static const double minMovementMeters = 3.0;
 
   List<String> _lastSubscribedCells = [];
-  List<String> get lastSubscribedCells => List.unmodifiable(_lastSubscribedCells);
+  List<String> get lastSubscribedCells =>
+      List.unmodifiable(_lastSubscribedCells);
 
   final _presenceController = StreamController<RunnerPresenceEvent>.broadcast();
   final _runnerLeftController = StreamController<String>.broadcast();
   final _alertController = StreamController<TerritoryAlertEvent>.broadcast();
-  final _broadcastController = StreamController<ConquestBroadcastEvent>.broadcast();
+  final _broadcastController =
+      StreamController<ConquestBroadcastEvent>.broadcast();
   final _connectionStateController = StreamController<bool>.broadcast();
 
   Stream<RunnerPresenceEvent> get presenceStream => _presenceController.stream;
   Stream<String> get runnerLeftStream => _runnerLeftController.stream;
   Stream<TerritoryAlertEvent> get alertStream => _alertController.stream;
-  Stream<ConquestBroadcastEvent> get broadcastStream => _broadcastController.stream;
+  Stream<ConquestBroadcastEvent> get broadcastStream =>
+      _broadcastController.stream;
   Stream<bool> get isConnectedStream => _connectionStateController.stream;
   bool get isConnected => _isConnected;
   int get reconnectAttempts => _reconnectAttempts;
@@ -63,10 +68,10 @@ class WebSocketService {
     ApiClient? apiClient,
     PrivacyZoneService? privacyZoneService,
     UserSettingsService? userSettingsService,
-  })  : _firebaseService = firebaseService ?? FirebaseService(),
-        _apiClient = apiClient ?? ApiClient(),
-        _privacyZoneService = privacyZoneService ?? PrivacyZoneService(),
-        _userSettingsService = userSettingsService ?? UserSettingsService();
+  }) : _firebaseService = firebaseService ?? FirebaseService(),
+       _apiClient = apiClient ?? ApiClient(),
+       _privacyZoneService = privacyZoneService ?? PrivacyZoneService(),
+       _userSettingsService = userSettingsService ?? UserSettingsService();
 
   /// Visible for testing constructor
   @visibleForTesting
@@ -75,10 +80,10 @@ class WebSocketService {
     ApiClient? apiClient,
     PrivacyZoneService? privacyZoneService,
     UserSettingsService? userSettingsService,
-  })  : _firebaseService = firebaseService ?? FirebaseService(),
-        _apiClient = apiClient ?? ApiClient(),
-        _privacyZoneService = privacyZoneService ?? PrivacyZoneService(),
-        _userSettingsService = userSettingsService ?? UserSettingsService();
+  }) : _firebaseService = firebaseService ?? FirebaseService(),
+       _apiClient = apiClient ?? ApiClient(),
+       _privacyZoneService = privacyZoneService ?? PrivacyZoneService(),
+       _userSettingsService = userSettingsService ?? UserSettingsService();
 
   /// Computes the WebSocket URI and subprotocols according to authentication mode.
   /// When authenticated with Firebase, ID token is sent via Sec-WebSocket-Protocol (`bearer`, `<token>`)
@@ -97,7 +102,10 @@ class WebSocketService {
       try {
         token = await user.getIdToken(forceRefresh);
       } catch (e) {
-        AppLogger.warning('Error fetching Firebase ID token for WebSocket: $e', tag: 'WebSocketService');
+        AppLogger.warning(
+          'Error fetching Firebase ID token for WebSocket: $e',
+          tag: 'WebSocketService',
+        );
       }
     }
 
@@ -123,11 +131,17 @@ class WebSocketService {
     final params = await buildConnectionParams(forceRefresh: forceRefresh);
 
     try {
-      _channel = WebSocketChannel.connect(params.uri, protocols: params.protocols);
+      _channel = WebSocketChannel.connect(
+        params.uri,
+        protocols: params.protocols,
+      );
       _isConnected = true;
       _reconnectAttempts = 0;
       _connectionStateController.add(true);
-      AppLogger.info('Connected to real-time hub: ${params.uri}', tag: 'WebSocketService');
+      AppLogger.info(
+        'Connected to real-time hub: ${params.uri}',
+        tag: 'WebSocketService',
+      );
 
       _startHeartbeat();
 
@@ -142,12 +156,18 @@ class WebSocketService {
           _handleDisconnect();
         },
         onDone: () {
-          AppLogger.info('WebSocket connection closed by server', tag: 'WebSocketService');
+          AppLogger.info(
+            'WebSocket connection closed by server',
+            tag: 'WebSocketService',
+          );
           _handleDisconnect();
         },
       );
     } catch (e) {
-      AppLogger.warning('Failed to initiate WebSocket connection: $e', tag: 'WebSocketService');
+      AppLogger.warning(
+        'Failed to initiate WebSocket connection: $e',
+        tag: 'WebSocketService',
+      );
       _handleDisconnect();
     }
   }
@@ -159,13 +179,13 @@ class WebSocketService {
     if (!_isConnected || _channel == null || cells.isEmpty) return;
 
     try {
-      final packet = {
-        'type': 'viewport_subscribe',
-        'cells': cells,
-      };
+      final packet = {'type': 'viewport_subscribe', 'cells': cells};
       _channel!.sink.add(jsonEncode(packet));
     } catch (e) {
-      AppLogger.warning('Failed to send viewport subscription: $e', tag: 'WebSocketService');
+      AppLogger.warning(
+        'Failed to send viewport subscription: $e',
+        tag: 'WebSocketService',
+      );
     }
   }
 
@@ -202,7 +222,12 @@ class WebSocketService {
           break;
       }
     } catch (e, st) {
-      AppLogger.error('Error parsing inbound WebSocket packet', error: e, stackTrace: st, tag: 'WebSocketService');
+      AppLogger.error(
+        'Error parsing inbound WebSocket packet',
+        error: e,
+        stackTrace: st,
+        tag: 'WebSocketService',
+      );
     }
   }
 
@@ -272,7 +297,10 @@ class WebSocketService {
       _lastSentLng = longitude;
       return true;
     } catch (e) {
-      AppLogger.warning('Failed to send presence update: $e', tag: 'WebSocketService');
+      AppLogger.warning(
+        'Failed to send presence update: $e',
+        tag: 'WebSocketService',
+      );
       return false;
     }
   }
@@ -304,7 +332,10 @@ class WebSocketService {
     _reconnectAttempts++;
     final delay = computeBackoffDelay(_reconnectAttempts);
 
-    AppLogger.debug('Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts)...', tag: 'WebSocketService');
+    AppLogger.debug(
+      'Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts)...',
+      tag: 'WebSocketService',
+    );
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, connect);
   }

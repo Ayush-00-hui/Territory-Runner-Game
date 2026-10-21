@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/sync_queue.dart';
 import '../../../ui/ui.dart';
 
 class OfflineSyncBanner extends StatelessWidget {
   final SyncQueueService? syncQueueService;
 
-  const OfflineSyncBanner({
-    super.key,
-    this.syncQueueService,
-  });
+  const OfflineSyncBanner({super.key, this.syncQueueService});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +31,10 @@ class OfflineSyncBanner extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 borderRadius: AppRadius.br16,
-                border: Border.all(color: AppColors.warning.withValues(alpha: 0.3), width: 1.0),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.3),
+                  width: 1.0,
+                ),
               ),
               child: Row(
                 children: [
@@ -44,7 +45,9 @@ class OfflineSyncBanner extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      isSyncing ? Icons.sync_rounded : Icons.cloud_upload_outlined,
+                      isSyncing
+                          ? Icons.sync_rounded
+                          : Icons.cloud_upload_outlined,
                       color: AppColors.warning,
                       size: 20,
                     ),
@@ -55,7 +58,9 @@ class OfflineSyncBanner extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isSyncing ? 'Syncing Runs...' : '$count Runs Pending Sync',
+                          isSyncing
+                              ? 'Syncing Runs...'
+                              : '$count Runs Pending Sync',
                           style: AppText.labelLarge.copyWith(
                             color: AppColors.warning,
                           ),
@@ -85,8 +90,13 @@ class OfflineSyncBanner extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.warning,
                         foregroundColor: AppColors.onAccent,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: AppRadius.br8),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.br8,
+                        ),
                         minimumSize: Size.zero,
                         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),

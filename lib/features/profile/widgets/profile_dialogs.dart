@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../gameplay/territory_service.dart';
 import '../../../models/runner_profile.dart';
 import '../../../services/api_client.dart';
@@ -68,17 +69,17 @@ void showEditCallsignDialog(
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: AppSpacing.br12,
-                borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
+                borderSide: const BorderSide(
+                  color: AppColors.accent,
+                  width: 1.5,
+                ),
               ),
             ),
           ),
         ],
       ),
       actions: [
-        SecondaryButton(
-          label: 'Cancel',
-          onPressed: () => Navigator.pop(ctx),
-        ),
+        SecondaryButton(label: 'Cancel', onPressed: () => Navigator.pop(ctx)),
         PrimaryButton(
           label: 'Save Name',
           onPressed: () async {
@@ -161,19 +162,26 @@ void showFactionSelectionDialog(
                   profile.faction = f['name'] as String;
                   await territoryService.saveProfile(profile);
                   // Fire-and-forget sync to backend
-                  ApiClient().updateUserFaction(profile.faction).catchError((_) => false);
+                  ApiClient()
+                      .updateUserFaction(profile.faction)
+                      .catchError((_) => false);
                   if (ctx.mounted) {
                     Navigator.pop(ctx);
                   }
                   onUpdated();
                   if (context.mounted) {
-                    AppToast.show(context, 'Aligned with ${f['name']} Syndicate');
+                    AppToast.show(
+                      context,
+                      'Aligned with ${f['name']} Syndicate',
+                    );
                   }
                 },
                 child: Container(
                   padding: const EdgeInsets.all(AppSpacing.s16),
                   decoration: BoxDecoration(
-                    color: isSelected ? factionColor.withValues(alpha: 0.12) : AppColors.surface2,
+                    color: isSelected
+                        ? factionColor.withValues(alpha: 0.12)
+                        : AppColors.surface2,
                     borderRadius: AppSpacing.br16,
                     border: Border.all(
                       color: isSelected ? factionColor : AppColors.border,
@@ -202,16 +210,23 @@ void showFactionSelectionDialog(
                                 Text(
                                   f['name'] as String,
                                   style: AppText.bodyMedium.copyWith(
-                                    color: isSelected ? factionColor : AppColors.textPrimary,
+                                    color: isSelected
+                                        ? factionColor
+                                        : AppColors.textPrimary,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 14,
                                   ),
                                 ),
                                 if (isSelected)
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: factionColor.withValues(alpha: 0.2),
+                                      color: factionColor.withValues(
+                                        alpha: 0.2,
+                                      ),
                                       borderRadius: AppSpacing.br8,
                                     ),
                                     child: Text(
@@ -321,7 +336,10 @@ void showStatDetailModal(
                     children: [
                       Text(
                         m['label'] ?? '',
-                        style: AppText.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 12),
+                        style: AppText.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
                       ),
                       Text(
                         m['val'] ?? '',
@@ -376,7 +394,9 @@ void showBadgeDetailModal(
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  unlocked ? Icons.emoji_events_rounded : Icons.lock_outline_rounded,
+                  unlocked
+                      ? Icons.emoji_events_rounded
+                      : Icons.lock_outline_rounded,
                   color: badgeColor,
                   size: 26,
                 ),
@@ -396,7 +416,10 @@ void showBadgeDetailModal(
                     ),
                     const SizedBox(height: 4),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: unlocked
                             ? AppColors.gold.withValues(alpha: 0.16)
@@ -411,7 +434,9 @@ void showBadgeDetailModal(
                       child: Text(
                         unlocked ? 'Unlocked 🏆' : 'Locked',
                         style: AppText.labelSmall.copyWith(
-                          color: unlocked ? AppColors.gold : AppColors.textMuted,
+                          color: unlocked
+                              ? AppColors.gold
+                              : AppColors.textMuted,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
                         ),

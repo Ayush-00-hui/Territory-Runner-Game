@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -55,7 +56,9 @@ class _SecondaryButtonState extends State<SecondaryButton> {
 
     final Color bgColor = enabled ? AppColors.surface2 : AppColors.surface;
     final Color fgColor = enabled ? AppColors.textPrimary : AppColors.textMuted;
-    final Color borderColor = _isFocused ? AppColors.accent : AppColors.borderSubtle;
+    final Color borderColor = _isFocused
+        ? AppColors.accent
+        : AppColors.borderSubtle;
 
     Widget content = Row(
       mainAxisSize: widget.isFullWidth ? MainAxisSize.max : MainAxisSize.min,
@@ -72,17 +75,10 @@ class _SecondaryButtonState extends State<SecondaryButton> {
           ),
           const SizedBox(width: AppSpacing.s12),
         ] else if (widget.icon != null) ...[
-          Icon(
-            widget.icon,
-            color: fgColor,
-            size: 20,
-          ),
+          Icon(widget.icon, color: fgColor, size: 20),
           const SizedBox(width: AppSpacing.s8),
         ],
-        Text(
-          widget.label,
-          style: AppText.button.copyWith(color: fgColor),
-        ),
+        Text(widget.label, style: AppText.button.copyWith(color: fgColor)),
       ],
     );
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -18,7 +19,12 @@ class AppSheet extends StatelessWidget {
     this.subtitle,
     required this.child,
     this.trailing,
-    this.padding = const EdgeInsets.fromLTRB(AppSpacing.s20, 0, AppSpacing.s20, AppSpacing.s24),
+    this.padding = const EdgeInsets.fromLTRB(
+      AppSpacing.s20,
+      0,
+      AppSpacing.s20,
+      AppSpacing.s24,
+    ),
   });
 
   /// Displays the modal sheet using standardized styling tokens
@@ -43,7 +49,9 @@ class AppSheet extends StatelessWidget {
       builder: (context) => SafeArea(
         top: false,
         child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
           child: builder(context),
         ),
       ),
@@ -72,7 +80,12 @@ class AppSheet extends StatelessWidget {
         // Optional Title Header
         if (title != null) ...[
           Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s4, AppSpacing.s20, AppSpacing.s16),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.s20,
+              AppSpacing.s4,
+              AppSpacing.s20,
+              AppSpacing.s16,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -80,15 +93,14 @@ class AppSheet extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title!,
-                        style: AppText.titleLarge,
-                      ),
+                      Text(title!, style: AppText.titleLarge),
                       if (subtitle != null) ...[
                         const SizedBox(height: AppSpacing.s4),
                         Text(
                           subtitle!,
-                          style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+                          style: AppText.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ],
@@ -101,10 +113,7 @@ class AppSheet extends StatelessWidget {
         ],
 
         // Sheet Content
-        Padding(
-          padding: padding,
-          child: child,
-        ),
+        Padding(padding: padding, child: child),
       ],
     );
   }

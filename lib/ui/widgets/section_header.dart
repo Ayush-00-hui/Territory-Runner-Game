@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -52,10 +53,7 @@ class SectionHeader extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (overline != null) ...[
-                  Text(
-                    overline!.toUpperCase(),
-                    style: AppText.labelSmall,
-                  ),
+                  Text(overline!.toUpperCase(), style: AppText.labelSmall),
                   const SizedBox(height: AppSpacing.s2),
                 ],
                 Text(
@@ -66,10 +64,7 @@ class SectionHeader extends StatelessWidget {
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: AppSpacing.s4),
-                  Text(
-                    subtitle!,
-                    style: AppText.bodySmall,
-                  ),
+                  Text(subtitle!, style: AppText.bodySmall),
                 ],
               ],
             ),

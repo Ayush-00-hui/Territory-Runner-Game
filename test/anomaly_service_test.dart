@@ -32,28 +32,31 @@ void main() {
       expect(result.anomalyScore, lessThan(3.0));
     });
 
-    test('Vehicle-speed telemetry (> 25 km/h) triggers instant rule rejection', () {
-      final now = DateTime.now();
-      final positions = [
-        Position(
-          latitude: 37.7749,
-          longitude: -122.4194,
-          timestamp: now,
-          altitude: 10.0,
-          altitudeAccuracy: 1.0,
-          accuracy: 5.0,
-          heading: 90.0,
-          headingAccuracy: 1.0,
-          speed: 16.6, // ~60 km/h (Car driving)
-          speedAccuracy: 0.5,
-          isMocked: false,
-        ),
-      ];
+    test(
+      'Vehicle-speed telemetry (> 25 km/h) triggers instant rule rejection',
+      () {
+        final now = DateTime.now();
+        final positions = [
+          Position(
+            latitude: 37.7749,
+            longitude: -122.4194,
+            timestamp: now,
+            altitude: 10.0,
+            altitudeAccuracy: 1.0,
+            accuracy: 5.0,
+            heading: 90.0,
+            headingAccuracy: 1.0,
+            speed: 16.6, // ~60 km/h (Car driving)
+            speedAccuracy: 0.5,
+            isMocked: false,
+          ),
+        ];
 
-      final result = anomalyService.scoreSegment(positions);
-      expect(result.isAnomaly, isTrue);
-      expect(result.reason.contains('exceeded 25 km/h'), isTrue);
-    });
+        final result = anomalyService.scoreSegment(positions);
+        expect(result.isAnomaly, isTrue);
+        expect(result.reason.contains('exceeded 25 km/h'), isTrue);
+      },
+    );
 
     test('isMocked flag triggers immediate cheat rejection', () {
       final now = DateTime.now();
@@ -126,13 +129,17 @@ void main() {
           accuracy: 5.0,
           heading: 0.0,
           headingAccuracy: 1.0,
-          speed: 3.5, // 12.6 km/h (jogging speed, exceeds 10 km/h walking ceiling)
+          speed:
+              3.5, // 12.6 km/h (jogging speed, exceeds 10 km/h walking ceiling)
           speedAccuracy: 0.5,
           isMocked: false,
         ),
       ];
 
-      final result = anomalyService.scoreSegment(positions, ExerciseActivityType.walking);
+      final result = anomalyService.scoreSegment(
+        positions,
+        ExerciseActivityType.walking,
+      );
       expect(result.isAnomaly, isTrue);
       expect(result.reason.contains('exceeded 10 km/h'), isTrue);
     });
@@ -156,12 +163,18 @@ void main() {
       ];
 
       // Under running mode: flagged as cheat (> 25 km/h human sprinting ceiling)
-      final runningResult = anomalyService.scoreSegment(positions, ExerciseActivityType.running);
+      final runningResult = anomalyService.scoreSegment(
+        positions,
+        ExerciseActivityType.running,
+      );
       expect(runningResult.isAnomaly, isTrue);
       expect(runningResult.reason.contains('exceeded 25 km/h'), isTrue);
 
       // Under cycling mode: valid (<= 50 km/h urban cycling ceiling)
-      final cyclingResult = anomalyService.scoreSegment(positions, ExerciseActivityType.cycling);
+      final cyclingResult = anomalyService.scoreSegment(
+        positions,
+        ExerciseActivityType.cycling,
+      );
       expect(cyclingResult.isAnomaly, isFalse);
     });
 
@@ -183,74 +196,99 @@ void main() {
         ),
       ];
 
-      final result = anomalyService.scoreSegment(positions, ExerciseActivityType.cycling);
+      final result = anomalyService.scoreSegment(
+        positions,
+        ExerciseActivityType.cycling,
+      );
       expect(result.isAnomaly, isTrue);
       expect(result.reason.contains('exceeded 50 km/h'), isTrue);
     });
 
-    test('Running mode rejects superhuman sustained average pace (> 22 km/h)', () {
-      final now = DateTime.now();
-      final positions = List.generate(5, (i) {
-        return Position(
-          latitude: 37.7749 + (i * 0.00006), // ~6.6m per second = ~24 km/h displacement
-          longitude: -122.4194,
-          timestamp: now.add(Duration(seconds: i)),
-          altitude: 10.0,
-          altitudeAccuracy: 1.0,
-          accuracy: 5.0,
-          heading: 0.0,
-          headingAccuracy: 1.0,
-          speed: 6.0, // Instantaneous 21.6 km/h (under 25 km/h)
-          speedAccuracy: 0.5,
-          isMocked: false,
+    test(
+      'Running mode rejects superhuman sustained average pace (> 22 km/h)',
+      () {
+        final now = DateTime.now();
+        final positions = List.generate(5, (i) {
+          return Position(
+            latitude:
+                37.7749 +
+                (i * 0.00006), // ~6.6m per second = ~24 km/h displacement
+            longitude: -122.4194,
+            timestamp: now.add(Duration(seconds: i)),
+            altitude: 10.0,
+            altitudeAccuracy: 1.0,
+            accuracy: 5.0,
+            heading: 0.0,
+            headingAccuracy: 1.0,
+            speed: 6.0, // Instantaneous 21.6 km/h (under 25 km/h)
+            speedAccuracy: 0.5,
+            isMocked: false,
+          );
+        });
+
+        final result = anomalyService.scoreSegment(
+          positions,
+          ExerciseActivityType.running,
         );
-      });
+        expect(result.isAnomaly, isTrue);
+        expect(result.reason.contains('endurance ceiling'), isTrue);
+      },
+    );
 
-      final result = anomalyService.scoreSegment(positions, ExerciseActivityType.running);
-      expect(result.isAnomaly, isTrue);
-      expect(result.reason.contains('endurance ceiling'), isTrue);
-    });
+    test(
+      'Biomechanical acceleration limit rejects impossible speed spikes',
+      () {
+        final now = DateTime.now();
+        // Burst from 0 m/s to 6 m/s in 0.5s = 12.0 m/s² (exceeds 8.0 m/s² running limit)
+        final positions = [
+          Position(
+            latitude: 37.774900,
+            longitude: -122.4194,
+            timestamp: now,
+            altitude: 10.0,
+            altitudeAccuracy: 1.0,
+            accuracy: 5.0,
+            heading: 0.0,
+            headingAccuracy: 1.0,
+            speed: 0.0,
+            speedAccuracy: 0.5,
+            isMocked: false,
+          ),
+          Position(
+            latitude: 37.774913,
+            longitude: -122.4194,
+            timestamp: now.add(const Duration(milliseconds: 500)),
+            altitude: 10.0,
+            altitudeAccuracy: 1.0,
+            accuracy: 5.0,
+            heading: 0.0,
+            headingAccuracy: 1.0,
+            speed: 6.0,
+            speedAccuracy: 0.5,
+            isMocked: false,
+          ),
+        ];
 
-    test('Biomechanical acceleration limit rejects impossible speed spikes', () {
-      final now = DateTime.now();
-      // Burst from 0 m/s to 6 m/s in 0.5s = 12.0 m/s² (exceeds 8.0 m/s² running limit)
-      final positions = [
-        Position(
-          latitude: 37.774900,
-          longitude: -122.4194,
-          timestamp: now,
-          altitude: 10.0,
-          altitudeAccuracy: 1.0,
-          accuracy: 5.0,
-          heading: 0.0,
-          headingAccuracy: 1.0,
-          speed: 0.0,
-          speedAccuracy: 0.5,
-          isMocked: false,
-        ),
-        Position(
-          latitude: 37.774913,
-          longitude: -122.4194,
-          timestamp: now.add(const Duration(milliseconds: 500)),
-          altitude: 10.0,
-          altitudeAccuracy: 1.0,
-          accuracy: 5.0,
-          heading: 0.0,
-          headingAccuracy: 1.0,
-          speed: 6.0,
-          speedAccuracy: 0.5,
-          isMocked: false,
-        ),
-      ];
+        final runningResult = anomalyService.scoreSegment(
+          positions,
+          ExerciseActivityType.running,
+        );
+        expect(runningResult.isAnomaly, isTrue);
+        expect(
+          runningResult.reason.contains(
+            'Biomechanical acceleration limit exceeded',
+          ),
+          isTrue,
+        );
 
-      final runningResult = anomalyService.scoreSegment(positions, ExerciseActivityType.running);
-      expect(runningResult.isAnomaly, isTrue);
-      expect(runningResult.reason.contains('Biomechanical acceleration limit exceeded'), isTrue);
-
-      // Same 12 m/s² acceleration is permitted under cycling (12.0 m/s² ceiling)
-      final cyclingResult = anomalyService.scoreSegment(positions, ExerciseActivityType.cycling);
-      expect(cyclingResult.isAnomaly, isFalse);
-    });
+        // Same 12 m/s² acceleration is permitted under cycling (12.0 m/s² ceiling)
+        final cyclingResult = anomalyService.scoreSegment(
+          positions,
+          ExerciseActivityType.cycling,
+        );
+        expect(cyclingResult.isAnomaly, isFalse);
+      },
+    );
 
     test('Excessive frozen GPS breadcrumbs (> 50% identical) triggers replay detection', () {
       final now = DateTime.now();
@@ -309,9 +347,17 @@ void main() {
         ),
       ];
 
-      final result = anomalyService.scoreSegment(positions, ExerciseActivityType.running);
+      final result = anomalyService.scoreSegment(
+        positions,
+        ExerciseActivityType.running,
+      );
       expect(result.isAnomaly, isTrue);
-      expect(result.reason.contains('Excessive frozen/replay identical GPS breadcrumbs detected'), isTrue);
+      expect(
+        result.reason.contains(
+          'Excessive frozen/replay identical GPS breadcrumbs detected',
+        ),
+        isTrue,
+      );
     });
   });
 }

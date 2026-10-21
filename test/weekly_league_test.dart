@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -70,81 +71,96 @@ void main() {
   });
 
   group('ApiClient Weekly League & Device Token Tests', () {
-    test('registerDeviceToken sends POST /v1/device-token with Bearer header', () async {
-      final mockClient = MockClient((request) async {
-        expect(request.url.path, '/v1/device-token');
-        expect(request.method, 'POST');
-        final body = jsonDecode(request.body) as Map<String, dynamic>;
-        expect(body['token'], 'fcm_mock_token_123');
+    test(
+      'registerDeviceToken sends POST /v1/device-token with Bearer header',
+      () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, '/v1/device-token');
+          expect(request.method, 'POST');
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['token'], 'fcm_mock_token_123');
 
-        return http.Response(jsonEncode({'status': 'registered', 'token': 'fcm_mock_token_123'}), 200);
-      });
+          return http.Response(
+            jsonEncode({'status': 'registered', 'token': 'fcm_mock_token_123'}),
+            200,
+          );
+        });
 
-      final apiClient = ApiClient(httpClient: mockClient);
-      await expectLater(apiClient.registerDeviceToken('fcm_mock_token_123'), completes);
-    });
+        final apiClient = ApiClient(httpClient: mockClient);
+        await expectLater(
+          apiClient.registerDeviceToken('fcm_mock_token_123'),
+          completes,
+        );
+      },
+    );
 
-    test('getCurrentLeague retrieves and deserializes weekly league standing', () async {
-      final mockClient = MockClient((request) async {
-        expect(request.url.path, '/v1/league/current');
-        expect(request.method, 'GET');
+    test(
+      'getCurrentLeague retrieves and deserializes weekly league standing',
+      () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, '/v1/league/current');
+          expect(request.method, 'GET');
 
-        final mockResponse = {
-          'user_id': 'usr_tester',
-          'username': 'SwiftSprint',
-          'faction': 'Neon Syndicate',
-          'tier': 'Diamond',
-          'rank': 1,
-          'total_participants': 8,
-          'weekly_area_sqm': 32000.0,
-          'weekly_runs': 5,
-          'promotion_rank_cutoff': 0,
-          'relegation_rank_cutoff': 1,
-          'reset_at': '2026-10-26T00:00:00.000Z',
-          'seconds_until_reset': 3600,
-          'standings': [
-            {
-              'rank': 1,
-              'user_id': 'usr_tester',
-              'username': 'SwiftSprint',
-              'faction': 'Neon Syndicate',
-              'tier': 'Diamond',
-              'weekly_area_sqm': 32000.0,
-              'weekly_runs': 5,
-              'is_current_user': true,
-            },
-          ],
-        };
+          final mockResponse = {
+            'user_id': 'usr_tester',
+            'username': 'SwiftSprint',
+            'faction': 'Neon Syndicate',
+            'tier': 'Diamond',
+            'rank': 1,
+            'total_participants': 8,
+            'weekly_area_sqm': 32000.0,
+            'weekly_runs': 5,
+            'promotion_rank_cutoff': 0,
+            'relegation_rank_cutoff': 1,
+            'reset_at': '2026-10-26T00:00:00.000Z',
+            'seconds_until_reset': 3600,
+            'standings': [
+              {
+                'rank': 1,
+                'user_id': 'usr_tester',
+                'username': 'SwiftSprint',
+                'faction': 'Neon Syndicate',
+                'tier': 'Diamond',
+                'weekly_area_sqm': 32000.0,
+                'weekly_runs': 5,
+                'is_current_user': true,
+              },
+            ],
+          };
 
-        return http.Response(jsonEncode(mockResponse), 200);
-      });
+          return http.Response(jsonEncode(mockResponse), 200);
+        });
 
-      final apiClient = ApiClient(httpClient: mockClient);
-      final league = await apiClient.getCurrentLeague();
+        final apiClient = ApiClient(httpClient: mockClient);
+        final league = await apiClient.getCurrentLeague();
 
-      expect(league.tier, 'Diamond');
-      expect(league.rank, 1);
-      expect(league.weeklyAreaSqm, 32000.0);
-      expect(league.standings.first.isCurrentUser, isTrue);
-    });
+        expect(league.tier, 'Diamond');
+        expect(league.rank, 1);
+        expect(league.weeklyAreaSqm, 32000.0);
+        expect(league.standings.first.isCurrentUser, isTrue);
+      },
+    );
 
     test('getCurrentLeague passes activity_type query parameter', () async {
       final mockClient = MockClient((request) async {
         expect(request.url.path, '/v1/league/current');
         expect(request.url.queryParameters['activity_type'], 'cycling');
-        return http.Response(jsonEncode({
-          'user_id': 'usr_cyclist',
-          'tier': 'Gold',
-          'rank': 1,
-          'total_participants': 2,
-          'weekly_area_sqm': 45000.0,
-          'weekly_runs': 3,
-          'promotion_rank_cutoff': 0,
-          'relegation_rank_cutoff': 1,
-          'reset_at': '2026-10-26T00:00:00.000Z',
-          'seconds_until_reset': 3600,
-          'standings': [],
-        }), 200);
+        return http.Response(
+          jsonEncode({
+            'user_id': 'usr_cyclist',
+            'tier': 'Gold',
+            'rank': 1,
+            'total_participants': 2,
+            'weekly_area_sqm': 45000.0,
+            'weekly_runs': 3,
+            'promotion_rank_cutoff': 0,
+            'relegation_rank_cutoff': 1,
+            'reset_at': '2026-10-26T00:00:00.000Z',
+            'seconds_until_reset': 3600,
+            'standings': [],
+          }),
+          200,
+        );
       });
 
       final apiClient = ApiClient(httpClient: mockClient);
@@ -153,31 +169,40 @@ void main() {
       expect(league.weeklyAreaSqm, 45000.0);
     });
 
-    test('getLeaderboard passes activity_type and limit query parameters', () async {
-      final mockClient = MockClient((request) async {
-        expect(request.url.path, '/v1/leaderboard');
-        expect(request.url.queryParameters['activity_type'], 'walking');
-        expect(request.url.queryParameters['limit'], '25');
-        return http.Response(jsonEncode({
-          'leaderboard': [
-            {
-              'rank': 1,
-              'user_id': 'usr_walker',
-              'username': 'CityWalker',
-              'faction': 'Cyber Vanguard',
-              'total_area_sqm': 12000.0,
-              'level': 3,
-              'total_runs': 5,
-            }
-          ],
-        }), 200);
-      });
+    test(
+      'getLeaderboard passes activity_type and limit query parameters',
+      () async {
+        final mockClient = MockClient((request) async {
+          expect(request.url.path, '/v1/leaderboard');
+          expect(request.url.queryParameters['activity_type'], 'walking');
+          expect(request.url.queryParameters['limit'], '25');
+          return http.Response(
+            jsonEncode({
+              'leaderboard': [
+                {
+                  'rank': 1,
+                  'user_id': 'usr_walker',
+                  'username': 'CityWalker',
+                  'faction': 'Cyber Vanguard',
+                  'total_area_sqm': 12000.0,
+                  'level': 3,
+                  'total_runs': 5,
+                },
+              ],
+            }),
+            200,
+          );
+        });
 
-      final apiClient = ApiClient(httpClient: mockClient);
-      final leaderboard = await apiClient.getLeaderboard(limit: 25, activityType: 'walking');
-      expect(leaderboard.length, 1);
-      expect(leaderboard.first.username, 'CityWalker');
-    });
+        final apiClient = ApiClient(httpClient: mockClient);
+        final leaderboard = await apiClient.getLeaderboard(
+          limit: 25,
+          activityType: 'walking',
+        );
+        expect(leaderboard.length, 1);
+        expect(leaderboard.first.username, 'CityWalker');
+      },
+    );
   });
 
   group('WeeklyLeagueView Widget Tests', () {
@@ -248,67 +273,70 @@ void main() {
       ],
     );
 
-    testWidgets('WeeklyLeagueView renders division card, countdown, threshold lines, and current user row', (tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: WeeklyLeagueView(
-                initialStanding: mockStanding,
+    testWidgets(
+      'WeeklyLeagueView renders division card, countdown, threshold lines, and current user row',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: WeeklyLeagueView(initialStanding: mockStanding),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      // Division header and rank
-      expect(find.text('Gold Division'), findsOneWidget);
-      expect(find.text('Rank #2 of 5'), findsOneWidget);
+        // Division header and rank
+        expect(find.text('Gold Division'), findsOneWidget);
+        expect(find.text('Rank #2 of 5'), findsOneWidget);
 
-      // Stat metrics
-      expect(find.text('Weekly area'), findsOneWidget);
-      expect(find.text('Conquest runs'), findsOneWidget);
-      expect(find.text('League status'), findsOneWidget);
+        // Stat metrics
+        expect(find.text('Weekly area'), findsOneWidget);
+        expect(find.text('Conquest runs'), findsOneWidget);
+        expect(find.text('League status'), findsOneWidget);
 
-      // Section header
-      expect(find.text('Division standings'), findsOneWidget);
-      expect(find.text('Resets Monday 00:00 UTC'), findsOneWidget);
+        // Section header
+        expect(find.text('Division standings'), findsOneWidget);
+        expect(find.text('Resets Monday 00:00 UTC'), findsOneWidget);
 
-      // Promotion & Relegation threshold lines
-      expect(find.text('Promotion zone'), findsOneWidget);
-      expect(find.text('Relegation zone'), findsOneWidget);
+        // Promotion & Relegation threshold lines
+        expect(find.text('Promotion zone'), findsOneWidget);
+        expect(find.text('Relegation zone'), findsOneWidget);
 
-      // Participant names and 'You' badge
-      expect(find.text('Overlord'), findsOneWidget);
-      expect(find.text('ShadowRacer'), findsOneWidget);
-      expect(find.text('You'), findsOneWidget);
+        // Participant names and 'You' badge
+        expect(find.text('Overlord'), findsOneWidget);
+        expect(find.text('ShadowRacer'), findsOneWidget);
+        expect(find.text('You'), findsOneWidget);
 
-      // Local reset time badge
-      expect(find.textContaining('Ends '), findsOneWidget);
-    });
+        // Local reset time badge
+        expect(find.textContaining('Ends '), findsOneWidget);
+      },
+    );
 
-    testWidgets('WeeklyLeagueView renders offline error state with retry button when API fails', (tester) async {
-      final mockClient = MockClient((request) async {
-        return http.Response('Internal Server Error', 500);
-      });
-      final apiClient = ApiClient(httpClient: mockClient);
+    testWidgets(
+      'WeeklyLeagueView renders offline error state with retry button when API fails',
+      (tester) async {
+        final mockClient = MockClient((request) async {
+          return http.Response('Internal Server Error', 500);
+        });
+        final apiClient = ApiClient(httpClient: mockClient);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: Scaffold(
-            body: WeeklyLeagueView(
-              apiClient: apiClient,
-            ),
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(body: WeeklyLeagueView(apiClient: apiClient)),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Offline: unable to fetch league standings'), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
-    });
+        expect(
+          find.text('Offline: unable to fetch league standings'),
+          findsOneWidget,
+        );
+        expect(find.text('Retry'), findsOneWidget);
+      },
+    );
   });
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../ui/ui.dart';
 
 /// Calm, punchy loop-closure toast banner.
@@ -127,13 +128,18 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                             style: AppText.bodyBold.copyWith(
                               color: AppColors.textPrimary,
                               fontSize: 13,
-                              fontFeatures: const [FontFeature.tabularFigures()],
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                           if (widget.xpAwarded > 0) ...[
                             const SizedBox(width: AppSpacing.s8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: AppColors.accentContainer,
                                 borderRadius: AppRadius.br8,
@@ -144,7 +150,9 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                                   color: AppColors.accent,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
                             ),

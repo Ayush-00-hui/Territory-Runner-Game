@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../routing/route_service.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/theme/app_spacing.dart';
@@ -160,7 +162,12 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
         : 0;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s16, AppSpacing.s20, AppSpacing.s32),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s20,
+        AppSpacing.s16,
+        AppSpacing.s20,
+        AppSpacing.s32,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -186,22 +193,28 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                 decoration: BoxDecoration(
                   color: AppColors.accent.withValues(alpha: 0.12),
                   borderRadius: AppSpacing.br12,
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.3), width: 1.0),
+                  border: Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.3),
+                    width: 1.0,
+                  ),
                 ),
-                child: const Icon(Icons.explore_rounded, color: AppColors.accent, size: 22),
+                child: const Icon(
+                  Icons.explore_rounded,
+                  color: AppColors.accent,
+                  size: 22,
+                ),
               ),
               const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Claim planner',
-                      style: AppText.headingSmall,
-                    ),
+                    const Text('Claim planner', style: AppText.headingSmall),
                     Text(
                       'AI loop guidance biased to sovereign expansion',
-                      style: AppText.label.copyWith(color: AppColors.textSecondary),
+                      style: AppText.label.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -222,7 +235,10 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
           // Area Presets
           Text(
             'Target claim presets',
-            style: AppText.label.copyWith(color: AppColors.textSecondary, letterSpacing: 0.5),
+            style: AppText.label.copyWith(
+              color: AppColors.textSecondary,
+              letterSpacing: 0.5,
+            ),
           ),
           const SizedBox(height: AppSpacing.s10),
           Row(
@@ -235,14 +251,19 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                     onTap: () => _selectPreset(preset.areaSqM),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppColors.accent.withValues(alpha: 0.15)
                             : AppColors.surface,
                         borderRadius: AppSpacing.br12,
                         border: Border.all(
-                          color: isSelected ? AppColors.accent : AppColors.border,
+                          color: isSelected
+                              ? AppColors.accent
+                              : AppColors.border,
                           width: isSelected ? 1.5 : 1.0,
                         ),
                       ),
@@ -252,7 +273,9 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                           Text(
                             preset.title,
                             style: TextStyle(
-                              color: isSelected ? AppColors.secondary : AppColors.textSecondary,
+                              color: isSelected
+                                  ? AppColors.secondary
+                                  : AppColors.textSecondary,
                               fontWeight: FontWeight.w900,
                               fontSize: 10,
                               letterSpacing: 0.8,
@@ -262,7 +285,9 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                           Text(
                             preset.label,
                             style: TextStyle(
-                              color: isSelected ? AppColors.textPrimary : AppColors.textMuted,
+                              color: isSelected
+                                  ? AppColors.textPrimary
+                                  : AppColors.textMuted,
                               fontWeight: FontWeight.bold,
                               fontSize: 11,
                             ),
@@ -283,14 +308,19 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
             children: [
               Text(
                 'TARGET AREA',
-                style: AppText.label.copyWith(color: AppColors.textSecondary, letterSpacing: 1.1),
+                style: AppText.label.copyWith(
+                  color: AppColors.textSecondary,
+                  letterSpacing: 1.1,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
                   borderRadius: AppSpacing.br8,
-                  border: Border.all(color: AppColors.secondary.withValues(alpha: 0.5)),
+                  border: Border.all(
+                    color: AppColors.secondary.withValues(alpha: 0.5),
+                  ),
                 ),
                 child: Text(
                   '${_targetAreaSqM.toStringAsFixed(0)} m²',
@@ -329,11 +359,18 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
               decoration: BoxDecoration(
                 color: AppColors.warning.withValues(alpha: 0.12),
                 borderRadius: AppSpacing.br12,
-                border: Border.all(color: AppColors.warning.withValues(alpha: 0.6), width: 1.2),
+                border: Border.all(
+                  color: AppColors.warning.withValues(alpha: 0.6),
+                  width: 1.2,
+                ),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.wifi_off_rounded, color: AppColors.warning, size: 18),
+                  Icon(
+                    Icons.wifi_off_rounded,
+                    color: AppColors.warning,
+                    size: 18,
+                  ),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -355,11 +392,18 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
               decoration: BoxDecoration(
                 color: AppColors.accent.withValues(alpha: 0.08),
                 borderRadius: AppSpacing.br12,
-                border: Border.all(color: AppColors.accent.withValues(alpha: 0.35), width: 1.0),
+                border: Border.all(
+                  color: AppColors.accent.withValues(alpha: 0.35),
+                  width: 1.0,
+                ),
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.directions_walk_rounded, color: AppColors.accent, size: 16),
+                  Icon(
+                    Icons.directions_walk_rounded,
+                    color: AppColors.accent,
+                    size: 16,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Real-road pedestrian network matched via OSRM',
@@ -387,14 +431,18 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                   children: [
                     _buildTelemetryTile(
                       label: 'Est. distance',
-                      value: route != null ? '${route.totalDistanceKm.toStringAsFixed(2)} km' : '--',
+                      value: route != null
+                          ? '${route.totalDistanceKm.toStringAsFixed(2)} km'
+                          : '--',
                       icon: Icons.straighten_rounded,
                       color: AppColors.textPrimary,
                     ),
                     const SizedBox(width: 12),
                     _buildTelemetryTile(
                       label: 'Est. duration',
-                      value: route != null ? '~${route.estimatedDurationMinutes} min' : '--',
+                      value: route != null
+                          ? '~${route.estimatedDurationMinutes} min'
+                          : '--',
                       icon: Icons.timer_outlined,
                       color: AppColors.textPrimary,
                     ),
@@ -410,7 +458,10 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                           : '--',
                       icon: Icons.pentagon_outlined,
                       color: AppColors.mine,
-                      subtitle: route != null && route.targetAreaSqM > route.estimatedNewTerritoryAreaSqM + 50.0
+                      subtitle:
+                          route != null &&
+                              route.targetAreaSqM >
+                                  route.estimatedNewTerritoryAreaSqM + 50.0
                           ? 'Overlap deducted'
                           : null,
                     ),
@@ -450,7 +501,11 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.play_arrow_rounded, color: AppColors.onAccent, size: 26),
+                  Icon(
+                    Icons.play_arrow_rounded,
+                    color: AppColors.onAccent,
+                    size: 26,
+                  ),
                   SizedBox(width: 8),
                   Text(
                     'Start run with route',

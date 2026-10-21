@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/leaderboard_entry.dart';
 import '../../../services/api_client.dart';
 import '../../../ui/theme/app_colors.dart';
@@ -46,7 +47,12 @@ class LeaderboardSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.s20, AppSpacing.s16, AppSpacing.s20, AppSpacing.s20),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.s20,
+        AppSpacing.s16,
+        AppSpacing.s20,
+        AppSpacing.s20,
+      ),
       child: Column(
         children: [
           Container(
@@ -63,16 +69,20 @@ class LeaderboardSheet extends StatelessWidget {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 24),
-                  SizedBox(width: AppSpacing.s8),
-                  Text(
-                    'Global leaderboard',
-                    style: AppText.headingSmall,
+                  Icon(
+                    Icons.emoji_events_rounded,
+                    color: AppColors.gold,
+                    size: 24,
                   ),
+                  SizedBox(width: AppSpacing.s8),
+                  Text('Global leaderboard', style: AppText.headingSmall),
                 ],
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: AppColors.textSecondary,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -86,7 +96,9 @@ class LeaderboardSheet extends StatelessWidget {
                   return ListView.builder(
                     itemCount: 6,
                     itemBuilder: (context, index) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.s8,
+                      ),
                       child: SkeletonBox(
                         height: 56,
                         borderRadius: AppSpacing.br16,
@@ -100,7 +112,8 @@ class LeaderboardSheet extends StatelessWidget {
                     child: EmptyState(
                       icon: Icons.cloud_off_rounded,
                       title: 'Leaderboard Offline',
-                      message: 'Could not connect to authority server.\n${snapshot.error}',
+                      message:
+                          'Could not connect to authority server.\n${snapshot.error}',
                     ),
                   );
                 }
@@ -111,14 +124,16 @@ class LeaderboardSheet extends StatelessWidget {
                     child: EmptyState(
                       icon: Icons.emoji_events_outlined,
                       title: 'No Runners Ranked',
-                      message: 'Be the first pioneer to claim territory on foot!',
+                      message:
+                          'Be the first pioneer to claim territory on foot!',
                     ),
                   );
                 }
 
                 return ListView.separated(
                   itemCount: entries.length,
-                  separatorBuilder: (context, index) => const Divider(color: AppColors.borderSubtle, height: 1),
+                  separatorBuilder: (context, index) =>
+                      const Divider(color: AppColors.borderSubtle, height: 1),
                   itemBuilder: (context, index) {
                     final entry = entries[index];
                     final isCurrent = entry.userId == currentUserId;
@@ -129,9 +144,14 @@ class LeaderboardSheet extends StatelessWidget {
                     if (entry.rank == 3) rankColor = AppColors.bronze;
 
                     return Container(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.s12, horizontal: AppSpacing.s8),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.s12,
+                        horizontal: AppSpacing.s8,
+                      ),
                       decoration: BoxDecoration(
-                        color: isCurrent ? AppColors.accent.withValues(alpha: 0.12) : Colors.transparent,
+                        color: isCurrent
+                            ? AppColors.accent.withValues(alpha: 0.12)
+                            : Colors.transparent,
                         borderRadius: AppSpacing.br12,
                       ),
                       child: Row(
@@ -143,7 +163,9 @@ class LeaderboardSheet extends StatelessWidget {
                               style: AppText.statSmall.copyWith(
                                 color: rankColor,
                                 fontWeight: FontWeight.w900,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ),
@@ -157,13 +179,18 @@ class LeaderboardSheet extends StatelessWidget {
                                     Text(
                                       entry.username,
                                       style: AppText.bodyBold.copyWith(
-                                        color: isCurrent ? AppColors.accent : AppColors.textPrimary,
+                                        color: isCurrent
+                                            ? AppColors.accent
+                                            : AppColors.textPrimary,
                                       ),
                                     ),
                                     if (isCurrent) ...[
                                       const SizedBox(width: AppSpacing.s6),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: AppSpacing.s6,
+                                          vertical: 2,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: AppColors.accent,
                                           borderRadius: AppSpacing.br8,
@@ -198,13 +225,12 @@ class LeaderboardSheet extends StatelessWidget {
                                 style: AppText.statSmall.copyWith(
                                   color: AppColors.accent,
                                   fontWeight: FontWeight.w900,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
-                              const Text(
-                                'CLAIMED',
-                                style: AppText.label,
-                              ),
+                              const Text('CLAIMED', style: AppText.label),
                             ],
                           ),
                         ],

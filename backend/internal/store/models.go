@@ -93,18 +93,18 @@ type Run struct {
 
 // CaptureResult encapsulates the output of a single transaction territory capture.
 type CaptureResult struct {
-	RunID               string   `json:"run_id"`
-	IdempotencyKey      string   `json:"idempotency_key"`
-	ActivityType        string   `json:"activity_type,omitempty"`
-	Status              string   `json:"status"`
-	AnomalyScore        float64  `json:"anomaly_score"`
-	AnomalyReasons      []string `json:"anomaly_reasons"`
-	LoopDetected        bool     `json:"loop_detected"`
-	AreaClaimedSqm      float64  `json:"area_claimed_sqm"`
-	XpAwarded           int      `json:"xp_awarded"`
-	PlayerTotalAreaSqm  float64  `json:"player_total_area_sqm"`
-	TerritoryGeoJSON    string   `json:"territory_geojson,omitempty"`
-	RivalsAffected      []string `json:"rivals_affected,omitempty"`
+	RunID              string   `json:"run_id"`
+	IdempotencyKey     string   `json:"idempotency_key"`
+	ActivityType       string   `json:"activity_type,omitempty"`
+	Status             string   `json:"status"`
+	AnomalyScore       float64  `json:"anomaly_score"`
+	AnomalyReasons     []string `json:"anomaly_reasons"`
+	LoopDetected       bool     `json:"loop_detected"`
+	AreaClaimedSqm     float64  `json:"area_claimed_sqm"`
+	XpAwarded          int      `json:"xp_awarded"`
+	PlayerTotalAreaSqm float64  `json:"player_total_area_sqm"`
+	TerritoryGeoJSON   string   `json:"territory_geojson,omitempty"`
+	RivalsAffected     []string `json:"rivals_affected,omitempty"`
 }
 
 // LeaderboardEntry represents a ranked runner.
@@ -240,6 +240,3 @@ type PrivacyZone struct {
 type UserSettings struct {
 	LiveVisibility string `json:"live_visibility"`
 }
-
-
-

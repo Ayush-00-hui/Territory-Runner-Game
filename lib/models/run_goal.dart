@@ -2,7 +2,7 @@ enum GoalType {
   none,
   distance, // Target in kilometers
   duration, // Target in seconds
-  area,     // Target in square meters
+  area, // Target in square meters
 }
 
 /// Represents an athletic run goal (distance, time, or territory area)
@@ -11,10 +11,7 @@ class RunGoal {
   final GoalType type;
   final double targetValue;
 
-  const RunGoal({
-    required this.type,
-    required this.targetValue,
-  });
+  const RunGoal({required this.type, required this.targetValue});
 
   static const RunGoal none = RunGoal(type: GoalType.none, targetValue: 0);
 
@@ -65,17 +62,26 @@ class RunGoal {
     if (!isActive) return '';
     switch (type) {
       case GoalType.distance:
-        final double rem = (targetValue - currentDistanceKm).clamp(0.0, targetValue);
+        final double rem = (targetValue - currentDistanceKm).clamp(
+          0.0,
+          targetValue,
+        );
         if (rem <= 0) return 'Goal achieved!';
         return '${rem.toStringAsFixed(2)} km remaining';
       case GoalType.duration:
-        final int remSec = (targetValue.round() - currentDurationSeconds).clamp(0, targetValue.round());
+        final int remSec = (targetValue.round() - currentDurationSeconds).clamp(
+          0,
+          targetValue.round(),
+        );
         if (remSec <= 0) return 'Goal achieved!';
         final int m = remSec ~/ 60;
         final int s = remSec % 60;
         return "${m}m ${s.toString().padLeft(2, '0')}s remaining";
       case GoalType.area:
-        final double rem = (targetValue - currentAreaSqm).clamp(0.0, targetValue);
+        final double rem = (targetValue - currentAreaSqm).clamp(
+          0.0,
+          targetValue,
+        );
         if (rem <= 0) return 'Goal achieved!';
         if (rem >= 1000000) {
           return '${(rem / 1000000).toStringAsFixed(2)} km² to claim';

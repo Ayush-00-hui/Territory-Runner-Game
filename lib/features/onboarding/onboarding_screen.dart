@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../ui/ui.dart';
 
 /// 3-Slide Vector Onboarding Experience with Charcoal + Ember athletic styling.
@@ -33,7 +35,8 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerProviderStateMixin {
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with SingleTickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
   late final AnimationController _pulseController;
@@ -164,8 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                   _SlideView(
                     badge: '01 / CONQUEST MECHANICS',
                     title: 'Run & Claim Real-World Sectors',
-                    description:
-                        'Lace up and run organic loops through city streets. When your GPS path intersects and closes, the enclosed territory is instantly claimed on the global grid.',
+                    description: 'Lace up and run organic loops through city streets. When your GPS path intersects and closes, the enclosed territory is instantly claimed on the global grid.',
                     illustration: _RunAndClaimGraphic(pulse: _pulseController),
                     statusPillText: 'SECTOR #042 CLAIMED • 14,250 m²',
                     statusPillIcon: Icons.check_circle_rounded,
@@ -173,18 +175,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                   _SlideView(
                     badge: '02 / RIVALRY & DEFENSE',
                     title: 'Defend & Compete in Real-Time',
-                    description:
-                        'Rival runners will carve into your territory. Get early radar alerts, defend your home sectors, duel rivals head-to-head, and fight for weekly league promotion.',
-                    illustration: _DefendAndCompeteGraphic(pulse: _pulseController),
+                    description: 'Rival runners will carve into your territory. Get early radar alerts, defend your home sectors, duel rivals head-to-head, and fight for weekly league promotion.',
+                    illustration: _DefendAndCompeteGraphic(
+                      pulse: _pulseController,
+                    ),
                     statusPillText: 'TACTICAL RADAR ACTIVE • 3 RIVALS NEARBY',
                     statusPillIcon: Icons.radar_rounded,
                   ),
                   _SlideView(
                     badge: '03 / TACTICAL TELEMETRY',
                     title: 'Sub-Meter Precision & AI Coaching',
-                    description:
-                        'Military-grade GPS filtering, elevation splits, audio debriefs from your Tactical AI Coach, and true 1080p post-run share cards ready for your squad.',
-                    illustration: _AthleticPrecisionGraphic(pulse: _pulseController),
+                    description: 'Military-grade GPS filtering, elevation splits, audio debriefs from your Tactical AI Coach, and true 1080p post-run share cards ready for your squad.',
+                    illustration: _AthleticPrecisionGraphic(
+                      pulse: _pulseController,
+                    ),
                     statusPillText: 'AI COACH: "SPLIT AHEAD OF TARGET PACE"',
                     statusPillIcon: Icons.insights_rounded,
                   ),
@@ -215,7 +219,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                         width: isActive ? 24 : 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: isActive ? AppColors.accent : AppColors.disabled,
+                          color: isActive
+                              ? AppColors.accent
+                              : AppColors.disabled,
                           borderRadius: AppRadius.brFull,
                         ),
                       );
@@ -232,9 +238,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> with SingleTickerPr
                             label: 'Previous',
                             onPressed: _currentPage > 0
                                 ? () => _pageController.previousPage(
-                                      duration: const Duration(milliseconds: 300),
-                                      curve: Curves.easeOutCubic,
-                                    )
+                                    duration: const Duration(milliseconds: 300),
+                                    curve: Curves.easeOutCubic,
+                                  )
                                 : null,
                           ),
                         ),
@@ -301,7 +307,10 @@ class _SlideView extends StatelessWidget {
                     Positioned(
                       bottom: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surface2,
                           borderRadius: AppRadius.brFull,
@@ -314,7 +323,11 @@ class _SlideView extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(statusPillIcon, size: 14, color: AppColors.accent),
+                            Icon(
+                              statusPillIcon,
+                              size: 14,
+                              color: AppColors.accent,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               statusPillText,
@@ -343,7 +356,10 @@ class _SlideView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.accentContainer,
                       borderRadius: AppRadius.br8,
@@ -676,7 +692,8 @@ class _AthleticPrecisionPainter extends CustomPainter {
     final barHeights = [10.0, 22.0, 16.0, 28.0, 18.0, 12.0];
     final startX = center.dx - 22;
     for (int i = 0; i < barHeights.length; i++) {
-      final h = barHeights[i] * (0.7 + 0.3 * math.sin(progress * math.pi * 2 + i));
+      final h =
+          barHeights[i] * (0.7 + 0.3 * math.sin(progress * math.pi * 2 + i));
       final x = startX + i * 9.0;
       canvas.drawLine(
         Offset(x, center.dy + h / 2),

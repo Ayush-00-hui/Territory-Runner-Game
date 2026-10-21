@@ -24,19 +24,22 @@ void main() {
       expect(t.isAutoPaused, isFalse);
     });
 
-    test('tick increments both elapsed and moving seconds when not auto-paused', () {
-      notifier.tick(isAutoPaused: false);
-      notifier.tick(isAutoPaused: false);
+    test(
+      'tick increments both elapsed and moving seconds when not auto-paused',
+      () {
+        notifier.tick(isAutoPaused: false);
+        notifier.tick(isAutoPaused: false);
 
-      expect(notifier.value.elapsedSeconds, equals(2));
-      expect(notifier.value.movingSeconds, equals(2));
-      expect(notifier.value.isAutoPaused, isFalse);
-    });
+        expect(notifier.value.elapsedSeconds, equals(2));
+        expect(notifier.value.movingSeconds, equals(2));
+        expect(notifier.value.isAutoPaused, isFalse);
+      },
+    );
 
     test('tick increments only elapsed seconds when auto-paused', () {
       notifier.tick(isAutoPaused: false); // 1s moving
-      notifier.tick(isAutoPaused: true);  // 1s paused
-      notifier.tick(isAutoPaused: true);  // 1s paused
+      notifier.tick(isAutoPaused: true); // 1s paused
+      notifier.tick(isAutoPaused: true); // 1s paused
 
       expect(notifier.value.elapsedSeconds, equals(3));
       expect(notifier.value.movingSeconds, equals(1));

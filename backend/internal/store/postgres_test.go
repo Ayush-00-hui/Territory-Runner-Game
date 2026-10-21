@@ -957,4 +957,3 @@ func TestPostgres_PrivacyZonesPersistence(t *testing.T) {
 	require.NoError(t, err)
 	assert.Empty(t, retrieved3)
 }
-

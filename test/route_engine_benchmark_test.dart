@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:territory_runner/features/routing/route_service.dart';
@@ -10,19 +11,31 @@ void main() {
   const double targetBudgetKm = 3.0; // 3km target run
 
   group('Route Recommendation Engine Benchmarks', () {
-    test('RouteService produces a closed valid loop within distance budget', () {
-      final SuggestedRoute route = routeService.suggestRoute(
-        currentLocation: startPos,
-        targetDistanceKm: targetBudgetKm,
-      );
+    test(
+      'RouteService produces a closed valid loop within distance budget',
+      () {
+        final SuggestedRoute route = routeService.suggestRoute(
+          currentLocation: startPos,
+          targetDistanceKm: targetBudgetKm,
+        );
 
-      expect(route.polyline.length, greaterThanOrEqualTo(3));
-      // First and last point should form a closed loop
-      expect(route.polyline.first.latitude, equals(route.polyline.last.latitude));
-      expect(route.polyline.first.longitude, equals(route.polyline.last.longitude));
-      expect(route.totalDistanceKm, lessThanOrEqualTo(targetBudgetKm * 1.15)); // Within 15% tolerance
-      expect(route.estimatedNewTerritoryAreaSqM, greaterThan(1000.0));
-    });
+        expect(route.polyline.length, greaterThanOrEqualTo(3));
+        // First and last point should form a closed loop
+        expect(
+          route.polyline.first.latitude,
+          equals(route.polyline.last.latitude),
+        );
+        expect(
+          route.polyline.first.longitude,
+          equals(route.polyline.last.longitude),
+        );
+        expect(
+          route.totalDistanceKm,
+          lessThanOrEqualTo(targetBudgetKm * 1.15),
+        ); // Within 15% tolerance
+        expect(route.estimatedNewTerritoryAreaSqM, greaterThan(1000.0));
+      },
+    );
 
     test('Benchmark: AI Biased Route Loop vs Random Walks on Polygon Area', () {
       final SuggestedRoute aiRoute = routeService.suggestRoute(
@@ -35,7 +48,9 @@ void main() {
       // Simulate N=20 random walk closed loops of equivalent distance budget
       const int numRandomWalks = 20;
       double totalRandomAreaSqM = 0.0;
-      final math.Random rng = math.Random(42); // Seeded for deterministic reproducible benchmarks
+      final math.Random rng = math.Random(
+        42,
+      ); // Seeded for deterministic reproducible benchmarks
 
       for (int i = 0; i < numRandomWalks; i++) {
         final List<LatLng> randomLoop = [startPos];
@@ -54,28 +69,39 @@ void main() {
         }
         randomLoop.add(startPos); // close loop
 
-        final double randomArea = PolygonEnclosureEngine.computeGeodesicShoelaceArea(randomLoop);
+        final double randomArea =
+            PolygonEnclosureEngine.computeGeodesicShoelaceArea(randomLoop);
         totalRandomAreaSqM += randomArea;
       }
 
       final double avgRandomAreaSqM = totalRandomAreaSqM / numRandomWalks;
-      final double percentImprovement = ((aiAreaSqM - avgRandomAreaSqM) / (avgRandomAreaSqM > 0 ? avgRandomAreaSqM : 1)) * 100.0;
+      final double percentImprovement =
+          ((aiAreaSqM - avgRandomAreaSqM) /
+              (avgRandomAreaSqM > 0 ? avgRandomAreaSqM : 1)) *
+          100.0;
 
       // ignore: avoid_print
       print('====================================================');
       // ignore: avoid_print
       print('ROUTE ENGINE BENCHMARK RESULTS:');
       // ignore: avoid_print
-      print('AI Biased Loop Area  : ${aiAreaSqM.toStringAsFixed(0)} m² (${aiRoute.totalDistanceKm.toStringAsFixed(2)} km)');
+      print(
+        'AI Biased Loop Area  : ${aiAreaSqM.toStringAsFixed(0)} m² (${aiRoute.totalDistanceKm.toStringAsFixed(2)} km)',
+      );
       // ignore: avoid_print
       print('Average Random Walk  : ${avgRandomAreaSqM.toStringAsFixed(0)} m²');
       // ignore: avoid_print
-      print('AI Route Improvement : +${percentImprovement.toStringAsFixed(1)}% new ground enclosed');
+      print(
+        'AI Route Improvement : +${percentImprovement.toStringAsFixed(1)}% new ground enclosed',
+      );
       // ignore: avoid_print
       print('====================================================');
 
-      expect(aiAreaSqM, greaterThan(avgRandomAreaSqM),
-          reason: 'AI route recommendation should outperform unguided random loops in territory acquisition');
+      expect(
+        aiAreaSqM,
+        greaterThan(avgRandomAreaSqM),
+        reason: 'AI route recommendation should outperform unguided random loops in territory acquisition',
+      );
     });
   });
 }

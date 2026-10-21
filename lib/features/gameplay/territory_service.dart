@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:clipper2/clipper2.dart';
+
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
 import '../../services/firebase_service.dart';
@@ -14,14 +16,19 @@ class TerritoryService {
   static final TerritoryService _instance = TerritoryService._internal();
   factory TerritoryService() => _instance;
 
-  Box<Territory>? get _territoryBox => Hive.isBoxOpen('territories_v3') ? Hive.box<Territory>('territories_v3') : null;
-  Box<RunnerProfile>? get _profileBox => Hive.isBoxOpen('profile') ? Hive.box<RunnerProfile>('profile') : null;
+  Box<Territory>? get _territoryBox => Hive.isBoxOpen('territories_v3')
+      ? Hive.box<Territory>('territories_v3')
+      : null;
+  Box<RunnerProfile>? get _profileBox =>
+      Hive.isBoxOpen('profile') ? Hive.box<RunnerProfile>('profile') : null;
   final FirebaseService _firebaseService = FirebaseService();
 
-  final StreamController<Territory> _captureEventController = StreamController<Territory>.broadcast();
+  final StreamController<Territory> _captureEventController =
+      StreamController<Territory>.broadcast();
   Stream<Territory> get onTerritoryCaptured => _captureEventController.stream;
 
-  static const double _coordScale = 10000000.0; // 1e7 for high-precision GPS integer clipping
+  static const double _coordScale =
+      10000000.0; // 1e7 for high-precision GPS integer clipping
 
   /// Smallest amount of genuinely new area (m²) that counts as a claim.
   /// Prevents farming XP by re-running loops inside land you already own.
@@ -58,7 +65,8 @@ class TerritoryService {
         // 'poly_' prefix and may legitimately have any vertex count (including 6),
         // so they must never be deleted here.
         final bool isPolygonTerritory = t.id.startsWith('poly_');
-        final bool isLegacyHex = t.id.startsWith('hex_') ||
+        final bool isLegacyHex =
+            t.id.startsWith('hex_') ||
             RegExp(r'^8[0-9a-f]{14}$').hasMatch(t.id);
         if (!isPolygonTerritory && isLegacyHex) {
           keysToDelete.add(key);
@@ -93,13 +101,20 @@ class TerritoryService {
   /// Helper: converts LatLng list to Clipper2 Path64
   static Path64 latLngsToPath64(List<LatLng> points) {
     return points
-        .map((p) => Point64((p.longitude * _coordScale).round(), (p.latitude * _coordScale).round()))
+        .map(
+          (p) => Point64(
+            (p.longitude * _coordScale).round(),
+            (p.latitude * _coordScale).round(),
+          ),
+        )
         .toList();
   }
 
   /// Helper: converts Clipper2 Path64 to LatLng list
   static List<LatLng> path64ToLatLngs(Path64 path) {
-    return path.map((pt) => LatLng(pt.y / _coordScale, pt.x / _coordScale)).toList();
+    return path
+        .map((pt) => LatLng(pt.y / _coordScale, pt.x / _coordScale))
+        .toList();
   }
 
   /// Returns active runner profile
@@ -179,7 +194,9 @@ class TerritoryService {
           )
         : [newPath64];
 
-    final List<List<LatLng>> mergedMultiPolys = mergedPaths.map(path64ToLatLngs).toList();
+    final List<List<LatLng>> mergedMultiPolys = mergedPaths
+        .map(path64ToLatLngs)
+        .toList();
     final double previousTotalAreaSqM = playerExistingTerritories.fold(
       0.0,
       (acc, t) => acc + t.areaSqMeters,
@@ -200,7 +217,9 @@ class TerritoryService {
       ownerId: activeOwner,
       polygon: mergedMultiPolys.isNotEmpty ? mergedMultiPolys.first : polygon,
       polygons: mergedMultiPolys,
-      areaSqMeters: totalUnifiedAreaSqM > 0 ? totalUnifiedAreaSqM : areaSqMeters,
+      areaSqMeters: totalUnifiedAreaSqM > 0
+          ? totalUnifiedAreaSqM
+          : areaSqMeters,
       capturedAt: DateTime.now(),
       lastDefendedAt: DateTime.now(),
       strength: Territory.defaultInitialStrength,
@@ -238,9 +257,14 @@ class TerritoryService {
           if (box != null) {
             await box.delete(rival.id);
           }
-          AppLogger.info('Rival territory ${rival.id} completely conquered by $activeOwner', tag: 'TerritoryService');
+          AppLogger.info(
+            'Rival territory ${rival.id} completely conquered by $activeOwner',
+            tag: 'TerritoryService',
+          );
         } else {
-          final List<List<LatLng>> clippedMultiPolys = clippedRivalPaths.map(path64ToLatLngs).toList();
+          final List<List<LatLng>> clippedMultiPolys = clippedRivalPaths
+              .map(path64ToLatLngs)
+              .toList();
           final double remainingArea = _netAreaOf(clippedMultiPolys);
           final double lostByRival = rival.areaSqMeters - remainingArea;
 
@@ -259,7 +283,10 @@ class TerritoryService {
             if (box != null) {
               await box.delete(rival.id);
             }
-            AppLogger.info('Weak rival territory ${rival.id} completely collapsed (<50m²)', tag: 'TerritoryService');
+            AppLogger.info(
+              'Weak rival territory ${rival.id} completely collapsed (<50m²)',
+              tag: 'TerritoryService',
+            );
           } else {
             final double currentRivalStrength = rival.computeCurrentStrength();
             final updatedRival = rival.copyWith(
@@ -272,7 +299,10 @@ class TerritoryService {
             if (box != null) {
               await box.put(rival.id, updatedRival);
             }
-            AppLogger.debug('Rival territory ${rival.id} clipped to ${remainingArea.toStringAsFixed(1)} m² (strength: ${updatedRival.strength.toStringAsFixed(0)}%)', tag: 'TerritoryService');
+            AppLogger.debug(
+              'Rival territory ${rival.id} clipped to ${remainingArea.toStringAsFixed(1)} m² (strength: ${updatedRival.strength.toStringAsFixed(0)}%)',
+              tag: 'TerritoryService',
+            );
           }
         }
       }
@@ -326,13 +356,27 @@ class TerritoryService {
     const double deltaLng = 0.0022;
 
     final rivalPolygon = [
-      LatLng(center.latitude + deltaLat * 0.2, center.longitude + deltaLng * 0.1),
-      LatLng(center.latitude + deltaLat * 1.2, center.longitude + deltaLng * 0.1),
-      LatLng(center.latitude + deltaLat * 1.2, center.longitude + deltaLng * 1.3),
-      LatLng(center.latitude + deltaLat * 0.2, center.longitude + deltaLng * 1.3),
+      LatLng(
+        center.latitude + deltaLat * 0.2,
+        center.longitude + deltaLng * 0.1,
+      ),
+      LatLng(
+        center.latitude + deltaLat * 1.2,
+        center.longitude + deltaLng * 0.1,
+      ),
+      LatLng(
+        center.latitude + deltaLat * 1.2,
+        center.longitude + deltaLng * 1.3,
+      ),
+      LatLng(
+        center.latitude + deltaLat * 0.2,
+        center.longitude + deltaLng * 1.3,
+      ),
     ];
 
-    final area = PolygonEnclosureEngine.computeGeodesicShoelaceArea(rivalPolygon);
+    final area = PolygonEnclosureEngine.computeGeodesicShoelaceArea(
+      rivalPolygon,
+    );
     const rivalOwner = 'rival_crimson_runner_99';
     const territoryId = 'poly_rival_crimson_sector';
 
@@ -371,14 +415,21 @@ class TerritoryService {
       await box.put(territoryId, defended);
       _captureEventController.add(defended);
       unawaited(_firebaseService.syncTerritoryToCloud(defended));
-      AppLogger.info('Territory $territoryId fortified to 100% defense!', tag: 'TerritoryService');
+      AppLogger.info(
+        'Territory $territoryId fortified to 100% defense!',
+        tag: 'TerritoryService',
+      );
       return defended;
     }
     return null;
   }
 
   /// Manually degrades territory strength for testing and Viva demonstrations
-  Future<Territory?> simulateDecay(String ownerId, {double targetStrength = 20.0, int daysAgo = 5}) async {
+  Future<Territory?> simulateDecay(
+    String ownerId, {
+    double targetStrength = 20.0,
+    int daysAgo = 5,
+  }) async {
     final box = _territoryBox;
     if (box == null) return null;
     final territoryId = 'poly_${ownerId}_territory';
@@ -390,13 +441,16 @@ class TerritoryService {
       );
       await box.put(territoryId, decayed);
       _captureEventController.add(decayed);
-      AppLogger.debug('Territory $territoryId simulated decay: $targetStrength% (defended $daysAgo days ago)', tag: 'TerritoryService');
+      AppLogger.debug(
+        'Territory $territoryId simulated decay: $targetStrength% (defended $daysAgo days ago)',
+        tag: 'TerritoryService',
+      );
       return decayed;
     }
     return null;
   }
 
   /// Listen to changes in territories to update UI in real-time
-  Stream<BoxEvent> get territoryStream => _territoryBox?.watch() ?? const Stream.empty();
+  Stream<BoxEvent> get territoryStream =>
+      _territoryBox?.watch() ?? const Stream.empty();
 }
-

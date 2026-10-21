@@ -1,7 +1,10 @@
 import 'dart:async';
+
 import 'package:audioplayers/audioplayers.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../core/logging/app_logger.dart';
+
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -46,11 +49,14 @@ class SafetyService {
       final prefs = await SharedPreferences.getInstance();
       _contactName = prefs.getString(_prefContactName) ?? '';
       _contactPhone = prefs.getString(_prefContactPhone) ?? '';
-      _customMessage = prefs.getString(_prefCustomMessage) ??
-          'EMERGENCY: I am running and need assistance. My current GPS coordinates are:';
+      _customMessage = prefs.getString(_prefCustomMessage) ?? 'EMERGENCY: I am running and need assistance. My current GPS coordinates are:';
       _isLoaded = true;
     } catch (e) {
-      AppLogger.error('Error loading safety settings: $e', tag: 'SafetyService', error: e);
+      AppLogger.error(
+        'Error loading safety settings: $e',
+        tag: 'SafetyService',
+        error: e,
+      );
     }
   }
 
@@ -72,7 +78,11 @@ class SafetyService {
       await prefs.setString(_prefContactPhone, _contactPhone);
       await prefs.setString(_prefCustomMessage, _customMessage);
     } catch (e) {
-      AppLogger.error('Error saving safety settings: $e', tag: 'SafetyService', error: e);
+      AppLogger.error(
+        'Error saving safety settings: $e',
+        tag: 'SafetyService',
+        error: e,
+      );
     }
   }
 
@@ -84,7 +94,11 @@ class SafetyService {
         return await launchUrl(uri);
       }
     } catch (e) {
-      AppLogger.error('Failed to dial emergency services: $e', tag: 'SafetyService', error: e);
+      AppLogger.error(
+        'Failed to dial emergency services: $e',
+        tag: 'SafetyService',
+        error: e,
+      );
     }
     return false;
   }
@@ -93,8 +107,10 @@ class SafetyService {
   Future<bool> sendEmergencySms({required LatLng position}) async {
     if (!_isLoaded) await loadSettings();
 
-    final locationUrl = 'https://maps.google.com/?q=${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
-    final body = '$_customMessage\n$locationUrl\n(Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)})';
+    final locationUrl =
+        'https://maps.google.com/?q=${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+    final body =
+        '$_customMessage\n$locationUrl\n(Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)})';
 
     final query = Uri.encodeComponent(body);
     final phone = _contactPhone.isNotEmpty ? _contactPhone : '';
@@ -105,25 +121,27 @@ class SafetyService {
         return await launchUrl(uri);
       }
     } catch (e) {
-      AppLogger.error('Failed to launch SMS composer: $e', tag: 'SafetyService', error: e);
+      AppLogger.error(
+        'Failed to launch SMS composer: $e',
+        tag: 'SafetyService',
+        error: e,
+      );
     }
     return false;
   }
 
   /// Shares current GPS coordinates and map link via standard system share sheet
   Future<void> shareLiveLocation({required LatLng position}) async {
-    final locationUrl = 'https://maps.google.com/?q=${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
-    final text = '🚨 TACTICAL DISTRESS BEACON — Territory Runner\n'
+    final locationUrl =
+        'https://maps.google.com/?q=${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+    final text =
+        '🚨 TACTICAL DISTRESS BEACON — Territory Runner\n'
         'My current GPS location:\n$locationUrl\n'
         'Latitude: ${position.latitude.toStringAsFixed(6)}\n'
         'Longitude: ${position.longitude.toStringAsFixed(6)}\n'
         'Time: ${DateTime.now().toUtc().toIso8601String()}';
 
-    await SharePlus.instance.share(
-      ShareParams(
-        text: text,
-      ),
-    );
+    await SharePlus.instance.share(ShareParams(text: text));
   }
 
   /// Triggers a loud tactical audio siren beacon to deter threats or alert passersby
@@ -136,7 +154,11 @@ class SafetyService {
       await _sirenPlayer!.setVolume(1.0);
       await _sirenPlayer!.play(AssetSource('audio/sos_siren.wav'));
     } catch (e) {
-      AppLogger.error('Error playing tactical siren: $e', tag: 'SafetyService', error: e);
+      AppLogger.error(
+        'Error playing tactical siren: $e',
+        tag: 'SafetyService',
+        error: e,
+      );
     }
   }
 
@@ -148,7 +170,11 @@ class SafetyService {
         await _sirenPlayer!.stop();
       }
     } catch (e) {
-      AppLogger.error('Error stopping tactical siren: $e', tag: 'SafetyService', error: e);
+      AppLogger.error(
+        'Error stopping tactical siren: $e',
+        tag: 'SafetyService',
+        error: e,
+      );
     }
   }
 }

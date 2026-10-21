@@ -10,13 +10,13 @@ type LatLng struct {
 
 // TrackPoint represents a single GPS breadcrumb recorded during a run.
 type TrackPoint struct {
-	Latitude   float64   `json:"latitude"`
-	Longitude  float64   `json:"longitude"`
-	Timestamp  time.Time `json:"timestamp"`
-	Altitude   float64   `json:"altitude,omitempty"`
-	Speed      float64   `json:"speed,omitempty"`
-	Heading    float64   `json:"heading,omitempty"`
-	IsMocked   bool      `json:"is_mocked,omitempty"`
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
+	Timestamp time.Time `json:"timestamp"`
+	Altitude  float64   `json:"altitude,omitempty"`
+	Speed     float64   `json:"speed,omitempty"`
+	Heading   float64   `json:"heading,omitempty"`
+	IsMocked  bool      `json:"is_mocked,omitempty"`
 }
 
 // ToLatLng converts TrackPoint to LatLng.

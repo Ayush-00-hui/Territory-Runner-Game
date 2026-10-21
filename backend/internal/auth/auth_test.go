@@ -256,4 +256,3 @@ func TestDevAuthMode_AcceptsDevUserQueryParam(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "uid_developer", uid2)
 }
-

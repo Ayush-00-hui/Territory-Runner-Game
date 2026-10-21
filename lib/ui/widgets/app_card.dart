@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../motion/motion.dart';
@@ -53,10 +54,12 @@ class _AppCardState extends State<AppCard> {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveBorder = widget.border ??
-        Border.all(color: AppColors.borderSubtle, width: 1.0);
+    final effectiveBorder =
+        widget.border ?? Border.all(color: AppColors.borderSubtle, width: 1.0);
     final effectiveRadius = widget.borderRadius ?? AppRadius.br16;
-    final scale = (widget.onTap != null && _isPressed) ? AppMotion.pressScale : 1.0;
+    final scale = (widget.onTap != null && _isPressed)
+        ? AppMotion.pressScale
+        : 1.0;
 
     final container = AnimatedContainer(
       duration: AppMotion.duration(context, AppMotion.fast),
