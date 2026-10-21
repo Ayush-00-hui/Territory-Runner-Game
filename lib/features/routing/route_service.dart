@@ -28,8 +28,8 @@ class SuggestedRoute {
     this.targetAreaSqM = 0.0,
     this.isOffline = false,
     int? estimatedDurationMinutes,
-  }) : _estimatedDurationMinutes =
-           estimatedDurationMinutes; // ignore: prefer_initializing_formals
+    // ignore: prefer_initializing_formals
+  }) : _estimatedDurationMinutes = estimatedDurationMinutes;
 
   int get estimatedDurationMinutes =>
       _estimatedDurationMinutes ??

@@ -2002,8 +2002,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             ValueListenableBuilder<bool>(
               valueListenable: _batterySaverService.isAmoledHudActiveNotifier,
               builder: (context, isAmoledActive, _) {
-                if (!isAmoledActive || !_isRunActive)
+                if (!isAmoledActive || !_isRunActive) {
                   return const SizedBox.shrink();
+                }
                 return ValueListenableBuilder<RunTelemetry>(
                   valueListenable: _telemetryNotifier,
                   builder: (context, telemetry, _) {

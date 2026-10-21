@@ -43,10 +43,8 @@ class PolygonEnclosureEngine {
   final double? maxSpeedKmhOutlier; // Explicit outlier ceiling override
   final double
   maxSignalGapSeconds; // Max gap before track segmentation (default: 15s)
-  final double
-  maxPauseDisplacementMeters; // Max straight-line displacement across gap to treat as pause (default: 50m)
-  final double
-  maxPauseDurationSeconds; // Max pause duration before reset (default: 600s / 10 min)
+  final double maxPauseDisplacementMeters; // Max straight-line displacement across gap to treat as pause (default: 50m)
+  final double maxPauseDurationSeconds; // Max pause duration before reset (default: 600s / 10 min)
   ExerciseActivityType? activityType; // Activity mode calibrating thresholds
 
   /// Rejection messages matching Go backend's errors.
@@ -93,8 +91,9 @@ class PolygonEnclosureEngine {
   /// Authoritative perimeter threshold (meters) for the active exercise modality:
   /// Walking: 40m, Running: 60m, Cycling: 150m
   double get effectiveMinLoopDistanceMeters {
-    if (_minLoopDistanceMetersOverride != null)
+    if (_minLoopDistanceMetersOverride != null) {
       return _minLoopDistanceMetersOverride;
+    }
     switch (activityType ?? ExerciseActivityType.running) {
       case ExerciseActivityType.walking:
         return 40.0;
@@ -108,8 +107,9 @@ class PolygonEnclosureEngine {
   /// Authoritative loop area threshold (m²) for the active exercise modality:
   /// Walking: 100 m², Running: 200 m², Cycling: 1000 m²
   double get effectiveMinLoopAreaSqMeters {
-    if (_minLoopAreaSqMetersOverride != null)
+    if (_minLoopAreaSqMetersOverride != null) {
       return _minLoopAreaSqMetersOverride;
+    }
     switch (activityType ?? ExerciseActivityType.running) {
       case ExerciseActivityType.walking:
         return 100.0;
@@ -521,8 +521,9 @@ class PolygonEnclosureEngine {
       final p1 = polygon[i];
       final p2 = polygon[i + 1];
       for (int j = i + 2; j < n - 1; j++) {
-        if (i == 0 && j == n - 2)
+        if (i == 0 && j == n - 2) {
           continue; // Ignore shared start-end vertex in closed ring
+        }
         final p3 = polygon[j];
         final p4 = polygon[j + 1];
         if (doSegmentsIntersect(p1, p2, p3, p4)) {

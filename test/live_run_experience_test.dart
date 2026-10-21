@@ -152,7 +152,8 @@ void main() {
         expect(
           toastInvocationCount,
           equals(1),
-          reason: 'Consecutive tick with same rejection must not duplicate toast',
+          reason:
+              'Consecutive tick with same rejection must not duplicate toast',
         );
       },
     );

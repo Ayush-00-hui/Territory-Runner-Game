@@ -177,29 +177,35 @@ void main() {
       },
     );
 
-    test('Rejection reason is cleared at start of subsequent addPosition call', () {
-      final engine = PolygonEnclosureEngine();
-      final t0 = DateTime(2026, 10, 20, 10, 0, 0);
-      final p1 = LatLng(51.5000, -0.1200);
-      final p2 = LatLng(51.5009, -0.1200);
-      engine.addPosition(p1, t0);
-      engine.addPosition(p2, t0.add(const Duration(seconds: 10)));
+    test(
+      'Rejection reason is cleared at start of subsequent addPosition call',
+      () {
+        final engine = PolygonEnclosureEngine();
+        final t0 = DateTime(2026, 10, 20, 10, 0, 0);
+        final p1 = LatLng(51.5000, -0.1200);
+        final p2 = LatLng(51.5009, -0.1200);
+        engine.addPosition(p1, t0);
+        engine.addPosition(p2, t0.add(const Duration(seconds: 10)));
 
-      // Trigger gap rejection (> 50m jump after 30s gap)
-      final pJump = LatLng(51.5009, -0.1214);
-      engine.addPosition(pJump, t0.add(const Duration(seconds: 40)));
-      expect(engine.lastInvalidReason, equals(PolygonEnclosureEngine.signalGapReason));
+        // Trigger gap rejection (> 50m jump after 30s gap)
+        final pJump = LatLng(51.5009, -0.1214);
+        engine.addPosition(pJump, t0.add(const Duration(seconds: 40)));
+        expect(
+          engine.lastInvalidReason,
+          equals(PolygonEnclosureEngine.signalGapReason),
+        );
 
-      // Subsequent normal tick within valid parameters
-      final pNormal = LatLng(51.5009, -0.1216);
-      engine.addPosition(pNormal, t0.add(const Duration(seconds: 43)));
+        // Subsequent normal tick within valid parameters
+        final pNormal = LatLng(51.5009, -0.1216);
+        engine.addPosition(pNormal, t0.add(const Duration(seconds: 43)));
 
-      // MUST be cleared! Reason should only be exposed for the call that produced it.
-      expect(
-        engine.lastInvalidReason,
-        isNull,
-        reason: 'Rejection reason must be cleared on the next call if no rejection occurred',
-      );
-    });
+        // MUST be cleared! Reason should only be exposed for the call that produced it.
+        expect(
+          engine.lastInvalidReason,
+          isNull,
+          reason: 'Rejection reason must be cleared on the next call if no rejection occurred',
+        );
+      },
+    );
   });
 }

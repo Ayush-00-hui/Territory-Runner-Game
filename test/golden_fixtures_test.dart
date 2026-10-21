@@ -501,10 +501,12 @@ void main() {
       expect(
         event,
         isNotNull,
-        reason: 'Pause <= 50m displacement must not reset path; loop must close',
+        reason:
+            'Pause <= 50m displacement must not reset path; loop must close',
       );
       final double expectedArea = (data['expected_area_sqm'] as num).toDouble();
-      final double tolerance = (data['area_tolerance_percent'] as num).toDouble();
+      final double tolerance = (data['area_tolerance_percent'] as num)
+          .toDouble();
       final double delta = (event!.areaSqMeters - expectedArea).abs();
       final double percentDiff = (delta / expectedArea) * 100.0;
       expect(percentDiff, lessThanOrEqualTo(tolerance));

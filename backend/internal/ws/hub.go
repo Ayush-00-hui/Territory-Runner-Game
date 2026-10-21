@@ -131,20 +131,20 @@ func NewHub(logger *slog.Logger, opts ...Option) *Hub {
 	h := &Hub{
 		clients:             make(map[*Client]bool),
 		userClients:         make(map[string]map[*Client]bool),
-		userPrivacyZones:   make(map[string][]geo.PrivacyZoneEvaluator),
-		userVisibility:     make(map[string]string),
-		friendsCache:       make(map[string]*friendsCacheEntry),
-		friendsCacheTTL:    DefaultFriendsCacheTTL,
+		userPrivacyZones:    make(map[string][]geo.PrivacyZoneEvaluator),
+		userVisibility:      make(map[string]string),
+		friendsCache:        make(map[string]*friendsCacheEntry),
+		friendsCacheTTL:     DefaultFriendsCacheTTL,
 		recentRecipients:    make(map[string]map[string]time.Time),
 		recentRecipientsTTL: DefaultRecentRecipientsTTL,
-		broadcast:          make(chan []byte, 256),
-		register:           make(chan *Client),
-		unregister:         make(chan *Client),
-		logger:             logger,
-		stop:               make(chan struct{}),
-		presenceDelay:      5 * time.Second, // Default 5s privacy delay
-		maxConnsPerUser:    3,               // Max 3 connections per user
-		outboundBufferSize: 128,             // Default 128-slot outbound buffer per client
+		broadcast:           make(chan []byte, 256),
+		register:            make(chan *Client),
+		unregister:          make(chan *Client),
+		logger:              logger,
+		stop:                make(chan struct{}),
+		presenceDelay:       5 * time.Second, // Default 5s privacy delay
+		maxConnsPerUser:     3,               // Max 3 connections per user
+		outboundBufferSize:  128,             // Default 128-slot outbound buffer per client
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,

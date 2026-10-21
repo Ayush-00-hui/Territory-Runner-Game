@@ -752,4 +752,3 @@ func TestWebSocket_ConquestBroadcast_OnlyVictimsAndFriends(t *testing.T) {
 	_, strBytes, err := cStranger.ReadMessage()
 	assert.Error(t, err, "stranger should not receive conquest event, but received: %s", string(strBytes))
 }
-
