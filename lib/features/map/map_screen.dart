@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -7,6 +8,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+
 import '../../core/utils/constants.dart';
 import '../../services/location_service.dart';
 import '../../services/run_recovery_service.dart';
@@ -76,11 +78,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   StreamSubscription<String>? _wsRunnerLeftSub;
   StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
   StreamSubscription<ConquestBroadcastEvent>? _wsBroadcastSub;
-  
+
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
   StreamSubscription<String>? _notificationSub;
-  
+
   LatLng? _currentLocation;
   bool _isRunActive = false;
   int _lastAnnouncedKm = 0;
@@ -89,7 +91,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   // Phase 3 High-Performance State Notifiers
   final RunTelemetryNotifier _telemetryNotifier = RunTelemetryNotifier();
-  final ValueNotifier<LatLng?> _liveLocationNotifier = ValueNotifier<LatLng?>(null);
+  final ValueNotifier<LatLng?> _liveLocationNotifier = ValueNotifier<LatLng?>(
+    null,
+  );
   final ValueNotifier<int> _runPathUpdateNotifier = ValueNotifier<int>(0);
 
   // AI Route Suggestion State
@@ -120,6 +124,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   bool _isCameraFollowLocked = true;
   double? _distanceToClosureMeters;
   double? _proximityToClosure;
+  String? _lastShownRejectionReason;
   final FocusNode _keyboardFocusNode = FocusNode();
 
   // Crash/Kill recovery & GPS signal health state
@@ -134,9 +139,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     super.initState();
 
     // Listen to sync queue reconciliation delta toasts and authoritative rejections
-    SyncQueueService().reconciliationToastNotifier.addListener(_onReconciliationToast);
+    SyncQueueService().reconciliationToastNotifier.addListener(
+      _onReconciliationToast,
+    );
     SyncQueueService().lastRejectionNotifier.addListener(_onRunRejected);
-    
+
     // Listen for new territory captures
     _territorySub = _territoryService.territoryStream.listen((event) {
       if (mounted) {
@@ -145,7 +152,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     });
 
     // Listen for FCM notification deep links (e.g. attacked sector tapped)
-    _notificationSub = NotificationService().onAttackedTerritoryTapped.listen((territoryId) {
+    _notificationSub = NotificationService().onAttackedTerritoryTapped.listen((
+      territoryId,
+    ) {
       _focusOnAttackedTerritory(territoryId);
     });
 
@@ -169,7 +178,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (mounted) {
         setState(() {
           _activeRivalRunners[presence.userId] = presence;
-          final trail = _rivalBreadcrumbs.putIfAbsent(presence.userId, () => []);
+          final trail = _rivalBreadcrumbs.putIfAbsent(
+            presence.userId,
+            () => [],
+          );
           trail.add(presence.position);
           if (trail.length > 40) {
             trail.removeAt(0);
@@ -200,7 +212,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ),
           content: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: AppColors.rival, size: 28),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.rival,
+                size: 28,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -219,7 +235,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     const SizedBox(height: 2),
                     Text(
                       alert.message,
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -274,7 +293,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _gpsLivenessTimer?.cancel();
     WakelockPlus.disable();
     _rivalSimulationTimer?.cancel();
-    SyncQueueService().reconciliationToastNotifier.removeListener(_onReconciliationToast);
+    SyncQueueService().reconciliationToastNotifier.removeListener(
+      _onReconciliationToast,
+    );
     SyncQueueService().lastRejectionNotifier.removeListener(_onRunRejected);
     _runTimer?.cancel();
     _rivalPollingTimer?.cancel();
@@ -307,7 +328,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ),
           content: Text(
             msg,
-            style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold, fontSize: 12.5),
+            style: const TextStyle(
+              color: AppColors.accent,
+              fontWeight: FontWeight.bold,
+              fontSize: 12.5,
+            ),
           ),
         ),
       );
@@ -350,14 +375,26 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: AppColors.accent, width: 1.2)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+            side: const BorderSide(color: AppColors.accent, width: 1.2),
+          ),
           title: const Row(
             children: [
-              Icon(Icons.satellite_alt_rounded, color: AppColors.accent, size: 24),
+              Icon(
+                Icons.satellite_alt_rounded,
+                color: AppColors.accent,
+                size: 24,
+              ),
               SizedBox(width: 10),
               Text(
                 'TACTICAL HUD AUTHORIZATION',
-                style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.1),
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 15,
+                  letterSpacing: 1.1,
+                ),
               ),
             ],
           ),
@@ -367,7 +404,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             children: [
               const Text(
                 'Territory Runner requires High-Accuracy Geolocation to track running loops and enclose real-world sovereign territory polygons.',
-                style: TextStyle(color: AppColors.textSecondary, height: 1.4, fontSize: 13),
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                  fontSize: 13,
+                ),
               ),
               const SizedBox(height: 14),
               Container(
@@ -379,16 +420,31 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.gps_fixed_rounded, color: AppColors.accent, size: 16),
+                    Icon(
+                      Icons.gps_fixed_rounded,
+                      color: AppColors.accent,
+                      size: 16,
+                    ),
                     SizedBox(width: 8),
-                    Text('High-Accuracy GPS (Sub-meter)', style: TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text(
+                      'High-Accuracy GPS (Sub-meter)',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 10),
               const Text(
                 'If denied or restricted on desktop, the engine falls back gracefully to interactive simulation mode with W/A/S/D keyboard controls.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontStyle: FontStyle.italic),
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ],
           ),
@@ -402,7 +458,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               onPressed: () {
                 Navigator.of(ctx).pop();
               },
-              child: const Text('Start tracking', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              child: const Text(
+                'Start tracking',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
             ),
           ],
         ),
@@ -433,11 +492,20 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         ),
         title: const Row(
           children: [
-            Icon(Icons.history_toggle_off_rounded, color: AppColors.accent, size: 22),
+            Icon(
+              Icons.history_toggle_off_rounded,
+              color: AppColors.accent,
+              size: 22,
+            ),
             SizedBox(width: 8),
             Text(
               'RESUME RUN?',
-              style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.0),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+                letterSpacing: 1.0,
+              ),
             ),
           ],
         ),
@@ -447,7 +515,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           children: [
             Text(
               'An interrupted run with ${snapshot.distanceKm.toStringAsFixed(2)} km recorded was recovered from local cache.',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.4),
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                height: 1.4,
+              ),
             ),
             const SizedBox(height: 12),
             Container(
@@ -460,8 +532,21 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Distance: ${snapshot.distanceKm.toStringAsFixed(2)} km', style: const TextStyle(color: AppColors.textPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
-                  Text('${snapshot.coordinates.length} GPS Points', style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                  Text(
+                    'Distance: ${snapshot.distanceKm.toStringAsFixed(2)} km',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${snapshot.coordinates.length} GPS Points',
+                    style: const TextStyle(
+                      color: AppColors.textMuted,
+                      fontSize: 11,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -473,7 +558,14 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               Navigator.of(ctx).pop();
               _runRecoveryService.clearRecovery();
             },
-            child: const Text('Discard', style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600, fontSize: 12)),
+            child: const Text(
+              'Discard',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -485,7 +577,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               Navigator.of(ctx).pop();
               _resumeRun(snapshot);
             },
-            child: const Text('Resume run', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
+            child: const Text(
+              'Resume run',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -562,7 +657,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         }
 
         // Subscribe to spatial viewport cells for targeted real-time rival presence
-        final viewportCells = GeohashUtils.computeViewportCells(LatLng(pos.latitude, pos.longitude));
+        final viewportCells = GeohashUtils.computeViewportCells(
+          LatLng(pos.latitude, pos.longitude),
+        );
         _wsService.sendViewportSubscription(viewportCells);
 
         // Broadcast live kinematic presence to peers via WebSocket
@@ -580,13 +677,22 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     if (_currentLocation != null) {
       // Check for signal gaps & suppress unrealistic jumps across tunnels/indoor areas
       final now = pos.timestamp;
-      if (_lastGpsFixTime != null && GpsQualityService.isSignalGap(_lastGpsFixTime!, now)) {
+      if (_lastGpsFixTime != null &&
+          GpsQualityService.isSignalGap(_lastGpsFixTime!, now)) {
         if (_runCoordinates.isNotEmpty) {
           final lastCoord = _runCoordinates.last;
           final newCoord = LatLng(pos.latitude, pos.longitude);
-          final deltaSec = (now.difference(_lastGpsFixTime!).inMilliseconds / 1000.0).abs();
-          if (GpsQualityService.isUnrealisticJump(lastCoord, newCoord, deltaSec)) {
-            AppLogger.info('Suppressed unrealistic gap jump across signal loss', tag: 'MapScreen');
+          final deltaSec =
+              (now.difference(_lastGpsFixTime!).inMilliseconds / 1000.0).abs();
+          if (GpsQualityService.isUnrealisticJump(
+            lastCoord,
+            newCoord,
+            deltaSec,
+          )) {
+            AppLogger.info(
+              'Suppressed unrealistic gap jump across signal loss',
+              tag: 'MapScreen',
+            );
             _lastGpsFixTime = now;
             return;
           }
@@ -606,12 +712,14 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       // Rolling window for instantaneous split pace calculation
       _rollingPaceWindow.add(pos);
-      _rollingPaceWindow.removeWhere((p) => now.difference(p.timestamp).inSeconds > 15);
+      _rollingPaceWindow.removeWhere(
+        (p) => now.difference(p.timestamp).inSeconds > 15,
+      );
 
       if (_isRunActive) {
         _runCoordinates.add(_currentLocation!);
         _runPathUpdateNotifier.value++;
-        
+
         // Loop Proximity Meter calculation
         if (_polygonEngine.currentPath.length >= 3) {
           final start = _polygonEngine.currentPath.first;
@@ -622,7 +730,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             start.longitude,
           );
           _distanceToClosureMeters = dist;
-          _proximityToClosure = (1.0 - ((dist - 35.0) / (120.0 - 35.0))).clamp(0.0, 1.0);
+          _proximityToClosure = (1.0 - ((dist - 35.0) / (120.0 - 35.0))).clamp(
+            0.0,
+            1.0,
+          );
         } else {
           _distanceToClosureMeters = null;
           _proximityToClosure = null;
@@ -633,32 +744,45 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         if (loopEvent != null) {
           _distanceToClosureMeters = null;
           _proximityToClosure = null;
-          _territoryService.capturePolygonTerritory(
-            polygon: loopEvent.polygon,
-            areaSqMeters: loopEvent.areaSqMeters,
-          ).then((_) {
-            if (mounted) {
-              setState(() {});
-              _showCaptureOutcome();
-            }
-          });
+          _lastShownRejectionReason = null;
+          _territoryService
+              .capturePolygonTerritory(
+                polygon: loopEvent.polygon,
+                areaSqMeters: loopEvent.areaSqMeters,
+              )
+              .then((_) {
+                if (mounted) {
+                  setState(() {});
+                  _showCaptureOutcome();
+                }
+              });
         } else if (_polygonEngine.lastInvalidReason != null) {
-          AppToast.show(
-            context,
-            _polygonEngine.lastInvalidReason!,
-            type: AppToastType.warning,
-          );
+          if (_lastShownRejectionReason != _polygonEngine.lastInvalidReason) {
+            _lastShownRejectionReason = _polygonEngine.lastInvalidReason;
+            AppToast.show(
+              context,
+              _polygonEngine.lastInvalidReason!,
+              type: AppToastType.warning,
+            );
+          }
+        } else {
+          _lastShownRejectionReason = null;
         }
 
         // High-Precision Geodesic Metric Accumulation on WGS84
         if (_runCoordinates.length >= 2) {
           final p1 = _runCoordinates[_runCoordinates.length - 2];
           final p2 = _runCoordinates.last;
-          final double segmentMeters = Geolocator.distanceBetween(p1.latitude, p1.longitude, p2.latitude, p2.longitude);
-          
+          final double segmentMeters = Geolocator.distanceBetween(
+            p1.latitude,
+            p1.longitude,
+            p2.latitude,
+            p2.longitude,
+          );
+
           _runDistanceKm += (segmentMeters / 1000.0);
           _checkGoalCompletion();
-          
+
           final int currentKmFloor = _runDistanceKm.floor();
           if (currentKmFloor > _lastAnnouncedKm && currentKmFloor >= 1) {
             _lastAnnouncedKm = currentKmFloor;
@@ -670,7 +794,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 duration: const Duration(seconds: 4),
                 content: Text(
                   '🏁 MILESTONE: $currentKmFloor.0 KM COMPLETED • Split Pace: ${_computeCurrentSplitPace()}',
-                  style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: AppColors.accent,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             );
@@ -690,7 +817,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         pLast.latitude,
         pLast.longitude,
       );
-      final double deltaSec = (pLast.timestamp.difference(pFirst.timestamp).inMilliseconds / 1000.0).abs();
+      final double deltaSec =
+          (pLast.timestamp.difference(pFirst.timestamp).inMilliseconds / 1000.0)
+              .abs();
       if (distMeters >= 5.0 && deltaSec > 1.0) {
         final double speedMps = distMeters / deltaSec;
         if (speedMps > 0.3) {
@@ -734,11 +863,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _territoriesClaimedThisRun++;
     });
     AppMotion.heavyBurst();
-    LoopCelebrationOverlay.show(
-      context,
-      areaSqMeters: claimed,
-      xpAwarded: xp,
-    );
+    LoopCelebrationOverlay.show(context, areaSqMeters: claimed, xpAwarded: xp);
     _appPrefs.triggerLoopClosedHaptic();
   }
 
@@ -754,25 +879,25 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
     final loopEvent = _polygonEngine.sealCurrentPath();
     if (loopEvent != null) {
-      _territoryService.capturePolygonTerritory(
-        polygon: loopEvent.polygon,
-        areaSqMeters: loopEvent.areaSqMeters,
-      ).then((_) {
-        if (mounted) {
-          setState(() {
-            _distanceToClosureMeters = null;
-            _proximityToClosure = null;
+      _territoryService
+          .capturePolygonTerritory(
+            polygon: loopEvent.polygon,
+            areaSqMeters: loopEvent.areaSqMeters,
+          )
+          .then((_) {
+            if (mounted) {
+              setState(() {
+                _distanceToClosureMeters = null;
+                _proximityToClosure = null;
+              });
+              _showCaptureOutcome();
+            }
           });
-          _showCaptureOutcome();
-        }
-      });
     } else {
-      final errorMsg = _polygonEngine.lastInvalidReason ?? 'Need at least 3 GPS path points to seal a domain shape';
-      AppToast.show(
-        context,
-        errorMsg,
-        type: AppToastType.warning,
-      );
+      final errorMsg =
+          _polygonEngine.lastInvalidReason ??
+          'Need at least 3 GPS path points to seal a domain shape';
+      AppToast.show(context, errorMsg, type: AppToastType.warning);
     }
   }
 
@@ -793,8 +918,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             side: const BorderSide(color: AppColors.gold, width: 1.2),
           ),
           content: Text(
-            goal.isActive ? '🎯 Target set: ${goal.title}' : 'Exploration mode: Open run',
-            style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
+            goal.isActive
+                ? '🎯 Target set: ${goal.title}'
+                : 'Exploration mode: Open run',
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       );
@@ -803,7 +933,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _checkGoalCompletion() {
     if (_isRunActive && _activeGoal.isActive && !_goalCompletedAnnounced) {
-      final currentMoving = _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds;
+      final currentMoving = _movingDurationSeconds > 0
+          ? _movingDurationSeconds
+          : _elapsedDurationSeconds;
       final progress = _activeGoal.computeProgress(
         currentDistanceKm: _runDistanceKm,
         currentDurationSeconds: currentMoving,
@@ -825,12 +957,20 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             ),
             content: Row(
               children: [
-                const Icon(Icons.emoji_events_rounded, color: AppColors.gold, size: 24),
+                const Icon(
+                  Icons.emoji_events_rounded,
+                  color: AppColors.gold,
+                  size: 24,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     '🎯 TARGET ACCOMPLISHED!\n${_activeGoal.title} completed.',
-                    style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ],
@@ -875,7 +1015,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           _runRecoveryService.saveActiveRun(
             positions: List<Position>.from(_recentPositions),
             coordinates: List<LatLng>.from(_runCoordinates),
-            startTime: DateTime.now().subtract(Duration(seconds: _elapsedDurationSeconds)),
+            startTime: DateTime.now().subtract(
+              Duration(seconds: _elapsedDurationSeconds),
+            ),
             elapsedDurationSeconds: _elapsedDurationSeconds,
             movingDurationSeconds: _movingDurationSeconds,
             distanceKm: _runDistanceKm,
@@ -892,6 +1034,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     if (!_isRunActive) {
       // START RUN
       _polygonEngine.clear();
+      _lastShownRejectionReason = null;
       _polygonEngine.setActivityType(_selectedActivity);
       _runCoordinates.clear();
       _rollingPaceWindow.clear();
@@ -934,7 +1077,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _locationService.setTrackingMode(GpsTrackingMode.idle);
       _telemetryNotifier.setRunActive(false);
 
-      final int finalSeconds = _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds;
+      final int finalSeconds = _movingDurationSeconds > 0
+          ? _movingDurationSeconds
+          : _elapsedDurationSeconds;
       final double finalDistance = _runDistanceKm;
       final int finalTerritories = _territoriesClaimedThisRun;
 
@@ -942,6 +1087,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       setState(() {
         _isRunActive = false;
         _isAutoPaused = false;
+        _lastShownRejectionReason = null;
         _highlightedTerritoryId = null;
         _activeSuggestedRoute = null;
       });
@@ -968,7 +1114,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         profile: _territoryService.getProfile(),
         coachService: _coachService,
         routePoints: List<LatLng>.from(_runCoordinates),
-        areaSqMeters: _accumulatedRunPreviewArea > 0 ? _accumulatedRunPreviewArea : null,
+        areaSqMeters: _accumulatedRunPreviewArea > 0
+            ? _accumulatedRunPreviewArea
+            : null,
       );
     }
   }
@@ -989,7 +1137,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             _mapController.fitCamera(
               CameraFit.coordinates(
                 coordinates: route.polyline,
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 80,
+                ),
               ),
             );
           } catch (_) {}
@@ -1022,7 +1173,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         ),
         content: Row(
           children: [
-            const Icon(Icons.navigation_rounded, color: AppColors.secondary, size: 20),
+            const Icon(
+              Icons.navigation_rounded,
+              color: AppColors.secondary,
+              size: 20,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -1072,13 +1227,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           backgroundColor: AppColors.surface,
           content: Text(
             'AI Route synthesized: ${route.totalDistanceKm.toStringAsFixed(1)}km (~${route.estimatedNewTerritoryAreaSqM.toStringAsFixed(0)} m² new area)',
-            style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: AppColors.accent,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       );
     }
   }
-
 
   Future<void> _fetchVisibleRivals() async {
     if (!mounted || _currentLocation == null) return;
@@ -1099,7 +1256,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
       if (mounted) setState(() {});
     } catch (e) {
-      AppLogger.warning('Error polling rival territories: $e', tag: 'MapScreen');
+      AppLogger.warning(
+        'Error polling rival territories: $e',
+        tag: 'MapScreen',
+      );
     }
   }
 
@@ -1113,7 +1273,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         duration: const Duration(seconds: 2),
         content: Text(
           'Location: ${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)} (Total owned: ${area.toStringAsFixed(0)} m²)',
-          style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: AppColors.accent,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
@@ -1129,13 +1292,17 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.keyW || event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      if (event.logicalKey == LogicalKeyboardKey.keyW ||
+          event.logicalKey == LogicalKeyboardKey.arrowUp) {
         _locationService.moveSimulatedRunner(forwardMeters: 6.0);
-      } else if (event.logicalKey == LogicalKeyboardKey.keyS || event.logicalKey == LogicalKeyboardKey.arrowDown) {
+      } else if (event.logicalKey == LogicalKeyboardKey.keyS ||
+          event.logicalKey == LogicalKeyboardKey.arrowDown) {
         _locationService.moveSimulatedRunner(forwardMeters: -4.0);
-      } else if (event.logicalKey == LogicalKeyboardKey.keyA || event.logicalKey == LogicalKeyboardKey.arrowLeft) {
+      } else if (event.logicalKey == LogicalKeyboardKey.keyA ||
+          event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         _locationService.moveSimulatedRunner(turnDegrees: -15.0);
-      } else if (event.logicalKey == LogicalKeyboardKey.keyD || event.logicalKey == LogicalKeyboardKey.arrowRight) {
+      } else if (event.logicalKey == LogicalKeyboardKey.keyD ||
+          event.logicalKey == LogicalKeyboardKey.arrowRight) {
         _locationService.moveSimulatedRunner(turnDegrees: 15.0);
       }
     }
@@ -1163,7 +1330,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       const SnackBar(
         backgroundColor: AppColors.surface,
         duration: Duration(seconds: 2),
-        content: Text('⚡ Streaming 400m automated GPS loop scenario...', style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold)),
+        content: Text(
+          '⚡ Streaming 400m automated GPS loop scenario...',
+          style: TextStyle(
+            color: AppColors.accent,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
 
@@ -1204,7 +1377,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _runRivalConflictDemo() async {
     final center = _currentLocation ?? const LatLng(37.7749, -122.4194);
-    
+
     await _territoryService.spawnMockRivalTerritory(center);
     if (!mounted) return;
     setState(() {});
@@ -1213,7 +1386,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       const SnackBar(
         backgroundColor: AppColors.surface,
         duration: Duration(seconds: 2),
-        content: Text('⚔️ Rival Crimson Sector #99 spawned! Executing slice conquest loop...', style: TextStyle(color: AppColors.rival, fontWeight: FontWeight.bold)),
+        content: Text(
+          '⚔️ Rival Crimson Sector #99 spawned! Executing slice conquest loop...',
+          style: TextStyle(color: AppColors.rival, fontWeight: FontWeight.bold),
+        ),
       ),
     );
 
@@ -1277,9 +1453,14 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   Widget build(BuildContext context) {
     final pad = MediaQuery.paddingOf(context);
     final profile = _territoryService.getProfile();
-    final String athleteName = profile.username.isNotEmpty ? profile.username : 'Runner';
+    final String athleteName = profile.username.isNotEmpty
+        ? profile.username
+        : 'Runner';
     final territories = _territoryService.getCapturedTerritoryObjects();
-    final double totalAreaSqMeters = territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
+    final double totalAreaSqMeters = territories.fold(
+      0.0,
+      (sum, t) => sum + t.areaSqMeters,
+    );
     final double totalAreaSqKm = totalAreaSqMeters / 1000000.0;
 
     return KeyboardListener(
@@ -1293,7 +1474,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           children: [
             // 1. The Interactive Fullscreen Map wrapped in RepaintBoundary
             _currentLocation == null
-                ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+                ? const Center(
+                    child: CircularProgressIndicator(color: AppColors.accent),
+                  )
                 : RepaintBoundary(
                     child: FlutterMap(
                       mapController: _mapController,
@@ -1315,21 +1498,25 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         MapLayers.buildTerritoryBadgesLayer(territories),
                         ValueListenableBuilder<int>(
                           valueListenable: _runPathUpdateNotifier,
-                          builder: (context, _, child) => MapLayers.buildPolylineLayer(
-                            isRunActive: _isRunActive,
-                            runCoordinates: _runCoordinates,
-                            currentEnclosurePath: _polygonEngine.currentPath,
-                            suggestedRouteCoordinates: _activeSuggestedRoute?.polyline,
-                            rivalBreadcrumbs: _rivalBreadcrumbs,
-                            activeRivalRunners: _activeRivalRunners,
-                          ),
+                          builder: (context, _, child) =>
+                              MapLayers.buildPolylineLayer(
+                                isRunActive: _isRunActive,
+                                runCoordinates: _runCoordinates,
+                                currentEnclosurePath:
+                                    _polygonEngine.currentPath,
+                                suggestedRouteCoordinates:
+                                    _activeSuggestedRoute?.polyline,
+                                rivalBreadcrumbs: _rivalBreadcrumbs,
+                                activeRivalRunners: _activeRivalRunners,
+                              ),
                         ),
                         ValueListenableBuilder<LatLng?>(
                           valueListenable: _liveLocationNotifier,
-                          builder: (context, loc, child) => MapLayers.buildMarkerLayer(
-                            currentLocation: loc ?? _currentLocation,
-                            activeRivalRunners: _activeRivalRunners,
-                          ),
+                          builder: (context, loc, child) =>
+                              MapLayers.buildMarkerLayer(
+                                currentLocation: loc ?? _currentLocation,
+                                activeRivalRunners: _activeRivalRunners,
+                              ),
                         ),
                         if (AppConstants.tileAttribution.isNotEmpty)
                           RichAttributionWidget(
@@ -1361,16 +1548,30 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             radius: 20,
                             backgroundColor: AppColors.surface2,
                             child: Text(
-                              athleteName.isNotEmpty ? athleteName[0].toUpperCase() : 'A',
-                              style: AppText.headingSmall.copyWith(color: AppColors.textPrimary),
+                              athleteName.isNotEmpty
+                                  ? athleteName[0].toUpperCase()
+                                  : 'A',
+                              style: AppText.headingSmall.copyWith(
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 10),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Good run,', style: AppText.bodySmall.copyWith(color: AppColors.textMuted)),
-                              Text('$athleteName 👋', style: AppText.headingSmall.copyWith(color: AppColors.textPrimary)),
+                              Text(
+                                'Good run,',
+                                style: AppText.bodySmall.copyWith(
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                              Text(
+                                '$athleteName 👋',
+                                style: AppText.headingSmall.copyWith(
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
                             ],
                           ),
                         ],
@@ -1381,15 +1582,22 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           const SyncChip(),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.surfaceGlass,
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(color: AppColors.borderSubtle),
                             ),
                             child: Text(
-                              profile.faction.isNotEmpty ? profile.faction : 'Run to own.',
-                              style: AppText.bodyBold.copyWith(color: AppColors.textPrimary),
+                              profile.faction.isNotEmpty
+                                  ? profile.faction
+                                  : 'Run to own.',
+                              style: AppText.bodyBold.copyWith(
+                                color: AppColors.textPrimary,
+                              ),
                             ),
                           ),
                         ],
@@ -1421,7 +1629,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     GestureDetector(
                       onTap: _panToNearestRival,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceGlass,
                           borderRadius: BorderRadius.circular(20),
@@ -1453,7 +1664,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                               ),
                             ),
                             const SizedBox(width: 6),
-                            const Icon(Icons.gps_fixed_rounded, color: AppColors.rival, size: 13),
+                            const Icon(
+                              Icons.gps_fixed_rounded,
+                              color: AppColors.rival,
+                              size: 13,
+                            ),
                           ],
                         ),
                       ),
@@ -1492,7 +1707,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   );
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceGlass,
                     borderRadius: AppSpacing.br16,
@@ -1501,7 +1719,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           ? AppColors.info
                           : AppColors.borderSubtle,
                     ),
-                    boxShadow: _locationService.pacerMode != VirtualPacerMode.none
+                    boxShadow:
+                        _locationService.pacerMode != VirtualPacerMode.none
                         ? AppSpacing.subtleElevation
                         : null,
                   ),
@@ -1511,7 +1730,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       Icon(
                         Icons.directions_run_rounded,
                         size: 16,
-                        color: _locationService.pacerMode != VirtualPacerMode.none
+                        color:
+                            _locationService.pacerMode != VirtualPacerMode.none
                             ? AppColors.info
                             : AppColors.textMuted,
                       ),
@@ -1521,7 +1741,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             ? 'Pacer ${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
                             : 'Pacer off',
                         style: AppText.label.copyWith(
-                          color: _locationService.pacerMode != VirtualPacerMode.none
+                          color:
+                              _locationService.pacerMode !=
+                                  VirtualPacerMode.none
                               ? AppColors.info
                               : AppColors.textMuted,
                           fontSize: 10,
@@ -1538,18 +1760,25 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               right: 20,
               bottom: pad.bottom + 175,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.surfaceGlass,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+                  border: Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.35),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('You own', style: AppText.label),
                     Text(
-                      totalAreaSqKm > 0 ? '${totalAreaSqKm.toStringAsFixed(2)} km²' : '0.00 km²',
+                      totalAreaSqKm > 0
+                          ? '${totalAreaSqKm.toStringAsFixed(2)} km²'
+                          : '0.00 km²',
                       style: AppText.statSmall.copyWith(
                         color: AppColors.accent,
                         fontFeatures: const [FontFeature.tabularFigures()],
@@ -1569,7 +1798,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 children: [
                   _buildFloatingCircleButton(
                     icon: Icons.speed_rounded,
-                    color: _locationService.pacerMode != VirtualPacerMode.none ? AppColors.info : AppColors.textSecondary,
+                    color: _locationService.pacerMode != VirtualPacerMode.none
+                        ? AppColors.info
+                        : AppColors.textSecondary,
                     onTap: () {
                       VirtualPacerSheet.show(
                         context: context,
@@ -1595,9 +1826,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   ),
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
-                    icon: _isCameraFollowLocked ? Icons.gps_fixed_rounded : Icons.pan_tool_rounded,
-                    color: _isCameraFollowLocked ? AppColors.accent : AppColors.textSecondary,
-                    tooltip: _isCameraFollowLocked ? 'Unlock Camera Pan' : 'Lock Camera Follow',
+                    icon: _isCameraFollowLocked
+                        ? Icons.gps_fixed_rounded
+                        : Icons.pan_tool_rounded,
+                    color: _isCameraFollowLocked
+                        ? AppColors.accent
+                        : AppColors.textSecondary,
+                    tooltip: _isCameraFollowLocked
+                        ? 'Unlock Camera Pan'
+                        : 'Lock Camera Follow',
                     semanticLabel: 'Toggle camera auto-follow',
                     onTap: () {
                       setState(() {
@@ -1618,18 +1855,22 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.flag_rounded,
-                    color: _activeGoal.isActive ? AppColors.gold : AppColors.textSecondary,
+                    color: _activeGoal.isActive
+                        ? AppColors.gold
+                        : AppColors.textSecondary,
                     tooltip: 'Campaign Goals',
                     semanticLabel: 'Open conquest goals selector',
                     onTap: _openGoalSelector,
                   ),
-                  if (_batterySaverService.isBatterySaverEnabled && _isRunActive) ...[
+                  if (_batterySaverService.isBatterySaverEnabled &&
+                      _isRunActive) ...[
                     const SizedBox(height: 10),
                     _buildFloatingCircleButton(
                       icon: Icons.battery_saver_rounded,
                       color: AppColors.accent,
                       tooltip: 'AMOLED Low-Power Screen',
-                      semanticLabel: 'Activate AMOLED pure black battery saver screen',
+                      semanticLabel:
+                          'Activate AMOLED pure black battery saver screen',
                       onTap: () {
                         AppMotion.mediumTick();
                         _batterySaverService.setAmoledHudActive(true);
@@ -1661,15 +1902,20 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
             // Floating Defend CTA for Weak Territories
             if (!_isRunActive &&
-                territories.any((t) =>
-                    t.ownerId == _firebaseService.currentUserId && t.isWeak()))
+                territories.any(
+                  (t) =>
+                      t.ownerId == _firebaseService.currentUserId && t.isWeak(),
+                ))
               Positioned(
                 bottom: pad.bottom + 175,
                 right: 20,
                 child: GestureDetector(
                   onTap: _defendWeakestTerritory,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.surfaceGlass,
                       borderRadius: AppSpacing.br16,
@@ -1679,7 +1925,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.shield_outlined, color: AppColors.rival, size: 16),
+                        Icon(
+                          Icons.shield_outlined,
+                          color: AppColors.rival,
+                          size: 16,
+                        ),
                         SizedBox(width: 6),
                         Text(
                           'Defend',
@@ -1715,13 +1965,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     territoriesClaimed: telemetry.territoriesClaimed,
                     distanceToClosureMeters: telemetry.distanceToClosureMeters,
                     proximityToClosure: telemetry.proximityToClosure,
-                    targetPace: _locationService.pacerMode != VirtualPacerMode.none
+                    targetPace:
+                        _locationService.pacerMode != VirtualPacerMode.none
                         ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
                         : null,
                     runGoal: telemetry.activeGoal ?? _activeGoal,
                     currentAreaSqm: telemetry.currentAreaSqm,
                     onOpenGoalSelector: _openGoalSelector,
-                    isBatterySaverActive: _batterySaverService.isBatterySaverEnabled,
+                    isBatterySaverActive:
+                        _batterySaverService.isBatterySaverEnabled,
                     onToggleAmoledSaver: () {
                       AppMotion.mediumTick();
                       _batterySaverService.setAmoledHudActive(true);
@@ -1733,7 +1985,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         _toggleRun();
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Tap the center play button to begin tracking')),
+                          const SnackBar(
+                            content: Text(
+                              'Tap the center play button to begin tracking',
+                            ),
+                          ),
                         );
                       }
                     },
@@ -1746,7 +2002,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             ValueListenableBuilder<bool>(
               valueListenable: _batterySaverService.isAmoledHudActiveNotifier,
               builder: (context, isAmoledActive, _) {
-                if (!isAmoledActive || !_isRunActive) return const SizedBox.shrink();
+                if (!isAmoledActive || !_isRunActive)
+                  return const SizedBox.shrink();
                 return ValueListenableBuilder<RunTelemetry>(
                   valueListenable: _telemetryNotifier,
                   builder: (context, telemetry, _) {
@@ -1756,7 +2013,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       splitPace: telemetry.splitPace,
                       currentSpeedKmh: telemetry.currentSpeedKmh,
                       runGoal: telemetry.activeGoal ?? _activeGoal,
-                      onWake: () => _batterySaverService.setAmoledHudActive(false),
+                      onWake: () =>
+                          _batterySaverService.setAmoledHudActive(false),
                     );
                   },
                 );
@@ -1800,7 +2058,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _defendWeakestTerritory() {
     final myId = _firebaseService.currentUserId;
-    final box = Hive.isBoxOpen('territories_v3') ? Hive.box<Territory>('territories_v3') : null;
+    final box = Hive.isBoxOpen('territories_v3')
+        ? Hive.box<Territory>('territories_v3')
+        : null;
     final all = box?.values.whereType<Territory>().toList() ?? [];
     final myTerritories = all.where((t) => t.ownerId == myId).toList();
 
@@ -1835,7 +2095,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           duration: const Duration(seconds: 4),
           content: Text(
             '🛡️ DEFENSE ENGAGED: Run through your territory to restore 100% strength (${minStrength.round()}% active)',
-            style: const TextStyle(color: AppColors.gold, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: AppColors.gold,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       );
@@ -1844,7 +2107,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _simulateDecayAndAttack() async {
     final myId = _firebaseService.currentUserId;
-    final decayed = await _territoryService.simulateDecay(myId, targetStrength: 20.0, daysAgo: 5);
+    final decayed = await _territoryService.simulateDecay(
+      myId,
+      targetStrength: 20.0,
+      daysAgo: 5,
+    );
     if (decayed != null && mounted) {
       setState(() {
         _highlightedTerritoryId = decayed.id;
@@ -1866,7 +2133,11 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ),
           content: const Row(
             children: [
-              Icon(Icons.warning_amber_rounded, color: AppColors.rival, size: 28),
+              Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.rival,
+                size: 28,
+              ),
               SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1885,7 +2156,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     SizedBox(height: 2),
                     Text(
                       '⚠️ Rival ShadowRunner captured 3,500 m²! Defenses compromised (20% strength).',
-                      style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -1978,7 +2252,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             ),
             const SizedBox(width: 10),
             const Expanded(
-              child: Text('🔴 Live Rival active: ⚡ Phantom_Vanguard is running near you!'),
+              child: Text(
+                '🔴 Live Rival active: ⚡ Phantom_Vanguard is running near you!',
+              ),
             ),
           ],
         ),
@@ -1986,7 +2262,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       ),
     );
 
-    _rivalSimulationTimer = Timer.periodic(const Duration(milliseconds: 1000), (timer) {
+    _rivalSimulationTimer = Timer.periodic(const Duration(milliseconds: 1000), (
+      timer,
+    ) {
       if (!mounted || !_isRivalSimulating) {
         timer.cancel();
         return;
@@ -1998,12 +2276,17 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
 
       // Circular displacement around player's center
-      final dLat = (radiusMeters * math.cos(_rivalSimAngle)) / earthRadius * (180.0 / math.pi);
-      final dLng = (radiusMeters * math.sin(_rivalSimAngle)) /
+      final dLat =
+          (radiusMeters * math.cos(_rivalSimAngle)) /
+          earthRadius *
+          (180.0 / math.pi);
+      final dLng =
+          (radiusMeters * math.sin(_rivalSimAngle)) /
           (earthRadius * math.cos(center.latitude * (math.pi / 180.0))) *
           (180.0 / math.pi);
       final rivalPos = LatLng(center.latitude + dLat, center.longitude + dLng);
-      final headingDeg = ((_rivalSimAngle + math.pi / 2) * (180.0 / math.pi)) % 360.0;
+      final headingDeg =
+          ((_rivalSimAngle + math.pi / 2) * (180.0 / math.pi)) % 360.0;
 
       final event = RunnerPresenceEvent(
         userId: 'sim_rival_phantom',
@@ -2017,7 +2300,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       setState(() {
         _activeRivalRunners['sim_rival_phantom'] = event;
-        final trail = _rivalBreadcrumbs.putIfAbsent('sim_rival_phantom', () => []);
+        final trail = _rivalBreadcrumbs.putIfAbsent(
+          'sim_rival_phantom',
+          () => [],
+        );
         trail.add(rivalPos);
         if (trail.length > 40) {
           trail.removeAt(0);
@@ -2047,7 +2333,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         duration: const Duration(seconds: 4),
         content: Text(
           '🚨 SECTOR UNDER ATTACK: Focused on territory $territoryId',
-          style: const TextStyle(color: AppColors.rival, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: AppColors.rival,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );

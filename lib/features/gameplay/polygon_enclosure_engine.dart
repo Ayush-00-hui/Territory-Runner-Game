@@ -214,6 +214,7 @@ class PolygonEnclosureEngine {
   /// Ingests a new GPS position and checks for arbitrary polygon loop enclosure.
   /// Returns [EnclosedLoopEvent] if a valid loop was closed, or null otherwise.
   EnclosedLoopEvent? addPosition(LatLng position, [DateTime? timestamp]) {
+    _lastInvalidReason = null;
     final now = timestamp ?? DateTime.now();
 
     // 0. GPS Signal Gap Guard: Gaps > maxSignalGapSeconds (15s) segment the track.

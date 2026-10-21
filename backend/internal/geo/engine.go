@@ -145,6 +145,7 @@ func (e *Engine) LastInvalidError() error {
 
 // AddPoint ingests a new breadcrumb, performs noise/jitter filtering, and checks for loop closure.
 func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
+	e.lastInvalidErr = nil
 	pos := tp.ToLatLng()
 	now := tp.Timestamp
 	if now.IsZero() {
@@ -325,19 +326,22 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 func (e *Engine) ProcessTrack(points []TrackPoint) ([]EnclosedLoop, error) {
 	e.Clear()
 	var loops []EnclosedLoop
+	var trackErr error
 
 	for _, pt := range points {
 		loop, err := e.AddPoint(pt)
 		if err != nil {
-			e.lastInvalidErr = err
+			trackErr = err
+		} else if e.lastInvalidErr != nil {
+			trackErr = e.lastInvalidErr
 		}
 		if loop != nil {
 			loops = append(loops, *loop)
 		}
 	}
 
-	if len(loops) == 0 && e.lastInvalidErr != nil {
-		return nil, e.lastInvalidErr
+	if len(loops) == 0 && trackErr != nil {
+		return nil, trackErr
 	}
 
 	return loops, nil

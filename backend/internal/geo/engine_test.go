@@ -457,3 +457,29 @@ func TestGoldenVeryLongGap(t *testing.T) {
 	assert.ErrorIs(t, err, geo.ErrSignalGapDetected)
 	assert.Empty(t, loops, "Gap > 10 minutes must produce 0 valid loops")
 }
+
+func TestRejectionReasonClearedOnNextAddPoint(t *testing.T) {
+	engine := geo.NewEngine()
+	t0 := time.Date(2026, 10, 20, 10, 0, 0, 0, time.UTC)
+	p1 := geo.TrackPoint{Latitude: 51.5000, Longitude: -0.1200, Timestamp: t0}
+	p2 := geo.TrackPoint{Latitude: 51.5009, Longitude: -0.1200, Timestamp: t0.Add(10 * time.Second)}
+
+	_, err := engine.AddPoint(p1)
+	require.NoError(t, err)
+	_, err = engine.AddPoint(p2)
+	require.NoError(t, err)
+
+	// Trigger signal gap error with jump > 50m
+	pJump := geo.TrackPoint{Latitude: 51.5009, Longitude: -0.1214, Timestamp: t0.Add(40 * time.Second)}
+	_, err = engine.AddPoint(pJump)
+	require.NoError(t, err)
+	require.ErrorIs(t, engine.LastInvalidError(), geo.ErrSignalGapDetected)
+
+	// Next normal point 3s later, 14m displacement
+	pNormal := geo.TrackPoint{Latitude: 51.5009, Longitude: -0.1216, Timestamp: t0.Add(43 * time.Second)}
+	_, err = engine.AddPoint(pNormal)
+	require.NoError(t, err)
+
+	// MUST be cleared!
+	assert.Nil(t, engine.LastInvalidError(), "LastInvalidError must be nil on subsequent call without error")
+}

@@ -350,6 +350,7 @@ void main() {
         final rawPoints = data['points'] as List<dynamic>;
         final engine = PolygonEnclosureEngine();
         EnclosedLoopEvent? event;
+        String? recordedRejectionReason;
         for (final p in rawPoints) {
           final pt = LatLng(
             (p['latitude'] as num).toDouble(),
@@ -358,6 +359,9 @@ void main() {
           final ts = DateTime.parse(p['timestamp'] as String);
           final ev = engine.addPosition(pt, ts);
           if (ev != null) event = ev;
+          if (engine.lastInvalidReason != null) {
+            recordedRejectionReason = engine.lastInvalidReason;
+          }
         }
 
         expect(
@@ -366,7 +370,7 @@ void main() {
           reason: 'Track with >15s gap must not close loop across dropout',
         );
         expect(
-          engine.lastInvalidReason,
+          recordedRejectionReason,
           equals(PolygonEnclosureEngine.signalGapReason),
         );
       },
@@ -514,6 +518,7 @@ void main() {
       final rawPoints = data['points'] as List<dynamic>;
       final engine = PolygonEnclosureEngine();
       EnclosedLoopEvent? event;
+      String? recordedRejectionReason;
       for (final p in rawPoints) {
         final pt = LatLng(
           (p['latitude'] as num).toDouble(),
@@ -522,6 +527,9 @@ void main() {
         final ts = DateTime.parse(p['timestamp'] as String);
         final ev = engine.addPosition(pt, ts);
         if (ev != null) event = ev;
+        if (engine.lastInvalidReason != null) {
+          recordedRejectionReason = engine.lastInvalidReason;
+        }
       }
 
       expect(
@@ -530,7 +538,7 @@ void main() {
         reason: 'Gap with jump > 50m must reset path and reject loop',
       );
       expect(
-        engine.lastInvalidReason,
+        recordedRejectionReason,
         equals(PolygonEnclosureEngine.signalGapReason),
       );
     });
@@ -543,6 +551,7 @@ void main() {
       final rawPoints = data['points'] as List<dynamic>;
       final engine = PolygonEnclosureEngine();
       EnclosedLoopEvent? event;
+      String? recordedRejectionReason;
       for (final p in rawPoints) {
         final pt = LatLng(
           (p['latitude'] as num).toDouble(),
@@ -551,6 +560,9 @@ void main() {
         final ts = DateTime.parse(p['timestamp'] as String);
         final ev = engine.addPosition(pt, ts);
         if (ev != null) event = ev;
+        if (engine.lastInvalidReason != null) {
+          recordedRejectionReason = engine.lastInvalidReason;
+        }
       }
 
       expect(
@@ -559,7 +571,7 @@ void main() {
         reason: 'Gap > 10 minutes must reset path and reject loop',
       );
       expect(
-        engine.lastInvalidReason,
+        recordedRejectionReason,
         equals(PolygonEnclosureEngine.signalGapReason),
       );
     });
