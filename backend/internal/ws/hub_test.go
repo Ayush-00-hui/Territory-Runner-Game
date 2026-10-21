@@ -415,6 +415,9 @@ func TestWebSocketTargetedTerritoryCarvedAlert(t *testing.T) {
 
 	time.Sleep(50 * time.Millisecond)
 
+	// Attacker and victim are friends so victim receives attacker_id
+	hub.SetFriendsCache("attacker_02", []string{"victim_01"})
+
 	// Attacker captures territory that slices into victim_01
 	hub.BroadcastConquest("attacker_02", "ShadowRunner", 3500.0, []string{"victim_01"})
 
@@ -615,5 +618,138 @@ func TestWebSocket_FriendsDelivery_ConcurrentStress(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestWebSocket_RunnerLeft_RespectsVisibilityOff(t *testing.T) {
+	_, _, wsURL := setupTestHub(t)
+
+	// Alpha connects with default visibility "off"
+	c1, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid=runner_alpha_off", nil)
+	require.NoError(t, err)
+
+	// Beta connects and listens
+	c2, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid=runner_beta_listen", nil)
+	require.NoError(t, err)
+	defer c2.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Alpha disconnects
+	c1.Close()
+
+	// Beta should NOT receive runner_left for an "off" user
+	_ = c2.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	_, msg, err := c2.ReadMessage()
+	assert.Error(t, err, "expected no runner_left delivered when leaving user visibility is off, but got: %s", string(msg))
+}
+
+func TestWebSocket_RunnerLeft_OnlyDeliveredToEligibleRecipients(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	ctx := context.Background()
+
+	u1 := &store.User{ID: "usr_alice", Username: "Alice", Faction: "Vanguard"}
+	u2 := &store.User{ID: "usr_bob", Username: "Bob", Faction: "Vanguard"}
+	u3 := &store.User{ID: "usr_stranger", Username: "Stranger", Faction: "Vanguard"}
+	require.NoError(t, memStore.UpsertUser(ctx, u1))
+	require.NoError(t, memStore.UpsertUser(ctx, u2))
+	require.NoError(t, memStore.UpsertUser(ctx, u3))
+
+	// Alice and Bob are friends; Stranger is not
+	req, err := memStore.SendFriendRequest(ctx, u1.ID, u2.ID)
+	require.NoError(t, err)
+	_, err = memStore.RespondFriendRequest(ctx, req.ID, u2.ID, "accept")
+	require.NoError(t, err)
+
+	hub, _, wsURL := setupTestHub(t, ws.WithStore(memStore))
+	hub.UpdateUserVisibility(u1.ID, "friends")
+
+	c1, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u1.ID, nil)
+	require.NoError(t, err)
+	c2, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u2.ID, nil)
+	require.NoError(t, err)
+	defer c2.Close()
+	c3, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+u3.ID, nil)
+	require.NoError(t, err)
+	defer c3.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Alice leaves
+	c1.Close()
+
+	// Bob (friend) should receive runner_left
+	_ = c2.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	_, bMsg, err := c2.ReadMessage()
+	require.NoError(t, err, "friend should receive runner_left")
+	var leftMsg ws.RunnerLeftMessage
+	err = json.Unmarshal(bMsg, &leftMsg)
+	require.NoError(t, err)
+	assert.Equal(t, ws.TypeRunnerLeft, leftMsg.Type)
+	assert.Equal(t, u1.ID, leftMsg.UserID)
+
+	// Stranger should NOT receive runner_left
+	_ = c3.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	_, sMsg, err := c3.ReadMessage()
+	assert.Error(t, err, "stranger should not receive runner_left, but got: %s", string(sMsg))
+}
+
+func TestWebSocket_ConquestBroadcast_OnlyVictimsAndFriends(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	ctx := context.Background()
+
+	attacker := &store.User{ID: "atk_01", Username: "Attacker", Faction: "Vanguard"}
+	victim := &store.User{ID: "vic_01", Username: "Victim", Faction: "Vanguard"}
+	friend := &store.User{ID: "fri_01", Username: "Friend", Faction: "Vanguard"}
+	stranger := &store.User{ID: "str_01", Username: "Stranger", Faction: "Vanguard"}
+	require.NoError(t, memStore.UpsertUser(ctx, attacker))
+	require.NoError(t, memStore.UpsertUser(ctx, victim))
+	require.NoError(t, memStore.UpsertUser(ctx, friend))
+	require.NoError(t, memStore.UpsertUser(ctx, stranger))
+
+	// Attacker and Friend are mutual friends
+	req, err := memStore.SendFriendRequest(ctx, attacker.ID, friend.ID)
+	require.NoError(t, err)
+	_, err = memStore.RespondFriendRequest(ctx, req.ID, friend.ID, "accept")
+	require.NoError(t, err)
+
+	hub, _, wsURL := setupTestHub(t, ws.WithStore(memStore))
+
+	cVictim, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+victim.ID, nil)
+	require.NoError(t, err)
+	defer cVictim.Close()
+
+	cFriend, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+friend.ID, nil)
+	require.NoError(t, err)
+	defer cFriend.Close()
+
+	cStranger, _, err := websocket.DefaultDialer.Dial(wsURL+"?uid="+stranger.ID, nil)
+	require.NoError(t, err)
+	defer cStranger.Close()
+
+	time.Sleep(50 * time.Millisecond)
+
+	// Attacker conquers territory claiming from victim
+	hub.BroadcastConquest(attacker.ID, attacker.Username, 1500.0, []string{victim.ID})
+
+	// 1. Friend should receive conquest announcement with AttackerID included
+	_ = cFriend.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	_, friBytes, err := cFriend.ReadMessage()
+	require.NoError(t, err)
+	var friMsg ws.ConquestBroadcastMessage
+	require.NoError(t, json.Unmarshal(friBytes, &friMsg))
+	assert.Equal(t, attacker.ID, friMsg.AttackerID, "friend must see attacker ID")
+
+	// 2. Victim should receive targeted alert; since victim is non-friend, attacker_id should NOT be exposed
+	_ = cVictim.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+	_, vicBytes, err := cVictim.ReadMessage()
+	require.NoError(t, err)
+	var vicAlert ws.TerritoryAlertMessage
+	require.NoError(t, json.Unmarshal(vicBytes, &vicAlert))
+	assert.Empty(t, vicAlert.AttackerID, "non-friend victim must not receive attacker_id")
+
+	// 3. Stranger should receive NOTHING (not a victim, not a friend)
+	_ = cStranger.SetReadDeadline(time.Now().Add(200 * time.Millisecond))
+	_, strBytes, err := cStranger.ReadMessage()
+	assert.Error(t, err, "stranger should not receive conquest event, but received: %s", string(strBytes))
 }
 

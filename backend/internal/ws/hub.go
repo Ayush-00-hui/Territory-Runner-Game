@@ -21,11 +21,23 @@ type Option func(*Hub)
 // DefaultFriendsCacheTTL defines the cache duration for user friend sets (PROPOSED: 60s).
 const DefaultFriendsCacheTTL = 60 * time.Second
 
+// DefaultRecentRecipientsTTL defines the TTL for tracking recent presence recipients (PROPOSED: 60s).
+const DefaultRecentRecipientsTTL = 60 * time.Second
+
 // WithFriendsCacheTTL sets the TTL for cached friendships.
 func WithFriendsCacheTTL(ttl time.Duration) Option {
 	return func(h *Hub) {
 		if ttl > 0 {
 			h.friendsCacheTTL = ttl
+		}
+	}
+}
+
+// WithRecentRecipientsTTL sets the TTL for tracking recent presence recipients.
+func WithRecentRecipientsTTL(ttl time.Duration) Option {
+	return func(h *Hub) {
+		if ttl > 0 {
+			h.recentRecipientsTTL = ttl
 		}
 	}
 }
@@ -87,25 +99,28 @@ type friendsCacheEntry struct {
 
 // Hub manages active WebSocket runner connections and fans out targeted real-time updates.
 type Hub struct {
-	clients          map[*Client]bool
-	userClients      map[string]map[*Client]bool
-	userPrivacyZones map[string][]geo.PrivacyZoneEvaluator
-	userVisibility   map[string]string // "off" | "friends" | "nearby"
-	friendsCache     map[string]*friendsCacheEntry
-	friendsMu        sync.RWMutex
-	friendsSF        singleflight.Group
-	friendsCacheTTL  time.Duration
-	broadcast        chan []byte
-	register         chan *Client
-	unregister       chan *Client
-	mu               sync.RWMutex
-	logger           *slog.Logger
-	stop             chan struct{}
-	upgrader         websocket.Upgrader
-	store            store.Store
-	presenceDelay    time.Duration
-	maxConnsPerUser  int
-	outboundBufferSize int
+	clients             map[*Client]bool
+	userClients         map[string]map[*Client]bool
+	userPrivacyZones    map[string][]geo.PrivacyZoneEvaluator
+	userVisibility      map[string]string // "off" | "friends" | "nearby"
+	friendsCache        map[string]*friendsCacheEntry
+	friendsMu           sync.RWMutex
+	friendsSF           singleflight.Group
+	friendsCacheTTL     time.Duration
+	recentRecipients    map[string]map[string]time.Time // senderID -> recipientUserID -> expiresAt
+	recentRecipientsMu  sync.RWMutex
+	recentRecipientsTTL time.Duration
+	broadcast           chan []byte
+	register            chan *Client
+	unregister          chan *Client
+	mu                  sync.RWMutex
+	logger              *slog.Logger
+	stop                chan struct{}
+	upgrader            websocket.Upgrader
+	store               store.Store
+	presenceDelay       time.Duration
+	maxConnsPerUser     int
+	outboundBufferSize  int
 }
 
 // NewHub initializes a new real-time WebSocket hub.
@@ -114,20 +129,22 @@ func NewHub(logger *slog.Logger, opts ...Option) *Hub {
 		logger = slog.Default()
 	}
 	h := &Hub{
-		clients:          make(map[*Client]bool),
-		userClients:      make(map[string]map[*Client]bool),
-		userPrivacyZones: make(map[string][]geo.PrivacyZoneEvaluator),
-		userVisibility:   make(map[string]string),
-		friendsCache:     make(map[string]*friendsCacheEntry),
-		friendsCacheTTL:  DefaultFriendsCacheTTL,
-		broadcast:        make(chan []byte, 256),
-		register:         make(chan *Client),
-		unregister:       make(chan *Client),
-		logger:           logger,
-		stop:             make(chan struct{}),
-		presenceDelay:    5 * time.Second, // Default 5s privacy delay
-		maxConnsPerUser:  3,               // Max 3 connections per user
-		outboundBufferSize: 128,           // Default 128-slot outbound buffer per client
+		clients:             make(map[*Client]bool),
+		userClients:         make(map[string]map[*Client]bool),
+		userPrivacyZones:   make(map[string][]geo.PrivacyZoneEvaluator),
+		userVisibility:     make(map[string]string),
+		friendsCache:       make(map[string]*friendsCacheEntry),
+		friendsCacheTTL:    DefaultFriendsCacheTTL,
+		recentRecipients:    make(map[string]map[string]time.Time),
+		recentRecipientsTTL: DefaultRecentRecipientsTTL,
+		broadcast:          make(chan []byte, 256),
+		register:           make(chan *Client),
+		unregister:         make(chan *Client),
+		logger:             logger,
+		stop:               make(chan struct{}),
+		presenceDelay:      5 * time.Second, // Default 5s privacy delay
+		maxConnsPerUser:    3,               // Max 3 connections per user
+		outboundBufferSize: 128,             // Default 128-slot outbound buffer per client
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
@@ -173,20 +190,19 @@ func (h *Hub) Run() {
 				delete(h.clients, client)
 				client.Close()
 
+				completelyLeft := false
 				if userMap, exists := h.userClients[client.userID]; exists {
 					delete(userMap, client)
 					if len(userMap) == 0 {
 						delete(h.userClients, client.userID)
+						completelyLeft = true
 					}
 				}
 				h.mu.Unlock()
 
-				// Inform peers that this runner left
-				leftMsg, _ := json.Marshal(RunnerLeftMessage{
-					Type:   TypeRunnerLeft,
-					UserID: client.userID,
-				})
-				h.Broadcast(leftMsg)
+				if completelyLeft {
+					h.dispatchRunnerLeft(client.userID)
+				}
 				h.logger.Debug("client disconnected from ws hub", "user_id", client.userID)
 			} else {
 				h.mu.Unlock()
@@ -251,19 +267,34 @@ func (h *Hub) SendToUser(userID string, v interface{}) {
 	}
 }
 
-// BroadcastConquest broadcasts both targeted victim alerts and general milestone notifications.
+// BroadcastConquest broadcasts targeted victim alerts and conquest announcements
+// to victims and the attacker's friends only (never global).
+// AttackerID is never included in anything sent to non-friends.
 func (h *Hub) BroadcastConquest(attackerID, attackerName string, areaClaimed float64, victimUserIDs []string) {
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 
-	// 1. Send targeted high-priority tactical warning to each victim
-	for _, victimID := range victimUserIDs {
-		if victimID == attackerID || victimID == "" {
-			continue
+	// Resolve attacker's friends once
+	attackerFriends := h.getSenderFriends(attackerID)
+
+	victimSet := make(map[string]bool)
+	for _, vid := range victimUserIDs {
+		if vid != "" && vid != attackerID {
+			victimSet[vid] = true
 		}
+	}
+
+	// 1. Send targeted high-priority tactical warning to each victim
+	for victimID := range victimSet {
+		isFriend := attackerFriends != nil && attackerFriends[victimID]
+		reportedAttackerID := ""
+		if isFriend {
+			reportedAttackerID = attackerID
+		}
+
 		alert := TerritoryAlertMessage{
 			Type:           TypeTerritoryUnderAttack,
 			Event:          "territory_under_attack",
-			AttackerID:     attackerID,
+			AttackerID:     reportedAttackerID,
 			AttackerName:   attackerName,
 			AreaClaimedSqm: areaClaimed,
 			VictimUserID:   victimID,
@@ -273,17 +304,127 @@ func (h *Hub) BroadcastConquest(attackerID, attackerName string, areaClaimed flo
 		h.SendToUser(victimID, alert)
 	}
 
-	// 2. Broadcast conquest event to all active runners
-	broadcastMsg := ConquestBroadcastMessage{
-		Type:           TypeConquestBroadcast,
-		Event:          "territory_claimed",
-		AttackerID:     attackerID,
-		AttackerName:   attackerName,
-		AreaClaimedSqm: areaClaimed,
-		Message:        fmt.Sprintf("%s conquered %.0f m² of territory!", attackerName, areaClaimed),
-		Timestamp:      nowStr,
+	// 2. Deliver conquest event to attacker's friends only (with AttackerID)
+	if attackerFriends != nil {
+		friendMsg := ConquestBroadcastMessage{
+			Type:           TypeConquestBroadcast,
+			Event:          "territory_claimed",
+			AttackerID:     attackerID,
+			AttackerName:   attackerName,
+			AreaClaimedSqm: areaClaimed,
+			Message:        fmt.Sprintf("%s conquered %.0f m² of territory!", attackerName, areaClaimed),
+			Timestamp:      nowStr,
+		}
+
+		for friendID := range attackerFriends {
+			// If friend was also a victim, they already received TerritoryAlertMessage
+			if !victimSet[friendID] && friendID != attackerID {
+				h.SendToUser(friendID, friendMsg)
+			}
+		}
 	}
-	h.BroadcastJSON(broadcastMsg)
+}
+
+// recordRecentRecipients logs recipients who received presence from senderID with TTL.
+func (h *Hub) recordRecentRecipients(senderID string, recipientUserIDs []string) {
+	if len(recipientUserIDs) == 0 {
+		return
+	}
+	h.recentRecipientsMu.Lock()
+	defer h.recentRecipientsMu.Unlock()
+
+	recips, exists := h.recentRecipients[senderID]
+	if !exists {
+		recips = make(map[string]time.Time)
+		h.recentRecipients[senderID] = recips
+	}
+	expiry := time.Now().Add(h.recentRecipientsTTL)
+	for _, rid := range recipientUserIDs {
+		if rid != senderID && rid != "" {
+			recips[rid] = expiry
+		}
+	}
+}
+
+// getRecentRecipients returns currently unexpired recipients for a given sender.
+func (h *Hub) getRecentRecipients(senderID string) map[string]bool {
+	h.recentRecipientsMu.Lock()
+	defer h.recentRecipientsMu.Unlock()
+
+	recips, exists := h.recentRecipients[senderID]
+	if !exists {
+		return nil
+	}
+	now := time.Now()
+	res := make(map[string]bool)
+	for uid, expiry := range recips {
+		if now.Before(expiry) {
+			res[uid] = true
+		} else {
+			delete(recips, uid)
+		}
+	}
+	if len(recips) == 0 {
+		delete(h.recentRecipients, senderID)
+	}
+	return res
+}
+
+// dispatchRunnerLeft sends runner_left only to recipients who could have seen that runner
+// (friends or recent presence recipients/cell subscribers) and never when visibility is "off".
+func (h *Hub) dispatchRunnerLeft(userID string) {
+	visibility := h.GetUserVisibility(userID)
+	if visibility == "off" || visibility == "" {
+		return
+	}
+
+	eligibleUserIDs := make(map[string]bool)
+	if visibility == "friends" {
+		friends := h.getSenderFriends(userID)
+		for fID := range friends {
+			eligibleUserIDs[fID] = true
+		}
+	} else if visibility == "nearby" {
+		recents := h.getRecentRecipients(userID)
+		for rID := range recents {
+			eligibleUserIDs[rID] = true
+		}
+		friends := h.getSenderFriends(userID)
+		for fID := range friends {
+			eligibleUserIDs[fID] = true
+		}
+	}
+
+	if len(eligibleUserIDs) == 0 {
+		return
+	}
+
+	leftMsg, err := json.Marshal(RunnerLeftMessage{
+		Type:   TypeRunnerLeft,
+		UserID: userID,
+	})
+	if err != nil {
+		h.logger.Error("failed to serialize runner_left message", "error", err)
+		return
+	}
+
+	h.mu.RLock()
+	var targetClients []*Client
+	for targetUID := range eligibleUserIDs {
+		if targetUID == userID {
+			continue
+		}
+		if clients, ok := h.userClients[targetUID]; ok {
+			for c := range clients {
+				targetClients = append(targetClients, c)
+			}
+		}
+	}
+	h.mu.RUnlock()
+
+	for _, c := range targetClients {
+		h.deliverToClient(c, leftMsg)
+	}
 }
 
 // UpdateUserPrivacyZones caches or updates active privacy zones for a runner.
@@ -482,6 +623,13 @@ func (h *Hub) DispatchPresence(senderID, username, faction string, rawLat, rawLn
 	if len(filteredRecipients) == 0 {
 		return
 	}
+
+	// Record recent recipients for targeted runner_left delivery
+	recipIDs := make([]string, 0, len(filteredRecipients))
+	for _, client := range filteredRecipients {
+		recipIDs = append(recipIDs, client.userID)
+	}
+	h.recordRecentRecipients(senderID, recipIDs)
 
 	// 7. Construct coarsened presence payload (no speed, no heading)
 	presence := PresenceMessage{
