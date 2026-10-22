@@ -8,8 +8,9 @@ import '../../../ui/ui.dart';
 /// Performance-first Home Hero Card featuring Today's Goal Ring, GPS Status, and primary Start Run CTA.
 class QuickLaunchHero extends StatefulWidget {
   final VoidCallback? onStartRun;
+  final bool isActive;
 
-  const QuickLaunchHero({super.key, this.onStartRun});
+  const QuickLaunchHero({super.key, this.onStartRun, this.isActive = true});
 
   @override
   State<QuickLaunchHero> createState() => _QuickLaunchHeroState();
@@ -23,11 +24,30 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
   @override
   void initState() {
     super.initState();
-    _checkGpsStatus();
-    _checkTimer = Timer.periodic(
-      const Duration(seconds: 8),
-      (_) => _checkGpsStatus(),
-    );
+    if (widget.isActive) {
+      _checkGpsStatus();
+      _checkTimer = Timer.periodic(
+        const Duration(seconds: 8),
+        (_) => _checkGpsStatus(),
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(QuickLaunchHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        _checkGpsStatus();
+        _checkTimer ??= Timer.periodic(
+          const Duration(seconds: 8),
+          (_) => _checkGpsStatus(),
+        );
+      } else {
+        _checkTimer?.cancel();
+        _checkTimer = null;
+      }
+    }
   }
 
   @override

@@ -25,6 +25,7 @@ class RunHud extends StatelessWidget {
   final VoidCallback? onOpenGoalSelector;
   final VoidCallback? onToggleAmoledSaver;
   final bool isBatterySaverActive;
+  final bool isSearchingGps;
   final VoidCallback onToggleRun;
   final VoidCallback onSealShape;
   final VoidCallback onFinishRun;
@@ -48,6 +49,7 @@ class RunHud extends StatelessWidget {
     this.onOpenGoalSelector,
     this.onToggleAmoledSaver,
     this.isBatterySaverActive = false,
+    this.isSearchingGps = false,
     required this.onToggleRun,
     required this.onSealShape,
     required this.onFinishRun,
@@ -121,6 +123,51 @@ class RunHud extends StatelessWidget {
                         style: TextStyle(
                           color: AppColors.warning,
                           fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            // Finding GPS Inline Status (Quiet non-modal status)
+            if (isRunActive &&
+                !isAutoPaused &&
+                (satelliteAccuracyMeters > 30.0 || isSearchingGps)) ...[
+              Semantics(
+                liveRegion: true,
+                label: 'Finding GPS satellite signal',
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s12,
+                    vertical: AppSpacing.s4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: AppSpacing.brFull,
+                    border: Border.all(color: AppColors.borderSubtle, width: 1),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 10,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                      SizedBox(width: AppSpacing.s6),
+                      Text(
+                        'Finding GPS...',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w600,
                           fontSize: 10,
                           letterSpacing: 0.3,
                         ),

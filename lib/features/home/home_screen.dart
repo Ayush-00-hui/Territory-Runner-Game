@@ -15,8 +15,9 @@ import '../history/run_history_screen.dart';
 /// Athlete Home Screen - Performance First Conquest Dashboard
 class HomeScreen extends StatelessWidget {
   final VoidCallback? onStartRun;
+  final bool isActive;
 
-  const HomeScreen({super.key, this.onStartRun});
+  const HomeScreen({super.key, this.onStartRun, this.isActive = true});
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +65,7 @@ class HomeScreen extends StatelessWidget {
                     const SizedBox(height: AppSpacing.s20),
 
                     // Quick Launch "START RUN" Hero
-                    QuickLaunchHero(onStartRun: onStartRun),
+                    QuickLaunchHero(onStartRun: onStartRun, isActive: isActive),
 
                     const SizedBox(height: AppSpacing.s24),
 
@@ -76,7 +77,7 @@ class HomeScreen extends StatelessWidget {
                         AppMotion.lightTick();
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
+                          AppMotion.pageRoute(
                             builder: (_) => const RunHistoryScreen(),
                           ),
                         );

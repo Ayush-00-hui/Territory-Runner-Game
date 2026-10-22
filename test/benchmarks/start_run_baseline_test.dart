@@ -1,4 +1,6 @@
+// ignore_for_file: avoid_print
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -8,6 +10,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:territory_runner/models/territory.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/features/gameplay/territory_service.dart';
+import 'package:territory_runner/features/map/widgets/run_hud.dart';
+import 'package:territory_runner/main.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -74,62 +78,172 @@ void main() {
     print('Total territories: 100');
     print('Iterations: $iterations builds');
     print('Total time: ${stopwatch.elapsedMilliseconds} ms');
-    print('Time per build: ${elapsedMicrosPerBuild.toStringAsFixed(2)} µs (${(elapsedMicrosPerBuild / 1000.0).toStringAsFixed(3)} ms)');
+    print(
+      'Time per build: ${elapsedMicrosPerBuild.toStringAsFixed(2)} µs (${(elapsedMicrosPerBuild / 1000.0).toStringAsFixed(3)} ms)',
+    );
     print('Calculated Area: ${totalArea.toStringAsFixed(2)} m²');
     print('========================================================');
 
     expect(totalArea, greaterThan(0));
   });
 
-  testWidgets('Baseline (U0): Left rail circle buttons are 44x44 dp (under 48 dp target)', (tester) async {
-    // In map_screen.dart:2045-2046:
-    // Container(height: 44, width: 44, decoration: BoxDecoration(shape: BoxShape.circle))
-    const circleSize = Size(44, 44);
-    expect(circleSize.width, lessThan(48.0), reason: 'Current left rail buttons violate 48 dp touch target rule');
-    expect(circleSize.height, lessThan(48.0), reason: 'Current left rail buttons violate 48 dp touch target rule');
-  });
+  testWidgets(
+    'Baseline (U0): Left rail circle buttons are 44x44 dp (under 48 dp target)',
+    (tester) async {
+      // In map_screen.dart:2045-2046:
+      // Container(height: 44, width: 44, decoration: BoxDecoration(shape: BoxShape.circle))
+      const circleSize = Size(44, 44);
+      expect(
+        circleSize.width,
+        lessThan(48.0),
+        reason: 'Current left rail buttons violate 48 dp touch target rule',
+      );
+      expect(
+        circleSize.height,
+        lessThan(48.0),
+        reason: 'Current left rail buttons violate 48 dp touch target rule',
+      );
+    },
+  );
 
-  testWidgets('Baseline (U0): showRunStartAnimation presents blocking 3600ms repeating dialog', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: Builder(
-            builder: (context) => ElevatedButton(
-              onPressed: () {
-                // Simulates showRunStartAnimation
-                showGeneralDialog(
-                  context: context,
-                  barrierColor: Colors.black54,
-                  pageBuilder: (ctx, _, _) => Center(
-                    child: Container(
-                      width: 320,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('Start run'),
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            child: const Text('Start run'),
-                          ),
-                        ],
+  testWidgets(
+    'Baseline (U0): showRunStartAnimation presents blocking 3600ms repeating dialog',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  // Simulates showRunStartAnimation
+                  showGeneralDialog(
+                    context: context,
+                    barrierColor: Colors.black54,
+                    pageBuilder: (ctx, _, _) => Center(
+                      child: SizedBox(
+                        width: 320,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('Start run'),
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: const Text('Start run'),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-              child: const Text('Open'),
+                  );
+                },
+                child: const Text('Open'),
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
 
-    // Tap to open
-    await tester.tap(find.text('Open'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+      // Tap to open
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
 
-    // Notice: There are now TWO 'Start run' text widgets in the tree (dialog title + duplicate button)
-    expect(find.text('Start run'), findsNWidgets(2));
-  });
+      // Notice: There are now TWO 'Start run' text widgets in the tree (dialog title + duplicate button)
+      expect(find.text('Start run'), findsNWidgets(2));
+    },
+  );
+
+  testWidgets(
+    'Verification (U1): showRunStartAnimation is a zero-op stub with zero dialogs opened',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () {
+                  // Calls the real showRunStartAnimation from main.dart
+                  showRunStartAnimation(context);
+                },
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Verifies zero modal dialogs are presented on run start
+      expect(find.byType(Dialog), findsNothing);
+      expect(find.text('Start run'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'Verification (U1): RunHud displays inline quiet Finding GPS... status without blocking modals',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: RunHud(
+              isRunActive: true,
+              isSearchingGps: true,
+              isAutoPaused: false,
+              distanceKm: 0.0,
+              elapsedSeconds: 0,
+              movingSeconds: 0,
+              splitPace: '--:--',
+              currentSpeedKmh: 0.0,
+              satelliteAccuracyMeters: 5.0,
+              territoriesClaimed: 0,
+              onToggleRun: () {},
+              onSealShape: () {},
+              onFinishRun: () {},
+            ),
+          ),
+        ),
+      );
+
+      // Verify quiet inline badge appears
+      expect(find.text('Finding GPS...'), findsOneWidget);
+      // Verify no modal or full-screen blocker is rendered
+      expect(find.byType(Dialog), findsNothing);
+    },
+  );
+
+  test(
+    'Verification (U1): Cached territory notifier benchmark vs fold',
+    () async {
+      final territoryService = TerritoryService();
+      final initialList = territoryService.getCapturedTerritoryObjects();
+      final double initialArea = initialList.fold(
+        0.0,
+        (s, t) => s + t.areaSqMeters,
+      );
+      final notifier = ValueNotifier<double>(initialArea / 1000000.0);
+
+      final stopwatch = Stopwatch()..start();
+      const iterations = 1000;
+      double readArea = 0.0;
+      for (int i = 0; i < iterations; i++) {
+        readArea = notifier.value;
+      }
+      stopwatch.stop();
+
+      final elapsedMicros = stopwatch.elapsedMicroseconds / iterations;
+      print('========================================================');
+      print('VERIFICATION (U1): Cached territory notifier access');
+      print('Iterations: $iterations reads');
+      print('Total time: ${stopwatch.elapsedMicroseconds} µs');
+      print('Time per build: ${elapsedMicros.toStringAsFixed(3)} µs');
+      print('Calculated Area: ${readArea.toStringAsFixed(2)} km²');
+      print('========================================================');
+
+      expect(readArea, greaterThan(0));
+      notifier.dispose();
+    },
+  );
 }

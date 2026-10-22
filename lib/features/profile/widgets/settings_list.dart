@@ -340,7 +340,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             onTap: () {
               AppMotion.selectionTick();
               Navigator.of(context).push(
-                MaterialPageRoute(
+                AppMotion.pageRoute(
                   builder: (_) => OnboardingScreen(
                     onCompleted: () => Navigator.of(context).pop(),
                   ),
@@ -358,7 +358,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               onTap: () {
                 AppMotion.selectionTick();
                 Navigator.of(context).push(
-                  MaterialPageRoute(
+                  AppMotion.pageRoute(
                     builder: (_) => const DesignGalleryScreen(),
                   ),
                 );
