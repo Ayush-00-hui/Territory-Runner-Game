@@ -272,15 +272,15 @@ class _MainScreenState extends State<MainScreen> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Container(
-      height: 64.0 + bottomPad,
       decoration: const BoxDecoration(
         color: AppColors.bgElevated,
         border: Border(
           top: BorderSide(color: AppColors.borderSubtle, width: 1.0),
         ),
       ),
-      child: SafeArea(
-        top: false,
+      padding: EdgeInsets.only(bottom: bottomPad),
+      child: SizedBox(
+        height: 60.0,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.s16,
@@ -293,7 +293,7 @@ class _MainScreenState extends State<MainScreen> {
               Expanded(
                 child: _buildNavTab(
                   index: 0,
-                  icon: Icons.bolt_rounded,
+                  icon: Icons.home_rounded,
                   label: 'Home',
                 ),
               ),
@@ -302,12 +302,14 @@ class _MainScreenState extends State<MainScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
                 child: Semantics(
+                  container: true,
                   button: true,
-                  label: 'Start Run',
+                  label: 'Start run',
+                  excludeSemantics: true,
                   child: _CenterRunAction(
                     isSelected: _selectedIndex == 1,
                     onTap: () {
-                      AppMotion.heavyBurst();
+                      AppMotion.selectionTick();
                       _onTabSelected(1);
                     },
                   ),
@@ -403,6 +405,7 @@ class _CenterRunActionState extends State<_CenterRunAction> {
   @override
   Widget build(BuildContext context) {
     final scale = _isPressed ? AppMotion.pressScale : 1.0;
+    final isSelected = widget.isSelected;
 
     return AnimatedScale(
       scale: scale,
@@ -416,28 +419,36 @@ class _CenterRunActionState extends State<_CenterRunAction> {
         },
         onTapCancel: () => setState(() => _isPressed = false),
         behavior: HitTestBehavior.opaque,
-        child: Container(
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
           decoration: BoxDecoration(
-            color: AppColors.accent,
+            color: isSelected ? AppColors.accent : AppColors.surface2,
             borderRadius: AppRadius.brFull,
-            border: Border.all(color: AppColors.accent, width: 1.0),
+            border: Border.all(
+              color: isSelected ? AppColors.accent : AppColors.borderSubtle,
+              width: 1.0,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.directions_run_rounded,
-                size: 22,
-                color: AppColors.onAccent,
+                size: 20,
+                color: isSelected ? AppColors.onAccent : AppColors.accent,
               ),
               const SizedBox(width: AppSpacing.s6),
               Text(
                 'Run',
-                style: AppText.button.copyWith(
-                  color: AppColors.onAccent,
+                style: AppText.labelMedium.copyWith(
+                  color: isSelected
+                      ? AppColors.onAccent
+                      : AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
                 ),
               ),
             ],
