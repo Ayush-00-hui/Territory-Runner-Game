@@ -29,7 +29,7 @@ void main() {
 
       expect(find.text('RUNNER INTERFACE RECOVERED'), findsOneWidget);
       expect(
-        find.textContaining('Your telemetry, active GPS track'),
+        find.textContaining('Your run data, active GPS track'),
         findsOneWidget,
       );
       expect(find.text('RETURN TO NAVIGATION'), findsOneWidget);

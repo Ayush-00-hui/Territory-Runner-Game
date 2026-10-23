@@ -362,7 +362,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify active duel details
-      expect(find.text('Active conquests (1)'), findsOneWidget);
+      expect(find.text('Active duels (1)'), findsOneWidget);
       expect(find.text('Area: 10000 m²'), findsOneWidget);
       expect(find.text('Battle in progress'), findsOneWidget);
       expect(find.textContaining('VS ValkyrieRunner'), findsOneWidget);
@@ -500,7 +500,7 @@ void main() {
       await tester.tap(find.textContaining('Duels (1)'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Active conquests (1)'), findsOneWidget);
+      expect(find.text('Active duels (1)'), findsOneWidget);
       expect(find.text('Area: 10000 m²'), findsOneWidget);
       expect(find.text('Battle in progress'), findsOneWidget);
       expect(find.textContaining('VS OfflinePacer'), findsOneWidget);

@@ -485,7 +485,7 @@ class MapLayers {
     return MarkerLayer(markers: markers);
   }
 
-  /// Maps faction name to dedicated cyber aesthetic accent color
+  /// Maps faction name to dedicated accent color
   static Color getFactionColor(String faction) {
     final lower = faction.toLowerCase();
     if (lower.contains('vanguard') ||

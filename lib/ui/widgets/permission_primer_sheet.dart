@@ -281,19 +281,19 @@ class _PrimerConfig {
       case PermissionPrimerType.notifications:
         return const _PrimerConfig(
           headerIcon: Icons.notifications_active_rounded,
-          title: 'TACTICAL RADAR ALERTS',
-          subtitle: 'EARLY WARNING DEFENSE SYSTEM',
-          description: 'Rival runner syndicates can attack your captured sectors in real-time. Enable radar alerts to receive instant notifications when your territory is under attack, carved, or contested.',
+          title: 'Territory alerts',
+          subtitle: 'Live run updates',
+          description: 'Nearby runners can challenge your claimed territories. Enable alerts to receive instant notifications when your territory is contested.',
           features: [
             _FeatureItem(
               Icons.shield_rounded,
-              'Real-Time Attack Radar',
-              'Instant warnings when a rival runs through your sector',
+              'Nearby runner alerts',
+              'Instant notifications when a rival runs through your territory',
             ),
             _FeatureItem(
               Icons.gps_fixed_rounded,
-              'Direct Tactical Deep-Link',
-              'Tap notification to immediately center and defend on map',
+              'Direct map deep-link',
+              'Tap notification to immediately center and view on map',
             ),
             _FeatureItem(
               Icons.military_tech_rounded,
@@ -301,16 +301,16 @@ class _PrimerConfig {
               'Alerts when promotion or relegation zones shift',
             ),
           ],
-          primaryButtonText: 'ENABLE RADAR ALERTS',
-          secondaryButtonText: 'MAYBE LATER',
+          primaryButtonText: 'Enable alerts',
+          secondaryButtonText: 'Maybe later',
         );
 
       case PermissionPrimerType.location:
         return const _PrimerConfig(
           headerIcon: Icons.gps_fixed_rounded,
-          title: 'HIGH-PRECISION SATELLITE GPS',
-          subtitle: 'TERRITORY LOCK & ENCLOSURE',
-          description: 'Territory Runner requires precise GPS location to track your real-world path, calculate polygon enclosures, and award sovereign territory. Telemetry stays secure on your device.',
+          title: 'High-precision GPS',
+          subtitle: 'Territory mapping',
+          description: 'Territory Runner requires location access to track your running path, calculate enclosed loops, and map your territory. Data stays on your device.',
           features: [
             _FeatureItem(
               Icons.polyline_rounded,
@@ -319,7 +319,7 @@ class _PrimerConfig {
             ),
             _FeatureItem(
               Icons.speed_rounded,
-              'Real-Time Pace & Telemetry',
+              'Real-Time Pace & Stats',
               'Live split times, stride cadence, and elevation metrics',
             ),
             _FeatureItem(
@@ -328,16 +328,16 @@ class _PrimerConfig {
               'Automated privacy zones mask home and office locations',
             ),
           ],
-          primaryButtonText: 'GRANT GPS ACCESS',
-          secondaryButtonText: 'MAYBE LATER',
+          primaryButtonText: 'Grant GPS access',
+          secondaryButtonText: 'Maybe later',
         );
 
       case PermissionPrimerType.backgroundLocation:
         return const _PrimerConfig(
           headerIcon: Icons.screen_lock_portrait_rounded,
-          title: 'BACKGROUND TRACKING SENSING',
-          subtitle: 'CONTINUOUS ENCLOSURE RADAR',
-          description: 'To record loops while your phone is locked in your pocket or when using AMOLED battery saver, background location access is required. No telemetry is logged when not running.',
+          title: 'Background tracking',
+          subtitle: 'Continuous run tracking',
+          description: 'To record loops while your phone is locked in your pocket or when using AMOLED battery saver, background location access is required. No location is logged when not running.',
           features: [
             _FeatureItem(
               Icons.lock_clock_rounded,
@@ -352,11 +352,11 @@ class _PrimerConfig {
             _FeatureItem(
               Icons.restore_rounded,
               'Autonomous Run Recovery',
-              'Restores state if OS suspends app mid-conquest',
+              'Restores state if OS suspends app during a run',
             ),
           ],
-          primaryButtonText: 'ALLOW ALL-TIME GPS',
-          secondaryButtonText: 'MAYBE LATER',
+          primaryButtonText: 'Allow background GPS',
+          secondaryButtonText: 'Maybe later',
         );
     }
   }

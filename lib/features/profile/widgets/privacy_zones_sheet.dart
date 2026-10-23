@@ -207,7 +207,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
 
             const SizedBox(height: AppSpacing.s12),
             Text(
-              'Your GPS tracks, start/finish points, and live presence inside privacy zones are strictly hidden from other runners and public exports. Territory polygons remain visible to maintain fair conquest gameplay.',
+              'Your GPS tracks, start/finish points, and live presence inside privacy zones are strictly hidden from other runners and public exports. Territory polygons remain visible to maintain fair territory gameplay.',
               style: AppText.bodySmall.copyWith(
                 color: AppColors.textSecondary,
                 height: 1.35,

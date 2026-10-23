@@ -135,7 +135,7 @@ class SafetyService {
     final locationUrl =
         'https://maps.google.com/?q=${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
     final text =
-        '🚨 TACTICAL DISTRESS BEACON — Territory Runner\n'
+        'Distress alert: Territory Runner\n'
         'My current GPS location:\n$locationUrl\n'
         'Latitude: ${position.latitude.toStringAsFixed(6)}\n'
         'Longitude: ${position.longitude.toStringAsFixed(6)}\n'
@@ -144,7 +144,7 @@ class SafetyService {
     await SharePlus.instance.share(ShareParams(text: text));
   }
 
-  /// Triggers a loud tactical audio siren beacon to deter threats or alert passersby
+  /// Triggers a loud audio siren beacon to deter threats or alert passersby
   Future<void> playTacticalSiren() async {
     if (_isSirenPlaying) return;
     _isSirenPlaying = true;
@@ -155,7 +155,7 @@ class SafetyService {
       await _sirenPlayer!.play(AssetSource('audio/sos_siren.wav'));
     } catch (e) {
       AppLogger.error(
-        'Error playing tactical siren: $e',
+        'Error playing siren: $e',
         tag: 'SafetyService',
         error: e,
       );
@@ -171,7 +171,7 @@ class SafetyService {
       }
     } catch (e) {
       AppLogger.error(
-        'Error stopping tactical siren: $e',
+        'Error stopping siren: $e',
         tag: 'SafetyService',
         error: e,
       );

@@ -14,10 +14,10 @@ class ErrorState extends StatelessWidget {
 
   const ErrorState({
     super.key,
-    this.title = 'Unable to Load Telemetry',
+    this.title = 'Unable to load stats',
     required this.message,
     this.onRetry,
-    this.retryLabel = 'Try Again',
+    this.retryLabel = 'Try again',
   });
 
   @override

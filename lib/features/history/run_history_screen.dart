@@ -8,7 +8,9 @@ import '../../models/territory.dart';
 import '../../ui/ui.dart';
 import 'widgets/history_run_card.dart';
 
-enum HistoryTimeFilter { all, thisWeek, thisMonth }
+enum HistoryFilter { all, loops, claims, thisWeek, thisMonth }
+
+typedef HistoryTimeFilter = HistoryFilter;
 
 enum HistorySortOption { newest, largestArea, longestDistance }
 
@@ -28,7 +30,7 @@ class RunHistoryScreen extends StatefulWidget {
 
 class _RunHistoryScreenState extends State<RunHistoryScreen> {
   final TerritoryService _territoryService = TerritoryService();
-  HistoryTimeFilter _timeFilter = HistoryTimeFilter.all;
+  HistoryFilter _timeFilter = HistoryFilter.all;
   HistorySortOption _sortOption = HistorySortOption.newest;
 
   double _estimateDistanceKm(List<LatLng> points) {
@@ -47,11 +49,15 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
 
     final filtered = rawList.where((t) {
       switch (_timeFilter) {
-        case HistoryTimeFilter.all:
+        case HistoryFilter.all:
           return true;
-        case HistoryTimeFilter.thisWeek:
+        case HistoryFilter.loops:
+          return t.polygon.length >= 3;
+        case HistoryFilter.claims:
+          return t.areaSqMeters > 0;
+        case HistoryFilter.thisWeek:
           return now.difference(t.capturedAt).inDays <= 7;
-        case HistoryTimeFilter.thisMonth:
+        case HistoryFilter.thisMonth:
           return now.difference(t.capturedAt).inDays <= 30;
       }
     }).toList();
@@ -69,6 +75,44 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
     });
 
     return filtered;
+  }
+
+  String _groupKeyForDate(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(dt.year, dt.month, dt.day);
+    final diffDays = today.difference(target).inDays;
+
+    if (diffDays <= 7) {
+      return 'Current week';
+    } else if (diffDays <= 14) {
+      return 'Last week';
+    } else {
+      const months = [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December',
+      ];
+      return '${months[dt.month - 1]} ${dt.year}';
+    }
+  }
+
+  Map<String, List<Territory>> _groupByPeriod(List<Territory> items) {
+    final map = <String, List<Territory>>{};
+    for (final t in items) {
+      final key = _groupKeyForDate(t.capturedAt);
+      map.putIfAbsent(key, () => []).add(t);
+    }
+    return map;
   }
 
   @override
@@ -138,6 +182,9 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
         ? '${(totalArea / 1000000.0).toStringAsFixed(2)} km²'
         : '${totalArea.toStringAsFixed(0)} m²';
 
+    final isNewestSort = _sortOption == HistorySortOption.newest;
+    final groupedRuns = isNewestSort ? _groupByPeriod(territories) : null;
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -158,32 +205,37 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                 border: Border.all(color: AppColors.borderSubtle),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildSummaryMetric(
-                    'Total area',
-                    totalAreaFormatted,
-                    AppColors.accent,
+                  Expanded(
+                    child: _buildSummaryMetric(
+                      'Total area',
+                      totalAreaFormatted,
+                      AppColors.accent,
+                    ),
                   ),
                   Container(
                     width: 1,
                     height: 36,
                     color: AppColors.borderSubtle,
                   ),
-                  _buildSummaryMetric(
-                    'Conquests',
-                    '${rawTerritories.length}',
-                    AppColors.textPrimary,
+                  Expanded(
+                    child: _buildSummaryMetric(
+                      'Territories',
+                      '${rawTerritories.length}',
+                      AppColors.textPrimary,
+                    ),
                   ),
                   Container(
                     width: 1,
                     height: 36,
                     color: AppColors.borderSubtle,
                   ),
-                  _buildSummaryMetric(
-                    'Total distance',
-                    '${totalDist.toStringAsFixed(1)} km',
-                    AppColors.textPrimary,
+                  Expanded(
+                    child: _buildSummaryMetric(
+                      'Total distance',
+                      '${totalDist.toStringAsFixed(1)} km',
+                      AppColors.textPrimary,
+                    ),
                   ),
                 ],
               ),
@@ -191,111 +243,109 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           ),
         ),
 
-        // Filter & Sort Pills
+        // Filter chips row
         SliverToBoxAdapter(
-          child: Padding(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                // Time filter row
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip(HistoryTimeFilter.all, 'All runs'),
-                      const SizedBox(width: AppSpacing.s8),
-                      _buildFilterChip(HistoryTimeFilter.thisWeek, 'This week'),
-                      const SizedBox(width: AppSpacing.s8),
-                      _buildFilterChip(
-                        HistoryTimeFilter.thisMonth,
-                        'This month',
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s12),
-
-                // Sort selector row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${territories.length} conquests',
-                      style: AppText.label.copyWith(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    ),
-                    PopupMenuButton<HistorySortOption>(
-                      initialValue: _sortOption,
-                      color: AppColors.bgElevated,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSpacing.br16,
-                      ),
-                      onSelected: (opt) {
-                        AppMotion.lightTick();
-                        setState(() => _sortOption = opt);
-                      },
-                      itemBuilder: (ctx) => [
-                        const PopupMenuItem(
-                          value: HistorySortOption.newest,
-                          child: Text('Sort by Newest', style: AppText.body),
-                        ),
-                        const PopupMenuItem(
-                          value: HistorySortOption.largestArea,
-                          child: Text(
-                            'Sort by Largest Area',
-                            style: AppText.body,
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: HistorySortOption.longestDistance,
-                          child: Text(
-                            'Sort by Longest Distance',
-                            style: AppText.body,
-                          ),
-                        ),
-                      ],
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: AppSpacing.br8,
-                          border: Border.all(color: AppColors.borderSubtle),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.sort_rounded,
-                              size: 14,
-                              color: AppColors.accent,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _sortLabel(_sortOption),
-                              style: AppText.label.copyWith(
-                                color: AppColors.accent,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.s12),
+                _buildFilterChip(HistoryFilter.all, 'All runs'),
+                const SizedBox(width: AppSpacing.s8),
+                _buildFilterChip(HistoryFilter.loops, 'Loops'),
+                const SizedBox(width: AppSpacing.s8),
+                _buildFilterChip(HistoryFilter.claims, 'Claims'),
+                const SizedBox(width: AppSpacing.s8),
+                _buildFilterChip(HistoryFilter.thisWeek, 'This week'),
+                const SizedBox(width: AppSpacing.s8),
+                _buildFilterChip(HistoryFilter.thisMonth, 'This month'),
               ],
             ),
           ),
         ),
 
-        // List of runs
+        // Sort selector row
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.s16,
+              AppSpacing.s12,
+              AppSpacing.s16,
+              AppSpacing.s8,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${territories.length} runs',
+                  style: AppText.labelSmall.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                PopupMenuButton<HistorySortOption>(
+                  initialValue: _sortOption,
+                  color: AppColors.bgElevated,
+                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
+                  onSelected: (opt) {
+                    AppMotion.selectionTick();
+                    setState(() => _sortOption = opt);
+                  },
+                  itemBuilder: (ctx) => [
+                    const PopupMenuItem(
+                      value: HistorySortOption.newest,
+                      child: Text('Newest', style: AppText.bodyMedium),
+                    ),
+                    const PopupMenuItem(
+                      value: HistorySortOption.largestArea,
+                      child: Text('Largest area', style: AppText.bodyMedium),
+                    ),
+                    const PopupMenuItem(
+                      value: HistorySortOption.longestDistance,
+                      child: Text(
+                        'Longest distance',
+                        style: AppText.bodyMedium,
+                      ),
+                    ),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppSpacing.br8,
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.sort_rounded,
+                          size: 14,
+                          color: AppColors.accent,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _sortLabel(_sortOption),
+                          style: AppText.labelSmall.copyWith(
+                            color: AppColors.accent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // List of runs (or Empty state)
         if (territories.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
@@ -305,23 +355,60 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                 child: EmptyState(
                   icon: Icons.history_toggle_off_rounded,
                   title: 'No runs in range',
-                  message: 'Try changing your filters or start a new run to capture sovereign loops.',
-                  actionLabel: _timeFilter != HistoryTimeFilter.all
+                  message: 'Try changing your filters or start a new run to claim territory.',
+                  actionLabel: _timeFilter != HistoryFilter.all
                       ? 'Reset filters'
                       : null,
-                  onAction: _timeFilter != HistoryTimeFilter.all
-                      ? () =>
-                            setState(() => _timeFilter = HistoryTimeFilter.all)
+                  onAction: _timeFilter != HistoryFilter.all
+                      ? () => setState(() => _timeFilter = HistoryFilter.all)
                       : null,
                 ),
               ),
             ),
           )
+        else if (isNewestSort && groupedRuns != null)
+          // Grouped by week/month
+          ...groupedRuns.entries.expand((entry) {
+            return [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.s20,
+                    AppSpacing.s16,
+                    AppSpacing.s20,
+                    AppSpacing.s8,
+                  ),
+                  child: Text(
+                    entry.key,
+                    style: AppText.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final territory = entry.value[index];
+                    return HistoryRunCard(
+                      territory: territory,
+                      callsign: profile.username,
+                      faction: profile.faction,
+                    );
+                  }, childCount: entry.value.length),
+                ),
+              ),
+            ];
+          })
         else
+          // Flat sorted list
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.s16,
-              0,
+              AppSpacing.s8,
               AppSpacing.s16,
               AppSpacing.s32,
             ),
@@ -336,6 +423,8 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               }, childCount: territories.length),
             ),
           ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s32)),
       ],
     );
   }
@@ -351,32 +440,43 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
     }
   }
 
-  Widget _buildFilterChip(HistoryTimeFilter filter, String label) {
+  Widget _buildFilterChip(HistoryFilter filter, String label) {
     final isSelected = _timeFilter == filter;
-    return GestureDetector(
-      onTap: () {
-        AppMotion.lightTick();
-        setState(() => _timeFilter = filter);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.accent.withValues(alpha: 0.18)
-              : AppColors.surface,
-          borderRadius: AppSpacing.brFull,
-          border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.borderSubtle,
-            width: isSelected ? 1.4 : 1.0,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: 'Filter: $label',
+      child: GestureDetector(
+        onTap: () {
+          AppMotion.selectionTick();
+          setState(() => _timeFilter = filter);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
+          constraints: const BoxConstraints(minHeight: 36),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.accent.withValues(alpha: 0.16)
+                : AppColors.surface,
+            borderRadius: AppRadius.brFull,
+            border: Border.all(
+              color: isSelected ? AppColors.accent : AppColors.borderSubtle,
+              width: isSelected ? 1.4 : 1.0,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: AppText.label.copyWith(
-            color: isSelected ? AppColors.accent : AppColors.textMuted,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+          child: Center(
+            child: Text(
+              label,
+              style: AppText.labelSmall.copyWith(
+                color: isSelected ? AppColors.accent : AppColors.textMuted,
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: 0.2,
+              ),
+            ),
           ),
         ),
       ),
@@ -385,22 +485,29 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
 
   Widget _buildSummaryMetric(String label, String value, Color valueColor) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          label,
-          style: AppText.label.copyWith(
-            color: AppColors.textMuted,
-            fontSize: 9.5,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            label,
+            style: AppText.labelSmall.copyWith(
+              color: AppColors.textMuted,
+              fontSize: 10,
+            ),
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppText.statSmall.copyWith(
-            fontSize: 16,
-            color: valueColor,
-            fontWeight: FontWeight.w900,
-            fontFeatures: const [FontFeature.tabularFigures()],
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: AppText.statSmall.copyWith(
+              fontSize: 16,
+              color: valueColor,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],

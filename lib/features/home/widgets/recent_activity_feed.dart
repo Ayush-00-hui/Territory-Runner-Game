@@ -110,7 +110,7 @@ class RecentActivityFeed extends StatelessWidget {
               children: [
                 Expanded(
                   child: SecondaryButton(
-                    label: 'Share Card',
+                    label: 'Share card',
                     icon: Icons.share_rounded,
                     onPressed: () {
                       Navigator.pop(ctx);
@@ -179,7 +179,7 @@ class RecentActivityFeed extends StatelessWidget {
           title: 'No runs yet',
           message:
               'Lace up your shoes and run a closed loop to claim territory.',
-          actionLabel: 'Start Run',
+          actionLabel: 'Start run',
           onAction: onStartRun,
         ),
       );
@@ -232,7 +232,15 @@ class RecentActivityFeed extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Closed loop', style: AppText.titleSmall),
+                          Flexible(
+                            child: Text(
+                              'Closed loop',
+                              style: AppText.titleSmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.s8),
                           Text(
                             _formatDate(territory.capturedAt),
                             style: AppText.caption,
@@ -263,9 +271,13 @@ class RecentActivityFeed extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.s8),
-                          Text(
-                            '${territory.polygon.length} pts',
-                            style: AppText.bodySmall,
+                          Flexible(
+                            child: Text(
+                              '${territory.polygon.length} pts',
+                              style: AppText.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),

@@ -211,7 +211,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                   children: [
                     const Text('Claim planner', style: AppText.headingSmall),
                     Text(
-                      'AI loop guidance biased to sovereign expansion',
+                      'AI loop guidance biased to territory expansion',
                       style: AppText.label.copyWith(
                         color: AppColors.textSecondary,
                       ),

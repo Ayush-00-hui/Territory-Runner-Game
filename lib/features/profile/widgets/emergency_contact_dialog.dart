@@ -124,7 +124,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
 
             // Contact Name
             Text(
-              'Contact Name',
+              'Contact name',
               style: AppText.labelSmall.copyWith(
                 fontSize: 11,
                 color: AppColors.textMuted,
@@ -133,6 +133,8 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
             const SizedBox(height: 4),
             TextField(
               controller: _nameController,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.name],
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 13,
@@ -156,7 +158,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
 
             // Contact Phone
             Text(
-              'Phone Number (with Country Code)',
+              'Phone number (with country code)',
               style: AppText.labelSmall.copyWith(
                 fontSize: 11,
                 color: AppColors.textMuted,
@@ -166,6 +168,8 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
             TextField(
               controller: _phoneController,
               keyboardType: TextInputType.phone,
+              textInputAction: TextInputAction.next,
+              autofillHints: const [AutofillHints.telephoneNumber],
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 13,
@@ -189,7 +193,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
 
             // SOS Message template
             Text(
-              'Distress Message Preview',
+              'Distress message preview',
               style: AppText.labelSmall.copyWith(
                 fontSize: 11,
                 color: AppColors.textMuted,
@@ -199,6 +203,8 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
             TextField(
               controller: _messageController,
               maxLines: 2,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _save(),
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontSize: 12,
@@ -224,7 +230,7 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
           label: 'Cancel',
           onPressed: () => Navigator.of(context).pop(),
         ),
-        PrimaryButton(label: 'Save Settings', onPressed: _save),
+        PrimaryButton(label: 'Save settings', onPressed: _save),
       ],
     );
   }

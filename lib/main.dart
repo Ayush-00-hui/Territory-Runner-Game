@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -126,250 +124,10 @@ void _initServicesAsync() async {
   }
 }
 
-Path _runPreviewPath(Size size) {
-  final p = Path();
-
-  final start = Offset(size.width * 0.10, size.height * 0.68);
-  final c1 = Offset(size.width * 0.28, size.height * 0.82);
-  final mid1 = Offset(size.width * 0.42, size.height * 0.52);
-
-  final c2 = Offset(size.width * 0.56, size.height * 0.28);
-  final mid2 = Offset(size.width * 0.68, size.height * 0.60);
-
-  final c3 = Offset(size.width * 0.80, size.height * 0.78);
-  final end = Offset(size.width * 0.90, size.height * 0.40);
-
-  p.moveTo(start.dx, start.dy);
-  p.cubicTo(c1.dx, c1.dy, mid1.dx, mid1.dy, mid1.dx, mid1.dy);
-  p.cubicTo(c2.dx, c2.dy, mid2.dx, mid2.dy, mid2.dx, mid2.dy);
-  p.cubicTo(c3.dx, c3.dy, end.dx, end.dy, end.dx, end.dy);
-
-  return p;
-}
-
-void showRunStartAnimation(BuildContext context) {
-  showGeneralDialog(
-    context: context,
-    barrierDismissible: true,
-    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-    barrierColor: AppColors.scrim,
-    transitionDuration: AppMotion.sheet,
-    transitionBuilder: (context, animation, _, child) {
-      return AppMotion.sharedAxisTransition(
-        context: context,
-        animation: animation,
-        child: child,
-      );
-    },
-    pageBuilder: (context, _, _) => const _RunStartOverlay(),
-  );
-}
-
-class _RunStartOverlay extends StatefulWidget {
-  const _RunStartOverlay();
-
-  @override
-  State<_RunStartOverlay> createState() => _RunStartOverlayState();
-}
-
-class _RunStartOverlayState extends State<_RunStartOverlay>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3600),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  static ui.Tangent? _tangentAt(ui.PathMetric metric, double t) {
-    final len = metric.length;
-    if (len <= 0) return null;
-    return metric.getTangentForOffset(t.clamp(0.0, 1.0) * len);
-  }
-
-  Widget _runnerStack(ui.PathMetric metric, double pathT) {
-    const lags = [0.048, 0.032, 0.018];
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        for (var k = 3; k >= 0; k--)
-          _runnerAt(metric, pathT, k == 0 ? 0.0 : lags[k - 1], k),
-      ],
-    );
-  }
-
-  Widget _runnerAt(ui.PathMetric metric, double pathT, double lag, int layer) {
-    final t = (pathT - lag).clamp(0.0, 1.0);
-    final tan = _tangentAt(metric, t);
-    if (tan == null) return const SizedBox.shrink();
-
-    final bob = math.sin(t * math.pi * 2 * 5) * 3.5;
-    final angle = math.atan2(tan.vector.dy, tan.vector.dx);
-    final opacity = layer == 0 ? 1.0 : [0.15, 0.30, 0.50][layer - 1];
-    final size = layer == 0 ? 38.0 : 32.0 - layer * 2.0;
-
-    return Positioned(
-      left: tan.position.dx - size * 0.55,
-      top: tan.position.dy - size * 0.6 + bob,
-      child: Transform.rotate(
-        angle: angle - math.pi / 2,
-        child: Opacity(
-          opacity: opacity,
-          child: Icon(
-            Icons.directions_run_rounded,
-            size: size,
-            color: AppColors.accent,
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            width: 320,
-            margin: const EdgeInsets.symmetric(horizontal: AppSpacing.s24),
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.s20,
-              AppSpacing.s24,
-              AppSpacing.s20,
-              AppSpacing.s20,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.br24,
-              border: Border.all(color: AppColors.borderSubtle, width: 1.0),
-              boxShadow: AppElevation.floating,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Start run',
-                      style: AppText.labelSmall.copyWith(
-                        color: AppColors.accent,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        size: 20,
-                        color: AppColors.textSecondary,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.s12),
-                SizedBox(
-                  height: 150,
-                  width: double.infinity,
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) {
-                      return CustomPaint(
-                        painter: _RunOverlayTrackPainter(
-                          progress: _controller.value,
-                        ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final size = constraints.biggest;
-                            final path = _runPreviewPath(size);
-                            final metrics = path.computeMetrics().toList();
-                            if (metrics.isEmpty) {
-                              return const SizedBox.shrink();
-                            }
-                            return _runnerStack(
-                              metrics.first,
-                              _controller.value,
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s12),
-                Text(
-                  'Connecting to GPS & preparing your run...',
-                  textAlign: TextAlign.center,
-                  style: AppText.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.s20),
-                PrimaryButton(
-                  label: 'Start run',
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RunOverlayTrackPainter extends CustomPainter {
-  _RunOverlayTrackPainter({required this.progress});
-
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = _runPreviewPath(size);
-
-    final bgPaint = Paint()
-      ..color = AppColors.borderSubtle
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
-      ..strokeCap = StrokeCap.round;
-    canvas.drawPath(path, bgPaint);
-
-    final metrics = path.computeMetrics().toList();
-    if (metrics.isEmpty) return;
-    final m = metrics.first;
-    final len = m.length;
-    final head = progress.clamp(0.0, 1.0) * len;
-    final tail = (head - 72).clamp(0.0, len);
-
-    if (head > tail) {
-      final seg = m.extractPath(tail, head);
-      final trailPaint = Paint()
-        ..color = AppColors.accent
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.5
-        ..strokeCap = StrokeCap.round;
-      canvas.drawPath(seg, trailPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RunOverlayTrackPainter oldDelegate) =>
-      oldDelegate.progress != progress;
-}
+/// Deprecated in U1 for instant, zero-delay run start.
+/// Tapping start tracking activates the HUD in one frame (<100ms) with quiet inline status.
+@Deprecated('Use instant inline HUD activation instead (U1)')
+void showRunStartAnimation(BuildContext context) {}
 
 class TerritoryApp extends StatefulWidget {
   const TerritoryApp({super.key});
@@ -453,19 +211,17 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  final Set<int> _loadedTabs = {0};
   StreamSubscription<String>? _notificationSub;
 
-  late final List<Widget> _pages = [
-    HomeScreen(
-      onStartRun: () {
-        setState(() {
-          _selectedIndex = 1;
-        });
-      },
-    ),
-    const MapScreenFeature(),
-    const ProfilePage(),
-  ];
+  void _onTabSelected(int index) {
+    if (mounted) {
+      setState(() {
+        _selectedIndex = index;
+        _loadedTabs.add(index);
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -473,11 +229,7 @@ class _MainScreenState extends State<MainScreen> {
     _notificationSub = NotificationService().onAttackedTerritoryTapped.listen((
       _,
     ) {
-      if (mounted) {
-        setState(() {
-          _selectedIndex = 1;
-        });
-      }
+      _onTabSelected(1);
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -495,7 +247,23 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgDeep,
-      body: IndexedStack(index: _selectedIndex, children: _pages),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          _loadedTabs.contains(0)
+              ? HomeScreen(
+                  isActive: _selectedIndex == 0,
+                  onStartRun: () => _onTabSelected(1),
+                )
+              : const SizedBox.shrink(),
+          _loadedTabs.contains(1)
+              ? MapScreenFeature(isActive: _selectedIndex == 1)
+              : const SizedBox.shrink(),
+          _loadedTabs.contains(2)
+              ? const ProfilePage()
+              : const SizedBox.shrink(),
+        ],
+      ),
       bottomNavigationBar: _buildPremiumBottomNav(context),
     );
   }
@@ -504,15 +272,15 @@ class _MainScreenState extends State<MainScreen> {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Container(
-      height: 64.0 + bottomPad,
       decoration: const BoxDecoration(
         color: AppColors.bgElevated,
         border: Border(
           top: BorderSide(color: AppColors.borderSubtle, width: 1.0),
         ),
       ),
-      child: SafeArea(
-        top: false,
+      padding: EdgeInsets.only(bottom: bottomPad),
+      child: SizedBox(
+        height: 60.0,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.s16,
@@ -525,7 +293,7 @@ class _MainScreenState extends State<MainScreen> {
               Expanded(
                 child: _buildNavTab(
                   index: 0,
-                  icon: Icons.bolt_rounded,
+                  icon: Icons.home_rounded,
                   label: 'Home',
                 ),
               ),
@@ -534,15 +302,15 @@ class _MainScreenState extends State<MainScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
                 child: Semantics(
+                  container: true,
                   button: true,
-                  label: 'Start Run',
+                  label: 'Start run',
+                  excludeSemantics: true,
                   child: _CenterRunAction(
                     isSelected: _selectedIndex == 1,
                     onTap: () {
-                      AppMotion.heavyBurst();
-                      setState(() {
-                        _selectedIndex = 1;
-                      });
+                      AppMotion.selectionTick();
+                      _onTabSelected(1);
                     },
                   ),
                 ),
@@ -578,9 +346,7 @@ class _MainScreenState extends State<MainScreen> {
         onTap: () {
           if (_selectedIndex != index) {
             AppMotion.selectionTick();
-            setState(() {
-              _selectedIndex = index;
-            });
+            _onTabSelected(index);
           }
         },
         behavior: HitTestBehavior.opaque,
@@ -639,6 +405,7 @@ class _CenterRunActionState extends State<_CenterRunAction> {
   @override
   Widget build(BuildContext context) {
     final scale = _isPressed ? AppMotion.pressScale : 1.0;
+    final isSelected = widget.isSelected;
 
     return AnimatedScale(
       scale: scale,
@@ -652,28 +419,36 @@ class _CenterRunActionState extends State<_CenterRunAction> {
         },
         onTapCancel: () => setState(() => _isPressed = false),
         behavior: HitTestBehavior.opaque,
-        child: Container(
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
           height: 48,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
           decoration: BoxDecoration(
-            color: AppColors.accent,
+            color: isSelected ? AppColors.accent : AppColors.surface2,
             borderRadius: AppRadius.brFull,
-            border: Border.all(color: AppColors.accent, width: 1.0),
+            border: Border.all(
+              color: isSelected ? AppColors.accent : AppColors.borderSubtle,
+              width: 1.0,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.directions_run_rounded,
-                size: 22,
-                color: AppColors.onAccent,
+                size: 20,
+                color: isSelected ? AppColors.onAccent : AppColors.accent,
               ),
               const SizedBox(width: AppSpacing.s6),
               Text(
                 'Run',
-                style: AppText.button.copyWith(
-                  color: AppColors.onAccent,
+                style: AppText.labelMedium.copyWith(
+                  color: isSelected
+                      ? AppColors.onAccent
+                      : AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
                 ),
               ),
             ],

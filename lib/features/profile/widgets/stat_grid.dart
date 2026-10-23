@@ -26,13 +26,16 @@ class ProfileStatGrid extends StatelessWidget {
         ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
         : '${totalAreaM2.toStringAsFixed(0)} m²';
 
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final double aspectRatio = textScale > 1.15 ? 1.2 : 1.45;
+
     return GridView.count(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       crossAxisCount: 2,
       mainAxisSpacing: AppSpacing.s12,
       crossAxisSpacing: AppSpacing.s12,
-      childAspectRatio: 1.45,
+      childAspectRatio: aspectRatio,
       children: [
         ProfileStatCard(
           icon: Icons.route_rounded,
@@ -43,9 +46,9 @@ class ProfileStatGrid extends StatelessWidget {
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'Distance Telemetry',
+              title: 'Distance Stats',
               value: '${profile.totalDistanceKm.toStringAsFixed(2)} km',
-              description: 'Cumulative GPS route distance logged on foot across urban and wilderness sectors.',
+              description: 'Cumulative GPS route distance logged on foot.',
               metrics: [
                 {
                   'label': 'Lifetime Distance',
@@ -70,9 +73,9 @@ class ProfileStatGrid extends StatelessWidget {
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'Streak Telemetry',
+              title: 'Streak Stats',
               value: '${profile.currentStreak} days',
-              description: 'Continuous daily conquest momentum. Running and claiming territory daily keeps your streak active.',
+              description: 'Daily running consistency. Running and claiming territory keeps your streak active.',
               metrics: [
                 {
                   'label': 'Active Streak Days',
@@ -96,13 +99,13 @@ class ProfileStatGrid extends StatelessWidget {
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'Territory Telemetry',
+              title: 'Territory Stats',
               value: '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} km²',
-              description: 'Post-union sovereign territory polygons permanently claimed on foot.',
+              description: 'Territory polygons permanently claimed on foot.',
               metrics: [
                 {
                   'label': 'Captured Polygons',
-                  'val': '${captured.length} sectors',
+                  'val': '${captured.length} areas',
                 },
                 {
                   'label': 'Controlled Area',
@@ -125,9 +128,9 @@ class ProfileStatGrid extends StatelessWidget {
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'Rank & Tier Telemetry',
+              title: 'Rank & Tier Stats',
               value: 'Level ${profile.level}',
-              description: 'Athlete experience tier. Progressing tiers grants improved sector claim speed and prestige insignia.',
+              description: 'Athlete experience tier. Level up as you run and claim territory.',
               metrics: [
                 {'label': 'Current Level', 'val': 'Level ${profile.level}'},
                 {
@@ -136,7 +139,7 @@ class ProfileStatGrid extends StatelessWidget {
                 },
                 {
                   'label': 'Perks Unlocked',
-                  'val': 'Territory Sovereign, Speed Burst',
+                  'val': 'Territory Master, Speed Burst',
                 },
               ],
             );
@@ -175,7 +178,10 @@ class ProfileStatCard extends StatelessWidget {
         }
       },
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.s16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s14,
+          vertical: AppSpacing.s12,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: AppSpacing.br16,
@@ -196,22 +202,30 @@ class ProfileStatCard extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            Text(
-              value,
-              style: AppText.statMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: AppText.statMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.s4),
-            Text(
-              title,
-              style: AppText.labelSmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                title,
+                style: AppText.labelSmall.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],

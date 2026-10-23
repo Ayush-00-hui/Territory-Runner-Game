@@ -543,7 +543,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                 ),
                 const SizedBox(height: AppSpacing.s6),
                 const Text(
-                  'Add rival athletes or syndicate members to monitor their territory conquest and challenge them to duels!',
+                  'Add rival athletes or team members to monitor their territories and challenge them to duels.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -811,7 +811,7 @@ class _SocialHubViewState extends State<SocialHubView> {
         if (activeDuels.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.s8),
           Text(
-            'Active conquests (${activeDuels.length})',
+            'Active duels (${activeDuels.length})',
             style: const TextStyle(
               color: AppColors.accent,
               fontWeight: FontWeight.w900,
@@ -853,7 +853,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                 ),
                 const SizedBox(height: AppSpacing.s6),
                 const Text(
-                  'Challenge friends to a 24-hour Area Conquest or Distance Sprint. Runs submitted during the duel automatically advance your meter!',
+                  'Challenge friends to a 24-hour Area Match or Distance Sprint. Runs submitted during the duel automatically advance your meter.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.textSecondary,
@@ -1343,12 +1343,11 @@ class _SocialHubViewState extends State<SocialHubView> {
                       ),
                       const SizedBox(width: AppSpacing.s8),
                       Text(
-                        'ISSUE CONQUEST CHALLENGE',
+                        'Send duel challenge',
                         style: AppText.headingSmall.copyWith(
                           color: AppColors.textPrimary,
                           fontSize: 15,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.0,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -1469,7 +1468,7 @@ class _SocialHubViewState extends State<SocialHubView> {
 
                   // Target Preset Chips
                   Text(
-                    'CONQUEST TARGET',
+                    'Goal target',
                     style: AppText.label.copyWith(
                       color: AppColors.textMuted,
                       fontSize: 11,
@@ -1600,7 +1599,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                         if (created != null && mounted) {
                           AppToast.show(
                             context,
-                            'Conquest duel issued! May the fastest runner prevail.',
+                            'Duel challenge sent. May the fastest runner prevail.',
                             type: AppToastType.success,
                           );
                           _refreshData();

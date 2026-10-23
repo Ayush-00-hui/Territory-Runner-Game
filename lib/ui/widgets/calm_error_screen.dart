@@ -63,7 +63,7 @@ class _CalmErrorScreenState extends State<CalmErrorScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s12),
                 const Text(
-                  'A temporary interface issue occurred. Your telemetry, active GPS track, and claimed territories remain safely stored on your device.',
+                  'A temporary interface issue occurred. Your run data, active GPS track, and claimed territories remain safely stored on your device.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: 'Inter',

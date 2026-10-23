@@ -8,26 +8,45 @@ import '../../../ui/ui.dart';
 /// Performance-first Home Hero Card featuring Today's Goal Ring, GPS Status, and primary Start Run CTA.
 class QuickLaunchHero extends StatefulWidget {
   final VoidCallback? onStartRun;
+  final bool isActive;
 
-  const QuickLaunchHero({super.key, this.onStartRun});
+  const QuickLaunchHero({super.key, this.onStartRun, this.isActive = true});
 
   @override
   State<QuickLaunchHero> createState() => _QuickLaunchHeroState();
 }
 
 class _QuickLaunchHeroState extends State<QuickLaunchHero> {
-  String _gpsStatus = 'Checking GPS...';
   bool _isGpsReady = false;
   Timer? _checkTimer;
 
   @override
   void initState() {
     super.initState();
-    _checkGpsStatus();
-    _checkTimer = Timer.periodic(
-      const Duration(seconds: 8),
-      (_) => _checkGpsStatus(),
-    );
+    if (widget.isActive) {
+      _checkGpsStatus();
+      _checkTimer = Timer.periodic(
+        const Duration(seconds: 8),
+        (_) => _checkGpsStatus(),
+      );
+    }
+  }
+
+  @override
+  void didUpdateWidget(QuickLaunchHero oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive != oldWidget.isActive) {
+      if (widget.isActive) {
+        _checkGpsStatus();
+        _checkTimer ??= Timer.periodic(
+          const Duration(seconds: 8),
+          (_) => _checkGpsStatus(),
+        );
+      } else {
+        _checkTimer?.cancel();
+        _checkTimer = null;
+      }
+    }
   }
 
   @override
@@ -42,7 +61,6 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
       if (!serviceEnabled) {
         if (mounted) {
           setState(() {
-            _gpsStatus = 'GPS Disabled';
             _isGpsReady = false;
           });
         }
@@ -54,7 +72,6 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
           permission == LocationPermission.deniedForever) {
         if (mounted) {
           setState(() {
-            _gpsStatus = 'Location Denied';
             _isGpsReady = false;
           });
         }
@@ -64,19 +81,12 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
       final lastPos = await Geolocator.getLastKnownPosition();
       if (mounted) {
         setState(() {
-          if (lastPos != null && lastPos.accuracy < 25) {
-            _gpsStatus = 'GPS Ready • ±${lastPos.accuracy.round()}m';
-            _isGpsReady = true;
-          } else {
-            _gpsStatus = 'GPS Ready (Locking)';
-            _isGpsReady = true;
-          }
+          _isGpsReady = lastPos != null && lastPos.accuracy < 25;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _gpsStatus = 'GPS Active';
           _isGpsReady = true;
         });
       }
@@ -98,8 +108,8 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
               // Today's Goal Ring
               ProgressRing(
                 progress: goalProgress,
-                size: 64,
-                strokeWidth: 6,
+                size: 58,
+                strokeWidth: 5.5,
                 progressColor: AppColors.accent,
                 trackColor: AppColors.surface2,
                 center: Text(
@@ -107,37 +117,50 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.s16),
+              const SizedBox(width: AppSpacing.s14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Daily goal', style: AppText.labelSmall),
                     const SizedBox(height: AppSpacing.s2),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text('$currentDayKm', style: AppText.displaySmall),
-                        const SizedBox(width: AppSpacing.s4),
-                        Text(
-                          '/ ${goalTargetKm.toStringAsFixed(1)} km',
-                          style: AppText.statUnit,
-                        ),
-                      ],
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            '$currentDayKm',
+                            style: AppText.displaySmall.copyWith(
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          Text(
+                            '/ ${goalTargetKm.toStringAsFixed(1)} km',
+                            style: AppText.statUnit,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.s8),
 
               // GPS Status Pill
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s10,
-                  vertical: AppSpacing.s6,
+                  horizontal: AppSpacing.s8,
+                  vertical: AppSpacing.s4,
                 ),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
@@ -164,12 +187,13 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
                     ),
                     const SizedBox(width: AppSpacing.s6),
                     Text(
-                      _gpsStatus,
+                      _isGpsReady ? 'Ready' : 'Locking...',
                       style: AppText.labelSmall.copyWith(
                         color: _isGpsReady
                             ? AppColors.success
                             : AppColors.warning,
                         fontSize: 10,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -179,14 +203,14 @@ class _QuickLaunchHeroState extends State<QuickLaunchHero> {
             ],
           ),
 
-          const SizedBox(height: AppSpacing.s20),
+          const SizedBox(height: AppSpacing.s16),
 
           // Primary CTA Button
           PrimaryButton(
             label: 'Start run',
             icon: Icons.play_arrow_rounded,
             onPressed: () {
-              AppMotion.heavyBurst();
+              AppMotion.mediumTick();
               widget.onStartRun?.call();
             },
           ),

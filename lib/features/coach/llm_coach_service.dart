@@ -28,7 +28,7 @@ class CoachInsight {
 
     return CoachInsight(
       summary:
-          "Outstanding run! You logged ${distanceKm.toStringAsFixed(2)} km in ${(durationSeconds / 60).toStringAsFixed(1)} min and conquered $hexesClaimed new territory sectors.",
+          "Strong run. You logged ${distanceKm.toStringAsFixed(2)} km in ${(durationSeconds / 60).toStringAsFixed(1)} min and claimed $hexesClaimed new territories.",
       tip:
           "Pace recorded at $paceMin'${paceSec.toString().padLeft(2, '0')}\"/km. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-hex loops.",
       moodTag: hexesClaimed > 5 ? CoachMood.celebratory : CoachMood.encouraging,

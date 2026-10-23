@@ -65,7 +65,10 @@ class HomeHeader extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: AppSpacing.s4),
-              Row(
+              Wrap(
+                spacing: AppSpacing.s6,
+                runSpacing: AppSpacing.s2,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   // Level capsule
                   Container(
@@ -90,32 +93,29 @@ class HomeHeader extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.s6),
                   // Faction tag
                   if (profile.faction.isNotEmpty)
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 2,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: factionColor.withValues(alpha: 0.12),
+                        borderRadius: AppRadius.br8,
+                        border: Border.all(
+                          color: factionColor.withValues(alpha: 0.3),
                         ),
-                        decoration: BoxDecoration(
-                          color: factionColor.withValues(alpha: 0.12),
-                          borderRadius: AppRadius.br8,
-                          border: Border.all(
-                            color: factionColor.withValues(alpha: 0.3),
-                          ),
+                      ),
+                      child: Text(
+                        profile.faction,
+                        style: AppText.labelSmall.copyWith(
+                          color: factionColor,
+                          fontSize: 10,
+                          letterSpacing: 0.1,
                         ),
-                        child: Text(
-                          profile.faction,
-                          style: AppText.labelSmall.copyWith(
-                            color: factionColor,
-                            fontSize: 10,
-                            letterSpacing: 0.1,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                 ],

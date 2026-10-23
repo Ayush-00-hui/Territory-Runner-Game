@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../../models/runner_profile.dart';
-import '../../../models/territory.dart';
 import '../../../services/export_service.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../../ui/ui.dart';
@@ -13,7 +12,7 @@ import '../../history/widgets/run_share_card_modal.dart';
 /// Modal bottom sheet presented upon completing a run session.
 /// Redesigned as a high-impact post-run victory card with athletic stat grid,
 /// AI Coach debrief card, territory map vector thumbnail, and share card export.
-class SummarySheet extends StatelessWidget {
+class SummarySheet extends StatefulWidget {
   final double distanceKm;
   final int durationSeconds;
   final int territoriesClaimed;
@@ -66,27 +65,57 @@ class SummarySheet extends StatelessWidget {
     );
   }
 
-  String _formatPace() {
-    if (distanceKm <= 0) return "--'--\"";
-    final double pace = (durationSeconds / 60.0) / distanceKm;
+  @override
+  State<SummarySheet> createState() => _SummarySheetState();
+}
+
+class _SummarySheetState extends State<SummarySheet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _countUpController;
+  late final Animation<double> _countUpAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _countUpController = AnimationController(
+      vsync: this,
+      duration: AppMotion.countUp,
+    );
+    _countUpAnimation = CurvedAnimation(
+      parent: _countUpController,
+      curve: AppMotion.easeOut,
+    );
+    _countUpController.forward();
+  }
+
+  @override
+  void dispose() {
+    _countUpController.dispose();
+    super.dispose();
+  }
+
+  String _formatPace(double km, int durationSeconds) {
+    if (km <= 0.05 || durationSeconds < 5) return "--'--\"";
+    final double pace = (durationSeconds / 60.0) / km;
     final int paceMin = pace.floor();
     final int paceSec = ((pace - paceMin) * 60).round();
     return "$paceMin'${paceSec.toString().padLeft(2, '0')}\"";
   }
 
-  String _formatDuration() {
-    final int minutes = durationSeconds ~/ 60;
-    final int seconds = durationSeconds % 60;
+  String _formatDuration(int seconds) {
+    final int minutes = seconds ~/ 60;
+    final int sec = seconds % 60;
     if (minutes >= 60) {
       final int hours = minutes ~/ 60;
       final int remainingMins = minutes % 60;
       return '${hours}h ${remainingMins.toString().padLeft(2, '0')}m';
     }
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+    return '${minutes.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
   }
 
   String _formatArea() {
-    final double effectiveArea = areaSqMeters ?? (territoriesClaimed * 15000.0);
+    final double effectiveArea =
+        widget.areaSqMeters ?? (widget.territoriesClaimed * 15000.0);
     if (effectiveArea >= 10000) {
       return '${(effectiveArea / 1000000.0).toStringAsFixed(2)} km²';
     }
@@ -95,20 +124,26 @@ class SummarySheet extends StatelessWidget {
 
   int _estimateCalories() {
     // Athletic benchmark: ~62 kcal per km for average runner
-    return (distanceKm * 62).round();
+    return (widget.distanceKm * 62).round();
   }
 
   @override
   Widget build(BuildContext context) {
-    final effectivePoints = routePoints ?? [];
-    final effectiveArea = areaSqMeters ?? (territoriesClaimed * 15000.0);
+    final effectivePoints = widget.routePoints ?? [];
+    final effectiveArea =
+        widget.areaSqMeters ?? (widget.territoriesClaimed * 15000.0);
+    final isReducedMotion = AppMotion.shouldReduceMotion(context);
+    final bottomInset = math.max(
+      MediaQuery.paddingOf(context).bottom,
+      AppSpacing.s16,
+    );
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.s20,
         AppSpacing.s16,
         AppSpacing.s20,
-        MediaQuery.paddingOf(context).bottom + AppSpacing.s20,
+        bottomInset + AppSpacing.s12,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -137,24 +172,24 @@ class SummarySheet extends StatelessWidget {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color:
-                          (rejectionReason != null
+                          (widget.rejectionReason != null
                                   ? AppColors.error
                                   : AppColors.accent)
                               .withValues(alpha: 0.15),
                       borderRadius: AppSpacing.br12,
                       border: Border.all(
                         color:
-                            (rejectionReason != null
+                            (widget.rejectionReason != null
                                     ? AppColors.error
                                     : AppColors.accent)
                                 .withValues(alpha: 0.35),
                       ),
                     ),
                     child: Icon(
-                      rejectionReason != null
+                      widget.rejectionReason != null
                           ? Icons.cancel_outlined
                           : Icons.emoji_events_rounded,
-                      color: rejectionReason != null
+                      color: widget.rejectionReason != null
                           ? AppColors.error
                           : AppColors.accent,
                       size: 20,
@@ -165,20 +200,20 @@ class SummarySheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        rejectionReason != null
+                        widget.rejectionReason != null
                             ? 'Run rejected'
                             : 'Run complete',
                         style: AppText.headingSmall.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: rejectionReason != null
+                          color: widget.rejectionReason != null
                               ? AppColors.error
                               : AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '${profile.username} • ${profile.faction}',
+                        '${widget.profile.username} • ${widget.profile.faction}',
                         style: AppText.bodySmall.copyWith(
                           color: AppColors.textMuted,
                           fontSize: 11,
@@ -198,7 +233,7 @@ class SummarySheet extends StatelessWidget {
             ],
           ),
 
-          if (rejectionReason != null) ...[
+          if (widget.rejectionReason != null) ...[
             const SizedBox(height: AppSpacing.s12),
             Container(
               padding: const EdgeInsets.all(AppSpacing.s12),
@@ -232,7 +267,7 @@ class SummarySheet extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          rejectionReason!,
+                          widget.rejectionReason!,
                           style: AppText.bodySmall.copyWith(
                             color: AppColors.textPrimary,
                             fontSize: 12,
@@ -249,42 +284,68 @@ class SummarySheet extends StatelessWidget {
 
           const SizedBox(height: AppSpacing.s16),
 
-          // High Impact 4-Metric Athletic Grid
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppSpacing.br20,
-              border: Border.all(color: AppColors.borderSubtle),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildMetricColumn(
-                  'Distance',
-                  '${distanceKm.toStringAsFixed(2)} km',
-                  AppColors.accent,
+          // High Impact 4-Metric Athletic Grid with 500ms Count-Up
+          AnimatedBuilder(
+            animation: _countUpAnimation,
+            builder: (context, _) {
+              final progress = isReducedMotion ? 1.0 : _countUpAnimation.value;
+              final double curKm = widget.distanceKm * progress;
+              final int curSec = (widget.durationSeconds * progress).round();
+              final int curTerr = (widget.territoriesClaimed * progress)
+                  .round();
+
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 14,
                 ),
-                Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn(
-                  'Time',
-                  _formatDuration(),
-                  AppColors.textPrimary,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppSpacing.br20,
+                  border: Border.all(color: AppColors.borderSubtle),
                 ),
-                Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn(
-                  'Pace',
-                  '${_formatPace()}/km',
-                  AppColors.textPrimary,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildMetricColumn(
+                      'Distance',
+                      '${curKm.toStringAsFixed(2)} km',
+                      AppColors.accent,
+                    ),
+                    Container(
+                      width: 1,
+                      height: 36,
+                      color: AppColors.borderSubtle,
+                    ),
+                    _buildMetricColumn(
+                      'Time',
+                      _formatDuration(curSec),
+                      AppColors.textPrimary,
+                    ),
+                    Container(
+                      width: 1,
+                      height: 36,
+                      color: AppColors.borderSubtle,
+                    ),
+                    _buildMetricColumn(
+                      'Pace',
+                      '${_formatPace(curKm, curSec)}/km',
+                      AppColors.textPrimary,
+                    ),
+                    Container(
+                      width: 1,
+                      height: 36,
+                      color: AppColors.borderSubtle,
+                    ),
+                    _buildMetricColumn(
+                      'Territory',
+                      '+$curTerr',
+                      AppColors.accent,
+                    ),
+                  ],
                 ),
-                Container(width: 1, height: 36, color: AppColors.borderSubtle),
-                _buildMetricColumn(
-                  'Territory',
-                  '+$territoriesClaimed',
-                  AppColors.accent,
-                ),
-              ],
-            ),
+              );
+            },
           ),
 
           const SizedBox(height: AppSpacing.s14),
@@ -340,11 +401,11 @@ class SummarySheet extends StatelessWidget {
 
           // AI Coach Insight Card
           FutureBuilder<CoachInsight>(
-            future: coachService.generateRunInsight(
-              distanceKm: distanceKm,
-              durationSeconds: durationSeconds,
-              hexesClaimed: territoriesClaimed,
-              profile: profile,
+            future: widget.coachService.generateRunInsight(
+              distanceKm: widget.distanceKm,
+              durationSeconds: widget.durationSeconds,
+              hexesClaimed: widget.territoriesClaimed,
+              profile: widget.profile,
             ),
             builder: (context, snapshot) {
               final insight = snapshot.data;
@@ -375,7 +436,7 @@ class SummarySheet extends StatelessWidget {
                               ),
                               SizedBox(width: AppSpacing.s12),
                               Text(
-                                'AI Coach analyzing telemetry...',
+                                'AI coach analyzing run stats...',
                                 style: AppText.bodySmall,
                               ),
                             ],
@@ -394,7 +455,7 @@ class SummarySheet extends StatelessWidget {
                               ),
                               const SizedBox(width: AppSpacing.s8),
                               Text(
-                                'AI Coach debrief • ${insight?.moodTag.name.toUpperCase() ?? 'COACH'}',
+                                'AI coach debrief • ${insight?.moodTag.name.toLowerCase() ?? 'coach'}',
                                 style: AppText.label.copyWith(
                                   color: AppColors.accent,
                                   fontSize: 10.5,
@@ -406,7 +467,7 @@ class SummarySheet extends StatelessWidget {
                           ),
                           const SizedBox(height: AppSpacing.s6),
                           Text(
-                            insight?.summary ?? 'Conquest complete! Every closed loop expands your territorial perimeter.',
+                            insight?.summary ?? 'Run complete. Every closed loop expands your territory.',
                             style: AppText.body.copyWith(
                               fontSize: 12.5,
                               color: AppColors.textPrimary,
@@ -426,10 +487,12 @@ class SummarySheet extends StatelessWidget {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  '💡 ',
-                                  style: TextStyle(fontSize: 12),
+                                const Icon(
+                                  Icons.tips_and_updates_outlined,
+                                  size: 14,
+                                  color: AppColors.accent,
                                 ),
+                                const SizedBox(width: AppSpacing.s6),
                                 Expanded(
                                   child: Text(
                                     insight?.tip ?? 'Keep up the rhythm! Regular runs compound territory sovereignty.',
@@ -450,62 +513,49 @@ class SummarySheet extends StatelessWidget {
 
           const SizedBox(height: AppSpacing.s16),
 
-          // Actions: Share Card Button + Claim & Close Button
+          // Secondary Actions Row (Share run + Export GPX)
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.accent,
-                    side: const BorderSide(color: AppColors.accent, width: 1.5),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.accent, width: 1.2),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: AppSpacing.br16,
                     ),
                   ),
-                  icon: const Icon(Icons.share_rounded, size: 18),
+                  icon: const Icon(Icons.share_rounded, size: 16),
                   label: const Text(
                     'Share run',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                    ),
                   ),
                   onPressed: () {
                     AppMotion.lightTick();
                     RunShareCardModal.show(
                       context: context,
-                      distanceKm: distanceKm,
-                      durationSeconds: durationSeconds,
+                      distanceKm: widget.distanceKm,
+                      durationSeconds: widget.durationSeconds,
                       areaSqMeters: effectiveArea,
                       points: effectivePoints,
-                      callsign: profile.username,
-                      faction: profile.faction,
+                      callsign: widget.profile.username,
+                      faction: widget.profile.faction,
                       capturedAt: DateTime.now(),
                     );
                   },
                 ),
               ),
-              const SizedBox(width: AppSpacing.s12),
-              Expanded(
-                child: PrimaryButton(
-                  label: 'Done',
-                  onPressed: () {
-                    AppMotion.heavyBurst();
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s10),
-
-          // Secondary Data Export Row (GPX for Strava/Garmin, GeoJSON)
-          Row(
-            children: [
+              const SizedBox(width: AppSpacing.s10),
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.textSecondary,
                     side: const BorderSide(color: AppColors.borderSubtle),
-                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: AppSpacing.br14,
                     ),
@@ -517,56 +567,29 @@ class SummarySheet extends StatelessWidget {
                   ),
                   label: const Text(
                     'Export GPX',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                   ),
                   onPressed: () async {
                     AppMotion.lightTick();
                     await ExportService().exportAndShareGpx(
-                      runTitle: 'Territory Run - ${profile.username}',
+                      runTitle: 'Territory Run - ${widget.profile.username}',
                       coordinates: effectivePoints,
                     );
                   },
                 ),
               ),
-              const SizedBox(width: AppSpacing.s10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.borderSubtle),
-                    padding: const EdgeInsets.symmetric(vertical: 11),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSpacing.br14,
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.polyline_rounded,
-                    size: 16,
-                    color: AppColors.info,
-                  ),
-                  label: const Text(
-                    'Export GeoJSON',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-                  ),
-                  onPressed: () async {
-                    AppMotion.lightTick();
-                    await ExportService().exportAndShareGeoJson(
-                      territories: [
-                        Territory(
-                          id: 'run_${DateTime.now().millisecondsSinceEpoch}',
-                          ownerId: profile.id,
-                          polygon: effectivePoints,
-                          capturedAt: DateTime.now(),
-                          color: AppColors.accent,
-                          areaSqMeters: effectiveArea,
-                        ),
-                      ],
-                      runTrack: effectivePoints,
-                    );
-                  },
-                ),
-              ),
             ],
+          ),
+
+          const SizedBox(height: AppSpacing.s12),
+
+          // Primary Done Action Button (At the very bottom, above system gesture area)
+          PrimaryButton(
+            label: 'Done',
+            onPressed: () {
+              AppMotion.heavyBurst();
+              Navigator.pop(context);
+            },
           ),
         ],
       ),

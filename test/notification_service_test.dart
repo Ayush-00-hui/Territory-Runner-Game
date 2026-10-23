@@ -74,21 +74,21 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify sheet title and features
-        expect(find.text('TACTICAL RADAR ALERTS'), findsOneWidget);
-        expect(find.text('EARLY WARNING DEFENSE SYSTEM'), findsOneWidget);
-        expect(find.text('Real-Time Attack Radar'), findsOneWidget);
-        expect(find.text('Direct Tactical Deep-Link'), findsOneWidget);
+        expect(find.text('Territory alerts'), findsOneWidget);
+        expect(find.text('Live run updates'), findsOneWidget);
+        expect(find.text('Nearby runner alerts'), findsOneWidget);
+        expect(find.text('Direct map deep-link'), findsOneWidget);
         expect(find.text('Weekly League Cutoffs'), findsOneWidget);
 
         // Verify buttons
-        expect(find.text('MAYBE LATER'), findsOneWidget);
-        expect(find.text('ENABLE RADAR ALERTS'), findsOneWidget);
+        expect(find.text('Maybe later'), findsOneWidget);
+        expect(find.text('Enable alerts'), findsOneWidget);
 
         // Tap Maybe Later to dismiss
-        await tester.tap(find.text('MAYBE LATER'));
+        await tester.tap(find.text('Maybe later'));
         await tester.pumpAndSettle();
 
-        expect(find.text('TACTICAL RADAR ALERTS'), findsNothing);
+        expect(find.text('Territory alerts'), findsNothing);
       },
     );
 
@@ -121,11 +121,11 @@ void main() {
       await tester.tap(find.text('OPEN PRIMER'));
       await tester.pumpAndSettle();
 
-      // Tap ENABLE RADAR ALERTS
-      await tester.tap(find.text('ENABLE RADAR ALERTS'));
+      // Tap Enable alerts
+      await tester.tap(find.text('Enable alerts'));
       await tester.pumpAndSettle();
 
-      expect(find.text('TACTICAL RADAR ALERTS'), findsNothing);
+      expect(find.text('Territory alerts'), findsNothing);
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool('fcm_permission_prompted'), isTrue);

@@ -116,11 +116,11 @@ void main() {
       );
 
       // Verify quests shelf header
-      expect(find.text('Active conquest quests'), findsOneWidget);
+      expect(find.text('Active territory quests'), findsOneWidget);
       expect(find.text('Resets in 14h'), findsOneWidget);
 
       // Verify quests appear
-      expect(find.text('Daily sector scout'), findsOneWidget);
+      expect(find.text('Daily distance run'), findsOneWidget);
       expect(find.text('Loop closure'), findsOneWidget);
       expect(find.text('Territory expansion'), findsOneWidget);
 
@@ -128,7 +128,7 @@ void main() {
       expect(find.text('Trophy case & badges'), findsOneWidget);
 
       // Verify unlocked and locked badges appear
-      expect(find.text('First Conquest'), findsOneWidget);
+      expect(find.text('First Claim'), findsOneWidget);
       expect(find.text('10K Centurion'), findsOneWidget);
     });
 

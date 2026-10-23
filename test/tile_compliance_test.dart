@@ -109,7 +109,7 @@ void main() {
         // Check policy notice
         expect(
           find.text(
-            'OSM Tile Usage Policy viewing cache active. Viewed sectors remain cached offline.',
+            'OSM Tile Usage Policy viewing cache active. Viewed areas remain cached offline.',
           ),
           findsOneWidget,
         );

@@ -360,7 +360,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     // 8. Watermark Footer
     _drawText(
       canvas,
-      'SERVER-AUTHORITATIVE TERRITORY CONQUEST • POSTGIS SPATIAL PARITY',
+      'Server-verified territory • GPS spatial parity',
       const Offset(240, 990),
       TextStyle(
         color: AppColors.textMuted.withValues(alpha: 0.6),
@@ -547,7 +547,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
               children: [
                 _buildThemePill(ShareCardTheme.athleticDark, 'Athletic Dark'),
                 const SizedBox(width: AppSpacing.s8),
-                _buildThemePill(ShareCardTheme.cyberVanguard, 'Cyber Neon'),
+                _buildThemePill(ShareCardTheme.cyberVanguard, 'Vanguard'),
                 const SizedBox(width: AppSpacing.s8),
                 _buildThemePill(ShareCardTheme.stealth, 'Stealth'),
               ],
@@ -763,33 +763,44 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
 
   Widget _buildThemePill(ShareCardTheme theme, String label) {
     final isSelected = _selectedTheme == theme;
-    return GestureDetector(
-      onTap: () {
-        AppMotion.lightTick();
-        setState(() {
-          _selectedTheme = theme;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.accent.withValues(alpha: 0.18)
-              : AppColors.surface,
-          borderRadius: AppSpacing.brFull,
-          border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.borderSubtle,
-            width: isSelected ? 1.5 : 1.0,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: 'Theme: $label',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          AppMotion.selectionTick();
+          setState(() {
+            _selectedTheme = theme;
+          });
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.accent.withValues(alpha: 0.18)
+                : AppColors.surface,
+            borderRadius: AppSpacing.brFull,
+            border: Border.all(
+              color: isSelected ? AppColors.accent : AppColors.borderSubtle,
+              width: isSelected ? 1.5 : 1.0,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: AppText.label.copyWith(
-            color: isSelected ? AppColors.accent : AppColors.textSecondary,
-            fontSize: 10.5,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.8,
+          child: Center(
+            child: Text(
+              label,
+              style: AppText.label.copyWith(
+                color: isSelected ? AppColors.accent : AppColors.textSecondary,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+              ),
+            ),
           ),
         ),
       ),

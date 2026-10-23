@@ -165,31 +165,31 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 },
                 children: [
                   _SlideView(
-                    badge: '01 / CONQUEST MECHANICS',
-                    title: 'Run & Claim Real-World Sectors',
+                    badge: '01 / RUN & CLAIM',
+                    title: 'Run & Claim Real-World Territory',
                     description: 'Lace up and run organic loops through city streets. When your GPS path intersects and closes, the enclosed territory is instantly claimed on the global grid.',
                     illustration: _RunAndClaimGraphic(pulse: _pulseController),
-                    statusPillText: 'SECTOR #042 CLAIMED • 14,250 m²',
+                    statusPillText: 'Territory claimed • 14,250 m²',
                     statusPillIcon: Icons.check_circle_rounded,
                   ),
                   _SlideView(
-                    badge: '02 / RIVALRY & DEFENSE',
+                    badge: '02 / RIVALRY & LEAGUES',
                     title: 'Defend & Compete in Real-Time',
-                    description: 'Rival runners will carve into your territory. Get early radar alerts, defend your home sectors, duel rivals head-to-head, and fight for weekly league promotion.',
+                    description: 'Rival runners will challenge your territory. Get alerts, defend your areas, compete with runners, and fight for weekly league promotion.',
                     illustration: _DefendAndCompeteGraphic(
                       pulse: _pulseController,
                     ),
-                    statusPillText: 'TACTICAL RADAR ACTIVE • 3 RIVALS NEARBY',
+                    statusPillText: 'Active radar • 3 runners nearby',
                     statusPillIcon: Icons.radar_rounded,
                   ),
                   _SlideView(
-                    badge: '03 / TACTICAL TELEMETRY',
+                    badge: '03 / RUN STATS & COACH',
                     title: 'Sub-Meter Precision & AI Coaching',
-                    description: 'Military-grade GPS filtering, elevation splits, audio debriefs from your Tactical AI Coach, and true 1080p post-run share cards ready for your squad.',
+                    description: 'Precise GPS filtering, elevation splits, audio tips from your AI coach, and post-run share cards ready for your squad.',
                     illustration: _AthleticPrecisionGraphic(
                       pulse: _pulseController,
                     ),
-                    statusPillText: 'AI COACH: "SPLIT AHEAD OF TARGET PACE"',
+                    statusPillText: 'AI coach: "Split ahead of target pace"',
                     statusPillIcon: Icons.insights_rounded,
                   ),
                 ],
@@ -257,7 +257,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     )
                   else
                     PrimaryButton(
-                      label: 'Get Started • Enter The Grid',
+                      label: 'Get started',
                       icon: Icons.bolt_rounded,
                       onPressed: _completeOnboarding,
                     ),

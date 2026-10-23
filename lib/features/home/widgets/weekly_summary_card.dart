@@ -23,8 +23,8 @@ class WeeklySummaryCard extends StatelessWidget {
       (sum, t) => sum + t.areaSqMeters,
     );
     final String territoryDisplay = totalAreaM2 >= 10000
-        ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} KM²'
-        : (totalAreaM2 > 0 ? '${totalAreaM2.toStringAsFixed(0)} M²' : '0 M²');
+        ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
+        : (totalAreaM2 > 0 ? '${totalAreaM2.toStringAsFixed(0)} m²' : '0 m²');
 
     final double weeklyDistanceKm = profile.totalDistanceKm > 0
         ? (profile.totalDistanceKm / 4.0).clamp(0.0, profile.totalDistanceKm)
@@ -66,7 +66,15 @@ class WeeklySummaryCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Weekly summary', style: AppText.labelSmall),
+              Flexible(
+                child: Text(
+                  'Weekly summary',
+                  style: AppText.labelSmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.s8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -147,21 +155,32 @@ class WeeklySummaryCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              value,
-              style: AppText.titleLarge.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(width: 3),
-            Text(unit, style: AppText.statUnit),
-          ],
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: AppText.titleLarge.copyWith(
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: 3),
+              Text(unit, style: AppText.statUnit),
+            ],
+          ),
         ),
         const SizedBox(height: AppSpacing.s4),
-        Text(label, style: AppText.labelSmall),
+        Text(
+          label,
+          style: AppText.labelSmall,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ],
     );
   }

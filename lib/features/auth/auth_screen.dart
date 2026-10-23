@@ -284,7 +284,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'CONQUER REAL-WORLD TERRITORY ON FOOT',
+                        'Claim real-world territory on foot',
                         style: AppText.label.copyWith(
                           color: AppColors.textSecondary,
                           fontSize: 9.5,
@@ -311,7 +311,7 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: AppSpacing.s6),
               Text(
-                'Sync your conquered territories, weekly league standing, and badges across devices.',
+                'Sync your claimed territories, weekly league standing, and badges across devices.',
                 style: AppText.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                   fontSize: 13,

@@ -74,7 +74,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Using local territorial telemetry (offline).';
+        _errorMessage = 'Using local territory data (offline).';
       });
     }
   }
@@ -426,28 +426,39 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
 
   Widget _buildScopeChip(LeaderboardScope scope, String label) {
     final isSelected = _scope == scope;
-    return GestureDetector(
-      onTap: () {
-        AppMotion.selectionTick();
-        setState(() => _scope = scope);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.accentContainer : AppColors.surface,
-          borderRadius: AppSpacing.brFull,
-          border: Border.all(
-            color: isSelected ? AppColors.accent : AppColors.border,
-            width: 1.0,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: 'Scope: $label',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () {
+          AppMotion.selectionTick();
+          setState(() => _scope = scope);
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.accentContainer : AppColors.surface,
+            borderRadius: AppSpacing.brFull,
+            border: Border.all(
+              color: isSelected ? AppColors.accent : AppColors.border,
+              width: 1.0,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: AppText.labelSmall.copyWith(
-            color: isSelected ? AppColors.accent : AppColors.textMuted,
-            fontSize: 10,
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          child: Center(
+            child: Text(
+              label,
+              style: AppText.labelSmall.copyWith(
+                color: isSelected ? AppColors.accent : AppColors.textMuted,
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
           ),
         ),
       ),
@@ -644,7 +655,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${entry.faction} • Lvl ${entry.level}',
+                  '${RunnerProfile.factionAliases[entry.faction] ?? entry.faction} • Lvl ${entry.level}',
                   style: AppText.bodySmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 11,

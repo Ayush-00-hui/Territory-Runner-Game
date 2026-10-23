@@ -95,4 +95,24 @@ class AppMotion {
       ),
     );
   }
+
+  /// Ergonomic page route builder using [sharedAxisTransition] and [standard] duration.
+  static Route<T> pageRoute<T>({
+    required WidgetBuilder builder,
+    RouteSettings? settings,
+  }) {
+    return PageRouteBuilder<T>(
+      settings: settings,
+      transitionDuration: standard,
+      reverseTransitionDuration: standard,
+      pageBuilder: (context, _, _) => builder(context),
+      transitionsBuilder: (context, animation, _, child) {
+        return sharedAxisTransition(
+          context: context,
+          animation: animation,
+          child: child,
+        );
+      },
+    );
+  }
 }

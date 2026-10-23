@@ -59,8 +59,8 @@ class OfflineSyncBanner extends StatelessWidget {
                       children: [
                         Text(
                           isSyncing
-                              ? 'Syncing Runs...'
-                              : '$count Runs Pending Sync',
+                              ? 'Syncing runs...'
+                              : '$count runs pending sync',
                           style: AppText.labelLarge.copyWith(
                             color: AppColors.warning,
                           ),
@@ -91,21 +91,20 @@ class OfflineSyncBanner extends StatelessWidget {
                         backgroundColor: AppColors.warning,
                         foregroundColor: AppColors.onAccent,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+                          horizontal: 14,
+                          vertical: 12,
                         ),
                         shape: RoundedRectangleBorder(
                           borderRadius: AppRadius.br8,
                         ),
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        minimumSize: const Size(0, 48),
                       ),
                       onPressed: () {
                         AppMotion.selectionTick();
                         queue.syncPendingRuns();
                       },
                       child: Text(
-                        'Sync Now',
+                        'Sync now',
                         style: AppText.labelSmall.copyWith(
                           color: AppColors.onAccent,
                           fontWeight: FontWeight.w700,

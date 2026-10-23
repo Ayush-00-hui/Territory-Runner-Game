@@ -118,7 +118,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                 ),
                 const SizedBox(height: AppSpacing.s4),
                 const Text(
-                  'Conquest Sector 04-A Active',
+                  'Territory 04-A Active',
                   style: AppText.titleLarge,
                 ),
                 const SizedBox(height: AppSpacing.s4),
@@ -145,7 +145,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
           ),
           const SizedBox(height: AppSpacing.s8),
           PrimaryButton(
-            label: 'Start Conquest Run',
+            label: 'Start Run',
             icon: Icons.play_arrow_rounded,
             onPressed: () {
               AppToast.show(
@@ -223,7 +223,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
 
           // 5. Stat Tiles & Progress Ring
           const SectionHeader(
-            title: 'Telemetry & Progress',
+            title: 'Stats & Progress',
             overline: 'ATHLETIC DATA',
             subtitle: 'Animated count-ups and circular progress rings',
           ),
@@ -274,7 +274,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Daily Sector Goal',
+                        'Daily Territory Goal',
                         style: AppText.titleMedium,
                       ),
                       const SizedBox(height: AppSpacing.s4),
@@ -324,7 +324,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                 onPressed: () {
                   AppToast.show(
                     context,
-                    'Sector captured! +450 XP awarded.',
+                    'Territory claimed! +450 XP awarded.',
                     type: AppToastType.success,
                   );
                 },

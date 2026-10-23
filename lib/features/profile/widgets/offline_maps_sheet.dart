@@ -78,7 +78,7 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
         setState(() => _isDownloading = false);
         AppToast.show(
           context,
-          'Offline sector cached! Added $newTiles map tiles.',
+          'Offline map cached. Added $newTiles map tiles.',
           type: AppToastType.success,
         );
       }
@@ -87,7 +87,7 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
         setState(() => _isDownloading = false);
         AppToast.show(
           context,
-          'Could not download sector: $e',
+          'Could not download map area: $e',
           type: AppToastType.error,
         );
       }
@@ -173,8 +173,8 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
           const SizedBox(height: AppSpacing.s14),
           Text(
             AppConstants.allowTilePrefetch
-                ? 'Pre-download map sectors to continue claiming territories, viewing boundaries, and navigating when running in dead zones or cellular outages.'
-                : 'Map tiles viewed while exploring or running are automatically cached locally on your device for at least 7 days. Bulk sector pre-downloading is disabled under the OpenStreetMap Tile Usage Policy.',
+                ? 'Pre-download map areas to continue claiming territories, viewing boundaries, and navigating when running in dead zones or cellular outages.'
+                : 'Map tiles viewed while exploring or running are automatically cached locally on your device for at least 7 days. Bulk area pre-downloading is disabled under the OpenStreetMap Tile Usage Policy.',
             style: AppText.bodySmall.copyWith(
               color: AppColors.textSecondary,
               height: 1.4,
@@ -249,7 +249,7 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'Caching Sector Tiles...',
+                      'Caching Map Tiles...',
                       style: TextStyle(
                         color: AppColors.accent,
                         fontSize: 12,
@@ -296,7 +296,7 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                 ),
                 icon: const Icon(Icons.download_rounded, size: 20),
                 label: const Text(
-                  'Pre-Cache Current Sector (1.2 km)',
+                  'Pre-cache current area (1.2 km)',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 ),
                 onPressed: _isDownloading ? null : _preDownloadCurrentSector,
@@ -322,7 +322,7 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                   const SizedBox(width: AppSpacing.s10),
                   Expanded(
                     child: Text(
-                      'OSM Tile Usage Policy viewing cache active. Viewed sectors remain cached offline.',
+                      'OSM Tile Usage Policy viewing cache active. Viewed areas remain cached offline.',
                       style: AppText.bodySmall.copyWith(
                         color: AppColors.textSecondary,
                         fontSize: 11,
