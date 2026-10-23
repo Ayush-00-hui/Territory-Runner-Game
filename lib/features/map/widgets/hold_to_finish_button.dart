@@ -20,6 +20,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
     with SingleTickerProviderStateMixin {
   late final AnimationController _holdController;
   bool _isHolding = false;
+  int _lastTickMilestone = 0;
 
   @override
   void initState() {
@@ -28,6 +29,17 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
+
+    _holdController.addListener(() {
+      final progress = _holdController.value;
+      if (progress >= 0.66 && _lastTickMilestone < 2) {
+        _lastTickMilestone = 2;
+        AppMotion.lightTick();
+      } else if (progress >= 0.33 && _lastTickMilestone < 1) {
+        _lastTickMilestone = 1;
+        AppMotion.lightTick();
+      }
+    });
 
     _holdController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
@@ -45,6 +57,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
 
   void _onPointerDown(PointerDownEvent _) {
     if (!widget.isRunActive) return;
+    _lastTickMilestone = 0;
     AppMotion.mediumTick();
     setState(() {
       _isHolding = true;
@@ -53,14 +66,22 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
   }
 
   void _onPointerUp(PointerUpEvent _) {
+    if (_isHolding && _holdController.value < 1.0) {
+      AppMotion.selectionTick();
+    }
     _holdController.reset();
+    _lastTickMilestone = 0;
     setState(() {
       _isHolding = false;
     });
   }
 
   void _onPointerCancel(PointerCancelEvent _) {
+    if (_isHolding && _holdController.value < 1.0) {
+      AppMotion.selectionTick();
+    }
     _holdController.reset();
+    _lastTickMilestone = 0;
     setState(() {
       _isHolding = false;
     });
@@ -124,66 +145,72 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
           animation: _holdController,
           builder: (context, child) {
             final progress = _holdController.value;
+            final isReducedMotion = AppMotion.shouldReduceMotion(context);
 
-            return Container(
-              constraints: const BoxConstraints(minHeight: 48),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s10,
-                vertical: AppSpacing.s10,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.rival.withValues(
-                  alpha: 0.15 + (progress * 0.4),
+            return AnimatedScale(
+              scale: (_isHolding && !isReducedMotion) ? 0.98 : 1.0,
+              duration: AppMotion.fast,
+              curve: AppMotion.easeOut,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s10,
+                  vertical: AppSpacing.s10,
                 ),
-                borderRadius: AppSpacing.br16,
-                border: Border.all(color: AppColors.rival, width: 1.5),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 2.5,
-                          backgroundColor: AppColors.rival.withValues(
-                            alpha: 0.25,
-                          ),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.textPrimary,
+                decoration: BoxDecoration(
+                  color: AppColors.rival.withValues(
+                    alpha: 0.15 + (progress * 0.4),
+                  ),
+                  borderRadius: AppSpacing.br16,
+                  border: Border.all(color: AppColors.rival, width: 1.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            value: progress,
+                            strokeWidth: 2.5,
+                            backgroundColor: AppColors.rival.withValues(
+                              alpha: 0.25,
+                            ),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppColors.textPrimary,
+                            ),
                           ),
                         ),
-                      ),
-                      const Icon(
-                        Icons.stop_rounded,
-                        color: AppColors.rival,
-                        size: 14,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: AppSpacing.s6),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        _isHolding
-                            ? 'Hold ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s'
-                            : 'Hold stop',
-                        style: AppText.labelSmall.copyWith(
+                        const Icon(
+                          Icons.stop_rounded,
                           color: AppColors.rival,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: AppSpacing.s6),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          _isHolding
+                              ? 'Hold ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s'
+                              : 'Hold stop',
+                          style: AppText.labelSmall.copyWith(
+                            color: AppColors.rival,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           },

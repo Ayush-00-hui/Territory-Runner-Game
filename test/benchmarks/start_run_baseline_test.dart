@@ -360,4 +360,112 @@ void main() {
       tester.view.resetDevicePixelRatio();
     },
   );
+
+  testWidgets(
+    'Verification (U3): RunHud toggles extended telemetry on drag/tap gesture without overflow',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: RunHud(
+                isRunActive: true,
+                isSearchingGps: false,
+                isAutoPaused: false,
+                distanceKm: 5.25,
+                elapsedSeconds: 1800,
+                movingSeconds: 1650,
+                splitPace: '5:10',
+                currentSpeedKmh: 11.2,
+                satelliteAccuracyMeters: 4.0,
+                territoriesClaimed: 3,
+                currentAreaSqm: 25000.0,
+                onToggleRun: () {},
+                onSealShape: () {},
+                onFinishRun: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Tap on the secondary telemetry row to expand extended telemetry
+      final speedText = find.text('11.2 km/h');
+      expect(speedText, findsOneWidget);
+      await tester.tap(speedText);
+      await tester.pumpAndSettle();
+
+      // Now expanded: 'Avg pace', 'Moving time', 'Active area' are visible
+      expect(find.text('Avg pace'), findsOneWidget);
+      expect(find.text('Moving time'), findsOneWidget);
+      expect(find.text('Active area'), findsOneWidget);
+      expect(find.text('2.5 ha'), findsOneWidget);
+
+      // Tap again to collapse cleanly
+      await tester.tap(speedText);
+      await tester.pumpAndSettle();
+    },
+  );
+
+  testWidgets(
+    'Verification (U3): RunHud expanded telemetry renders without overflow across 360, 393, 412 at textScale 1.3',
+    (tester) async {
+      const resolutions = [Size(360, 640), Size(393, 852), Size(412, 915)];
+
+      for (final res in resolutions) {
+        await tester.binding.setSurfaceSize(res);
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: res,
+                textScaler: const TextScaler.linear(1.3),
+              ),
+              child: Scaffold(
+                body: SingleChildScrollView(
+                  child: RunHud(
+                    key: ValueKey(res),
+                    isRunActive: true,
+                    isSearchingGps: true,
+                    isAutoPaused: false,
+                    distanceKm: 14.85,
+                    elapsedSeconds: 5420,
+                    movingSeconds: 5120,
+                    splitPace: '5:45',
+                    currentSpeedKmh: 10.5,
+                    satelliteAccuracyMeters: 6.0,
+                    territoriesClaimed: 7,
+                    currentAreaSqm: 54000.0,
+                    distanceToClosureMeters: 45.0,
+                    proximityToClosure: 0.85,
+                    onToggleRun: () {},
+                    onSealShape: () {},
+                    onFinishRun: () {},
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        // Tap secondary row to trigger expansion in each resolution
+        final speedText = find.text('10.5 km/h');
+        expect(speedText, findsOneWidget);
+        await tester.tap(speedText);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Verifies zero overflow exceptions occur on any target resolution while expanded
+        expect(tester.takeException(), isNull);
+        expect(find.text('Avg pace'), findsOneWidget);
+      }
+
+      await tester.binding.setSurfaceSize(null);
+    },
+  );
 }
