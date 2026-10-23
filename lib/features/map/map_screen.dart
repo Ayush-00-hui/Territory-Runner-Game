@@ -1836,96 +1836,111 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             Positioned(
               right: 20,
               bottom: pad.bottom + 215,
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 48),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceGlass,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.accent.withValues(alpha: 0.35),
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text('You own', style: AppText.label),
-                    ValueListenableBuilder<double>(
-                      valueListenable: _totalAreaSqKmNotifier,
-                      builder: (context, totalAreaSqKm, _) {
-                        return Text(
-                          totalAreaSqKm > 0
-                              ? '${totalAreaSqKm.toStringAsFixed(2)} km²'
-                              : '0.00 km²',
-                          style: AppText.statSmall.copyWith(
-                            color: AppColors.accent,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        );
-                      },
-                    ),
-                    const Text('here', style: AppText.label),
-                  ],
-                ),
-              ),
-            ),
-
-            // Floating Defend CTA for Weak Territories (overlays You own card when active)
-            Positioned(
-              bottom: pad.bottom + 215,
-              right: 20,
-              child: ValueListenableBuilder<List<Territory>>(
-                valueListenable: _territoriesNotifier,
-                builder: (context, territories, _) {
-                  if (_isRunActive ||
-                      !territories.any(
-                        (t) =>
-                            t.ownerId == _firebaseService.currentUserId &&
-                            t.isWeak(),
-                      )) {
-                    return const SizedBox.shrink();
-                  }
-                  return GestureDetector(
-                    onTap: _defendWeakestTerritory,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 48),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceGlass,
-                        borderRadius: AppSpacing.br16,
-                        border: Border.all(color: AppColors.rival, width: 1.5),
-                        boxShadow: AppElevation.floating,
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.shield_outlined,
-                            color: AppColors.rival,
-                            size: 18,
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Defend',
-                            style: TextStyle(
-                              color: AppColors.rival,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Floating Defend CTA for Weak Territories (sits directly above You own card)
+                  ValueListenableBuilder<List<Territory>>(
+                    valueListenable: _territoriesNotifier,
+                    builder: (context, territories, _) {
+                      if (_isRunActive ||
+                          !territories.any(
+                            (t) =>
+                                t.ownerId == _firebaseService.currentUserId &&
+                                t.isWeak(),
+                          )) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Semantics(
+                          button: true,
+                          label: 'Defend weakest territory',
+                          child: GestureDetector(
+                            onTap: _defendWeakestTerritory,
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              constraints: const BoxConstraints(minHeight: 48),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceGlass,
+                                borderRadius: AppSpacing.br16,
+                                border: Border.all(
+                                  color: AppColors.rival,
+                                  width: 1.5,
+                                ),
+                                boxShadow: AppElevation.floating,
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.shield_outlined,
+                                    color: AppColors.rival,
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Defend',
+                                    style: TextStyle(
+                                      color: AppColors.rival,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
+                        ),
+                      );
+                    },
+                  ),
+
+                  // Territory Claimed Pill
+                  Container(
+                    constraints: const BoxConstraints(minHeight: 48),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceGlass,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: AppColors.accent.withValues(alpha: 0.35),
                       ),
                     ),
-                  );
-                },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('You own', style: AppText.label),
+                        ValueListenableBuilder<double>(
+                          valueListenable: _totalAreaSqKmNotifier,
+                          builder: (context, totalAreaSqKm, _) {
+                            return Text(
+                              totalAreaSqKm > 0
+                                  ? '${totalAreaSqKm.toStringAsFixed(2)} km²'
+                                  : '0.00 km²',
+                              style: AppText.statSmall.copyWith(
+                                color: AppColors.accent,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        const Text('here', style: AppText.label),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
 

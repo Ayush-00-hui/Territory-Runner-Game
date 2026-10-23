@@ -117,79 +117,86 @@ class ProfileAchievementTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final Color badgeColor = unlocked ? AppColors.gold : AppColors.disabled;
 
-    return GestureDetector(
-      onTap: () {
-        if (onTap != null) {
-          AppMotion.selectionTick();
-          onTap!();
-        }
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(AppSpacing.s12),
-        decoration: BoxDecoration(
-          color: unlocked
-              ? AppColors.gold.withValues(alpha: 0.06)
-              : AppColors.surface2,
-          borderRadius: AppSpacing.br16,
-          border: Border.all(
+    return Semantics(
+      button: true,
+      label: '$title, ${unlocked ? "Unlocked" : "Locked"}',
+      child: GestureDetector(
+        onTap: () {
+          if (onTap != null) {
+            AppMotion.selectionTick();
+            onTap!();
+          }
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.all(AppSpacing.s12),
+          decoration: BoxDecoration(
             color: unlocked
-                ? AppColors.gold.withValues(alpha: 0.3)
-                : AppColors.border,
+                ? AppColors.gold.withValues(alpha: 0.06)
+                : AppColors.surface2,
+            borderRadius: AppSpacing.br16,
+            border: Border.all(
+              color: unlocked
+                  ? AppColors.gold.withValues(alpha: 0.3)
+                  : AppColors.border,
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              height: 42,
-              width: 42,
-              decoration: BoxDecoration(
-                color: unlocked
-                    ? AppColors.gold.withValues(alpha: 0.16)
-                    : AppColors.surface,
-                borderRadius: AppSpacing.br12,
-                border: Border.all(
+          child: Row(
+            children: [
+              Container(
+                height: 42,
+                width: 42,
+                decoration: BoxDecoration(
                   color: unlocked
-                      ? AppColors.gold.withValues(alpha: 0.4)
-                      : AppColors.borderSubtle,
+                      ? AppColors.gold.withValues(alpha: 0.16)
+                      : AppColors.surface,
+                  borderRadius: AppSpacing.br12,
+                  border: Border.all(
+                    color: unlocked
+                        ? AppColors.gold.withValues(alpha: 0.4)
+                        : AppColors.borderSubtle,
+                  ),
+                ),
+                child: Icon(icon, color: badgeColor, size: 20),
+              ),
+              const SizedBox(width: AppSpacing.s12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppText.bodyMedium.copyWith(
+                        color: unlocked
+                            ? AppColors.textPrimary
+                            : AppColors.disabled,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: Icon(icon, color: badgeColor, size: 20),
-            ),
-            const SizedBox(width: AppSpacing.s12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: AppText.bodyMedium.copyWith(
-                      color: unlocked
-                          ? AppColors.textPrimary
-                          : AppColors.disabled,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    subtitle,
-                    style: AppText.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+              Icon(
+                unlocked
+                    ? Icons.check_circle_rounded
+                    : Icons.lock_outline_rounded,
+                color: badgeColor,
+                size: 20,
               ),
-            ),
-            Icon(
-              unlocked
-                  ? Icons.check_circle_rounded
-                  : Icons.lock_outline_rounded,
-              color: badgeColor,
-              size: 20,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
