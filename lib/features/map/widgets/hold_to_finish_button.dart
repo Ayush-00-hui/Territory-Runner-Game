@@ -73,6 +73,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
         button: false,
         label: 'Run tracking inactive. Tap center play button to begin.',
         child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.s12,
             vertical: AppSpacing.s12,
@@ -92,12 +93,17 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
                 size: 16,
               ),
               const SizedBox(width: AppSpacing.s4),
-              Text(
-                'Locked',
-                style: AppText.labelSmall.copyWith(
-                  color: AppColors.disabled,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Locked',
+                    style: AppText.labelSmall.copyWith(
+                      color: AppColors.disabled,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -120,6 +126,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
             final progress = _holdController.value;
 
             return Container(
+              constraints: const BoxConstraints(minHeight: 48),
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.s10,
                 vertical: AppSpacing.s10,
@@ -160,15 +167,20 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
                     ],
                   ),
                   const SizedBox(width: AppSpacing.s6),
-                  Text(
-                    _isHolding
-                        ? 'Hold ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s'
-                        : 'Hold stop',
-                    style: AppText.labelSmall.copyWith(
-                      color: AppColors.rival,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        _isHolding
+                            ? 'Hold ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s'
+                            : 'Hold stop',
+                        style: AppText.labelSmall.copyWith(
+                          color: AppColors.rival,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
                     ),
                   ),
                 ],

@@ -1643,7 +1643,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                                 ),
                               ),
                               Text(
-                                '$athleteName 👋',
+                                athleteName,
                                 style: AppText.headingSmall.copyWith(
                                   color: AppColors.textPrimary,
                                 ),
@@ -1757,7 +1757,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             // 3. Floating Overlays: Pacer Pill (left) & Territory Claimed Pill (right)
             Positioned(
               left: 20,
-              bottom: pad.bottom + 175,
+              bottom: pad.bottom + 215,
               child: GestureDetector(
                 onTap: () {
                   AppMotion.lightTick();
@@ -1782,10 +1782,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     onToggleRivalSimulation: _toggleRivalSimulation,
                   );
                 },
+                behavior: HitTestBehavior.opaque,
                 child: Container(
+                  constraints: const BoxConstraints(minHeight: 48),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
+                    horizontal: 14,
+                    vertical: 10,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceGlass,
@@ -1805,13 +1807,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     children: [
                       Icon(
                         Icons.directions_run_rounded,
-                        size: 16,
+                        size: 18,
                         color:
                             _locationService.pacerMode != VirtualPacerMode.none
                             ? AppColors.info
                             : AppColors.textMuted,
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Text(
                         _locationService.pacerMode != VirtualPacerMode.none
                             ? 'Pacer ${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
@@ -1822,7 +1824,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                                   VirtualPacerMode.none
                               ? AppColors.info
                               : AppColors.textMuted,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1834,8 +1836,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
             Positioned(
               right: 20,
-              bottom: pad.bottom + 175,
+              bottom: pad.bottom + 215,
               child: Container(
+                constraints: const BoxConstraints(minHeight: 48),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 8,
@@ -1849,6 +1852,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Text('You own', style: AppText.label),
                     ValueListenableBuilder<double>(
@@ -1871,61 +1875,67 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               ),
             ),
 
-            // 4. Floating Control Buttons Stack
+            // Floating Defend CTA for Weak Territories (overlays You own card when active)
+            Positioned(
+              bottom: pad.bottom + 215,
+              right: 20,
+              child: ValueListenableBuilder<List<Territory>>(
+                valueListenable: _territoriesNotifier,
+                builder: (context, territories, _) {
+                  if (_isRunActive ||
+                      !territories.any(
+                        (t) =>
+                            t.ownerId == _firebaseService.currentUserId &&
+                            t.isWeak(),
+                      )) {
+                    return const SizedBox.shrink();
+                  }
+                  return GestureDetector(
+                    onTap: _defendWeakestTerritory,
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 48),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceGlass,
+                        borderRadius: AppSpacing.br16,
+                        border: Border.all(color: AppColors.rival, width: 1.5),
+                        boxShadow: AppElevation.floating,
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.shield_outlined,
+                            color: AppColors.rival,
+                            size: 18,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Defend',
+                            style: TextStyle(
+                              color: AppColors.rival,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // 4. Floating Control Buttons: Left Rail (Tactical & Route Planning)
             Positioned(
               left: 20,
-              bottom: pad.bottom + 230,
+              bottom: pad.bottom + 275,
               child: Column(
                 children: [
-                  _buildFloatingCircleButton(
-                    icon: Icons.speed_rounded,
-                    color: _locationService.pacerMode != VirtualPacerMode.none
-                        ? AppColors.info
-                        : AppColors.textSecondary,
-                    onTap: () {
-                      VirtualPacerSheet.show(
-                        context: context,
-                        locationService: _locationService,
-                        onSimulateLoop: _runAutomatedLoopDemo,
-                        onSimulateRivalCut: _runRivalConflictDemo,
-                        onSimulateAnomaly: _simulateSpeedAnomaly,
-                        onSimulateCoachDebrief: () {
-                          SummarySheet.show(
-                            context: context,
-                            distanceKm: 3.52,
-                            durationSeconds: 1140,
-                            territoriesClaimed: 3,
-                            profile: _territoryService.getProfile(),
-                            coachService: _coachService,
-                          );
-                        },
-                        onSimulateDecayAndAttack: _simulateDecayAndAttack,
-                        isRivalSimulating: _isRivalSimulating,
-                        onToggleRivalSimulation: _toggleRivalSimulation,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildFloatingCircleButton(
-                    icon: _isCameraFollowLocked
-                        ? Icons.gps_fixed_rounded
-                        : Icons.pan_tool_rounded,
-                    color: _isCameraFollowLocked
-                        ? AppColors.accent
-                        : AppColors.textSecondary,
-                    tooltip: _isCameraFollowLocked
-                        ? 'Unlock Camera Pan'
-                        : 'Lock Camera Follow',
-                    semanticLabel: 'Toggle camera auto-follow',
-                    onTap: () {
-                      setState(() {
-                        _isCameraFollowLocked = !_isCameraFollowLocked;
-                      });
-                      HapticFeedback.selectionClick();
-                      if (_isCameraFollowLocked) _recenter();
-                    },
-                  ),
-                  const SizedBox(height: 10),
                   _buildFloatingCircleButton(
                     icon: Icons.layers_rounded,
                     color: AppColors.textSecondary,
@@ -1958,7 +1968,16 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       },
                     ),
                   ],
-                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+
+            // 5. Floating Control Buttons: Right Rail (Navigation, Auto-Follow & SOS Safety)
+            Positioned(
+              right: 20,
+              bottom: pad.bottom + 275,
+              child: Column(
+                children: [
                   _buildFloatingCircleButton(
                     icon: Icons.emergency_rounded,
                     color: AppColors.error,
@@ -1971,6 +1990,26 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   ),
                   const SizedBox(height: 10),
                   _buildFloatingCircleButton(
+                    icon: _isCameraFollowLocked
+                        ? Icons.gps_fixed_rounded
+                        : Icons.pan_tool_rounded,
+                    color: _isCameraFollowLocked
+                        ? AppColors.accent
+                        : AppColors.textSecondary,
+                    tooltip: _isCameraFollowLocked
+                        ? 'Unlock Camera Pan'
+                        : 'Lock Camera Follow',
+                    semanticLabel: 'Toggle camera auto-follow',
+                    onTap: () {
+                      setState(() {
+                        _isCameraFollowLocked = !_isCameraFollowLocked;
+                      });
+                      HapticFeedback.selectionClick();
+                      if (_isCameraFollowLocked) _recenter();
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFloatingCircleButton(
                     icon: Icons.my_location_rounded,
                     color: AppColors.textSecondary,
                     tooltip: 'Recenter Map',
@@ -1978,59 +2017,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     onTap: _recenter,
                   ),
                 ],
-              ),
-            ),
-
-            // Floating Defend CTA for Weak Territories
-            Positioned(
-              bottom: pad.bottom + 175,
-              right: 20,
-              child: ValueListenableBuilder<List<Territory>>(
-                valueListenable: _territoriesNotifier,
-                builder: (context, territories, _) {
-                  if (_isRunActive ||
-                      !territories.any(
-                        (t) =>
-                            t.ownerId == _firebaseService.currentUserId &&
-                            t.isWeak(),
-                      )) {
-                    return const SizedBox.shrink();
-                  }
-                  return GestureDetector(
-                    onTap: _defendWeakestTerritory,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceGlass,
-                        borderRadius: AppSpacing.br16,
-                        border: Border.all(color: AppColors.rival, width: 1.5),
-                        boxShadow: AppElevation.floating,
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.shield_outlined,
-                            color: AppColors.rival,
-                            size: 16,
-                          ),
-                          SizedBox(width: 6),
-                          Text(
-                            'Defend',
-                            style: TextStyle(
-                              color: AppColors.rival,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
               ),
             ),
 
@@ -2131,16 +2117,17 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         message: tooltip ?? '',
         child: GestureDetector(
           onTap: onTap,
+          behavior: HitTestBehavior.opaque,
           child: Container(
-            height: 44,
-            width: 44,
+            height: 48,
+            width: 48,
             decoration: BoxDecoration(
               color: AppColors.surfaceGlass,
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.borderSubtle),
               boxShadow: AppElevation.floating,
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 22),
           ),
         ),
       ),

@@ -207,38 +207,54 @@ class RunHud extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.flag_rounded,
-                                  color: AppColors.gold,
-                                  size: 13,
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(
+                                      Icons.flag_rounded,
+                                      color: AppColors.gold,
+                                      size: 13,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      runGoal!.title,
+                                      style: const TextStyle(
+                                        color: AppColors.gold,
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 10,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  runGoal!.title,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s6),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  runGoal!.formatRemaining(
+                                    currentDistanceKm: distanceKm,
+                                    currentDurationSeconds: movingSeconds > 0
+                                        ? movingSeconds
+                                        : elapsedSeconds,
+                                    currentAreaSqm: currentAreaSqm,
+                                  ),
                                   style: const TextStyle(
-                                    color: AppColors.gold,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 10,
-                                    letterSpacing: 0.8,
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 9.5,
+                                    fontFeatures: [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                            Text(
-                              runGoal!.formatRemaining(
-                                currentDistanceKm: distanceKm,
-                                currentDurationSeconds: movingSeconds > 0
-                                    ? movingSeconds
-                                    : elapsedSeconds,
-                                currentAreaSqm: currentAreaSqm,
-                              ),
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 9.5,
-                                fontFeatures: [FontFeature.tabularFigures()],
                               ),
                             ),
                           ],
@@ -302,29 +318,42 @@ class RunHud extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                isNearClosure
-                                    ? 'Ready to close loop'
-                                    : 'Loop proximity',
-                                style: AppText.labelSmall.copyWith(
-                                  color: isNearClosure
-                                      ? AppColors.accent
-                                      : AppColors.textSecondary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    isNearClosure
+                                        ? 'Ready to close loop'
+                                        : 'Loop proximity',
+                                    style: AppText.labelSmall.copyWith(
+                                      color: isNearClosure
+                                          ? AppColors.accent
+                                          : AppColors.textSecondary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              Text(
-                                '${closureDist.round()} m to start',
-                                style: AppText.labelSmall.copyWith(
-                                  color: isNearClosure
-                                      ? AppColors.accent
-                                      : AppColors.textSecondary,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
+                              const SizedBox(width: AppSpacing.s6),
+                              Flexible(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    '${closureDist.round()} m to start',
+                                    style: AppText.labelSmall.copyWith(
+                                      color: isNearClosure
+                                          ? AppColors.accent
+                                          : AppColors.textSecondary,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      fontFeatures: const [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -354,109 +383,129 @@ class RunHud extends StatelessWidget {
             // Core Metric Readouts: Distance | Time | Pace
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Distance (Tabular Inter)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Distance', style: AppText.labelSmall),
-                    const SizedBox(height: 2),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text(
-                          isRunActive ? distanceKm.toStringAsFixed(2) : '0.00',
-                          style: AppText.statHero.copyWith(
-                            fontSize: 32,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Distance', style: AppText.labelSmall),
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              isRunActive
+                                  ? distanceKm.toStringAsFixed(2)
+                                  : '0.00',
+                              style: AppText.statHero.copyWith(
+                                fontSize: 32,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s4),
+                            const Text('km', style: AppText.labelAccent),
+                          ],
                         ),
-                        const SizedBox(width: AppSpacing.s4),
-                        const Text('km', style: AppText.labelAccent),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
 
                 // Moving Time (Tabular)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Time', style: AppText.labelSmall),
-                        if (isRunActive && !isAutoPaused) ...[
-                          const SizedBox(width: AppSpacing.s4),
-                          Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.accent,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Time', style: AppText.labelSmall),
+                          if (isRunActive && !isAutoPaused) ...[
+                            const SizedBox(width: AppSpacing.s4),
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.accent,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isRunActive
-                          ? _formatDuration(
-                              movingSeconds > 0
-                                  ? movingSeconds
-                                  : elapsedSeconds,
-                            )
-                          : '00:00',
-                      style: AppText.timer.copyWith(
-                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          isRunActive
+                              ? _formatDuration(
+                                  movingSeconds > 0
+                                      ? movingSeconds
+                                      : elapsedSeconds,
+                                )
+                              : '00:00',
+                          style: AppText.timer.copyWith(
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
                 // Pace (Tabular Inter)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Pace', style: AppText.labelSmall),
-                        if (targetPace != null) ...[
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                              vertical: 1,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface2,
-                              borderRadius: AppSpacing.br8,
-                            ),
-                            child: Text(
-                              'P: $targetPace',
-                              style: AppText.labelSmall.copyWith(
-                                color: AppColors.info,
-                                fontSize: 8.5,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Pace', style: AppText.labelSmall),
+                          if (targetPace != null) ...[
+                            const SizedBox(width: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                                vertical: 1,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface2,
+                                borderRadius: AppSpacing.br8,
+                              ),
+                              child: Text(
+                                'P: $targetPace',
+                                style: AppText.labelSmall.copyWith(
+                                  color: AppColors.info,
+                                  fontSize: 8.5,
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isRunActive ? splitPace : "--'--\"",
-                      style: AppText.statHero.copyWith(
-                        fontSize: 26,
-                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          isRunActive ? splitPace : "--'--\"",
+                          style: AppText.statHero.copyWith(
+                            fontSize: 26,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -475,86 +524,124 @@ class RunHud extends StatelessWidget {
                 border: Border.all(color: AppColors.borderSubtle),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.speed_rounded,
-                        color: AppColors.info,
-                        size: 14,
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.speed_rounded,
+                            color: AppColors.info,
+                            size: 14,
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          Text(
+                            '${currentSpeedKmh.toStringAsFixed(1)} km/h',
+                            style: AppText.bodyBold.copyWith(
+                              fontSize: 11,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.s4),
-                      Text(
-                        '${currentSpeedKmh.toStringAsFixed(1)} km/h',
-                        style: AppText.bodyBold.copyWith(
-                          fontSize: 11,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department_rounded,
-                        color: AppColors.rival,
-                        size: 14,
+                  const SizedBox(width: AppSpacing.s4),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.local_fire_department_rounded,
+                            color: AppColors.rival,
+                            size: 14,
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          Text(
+                            '+${(distanceKm * 65.0).round()} kcal',
+                            style: AppText.bodyBold.copyWith(
+                              fontSize: 11,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.s4),
-                      Text(
-                        '+${(distanceKm * 65.0).round()} kcal',
-                        style: AppText.bodyBold.copyWith(
-                          fontSize: 11,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.satellite_alt_rounded,
-                        color: satelliteAccuracyMeters <= 10.0
-                            ? AppColors.accent
-                            : (satelliteAccuracyMeters <= 30.0
-                                  ? AppColors.warning
-                                  : AppColors.rival),
-                        size: 14,
+                  const SizedBox(width: AppSpacing.s4),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.satellite_alt_rounded,
+                            color: satelliteAccuracyMeters <= 10.0
+                                ? AppColors.accent
+                                : (satelliteAccuracyMeters <= 30.0
+                                      ? AppColors.warning
+                                      : AppColors.rival),
+                            size: 14,
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          Text(
+                            satelliteAccuracyMeters > 50.0
+                                ? 'GPS LOST'
+                                : '±${satelliteAccuracyMeters.toStringAsFixed(0)}m',
+                            style: AppText.bodySmall.copyWith(
+                              fontSize: 11,
+                              color: satelliteAccuracyMeters <= 10.0
+                                  ? AppColors.textSecondary
+                                  : (satelliteAccuracyMeters <= 30.0
+                                        ? AppColors.warning
+                                        : AppColors.rival),
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.s4),
-                      Text(
-                        satelliteAccuracyMeters > 50.0
-                            ? 'GPS LOST'
-                            : '±${satelliteAccuracyMeters.toStringAsFixed(0)}m',
-                        style: AppText.bodySmall.copyWith(
-                          fontSize: 11,
-                          color: satelliteAccuracyMeters <= 10.0
-                              ? AppColors.textSecondary
-                              : (satelliteAccuracyMeters <= 30.0
-                                    ? AppColors.warning
-                                    : AppColors.rival),
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.shield_outlined,
-                        color: AppColors.accent,
-                        size: 14,
+                  const SizedBox(width: AppSpacing.s4),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.shield_outlined,
+                            color: AppColors.accent,
+                            size: 14,
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          Text(
+                            '$territoriesClaimed territories',
+                            style: AppText.bodyBold.copyWith(
+                              fontSize: 11,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: AppSpacing.s4),
-                      Text(
-                        '$territoriesClaimed territories',
-                        style: AppText.bodyBold.copyWith(
-                          fontSize: 11,
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -578,6 +665,7 @@ class RunHud extends StatelessWidget {
                       },
                       behavior: HitTestBehavior.opaque,
                       child: Container(
+                        constraints: const BoxConstraints(minHeight: 48),
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.s10,
                           vertical: AppSpacing.s12,

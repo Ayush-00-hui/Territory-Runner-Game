@@ -11,6 +11,7 @@ import 'package:territory_runner/models/territory.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/features/gameplay/territory_service.dart';
 import 'package:territory_runner/features/map/widgets/run_hud.dart';
+import 'package:territory_runner/features/map/widgets/hold_to_finish_button.dart';
 import 'package:territory_runner/main.dart';
 
 void main() {
@@ -244,6 +245,119 @@ void main() {
 
       expect(readArea, greaterThan(0));
       notifier.dispose();
+    },
+  );
+
+  testWidgets(
+    'Verification (U2): Floating circle buttons and HUD action buttons meet >=48 dp touch target rule',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  HoldToFinishButton(isRunActive: true, onFinish: () {}),
+                  HoldToFinishButton(isRunActive: false, onFinish: () {}),
+                  RunHud(
+                    isRunActive: true,
+                    isSearchingGps: false,
+                    isAutoPaused: false,
+                    distanceKm: 2.5,
+                    elapsedSeconds: 600,
+                    movingSeconds: 580,
+                    splitPace: '4:50',
+                    currentSpeedKmh: 12.4,
+                    satelliteAccuracyMeters: 4.0,
+                    territoriesClaimed: 2,
+                    onToggleRun: () {},
+                    onSealShape: () {},
+                    onFinishRun: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Verify HoldToFinishButton touch targets are >= 48dp (2 standalone + 1 in RunHud)
+      final holdButtons = find.byType(HoldToFinishButton);
+      expect(holdButtons, findsNWidgets(3));
+      for (final element in holdButtons.evaluate()) {
+        final renderBox = element.findRenderObject() as RenderBox;
+        expect(
+          renderBox.size.height,
+          greaterThanOrEqualTo(48.0),
+          reason: 'HoldToFinishButton must have minimum height of 48 dp',
+        );
+      }
+
+      // Verify Close Loop touch target is >= 48dp
+      final closeLoopText = find.text('Close loop');
+      expect(closeLoopText, findsOneWidget);
+      final closeLoopContainer = find.ancestor(
+        of: closeLoopText,
+        matching: find.byType(Container),
+      );
+      final closeLoopBox = tester.renderObject<RenderBox>(
+        closeLoopContainer.first,
+      );
+      expect(
+        closeLoopBox.size.height,
+        greaterThanOrEqualTo(48.0),
+        reason: 'Close loop action button must have minimum height of 48 dp',
+      );
+    },
+  );
+
+  testWidgets(
+    'Verification (U2): RunHud renders without overflow across 360x640, 393x852, 412x915 at textScale 1.3',
+    (tester) async {
+      const resolutions = [Size(360, 640), Size(393, 852), Size(412, 915)];
+
+      for (final res in resolutions) {
+        tester.view.physicalSize = Size(res.width * 2, res.height * 2);
+        tester.view.devicePixelRatio = 2.0;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery(
+              data: MediaQueryData(
+                size: res,
+                textScaler: const TextScaler.linear(1.3),
+              ),
+              child: Scaffold(
+                body: RunHud(
+                  isRunActive: true,
+                  isSearchingGps: true,
+                  isAutoPaused: false,
+                  distanceKm: 14.85,
+                  elapsedSeconds: 5420,
+                  movingSeconds: 5120,
+                  splitPace: '5:45',
+                  currentSpeedKmh: 10.5,
+                  satelliteAccuracyMeters: 6.0,
+                  territoriesClaimed: 7,
+                  distanceToClosureMeters: 45.0,
+                  proximityToClosure: 0.85,
+                  onToggleRun: () {},
+                  onSealShape: () {},
+                  onFinishRun: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pump();
+        // Verifies zero overflow exceptions occur on any target resolution
+        expect(tester.takeException(), isNull);
+      }
+
+      // Reset tester view
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
     },
   );
 }
