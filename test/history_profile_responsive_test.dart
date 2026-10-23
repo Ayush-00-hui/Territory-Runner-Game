@@ -76,7 +76,7 @@ void main() {
         // Top metrics
         expect(find.text('Run history'), findsOneWidget);
         expect(find.text('Total area'), findsOneWidget);
-        expect(find.text('Conquests'), findsOneWidget);
+        expect(find.text('Territories'), findsOneWidget);
 
         // Filter chips
         expect(find.text('All runs'), findsOneWidget);

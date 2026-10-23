@@ -90,7 +90,7 @@ class TerritoryService {
           totalDistanceKm: 0.0,
           xp: 0,
           level: 1,
-          badges: ['Cyber Rookie'],
+          badges: ['Rookie Runner', 'Cyber Rookie'],
           totalHexesClaimed: 0,
           currentStreak: 1,
         ),
@@ -128,7 +128,7 @@ class TerritoryService {
           totalDistanceKm: 0.0,
           xp: 0,
           level: 1,
-          badges: ['Cyber Rookie'],
+          badges: ['Rookie Runner', 'Cyber Rookie'],
           totalHexesClaimed: 0,
           currentStreak: 1,
         );
@@ -258,7 +258,7 @@ class TerritoryService {
             await box.delete(rival.id);
           }
           AppLogger.info(
-            'Rival territory ${rival.id} completely conquered by $activeOwner',
+            'Rival territory ${rival.id} claimed by $activeOwner',
             tag: 'TerritoryService',
           );
         } else {

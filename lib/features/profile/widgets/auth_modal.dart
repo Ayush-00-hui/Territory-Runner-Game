@@ -164,7 +164,7 @@ void showProfileAuthModal(
                     // --- PHONE OTP MODE ---
                     if (!codeSent) ...[
                       const Text(
-                        'Enter your mobile number to verify your runner profile and sync conquered sectors:',
+                        'Enter your mobile number to verify your runner profile and sync claimed territories:',
                         style: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 13,

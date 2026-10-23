@@ -313,7 +313,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                   Container(width: 1, height: 32, color: AppColors.border),
                   Expanded(
                     child: _buildStatTile(
-                      label: 'Conquest runs',
+                      label: 'Territory runs',
                       value: '${standing.weeklyRuns}',
                       unit: 'sessions',
                     ),

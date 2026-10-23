@@ -143,14 +143,14 @@ String formatRejectionReason(String code, String detail) {
       return 'Loop too large — exceeds maximum single-run limit (5 km²).';
     }
     if (lower.contains('crossed itself') || lower.contains('self-intersect')) {
-      return 'Loop crossed itself — sovereign territory cannot self-intersect.';
+      return 'Loop crossed itself — territory cannot self-intersect.';
     }
     if (lower.contains('perimeter') ||
         lower.contains('threshold') ||
         lower.contains('40')) {
       return 'Loop perimeter too small — minimum 40m required.';
     }
-    return 'Invalid loop geometry — could not enclose valid sovereign territory.';
+    return 'Invalid loop geometry — could not enclose valid territory.';
   }
   return detail.isNotEmpty ? detail : 'Run rejected by server rules.';
 }

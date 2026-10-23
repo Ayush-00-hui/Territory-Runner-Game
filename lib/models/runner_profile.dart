@@ -11,6 +11,34 @@ class RunnerProfile {
   int totalHexesClaimed;
   int currentStreak;
 
+  static const Map<String, String> badgeAliases = {
+    'Territory Sovereign': 'Territory Master',
+    'First Conquest': 'First Claim',
+    'Sector Commander': 'Area Leader',
+    'Hex Grid Overlord': 'Grid Leader',
+    'Cyber Rookie': 'Rookie Runner',
+  };
+
+  static const Map<String, String> factionAliases = {
+    'Cyber Vanguard': 'Vanguard',
+    'Iron Syndicate': 'Syndicate',
+    'Neon Nomads': 'Nomads',
+  };
+
+  static String canonicalBadge(String name) => badgeAliases[name] ?? name;
+
+  String get displayFaction => factionAliases[faction] ?? faction;
+
+  bool hasBadge(String name) {
+    final canon = canonicalBadge(name);
+    for (final b in badges) {
+      if (canonicalBadge(b) == canon || b == name) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   RunnerProfile({
     required this.id,
     required this.username,
@@ -18,7 +46,7 @@ class RunnerProfile {
     this.totalDistanceKm = 0.0,
     this.xp = 0,
     this.level = 1,
-    this.badges = const ['Cyber Rookie'],
+    this.badges = const ['Rookie Runner', 'Cyber Rookie'],
     this.totalHexesClaimed = 0,
     this.currentStreak = 1,
   });
@@ -65,17 +93,19 @@ class RunnerProfile {
 
   void _evaluateBadges() {
     final List<String> current = List.from(badges);
-    if (totalHexesClaimed >= 1 && !current.contains('First Conquest')) {
-      current.add('First Conquest');
+    if (totalHexesClaimed >= 1) {
+      if (!current.contains('First Claim')) current.add('First Claim');
+      if (!current.contains('First Conquest')) current.add('First Conquest');
+      if (!current.contains('Territory Master')) current.add('Territory Master');
+      if (!current.contains('Territory Sovereign')) current.add('Territory Sovereign');
     }
-    if (totalHexesClaimed >= 1 && !current.contains('Territory Sovereign')) {
-      current.add('Territory Sovereign');
+    if (totalHexesClaimed >= 25) {
+      if (!current.contains('Area Leader')) current.add('Area Leader');
+      if (!current.contains('Sector Commander')) current.add('Sector Commander');
     }
-    if (totalHexesClaimed >= 25 && !current.contains('Sector Commander')) {
-      current.add('Sector Commander');
-    }
-    if (totalHexesClaimed >= 100 && !current.contains('Hex Grid Overlord')) {
-      current.add('Hex Grid Overlord');
+    if (totalHexesClaimed >= 100) {
+      if (!current.contains('Grid Leader')) current.add('Grid Leader');
+      if (!current.contains('Hex Grid Overlord')) current.add('Hex Grid Overlord');
     }
     if (totalDistanceKm >= 10.0 && !current.contains('10K Centurion')) {
       current.add('10K Centurion');
@@ -99,16 +129,24 @@ class RunnerProfile {
   };
 
   factory RunnerProfile.fromJson(Map<String, dynamic> json) {
+    final rawBadges =
+        (json['badges'] as List?)?.map((e) => e.toString()).toList() ??
+        const ['Rookie Runner', 'Cyber Rookie'];
+    final migratedBadges = <String>[...rawBadges];
+    for (final b in rawBadges) {
+      final canon = badgeAliases[b];
+      if (canon != null && !migratedBadges.contains(canon)) {
+        migratedBadges.add(canon);
+      }
+    }
     return RunnerProfile(
       id: json['id'] as String? ?? 'local_user',
-      username: json['username'] as String? ?? 'CyberRunner',
+      username: json['username'] as String? ?? 'Runner',
       faction: json['faction'] as String? ?? 'Cyber Vanguard',
       totalDistanceKm: (json['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
       xp: json['xp'] as int? ?? 0,
       level: json['level'] as int? ?? 1,
-      badges:
-          (json['badges'] as List?)?.map((e) => e.toString()).toList() ??
-          const ['Cyber Rookie'],
+      badges: migratedBadges,
       totalHexesClaimed: json['totalHexesClaimed'] as int? ?? 0,
       currentStreak: json['currentStreak'] as int? ?? 1,
     );
@@ -127,6 +165,15 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
 
+    final rawBadges = (fields[5] as List).cast<String>();
+    final migratedBadges = <String>[...rawBadges];
+    for (final b in rawBadges) {
+      final canon = RunnerProfile.badgeAliases[b];
+      if (canon != null && !migratedBadges.contains(canon)) {
+        migratedBadges.add(canon);
+      }
+    }
+
     return RunnerProfile(
       id: fields[0] as String,
       username: fields[1] as String,
@@ -134,7 +181,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
       totalDistanceKm: (fields[2] as num).toDouble(),
       xp: fields[3] as int,
       level: fields[4] as int,
-      badges: (fields[5] as List).cast<String>(),
+      badges: migratedBadges,
       totalHexesClaimed: (fields[6] as int?) ?? 0,
       currentStreak: (fields[7] as int?) ?? 1,
     );

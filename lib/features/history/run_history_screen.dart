@@ -220,7 +220,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   ),
                   Expanded(
                     child: _buildSummaryMetric(
-                      'Conquests',
+                      'Territories',
                       '${rawTerritories.length}',
                       AppColors.textPrimary,
                     ),

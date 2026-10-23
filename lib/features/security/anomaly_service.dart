@@ -288,12 +288,12 @@ class AnomalyService {
 
     final bool isAnomaly = normalizedScore > _anomalyThreshold;
     final String reason = isAnomaly
-        ? 'Unnatural movement telemetry pattern (Score: ${normalizedScore.toStringAsFixed(2)})'
+        ? 'Unnatural movement pattern (Score: ${normalizedScore.toStringAsFixed(2)})'
         : 'Genuine running gait';
 
     if (isAnomaly) {
       AppLogger.warning(
-        'Suspicious telemetry segment scored: ${normalizedScore.toStringAsFixed(2)} > $_anomalyThreshold',
+        'Suspicious movement segment scored: ${normalizedScore.toStringAsFixed(2)} > $_anomalyThreshold',
         tag: 'AnomalyService',
       );
     }

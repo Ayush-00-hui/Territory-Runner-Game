@@ -478,7 +478,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Territory Runner requires location access to track your running path and map captured sectors.',
+                'Territory Runner requires location access to track your running path and map claimed territories.',
                 style: AppText.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.4,
@@ -936,7 +936,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     if (!_isRunActive) {
       AppToast.show(
         context,
-        'Start a run first to seal sovereign territory',
+        'Start a run first to claim territory',
         type: AppToastType.warning,
       );
       return;
@@ -1452,7 +1452,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         backgroundColor: AppColors.surface,
         duration: Duration(seconds: 2),
         content: Text(
-          '⚔️ Rival Crimson Sector #99 spawned! Executing slice conquest loop...',
+          'Rival territory simulated. Executing loop...',
           style: TextStyle(color: AppColors.rival, fontWeight: FontWeight.bold),
         ),
       ),
@@ -1506,7 +1506,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void _simulateSpeedAnomaly() {
     AppToast.show(
       context,
-      'ANTI-CHEAT TRIGGERED: Telemetry speed 48.5 km/h exceeds human capability threshold (25 km/h)!',
+      'Speed alert: 48.5 km/h exceeds running limit (25 km/h).',
       icon: Icons.shield_rounded,
       type: AppToastType.error,
       duration: const Duration(seconds: 4),
@@ -1721,12 +1721,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '${_activeRivalRunners.length} RIVAL${_activeRivalRunners.length > 1 ? 'S' : ''} IN SECTOR',
+                              '${_activeRivalRunners.length} rival${_activeRivalRunners.length > 1 ? 's' : ''} nearby',
                               style: const TextStyle(
                                 color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 11,
-                                letterSpacing: 0.8,
+                                letterSpacing: 0.4,
                               ),
                             ),
                             const SizedBox(width: 6),
@@ -1944,8 +1944,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                   _buildFloatingCircleButton(
                     icon: Icons.layers_rounded,
                     color: AppColors.textSecondary,
-                    tooltip: 'AI Route & Sector Planner',
-                    semanticLabel: 'Suggest tactical running route',
+                    tooltip: 'Route planner',
+                    semanticLabel: 'Suggest running route',
                     onTap: _suggestAiRoute,
                   ),
                   const SizedBox(height: 10),
@@ -1955,7 +1955,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                         ? AppColors.gold
                         : AppColors.textSecondary,
                     tooltip: 'Campaign Goals',
-                    semanticLabel: 'Open conquest goals selector',
+                    semanticLabel: 'Open goals selector',
                     onTap: _openGoalSelector,
                   ),
                   if (_batterySaverService.isBatterySaverEnabled &&
@@ -2407,7 +2407,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
         content: Text(
-          '🚨 SECTOR UNDER ATTACK: Focused on territory $territoryId',
+          'Territory alert: focused on $territoryId',
           style: const TextStyle(
             color: AppColors.rival,
             fontWeight: FontWeight.bold,

@@ -202,7 +202,7 @@ void main() {
             home: Scaffold(
               body: ProfileAchievementTile(
                 icon: Icons.emoji_events_rounded,
-                title: 'First Conquest',
+                title: 'First Claim',
                 subtitle: 'Claim your first territory polygon on foot',
                 unlocked: true,
                 onTap: () {},
@@ -288,7 +288,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final themePills = ['Athletic Dark', 'Cyber Neon', 'Stealth'];
+        final themePills = ['Athletic Dark', 'Vanguard', 'Stealth'];
         for (final pill in themePills) {
           final pillFinder = find.bySemanticsLabel('Theme: $pill');
           expect(pillFinder, findsOneWidget);

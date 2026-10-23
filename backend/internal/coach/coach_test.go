@@ -40,7 +40,7 @@ func TestCoachFallbackCelebratoryMood(t *testing.T) {
 
 	insight := svc.GenerateInsight(context.Background(), run)
 	assert.Equal(t, "celebratory", insight.MoodTag)
-	assert.Contains(t, insight.Summary, "conquered 12 new territory sectors")
+	assert.Contains(t, insight.Summary, "claimed 12 new territories")
 }
 
 func TestCoachGeminiSuccess(t *testing.T) {
@@ -57,7 +57,7 @@ func TestCoachGeminiSuccess(t *testing.T) {
 					"content": map[string]interface{}{
 						"parts": []map[string]interface{}{
 							{
-								"text": "```json\n{\"summary\":\"Phenomenal territory conquest through downtown!\",\"tip\":\"Increase recovery hydration and target the north sector next.\",\"moodTag\":\"celebratory\"}\n```",
+								"text": "```json\n{\"summary\":\"Phenomenal territory run through downtown.\",\"tip\":\"Increase recovery hydration and target the north area next.\",\"moodTag\":\"celebratory\"}\n```",
 							},
 						},
 					},
@@ -86,8 +86,8 @@ func TestCoachGeminiSuccess(t *testing.T) {
 
 	insight := svc.GenerateInsight(context.Background(), run)
 	require.NotEmpty(t, insight.Summary)
-	assert.Equal(t, "Phenomenal territory conquest through downtown!", insight.Summary)
-	assert.Equal(t, "Increase recovery hydration and target the north sector next.", insight.Tip)
+	assert.Equal(t, "Phenomenal territory run through downtown.", insight.Summary)
+	assert.Equal(t, "Increase recovery hydration and target the north area next.", insight.Tip)
 	assert.Equal(t, "celebratory", insight.MoodTag)
 }
 

@@ -436,7 +436,7 @@ class _SummarySheetState extends State<SummarySheet>
                               ),
                               SizedBox(width: AppSpacing.s12),
                               Text(
-                                'AI coach analyzing telemetry...',
+                                'AI coach analyzing run stats...',
                                 style: AppText.bodySmall,
                               ),
                             ],
@@ -467,7 +467,7 @@ class _SummarySheetState extends State<SummarySheet>
                           ),
                           const SizedBox(height: AppSpacing.s6),
                           Text(
-                            insight?.summary ?? 'Conquest complete! Every closed loop expands your territorial perimeter.',
+                            insight?.summary ?? 'Run complete. Every closed loop expands your territory.',
                             style: AppText.body.copyWith(
                               fontSize: 12.5,
                               color: AppColors.textPrimary,

@@ -46,9 +46,9 @@ class ProfileStatGrid extends StatelessWidget {
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'Distance Telemetry',
+              title: 'Distance Stats',
               value: '${profile.totalDistanceKm.toStringAsFixed(2)} km',
-              description: 'Cumulative GPS route distance logged on foot across urban and wilderness sectors.',
+              description: 'Cumulative GPS route distance logged on foot.',
               metrics: [
                 {
                   'label': 'Lifetime Distance',
@@ -73,9 +73,9 @@ class ProfileStatGrid extends StatelessWidget {
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'Streak Telemetry',
+              title: 'Streak Stats',
               value: '${profile.currentStreak} days',
-              description: 'Continuous daily conquest momentum. Running and claiming territory daily keeps your streak active.',
+              description: 'Daily running consistency. Running and claiming territory keeps your streak active.',
               metrics: [
                 {
                   'label': 'Active Streak Days',
@@ -99,13 +99,13 @@ class ProfileStatGrid extends StatelessWidget {
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'Territory Telemetry',
+              title: 'Territory Stats',
               value: '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} km²',
-              description: 'Post-union sovereign territory polygons permanently claimed on foot.',
+              description: 'Territory polygons permanently claimed on foot.',
               metrics: [
                 {
                   'label': 'Captured Polygons',
-                  'val': '${captured.length} sectors',
+                  'val': '${captured.length} areas',
                 },
                 {
                   'label': 'Controlled Area',
@@ -128,9 +128,9 @@ class ProfileStatGrid extends StatelessWidget {
           onTap: () {
             showStatDetailModal(
               context,
-              title: 'Rank & Tier Telemetry',
+              title: 'Rank & Tier Stats',
               value: 'Level ${profile.level}',
-              description: 'Athlete experience tier. Progressing tiers grants improved sector claim speed and prestige insignia.',
+              description: 'Athlete experience tier. Level up as you run and claim territory.',
               metrics: [
                 {'label': 'Current Level', 'val': 'Level ${profile.level}'},
                 {
@@ -139,7 +139,7 @@ class ProfileStatGrid extends StatelessWidget {
                 },
                 {
                   'label': 'Perks Unlocked',
-                  'val': 'Territory Sovereign, Speed Burst',
+                  'val': 'Territory Master, Speed Burst',
                 },
               ],
             );

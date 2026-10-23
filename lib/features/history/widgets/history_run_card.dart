@@ -166,7 +166,7 @@ class HistoryRunCard extends StatelessWidget {
                         'Verification',
                         territory.isPendingReview
                             ? 'Pending Review'
-                            : 'Verified Sovereign ✓',
+                            : 'Verified territory ✓',
                       ),
                     ],
                   ),

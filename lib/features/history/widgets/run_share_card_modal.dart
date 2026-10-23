@@ -360,7 +360,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     // 8. Watermark Footer
     _drawText(
       canvas,
-      'SERVER-AUTHORITATIVE TERRITORY CONQUEST • POSTGIS SPATIAL PARITY',
+      'Server-verified territory • GPS spatial parity',
       const Offset(240, 990),
       TextStyle(
         color: AppColors.textMuted.withValues(alpha: 0.6),
@@ -547,7 +547,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
               children: [
                 _buildThemePill(ShareCardTheme.athleticDark, 'Athletic Dark'),
                 const SizedBox(width: AppSpacing.s8),
-                _buildThemePill(ShareCardTheme.cyberVanguard, 'Cyber Neon'),
+                _buildThemePill(ShareCardTheme.cyberVanguard, 'Vanguard'),
                 const SizedBox(width: AppSpacing.s8),
                 _buildThemePill(ShareCardTheme.stealth, 'Stealth'),
               ],

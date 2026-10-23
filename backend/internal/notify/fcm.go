@@ -197,8 +197,8 @@ func BuildAlertPayload(deviceToken, territoryID, rivalName string, areaLost floa
 		Message: MessagePayload{
 			Token: deviceToken,
 			Notification: &FCMNotification{
-				Title: "TERRITORY UNDER ATTACK!",
-				Body:  fmt.Sprintf("Rival %s carved %.0f m² from your sector!", rivalName, areaLost),
+				Title: "Territory alert",
+				Body:  fmt.Sprintf("Rival %s claimed %.0f m² from your territory.", rivalName, areaLost),
 			},
 			Data: map[string]string{
 				"type":          "territory_carved",

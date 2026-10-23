@@ -97,7 +97,7 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tactical SOS beacon',
+                      'Emergency SOS beacon',
                       style: AppText.headingSmall.copyWith(
                         color: AppColors.error,
                         fontSize: 16,

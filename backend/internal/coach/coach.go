@@ -130,7 +130,7 @@ func (s *Service) GenerateFallback(run RunContext) CoachInsight {
 	}
 
 	return CoachInsight{
-		Summary: fmt.Sprintf("Outstanding run! You logged %.2f km in %.1f min and conquered %d new territory sectors.",
+		Summary: fmt.Sprintf("Strong run. You logged %.2f km in %.1f min and claimed %d new territories.",
 			run.DistanceKm, durationMin, run.HexesClaimed),
 		Tip: fmt.Sprintf("Pace recorded at %s. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-hex loops.",
 			paceStr),
@@ -172,7 +172,7 @@ type geminiResponse struct {
 }
 
 func (s *Service) callGemini(ctx context.Context, run RunContext) (CoachInsight, error) {
-	prompt := fmt.Sprintf(`You are the AI Running & Territory Conquest Coach in "Territory Runner".
+	prompt := fmt.Sprintf(`You are the AI Running & Territory Coach in "Territory Runner".
 Analyze this completed run session data:
 {
   "distanceKm": %.2f,
@@ -188,7 +188,7 @@ Analyze this completed run session data:
 Provide a motivational coaching response in STRICT JSON matching this schema:
 {
   "summary": "1-2 sentences highlighting performance, distance, and territory expansion achievements.",
-  "tip": "1 tactical, athletic advice for recovery or pacing on their next route.",
+  "tip": "1 athletic advice for recovery or pacing on their next route.",
   "moodTag": "celebratory" | "encouraging" | "analytical"
 }
 Do NOT include markdown wrapping or extra text. Output raw JSON only.`,

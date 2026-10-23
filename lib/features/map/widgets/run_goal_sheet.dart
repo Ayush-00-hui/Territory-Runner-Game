@@ -252,7 +252,7 @@ class _RunGoalSheetState extends State<RunGoalSheet>
             Expanded(
               child: _buildPresetCard(
                 '5.0 km',
-                'Sector Patrol',
+                'Area Run',
                 5.0,
                 _selectedValue == 5.0,
               ),
@@ -352,7 +352,7 @@ class _RunGoalSheetState extends State<RunGoalSheet>
             Expanded(
               child: _buildPresetCard(
                 '25,000 m²',
-                'Sub-Sector Claim',
+                'Small Territory Claim',
                 25000.0,
                 _selectedValue == 25000.0,
               ),
@@ -374,7 +374,7 @@ class _RunGoalSheetState extends State<RunGoalSheet>
             Expanded(
               child: _buildPresetCard(
                 '100,000 m²',
-                'Imperial Sovereign',
+                'Territory Master',
                 100000.0,
                 _selectedValue == 100000.0,
               ),
@@ -419,7 +419,7 @@ class _RunGoalSheetState extends State<RunGoalSheet>
           ),
           const SizedBox(height: 6),
           Text(
-            'Explore the city freely at your own pace without distance or time constraints. Sovereign territories are claimed as you enclose loops.',
+            'Explore the city freely at your own pace without distance or time constraints. Territories are claimed as you enclose loops.',
             style: AppText.bodySmall.copyWith(
               color: AppColors.textSecondary,
               height: 1.35,

@@ -260,7 +260,7 @@ class _RunHudState extends State<RunHud> {
                 Semantics(
                   button: true,
                   label:
-                      'Run conquest goal: ${runGoal.title}. Tap to configure.',
+                      'Run goal: ${runGoal.title}. Tap to configure.',
                   child: GestureDetector(
                     onTap: onOpenGoalSelector,
                     behavior: HitTestBehavior.opaque,

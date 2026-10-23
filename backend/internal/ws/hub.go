@@ -298,7 +298,7 @@ func (h *Hub) BroadcastConquest(attackerID, attackerName string, areaClaimed flo
 			AttackerName:   attackerName,
 			AreaClaimedSqm: areaClaimed,
 			VictimUserID:   victimID,
-			Message:        fmt.Sprintf("⚠️ ALERT: Territory under attack! Rival %s captured %.0f m²!", attackerName, areaClaimed),
+			Message:        fmt.Sprintf("Territory alert: rival %s claimed %.0f m².", attackerName, areaClaimed),
 			Timestamp:      nowStr,
 		}
 		h.SendToUser(victimID, alert)
@@ -312,7 +312,7 @@ func (h *Hub) BroadcastConquest(attackerID, attackerName string, areaClaimed flo
 			AttackerID:     attackerID,
 			AttackerName:   attackerName,
 			AreaClaimedSqm: areaClaimed,
-			Message:        fmt.Sprintf("%s conquered %.0f m² of territory!", attackerName, areaClaimed),
+			Message:        fmt.Sprintf("%s claimed %.0f m² of territory.", attackerName, areaClaimed),
 			Timestamp:      nowStr,
 		}
 

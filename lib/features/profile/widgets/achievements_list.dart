@@ -27,18 +27,18 @@ class ProfileAchievementsList extends StatelessWidget {
         children: [
           ProfileAchievementTile(
             icon: Icons.emoji_events_rounded,
-            title: 'First Conquest',
+            title: 'First Claim',
             subtitle: 'Claim your first territory polygon on foot',
             unlocked:
-                profile.badges.contains('First Conquest') ||
+                profile.hasBadge('First Claim') ||
                 territoriesCount >= 1,
             onTap: () {
               showBadgeDetailModal(
                 context,
-                title: 'First Conquest',
+                title: 'First Claim',
                 subtitle: 'Claim your first territory polygon on foot',
                 unlocked:
-                    profile.badges.contains('First Conquest') ||
+                    profile.hasBadge('First Claim') ||
                     territoriesCount >= 1,
                 criteria: 'Enclose and claim at least 1 real-world polygon in GPS tracking mode.',
                 reward: '+50 XP, "Pioneer Runner" Title',
@@ -48,24 +48,24 @@ class ProfileAchievementsList extends StatelessWidget {
           const SizedBox(height: AppSpacing.s12),
           ProfileAchievementTile(
             icon: Icons.military_tech_rounded,
-            title: 'Territory Sovereign',
-            subtitle: 'Conquer over 10,000 m² of sovereign ground',
+            title: 'Territory Master',
+            subtitle: 'Claim over 10,000 m² of territory',
             unlocked:
-                profile.badges.contains('Territory Sovereign') ||
-                profile.badges.contains('Sector Commander') ||
+                profile.hasBadge('Territory Master') ||
+                profile.hasBadge('Area Leader') ||
                 territoriesCount >= 5,
             onTap: () {
               showBadgeDetailModal(
                 context,
-                title: 'Territory Sovereign',
-                subtitle: 'Conquer over 10,000 m² of sovereign ground',
+                title: 'Territory Master',
+                subtitle: 'Claim over 10,000 m² of territory',
                 unlocked:
-                    profile.badges.contains('Territory Sovereign') ||
-                    profile.badges.contains('Sector Commander') ||
+                    profile.hasBadge('Territory Master') ||
+                    profile.hasBadge('Area Leader') ||
                     territoriesCount >= 5,
                 criteria:
                     'Enclose and secure vast contiguous territory polygons.',
-                reward: '+200 XP, "Sovereign Runner" Faction Insignia',
+                reward: '+200 XP, "Master Runner" Faction Insignia',
               );
             },
           ),
@@ -75,7 +75,7 @@ class ProfileAchievementsList extends StatelessWidget {
             title: '10K Centurion',
             subtitle: 'Log over 10.0 total kilometers on foot',
             unlocked:
-                profile.badges.contains('10K Centurion') ||
+                profile.hasBadge('10K Centurion') ||
                 profile.totalDistanceKm >= 10.0,
             onTap: () {
               showBadgeDetailModal(
@@ -83,11 +83,11 @@ class ProfileAchievementsList extends StatelessWidget {
                 title: '10K Centurion',
                 subtitle: 'Log over 10.0 total kilometers on foot',
                 unlocked:
-                    profile.badges.contains('10K Centurion') ||
+                    profile.hasBadge('10K Centurion') ||
                     profile.totalDistanceKm >= 10.0,
                 criteria:
                     'Complete a cumulative 10.0 km of running or walking.',
-                reward: '+300 XP, 10K Centurion Cyber Wings',
+                reward: '+300 XP, 10K Centurion Wings',
               );
             },
           ),

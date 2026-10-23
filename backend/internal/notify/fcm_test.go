@@ -32,7 +32,7 @@ func TestBuildAlertPayload(t *testing.T) {
 	payload := BuildAlertPayload("fcm_token_12345", "poly_territory_99", "ShadowStriker", 1850.5)
 
 	assert.Equal(t, "fcm_token_12345", payload.Message.Token)
-	assert.Equal(t, "TERRITORY UNDER ATTACK!", payload.Message.Notification.Title)
+	assert.Equal(t, "Territory alert", payload.Message.Notification.Title)
 	assert.Contains(t, payload.Message.Notification.Body, "ShadowStriker")
 	assert.Contains(t, payload.Message.Notification.Body, "1850")
 

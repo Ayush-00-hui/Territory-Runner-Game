@@ -350,7 +350,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 ? 'Offline maps'
                 : 'Map cache & storage',
             subtitle: AppConstants.allowTilePrefetch
-                ? 'Download map sectors for running without cellular signal'
+                ? 'Download map areas for running without cellular signal'
                 : 'Local viewing cache (bulk prefetch disabled under OSM policy)',
             onTap: () {
               AppMotion.selectionTick();

@@ -35,13 +35,13 @@ class DemoControlsLab extends StatelessWidget {
           children: [
             Icon(Icons.science_rounded, color: AppColors.info, size: 20),
             SizedBox(width: AppSpacing.s8),
-            Text('CLASSROOM & VIVA DEMO LAB', style: AppText.headingSmall),
+            Text('Classroom & viva demo lab', style: AppText.headingSmall),
           ],
         ),
         const SizedBox(height: AppSpacing.s12),
         _buildDemoActionTile(
           context: context,
-          title: '🎯 Auto-Simulate 400m Loop Conquest',
+          title: 'Auto-simulate 400m loop',
           subtitle: 'Streams real-time waypoints to trigger loop enclosure & Shoelace area',
           icon: Icons.replay_circle_filled_rounded,
           color: AppColors.mine,
@@ -49,7 +49,7 @@ class DemoControlsLab extends StatelessWidget {
         ),
         _buildDemoActionTile(
           context: context,
-          title: '⚔️ Auto-Simulate Rival Territory Cut',
+          title: 'Auto-simulate rival territory cut',
           subtitle: 'Spawns Crimson rival & runs a slicing loop using Clipper2 difference',
           icon: Icons.shield_outlined,
           color: AppColors.rival,
@@ -57,7 +57,7 @@ class DemoControlsLab extends StatelessWidget {
         ),
         _buildDemoActionTile(
           context: context,
-          title: '🚨 Test Anti-Cheat Speed Anomaly',
+          title: 'Test anti-cheat speed anomaly',
           subtitle:
               'Injects vehicle velocity (>40 km/h) to verify Z-score rejection',
           icon: Icons.warning_amber_rounded,
@@ -66,16 +66,16 @@ class DemoControlsLab extends StatelessWidget {
         ),
         _buildDemoActionTile(
           context: context,
-          title: '🤖 Instant Gemini AI Coach Debrief',
+          title: 'Instant Gemini AI coach debrief',
           subtitle:
-              'Simulates completed 3.5km workout with LLM tactical insights',
+              'Simulates completed 3.5 km workout with AI coach insights',
           icon: Icons.psychology_rounded,
           color: AppColors.info,
           onTap: onSimulateCoachDebrief,
         ),
         _buildDemoActionTile(
           context: context,
-          title: '🛡️ Simulate Decay & Under Attack Alert',
+          title: 'Simulate decay & under attack alert',
           subtitle: 'Degrades territory to 20% strength & dispatches targeted attack alert',
           icon: Icons.security_update_warning_rounded,
           color: AppColors.error,

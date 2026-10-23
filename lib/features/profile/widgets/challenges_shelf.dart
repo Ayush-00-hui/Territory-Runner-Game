@@ -47,7 +47,7 @@ class ChallengesShelf extends StatelessWidget {
                         const SizedBox(width: AppSpacing.s8),
                         Flexible(
                           child: Text(
-                            'Active conquest quests',
+                            'Active territory quests',
                             style: AppText.headingSmall.copyWith(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -76,7 +76,7 @@ class ChallengesShelf extends StatelessWidget {
 
               // Quest 1: Distance
               _buildQuestItem(
-                title: 'Daily sector scout',
+                title: 'Daily distance run',
                 description: 'Run at least 2.0 km on foot',
                 current: profile.totalDistanceKm,
                 target: 2.0,
@@ -248,40 +248,40 @@ class ChallengesShelf extends StatelessWidget {
   Widget _buildBadgeGrid(BuildContext context) {
     final badges = [
       _BadgeDefinition(
-        name: 'First Conquest',
+        name: 'First Claim',
         subtitle: 'Claimed 1st polygon loop',
         icon: Icons.emoji_events_rounded,
         unlocked:
-            profile.badges.contains('First Conquest') || territoriesCount >= 1,
-        criteria: 'Enclose and claim at least 1 sovereign GPS loop.',
+            profile.hasBadge('First Claim') || territoriesCount >= 1,
+        criteria: 'Enclose and claim at least 1 territory GPS loop.',
         reward: '+50 XP, "Pioneer Runner" Title',
       ),
       _BadgeDefinition(
-        name: 'Territory Sovereign',
-        subtitle: 'Conquered 10k m² ground',
+        name: 'Territory Master',
+        subtitle: 'Claimed 10k m² ground',
         icon: Icons.military_tech_rounded,
         unlocked:
-            profile.badges.contains('Territory Sovereign') ||
+            profile.hasBadge('Territory Master') ||
             totalAreaSqMeters >= 10000,
-        criteria: 'Hold 10,000+ m² of sovereign territory.',
-        reward: '+200 XP, "Sovereign Runner" Insignia',
+        criteria: 'Hold 10,000+ m² of territory.',
+        reward: '+200 XP, "Master Runner" Insignia',
       ),
       _BadgeDefinition(
         name: '10K Centurion',
         subtitle: 'Logged 10 km on foot',
         icon: Icons.directions_run_rounded,
         unlocked:
-            profile.badges.contains('10K Centurion') ||
+            profile.hasBadge('10K Centurion') ||
             profile.totalDistanceKm >= 10.0,
         criteria: 'Complete 10.0 cumulative km on foot.',
-        reward: '+300 XP, Centurion Cyber Wings',
+        reward: '+300 XP, Centurion Wings',
       ),
       _BadgeDefinition(
         name: 'Streak Flame',
-        subtitle: '7-day conquest streak',
+        subtitle: '7-day run streak',
         icon: Icons.local_fire_department_rounded,
         unlocked:
-            profile.badges.contains('Streak Flame') ||
+            profile.hasBadge('Streak Flame') ||
             profile.currentStreak >= 7,
         criteria: 'Maintain run momentum for 7 continuous days.',
         reward: '+150 XP, Burning Flame Avatar Aura',

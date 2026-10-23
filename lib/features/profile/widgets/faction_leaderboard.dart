@@ -74,7 +74,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Using local territorial telemetry (offline).';
+        _errorMessage = 'Using local territory data (offline).';
       });
     }
   }
@@ -655,7 +655,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${entry.faction} • Lvl ${entry.level}',
+                  '${RunnerProfile.factionAliases[entry.faction] ?? entry.faction} • Lvl ${entry.level}',
                   style: AppText.bodySmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 11,

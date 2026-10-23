@@ -141,7 +141,7 @@ void showFactionSelectionDialog(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Pledge allegiance to a runner syndicate to represent them on the territorial map grid and unlock tactical perks:',
+            'Select a team to represent on the map grid and earn run bonuses:',
             style: AppText.bodySmall.copyWith(
               color: AppColors.textSecondary,
               fontSize: 13,
@@ -292,7 +292,7 @@ void showStatDetailModal(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Telemetry Summary',
+                'Stats Summary',
                 style: AppText.labelSmall.copyWith(
                   color: AppColors.textMuted,
                   fontSize: 11,
@@ -358,7 +358,7 @@ void showStatDetailModal(
           ),
           const SizedBox(height: AppSpacing.s20),
           PrimaryButton(
-            label: 'Close Telemetry',
+            label: 'Close',
             onPressed: () => Navigator.pop(ctx),
           ),
         ],
@@ -477,7 +477,7 @@ void showBadgeDetailModal(
                 ),
                 const Divider(color: AppColors.border, height: 20),
                 Text(
-                  'CONQUEST REWARD',
+                  'REWARD',
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 10,
