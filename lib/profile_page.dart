@@ -273,43 +273,60 @@ class _ProfilePageState extends State<ProfilePage>
   }) {
     final isSelected = _activeTab == tab;
 
-    return GestureDetector(
-      onTap: () {
-        if (_activeTab != tab) {
-          AppMotion.lightTick();
-          setState(() => _activeTab = tab);
-        }
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.accentContainer : Colors.transparent,
-          borderRadius: AppSpacing.brFull,
-          border: Border.all(
-            color: isSelected ? AppColors.accent : Colors.transparent,
-            width: 1.0,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: GestureDetector(
+        onTap: () {
+          if (_activeTab != tab) {
+            AppMotion.selectionTick();
+            setState(() => _activeTab = tab);
+          }
+        },
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
+          constraints: const BoxConstraints(minHeight: 36),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.accentContainer : Colors.transparent,
+            borderRadius: AppSpacing.brFull,
+            border: Border.all(
+              color: isSelected ? AppColors.accent : Colors.transparent,
+              width: 1.0,
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 14,
-              color: isSelected ? AppColors.accent : AppColors.textMuted,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: AppText.label.copyWith(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
                 color: isSelected ? AppColors.accent : AppColors.textMuted,
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
-            ),
-          ],
+              const SizedBox(width: 4),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    style: AppText.label.copyWith(
+                      color: isSelected
+                          ? AppColors.accent
+                          : AppColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: isSelected
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

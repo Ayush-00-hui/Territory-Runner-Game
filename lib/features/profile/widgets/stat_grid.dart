@@ -26,13 +26,16 @@ class ProfileStatGrid extends StatelessWidget {
         ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
         : '${totalAreaM2.toStringAsFixed(0)} m²';
 
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final double aspectRatio = textScale > 1.15 ? 1.2 : 1.45;
+
     return GridView.count(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       crossAxisCount: 2,
       mainAxisSpacing: AppSpacing.s12,
       crossAxisSpacing: AppSpacing.s12,
-      childAspectRatio: 1.45,
+      childAspectRatio: aspectRatio,
       children: [
         ProfileStatCard(
           icon: Icons.route_rounded,
@@ -175,7 +178,10 @@ class ProfileStatCard extends StatelessWidget {
         }
       },
       child: Container(
-        padding: const EdgeInsets.all(AppSpacing.s16),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s14,
+          vertical: AppSpacing.s12,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: AppSpacing.br16,
@@ -196,22 +202,30 @@ class ProfileStatCard extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            Text(
-              value,
-              style: AppText.statMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                fontFeatures: const [FontFeature.tabularFigures()],
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                value,
+                style: AppText.statMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.s4),
-            Text(
-              title,
-              style: AppText.labelSmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                title,
+                style: AppText.labelSmall.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],

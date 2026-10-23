@@ -224,12 +224,19 @@ class ChallengesShelf extends StatelessWidget {
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
-            Text(
-              '${current >= 1000 ? current.toStringAsFixed(0) : current.toStringAsFixed(1)} / ${target >= 1000 ? target.toStringAsFixed(0) : target.toStringAsFixed(1)} $unit',
-              style: AppText.bodySmall.copyWith(
-                fontSize: 10,
-                color: AppColors.textSecondary,
-                fontFeatures: const [FontFeature.tabularFigures()],
+            const SizedBox(width: AppSpacing.s8),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  '${current >= 1000 ? current.toStringAsFixed(0) : current.toStringAsFixed(1)} / ${target >= 1000 ? target.toStringAsFixed(0) : target.toStringAsFixed(1)} $unit',
+                  style: AppText.bodySmall.copyWith(
+                    fontSize: 10,
+                    color: AppColors.textSecondary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
               ),
             ),
           ],
@@ -281,13 +288,19 @@ class ChallengesShelf extends StatelessWidget {
       ),
     ];
 
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final double childAspectRatio =
+        (textScale > 1.15 || MediaQuery.sizeOf(context).width <= 360)
+        ? 1.2
+        : 1.5;
+
     return GridView.count(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       crossAxisCount: 2,
       crossAxisSpacing: AppSpacing.s12,
       mainAxisSpacing: AppSpacing.s12,
-      childAspectRatio: MediaQuery.sizeOf(context).width < 360 ? 1.25 : 1.5,
+      childAspectRatio: childAspectRatio,
       children: badges.map((b) => _buildBadgeCard(context, b)).toList(),
     );
   }
@@ -368,7 +381,7 @@ class ChallengesShelf extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        b.unlocked ? 'Unlocked 🏆' : 'Locked',
+                        b.unlocked ? 'Unlocked' : 'Locked',
                         style: AppText.labelSmall.copyWith(
                           color: b.unlocked
                               ? AppColors.gold

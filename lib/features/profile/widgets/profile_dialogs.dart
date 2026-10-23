@@ -432,7 +432,7 @@ void showBadgeDetailModal(
                         ),
                       ),
                       child: Text(
-                        unlocked ? 'Unlocked 🏆' : 'Locked',
+                        unlocked ? 'Unlocked' : 'Locked',
                         style: AppText.labelSmall.copyWith(
                           color: unlocked
                               ? AppColors.gold

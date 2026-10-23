@@ -15,6 +15,9 @@ import '../../gallery/design_gallery_screen.dart';
 import '../../onboarding/onboarding_screen.dart';
 import '../../../core/utils/constants.dart';
 import '../../../services/user_settings_service.dart';
+import '../../../services/export_service.dart';
+
+import 'package:latlong2/latlong.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -34,6 +37,67 @@ class ProfileSettingsList extends StatefulWidget {
 
 class _ProfileSettingsListState extends State<ProfileSettingsList> {
   final AppPreferences _appPrefs = AppPreferences();
+
+  void _showExportSheet(BuildContext context) {
+    final territories = widget.territoryService.getCapturedTerritoryObjects();
+    AppSheet.show(
+      context: context,
+      builder: (ctx) => AppSheet(
+        title: 'Export run data',
+        subtitle:
+            '${territories.length} territories recorded • privacy redacted',
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Export your complete GPS territorial boundary maps in open formats with automatic exclusion of private zones.',
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s20),
+            Row(
+              children: [
+                Expanded(
+                  child: SecondaryButton(
+                    label: 'Export GPX',
+                    icon: Icons.route_rounded,
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      AppMotion.mediumTick();
+                      final allPoints = <LatLng>[];
+                      for (final t in territories) {
+                        allPoints.addAll(t.polygon);
+                      }
+                      await ExportService().exportAndShareGpx(
+                        runTitle: 'Territory Run History',
+                        coordinates: allPoints,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(
+                  child: PrimaryButton(
+                    label: 'Export GeoJSON',
+                    icon: Icons.map_rounded,
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      AppMotion.mediumTick();
+                      await ExportService().exportAndShareGeoJson(
+                        territories: territories,
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +143,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         const SizedBox(height: AppSpacing.s16),
 
         // 2. RUN EXPERIENCE (Switch: Battery Saver)
-        _buildSectionTitle('Run Experience'),
+        _buildSectionTitle('Run experience'),
         _buildSettingsGroup([
           SwitchListTile(
             secondary: const Icon(
@@ -172,7 +236,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         const SizedBox(height: AppSpacing.s16),
 
         // 4. UNITS
-        _buildSectionTitle('Measurement Units'),
+        _buildSectionTitle('Measurement units'),
         _buildSettingsGroup([
           ListTile(
             leading: const Icon(
@@ -181,7 +245,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               size: 20,
             ),
             title: Text(
-              'Distance & Pace Units',
+              'Distance & pace units',
               style: AppText.bodyMedium.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -228,7 +292,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         const SizedBox(height: AppSpacing.s16),
 
         // 5. PRIVACY & SAFETY
-        _buildSectionTitle('Privacy & Safety'),
+        _buildSectionTitle('Privacy & safety'),
         _buildSettingsGroup([
           AnimatedBuilder(
             animation: UserSettingsService(),
@@ -278,7 +342,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         const SizedBox(height: AppSpacing.s16),
 
         // 6. DATA & OFFLINE
-        _buildSectionTitle('Data & Offline'),
+        _buildSectionTitle('Data & offline'),
         _buildSettingsGroup([
           ProfileOptionTile(
             icon: Icons.download_for_offline_rounded,
@@ -291,6 +355,17 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             onTap: () {
               AppMotion.selectionTick();
               showOfflineMapsSheet(context);
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.file_download_outlined,
+            title: 'Export run data',
+            subtitle:
+                'Export GPS tracks and claimed territory as GeoJSON or GPX',
+            onTap: () {
+              AppMotion.selectionTick();
+              _showExportSheet(context);
             },
           ),
         ]),

@@ -81,28 +81,41 @@ class ProfileHeroCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: AppSpacing.s8),
-                        GestureDetector(
-                          onTap: onEditCallsign,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface2,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: const Icon(
-                              Icons.edit_rounded,
-                              color: AppColors.textSecondary,
-                              size: 12,
+                        Semantics(
+                          button: true,
+                          label: 'Edit callsign',
+                          child: GestureDetector(
+                            onTap: onEditCallsign,
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minWidth: 48,
+                                minHeight: 48,
+                              ),
+                              alignment: Alignment.center,
+                              child: Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface2,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: const Icon(
+                                  Icons.edit_rounded,
+                                  color: AppColors.textSecondary,
+                                  size: 13,
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.s8),
+                    const SizedBox(height: AppSpacing.s4),
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -126,38 +139,49 @@ class ProfileHeroCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: onSelectFaction,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface2,
-                              borderRadius: AppSpacing.br8,
-                              border: Border.all(color: AppColors.border),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.shield_rounded,
-                                  color: AppColors.accent,
-                                  size: 12,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  profile.faction.isNotEmpty
-                                      ? profile.faction
-                                      : 'Faction',
-                                  style: AppText.labelSmall.copyWith(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                        Semantics(
+                          button: true,
+                          label: 'Select faction',
+                          child: GestureDetector(
+                            onTap: onSelectFaction,
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              constraints: const BoxConstraints(minHeight: 28),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface2,
+                                borderRadius: AppSpacing.br8,
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.shield_rounded,
+                                    color: AppColors.accent,
+                                    size: 12,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  Flexible(
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        profile.faction.isNotEmpty
+                                            ? profile.faction
+                                            : 'Faction',
+                                        style: AppText.labelSmall.copyWith(
+                                          color: AppColors.textPrimary,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -211,15 +235,19 @@ class ProfileHeroCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Tier progression',
-                    style: AppText.labelSmall.copyWith(
-                      color: AppColors.textMuted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.6,
+                  Flexible(
+                    child: Text(
+                      'Tier progression',
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.labelSmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
+                      ),
                     ),
                   ),
+                  const SizedBox(width: AppSpacing.s8),
                   Text(
                     '${profile.xp} / $nextLevelXp XP',
                     style: AppText.labelSmall.copyWith(
