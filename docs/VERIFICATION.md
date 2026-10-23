@@ -1008,6 +1008,92 @@ ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	0.474s
   - *Reason*: Docker daemon is inactive on the local Windows host.
   - *CI Execution*: Executes against ephemeral PostGIS services in Linux CI.
 
+---
+
+## 15. Verification Record: Target SDK 36, Jargon Elimination & Parity (Branch: `v8-leftovers`)
+
+Executed on Windows 11 PowerShell, Go 1.24, Flutter 3.29.0 / Dart 3.7.0.
+
+### 15.1 Flutter Dependency Resolution
+- **Command**: `flutter pub get`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Resolving dependencies...
+Downloading packages...
+Got dependencies!
+50 packages have newer versions incompatible with dependency constraints.
+```
+
+### 15.2 Flutter Static Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...
+No issues found! (ran in 42.8s)
+```
+
+### 15.3 Full Flutter Test Suite
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Count**: 298 tests passed (0 failed, ran in 14.2s)
+- **Output**:
+```text
+00:14 +298: All tests passed!
+```
+*Note*: Includes new automated tests:
+- `test/badge_and_faction_migration_test.dart` (validating legacy JSON/Hive badge migration without data loss and calm display faction mapping).
+- `test/banned_words_audit_test.dart` (static audit verifying 0 occurrences of banned words in user-visible strings and validating calm rendered sheets).
+
+### 15.4 Go Static Analysis
+- **Command**: `go vet ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Output**:
+```text
+(Clean exit; 0 errors, 0 warnings)
+```
+
+### 15.5 Full Go Backend Test Suite (Clean Count=1)
+- **Command**: `go test -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Count**: 130 tests passed across 11 packages
+- **Output**:
+```text
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/cmd/server	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	0.704s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	1.464s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	1.407s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	1.007s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config	0.435s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	0.508s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	0.452s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	1.162s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.470s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	5.931s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	0.661s
+```
+
+### 15.6 Shared Golden Test Fixtures (Dart & Go Parity)
+- **Dart Fixture Runner**: `flutter test test/golden_fixtures_test.dart` $\rightarrow$ 14/14 golden fixtures passed
+- **Go Fixture Runner**: `go test -v -run "TestGolden" ./internal/geo` $\rightarrow$ 14/14 golden fixtures passed
+
+### 15.7 Items Not Run Locally
+- **Go Race Detection (`go test -race ./...`)**:
+  - *Status*: NOT RUN locally.
+  - *Reason*: Host is Windows 11 without a C compiler (`gcc`/`clang` not installed in PATH).
+  - *CI Execution*: Executes in Linux environment via GitHub Actions CI (`.github/workflows/ci.yml`).
+- **Live Docker PostGIS Migration Tests**:
+  - *Status*: NOT RUN locally.
+  - *Reason*: Docker daemon is inactive on the local Windows host.
+  - *CI Execution*: Executes against ephemeral PostGIS services in Linux CI.
+
+
 
 
 

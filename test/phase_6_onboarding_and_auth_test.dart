@@ -57,9 +57,9 @@ void main() {
 
         // Verify Slide 1
         expect(find.text('TERRITORY RUNNER'), findsOneWidget);
-        expect(find.text('01 / CONQUEST MECHANICS'), findsOneWidget);
-        expect(find.text('Run & Claim Real-World Sectors'), findsOneWidget);
-        expect(find.text('SECTOR #042 CLAIMED • 14,250 m²'), findsOneWidget);
+        expect(find.text('01 / RUN & CLAIM'), findsOneWidget);
+        expect(find.text('Run & Claim Real-World Territory'), findsOneWidget);
+        expect(find.text('Territory claimed • 14,250 m²'), findsOneWidget);
         expect(find.text('SKIP'), findsOneWidget);
         expect(find.text('Next'), findsOneWidget);
 
@@ -68,10 +68,10 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify Slide 2
-        expect(find.text('02 / RIVALRY & DEFENSE'), findsOneWidget);
+        expect(find.text('02 / RIVALRY & LEAGUES'), findsOneWidget);
         expect(find.text('Defend & Compete in Real-Time'), findsOneWidget);
         expect(
-          find.text('TACTICAL RADAR ACTIVE • 3 RIVALS NEARBY'),
+          find.text('Active radar • 3 runners nearby'),
           findsOneWidget,
         );
         expect(find.text('Previous'), findsOneWidget);
@@ -81,12 +81,12 @@ void main() {
         await tester.pumpAndSettle();
 
         // Verify Slide 3
-        expect(find.text('03 / TACTICAL TELEMETRY'), findsOneWidget);
+        expect(find.text('03 / RUN STATS & COACH'), findsOneWidget);
         expect(find.text('Sub-Meter Precision & AI Coaching'), findsOneWidget);
-        expect(find.text('Get Started • Enter The Grid'), findsOneWidget);
+        expect(find.text('Get started'), findsOneWidget);
 
         // Tap Get Started
-        await tester.tap(find.text('Get Started • Enter The Grid'));
+        await tester.tap(find.text('Get started'));
         await tester.pumpAndSettle();
 
         expect(completed, isTrue);
@@ -150,12 +150,12 @@ void main() {
         // Advance to Slide 2
         await tester.tap(find.text('Next'));
         await tester.pumpAndSettle();
-        expect(find.text('02 / RIVALRY & DEFENSE'), findsOneWidget);
+        expect(find.text('02 / RIVALRY & LEAGUES'), findsOneWidget);
 
         // Tap Previous
         await tester.tap(find.text('Previous'));
         await tester.pumpAndSettle();
-        expect(find.text('01 / CONQUEST MECHANICS'), findsOneWidget);
+        expect(find.text('01 / RUN & CLAIM'), findsOneWidget);
       },
     );
   });
@@ -177,15 +177,15 @@ void main() {
           ),
         );
 
-        expect(find.text('HIGH-PRECISION SATELLITE GPS'), findsOneWidget);
-        expect(find.text('TERRITORY LOCK & ENCLOSURE'), findsOneWidget);
+        expect(find.text('High-precision GPS'), findsOneWidget);
+        expect(find.text('Territory mapping'), findsOneWidget);
         expect(find.text('Sub-Meter Loop Enclosure'), findsOneWidget);
-        expect(find.text('Real-Time Pace & Telemetry'), findsOneWidget);
+        expect(find.text('Real-Time Pace & Stats'), findsOneWidget);
         expect(find.text('Strict Athlete Privacy'), findsOneWidget);
-        expect(find.text('GRANT GPS ACCESS'), findsOneWidget);
-        expect(find.text('MAYBE LATER'), findsOneWidget);
+        expect(find.text('Grant GPS access'), findsOneWidget);
+        expect(find.text('Maybe later'), findsOneWidget);
 
-        await tester.tap(find.text('GRANT GPS ACCESS'));
+        await tester.tap(find.text('Grant GPS access'));
         await tester.pumpAndSettle();
 
         expect(accepted, isTrue);
@@ -208,13 +208,13 @@ void main() {
           ),
         );
 
-        expect(find.text('BACKGROUND TRACKING SENSING'), findsOneWidget);
-        expect(find.text('CONTINUOUS ENCLOSURE RADAR'), findsOneWidget);
+        expect(find.text('Background tracking'), findsOneWidget);
+        expect(find.text('Continuous run tracking'), findsOneWidget);
         expect(find.text('Locked-Screen Run Capture'), findsOneWidget);
         expect(find.text('AMOLED Minimalist Display'), findsOneWidget);
-        expect(find.text('ALLOW ALL-TIME GPS'), findsOneWidget);
+        expect(find.text('Allow background GPS'), findsOneWidget);
 
-        await tester.tap(find.text('MAYBE LATER'));
+        await tester.tap(find.text('Maybe later'));
         await tester.pumpAndSettle();
 
         expect(declined, isTrue);
@@ -250,9 +250,9 @@ void main() {
         await tester.tap(find.text('OPEN'));
         await tester.pumpAndSettle();
 
-        expect(find.text('HIGH-PRECISION SATELLITE GPS'), findsOneWidget);
+        expect(find.text('High-precision GPS'), findsOneWidget);
 
-        await tester.tap(find.text('GRANT GPS ACCESS'));
+        await tester.tap(find.text('Grant GPS access'));
         await tester.pumpAndSettle();
 
         expect(dialogResult, isTrue);

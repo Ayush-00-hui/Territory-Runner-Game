@@ -294,7 +294,7 @@ void main() {
 
         // Stat metrics
         expect(find.text('Weekly area'), findsOneWidget);
-        expect(find.text('Conquest runs'), findsOneWidget);
+        expect(find.text('Territory runs'), findsOneWidget);
         expect(find.text('League status'), findsOneWidget);
 
         // Section header

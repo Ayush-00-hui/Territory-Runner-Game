@@ -273,7 +273,7 @@ void main() {
         await tester.tap(find.text('OPEN SOS'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Tactical SOS beacon'), findsOneWidget);
+        expect(find.text('Emergency SOS beacon'), findsOneWidget);
         expect(find.text('GPS: 37.774900, -122.419400'), findsOneWidget);
         expect(find.text('Call emergency (911)'), findsOneWidget);
         expect(find.text('Set up emergency contact SMS'), findsOneWidget);

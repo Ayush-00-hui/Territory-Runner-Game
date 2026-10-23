@@ -275,7 +275,7 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          expect(find.text('Active conquest quests'), findsOneWidget);
+          expect(find.text('Active territory quests'), findsOneWidget);
           expect(tester.takeException(), isNull);
         },
       );
