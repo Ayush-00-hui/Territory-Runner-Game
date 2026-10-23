@@ -454,21 +454,21 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             borderRadius: BorderRadius.circular(24),
             side: const BorderSide(color: AppColors.accent, width: 1.2),
           ),
-          title: const Row(
+          title: Row(
             children: [
-              Icon(
-                Icons.satellite_alt_rounded,
+              const Icon(
+                Icons.location_on_outlined,
                 color: AppColors.accent,
                 size: 24,
               ),
-              SizedBox(width: 10),
-              Text(
-                'TACTICAL HUD AUTHORIZATION',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 15,
-                  letterSpacing: 1.1,
+              const SizedBox(width: AppSpacing.s10),
+              Expanded(
+                child: Text(
+                  'Location access',
+                  style: AppText.headingSmall.copyWith(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ],
@@ -477,66 +477,57 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Territory Runner requires High-Accuracy Geolocation to track running loops and enclose real-world sovereign territory polygons.',
-                style: TextStyle(
+              Text(
+                'Territory Runner requires location access to track your running path and map captured sectors.',
+                style: AppText.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
                   height: 1.4,
                   fontSize: 13,
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.s14),
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(AppSpacing.s12),
                 decoration: BoxDecoration(
                   color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: AppSpacing.br12,
                   border: Border.all(color: AppColors.border),
                 ),
-                child: const Row(
+                child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.gps_fixed_rounded,
                       color: AppColors.accent,
                       size: 16,
                     ),
-                    SizedBox(width: 8),
-                    Text(
-                      'High-Accuracy GPS (Sub-meter)',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Text(
+                        'Precise GPS (meters)',
+                        style: AppText.labelSmall.copyWith(
+                          color: AppColors.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
-              const Text(
-                'If denied or restricted on desktop, the engine falls back gracefully to interactive simulation mode with W/A/S/D keyboard controls.',
-                style: TextStyle(
+              const SizedBox(height: AppSpacing.s10),
+              Text(
+                'If location is unavailable or denied, you can use simulator mode.',
+                style: AppText.bodySmall.copyWith(
                   color: AppColors.textMuted,
                   fontSize: 11,
-                  fontStyle: FontStyle.italic,
                 ),
               ),
             ],
           ),
           actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.onAccent,
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
-              ),
-              onPressed: () {
-                Navigator.of(ctx).pop();
-              },
-              child: const Text(
-                'Start tracking',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-              ),
+            PrimaryButton(
+              label: 'Enable location',
+              onPressed: () => Navigator.of(ctx).pop(),
             ),
           ],
         ),
