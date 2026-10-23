@@ -11,7 +11,12 @@ void main() {
         'totalDistanceKm': 15.5,
         'xp': 1200,
         'level': 3,
-        'badges': ['Cyber Rookie', 'First Conquest', 'Territory Sovereign', '10K Centurion'],
+        'badges': [
+          'Cyber Rookie',
+          'First Conquest',
+          'Territory Sovereign',
+          '10K Centurion',
+        ],
         'totalHexesClaimed': 10,
         'currentStreak': 5,
       };
@@ -19,15 +24,21 @@ void main() {
       final profile = RunnerProfile.fromJson(legacyJson);
 
       // Verify legacy badge names are preserved (backward-compatible)
-      expect(profile.badges.contains('Territory Sovereign'), isTrue,
-          reason: 'Legacy Territory Sovereign badge must not be dropped');
+      expect(
+        profile.badges.contains('Territory Sovereign'),
+        isTrue,
+        reason: 'Legacy Territory Sovereign badge must not be dropped',
+      );
       expect(profile.badges.contains('First Conquest'), isTrue);
       expect(profile.badges.contains('Cyber Rookie'), isTrue);
       expect(profile.badges.contains('10K Centurion'), isTrue);
 
       // Verify canonical alias badges are automatically available
-      expect(profile.badges.contains('Territory Master'), isTrue,
-          reason: 'Canonical Territory Master badge must be populated');
+      expect(
+        profile.badges.contains('Territory Master'),
+        isTrue,
+        reason: 'Canonical Territory Master badge must be populated',
+      );
       expect(profile.badges.contains('First Claim'), isTrue);
       expect(profile.badges.contains('Rookie Runner'), isTrue);
 
@@ -54,7 +65,10 @@ void main() {
 
       // Calm display faction
       expect(profile.displayFaction, equals('Vanguard'));
-      expect(RunnerProfile.factionAliases['Cyber Vanguard'], equals('Vanguard'));
+      expect(
+        RunnerProfile.factionAliases['Cyber Vanguard'],
+        equals('Vanguard'),
+      );
     });
 
     test('other factions map cleanly via factionAliases', () {

@@ -357,10 +357,7 @@ void showStatDetailModal(
             ),
           ),
           const SizedBox(height: AppSpacing.s20),
-          PrimaryButton(
-            label: 'Close',
-            onPressed: () => Navigator.pop(ctx),
-          ),
+          PrimaryButton(label: 'Close', onPressed: () => Navigator.pop(ctx)),
         ],
       ),
     ),

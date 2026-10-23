@@ -42,11 +42,11 @@ jobs:
       - name: Display Flutter Environment
         run: flutter --version
 
-      - name: Verify Dart Formatting
-        run: dart format --output=none --set-exit-if-changed .
-
       - name: Install Flutter Dependencies
         run: flutter pub get
+
+      - name: Verify Dart Formatting
+        run: dart format --output=none --set-exit-if-changed .
 
       - name: Run Static Code Analysis
         run: flutter analyze --fatal-infos --fatal-warnings

@@ -67,8 +67,7 @@ class DemoControlsLab extends StatelessWidget {
         _buildDemoActionTile(
           context: context,
           title: 'Instant Gemini AI coach debrief',
-          subtitle:
-              'Simulates completed 3.5 km workout with AI coach insights',
+          subtitle: 'Simulates completed 3.5 km workout with AI coach insights',
           icon: Icons.psychology_rounded,
           color: AppColors.info,
           onTap: onSimulateCoachDebrief,

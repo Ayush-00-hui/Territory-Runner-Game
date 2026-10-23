@@ -251,8 +251,7 @@ class ChallengesShelf extends StatelessWidget {
         name: 'First Claim',
         subtitle: 'Claimed 1st polygon loop',
         icon: Icons.emoji_events_rounded,
-        unlocked:
-            profile.hasBadge('First Claim') || territoriesCount >= 1,
+        unlocked: profile.hasBadge('First Claim') || territoriesCount >= 1,
         criteria: 'Enclose and claim at least 1 territory GPS loop.',
         reward: '+50 XP, "Pioneer Runner" Title',
       ),
@@ -261,8 +260,7 @@ class ChallengesShelf extends StatelessWidget {
         subtitle: 'Claimed 10k m² ground',
         icon: Icons.military_tech_rounded,
         unlocked:
-            profile.hasBadge('Territory Master') ||
-            totalAreaSqMeters >= 10000,
+            profile.hasBadge('Territory Master') || totalAreaSqMeters >= 10000,
         criteria: 'Hold 10,000+ m² of territory.',
         reward: '+200 XP, "Master Runner" Insignia',
       ),
@@ -281,8 +279,7 @@ class ChallengesShelf extends StatelessWidget {
         subtitle: '7-day run streak',
         icon: Icons.local_fire_department_rounded,
         unlocked:
-            profile.hasBadge('Streak Flame') ||
-            profile.currentStreak >= 7,
+            profile.hasBadge('Streak Flame') || profile.currentStreak >= 7,
         criteria: 'Maintain run momentum for 7 continuous days.',
         reward: '+150 XP, Burning Flame Avatar Aura',
       ),

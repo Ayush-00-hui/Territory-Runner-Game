@@ -94,18 +94,34 @@ class RunnerProfile {
   void _evaluateBadges() {
     final List<String> current = List.from(badges);
     if (totalHexesClaimed >= 1) {
-      if (!current.contains('First Claim')) current.add('First Claim');
-      if (!current.contains('First Conquest')) current.add('First Conquest');
-      if (!current.contains('Territory Master')) current.add('Territory Master');
-      if (!current.contains('Territory Sovereign')) current.add('Territory Sovereign');
+      if (!current.contains('First Claim')) {
+        current.add('First Claim');
+      }
+      if (!current.contains('First Conquest')) {
+        current.add('First Conquest');
+      }
+      if (!current.contains('Territory Master')) {
+        current.add('Territory Master');
+      }
+      if (!current.contains('Territory Sovereign')) {
+        current.add('Territory Sovereign');
+      }
     }
     if (totalHexesClaimed >= 25) {
-      if (!current.contains('Area Leader')) current.add('Area Leader');
-      if (!current.contains('Sector Commander')) current.add('Sector Commander');
+      if (!current.contains('Area Leader')) {
+        current.add('Area Leader');
+      }
+      if (!current.contains('Sector Commander')) {
+        current.add('Sector Commander');
+      }
     }
     if (totalHexesClaimed >= 100) {
-      if (!current.contains('Grid Leader')) current.add('Grid Leader');
-      if (!current.contains('Hex Grid Overlord')) current.add('Hex Grid Overlord');
+      if (!current.contains('Grid Leader')) {
+        current.add('Grid Leader');
+      }
+      if (!current.contains('Hex Grid Overlord')) {
+        current.add('Hex Grid Overlord');
+      }
     }
     if (totalDistanceKm >= 10.0 && !current.contains('10K Centurion')) {
       current.add('10K Centurion');

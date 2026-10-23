@@ -70,10 +70,7 @@ void main() {
         // Verify Slide 2
         expect(find.text('02 / RIVALRY & LEAGUES'), findsOneWidget);
         expect(find.text('Defend & Compete in Real-Time'), findsOneWidget);
-        expect(
-          find.text('Active radar • 3 runners nearby'),
-          findsOneWidget,
-        );
+        expect(find.text('Active radar • 3 runners nearby'), findsOneWidget);
         expect(find.text('Previous'), findsOneWidget);
 
         // Tap Next to advance to Slide 3

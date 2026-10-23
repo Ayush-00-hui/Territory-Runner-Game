@@ -117,10 +117,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                   style: AppText.labelSmall,
                 ),
                 const SizedBox(height: AppSpacing.s4),
-                const Text(
-                  'Territory 04-A Active',
-                  style: AppText.titleLarge,
-                ),
+                const Text('Territory 04-A Active', style: AppText.titleLarge),
                 const SizedBox(height: AppSpacing.s4),
                 const Text(
                   'Territory Claim Completed',

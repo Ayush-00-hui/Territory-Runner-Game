@@ -29,17 +29,14 @@ class ProfileAchievementsList extends StatelessWidget {
             icon: Icons.emoji_events_rounded,
             title: 'First Claim',
             subtitle: 'Claim your first territory polygon on foot',
-            unlocked:
-                profile.hasBadge('First Claim') ||
-                territoriesCount >= 1,
+            unlocked: profile.hasBadge('First Claim') || territoriesCount >= 1,
             onTap: () {
               showBadgeDetailModal(
                 context,
                 title: 'First Claim',
                 subtitle: 'Claim your first territory polygon on foot',
                 unlocked:
-                    profile.hasBadge('First Claim') ||
-                    territoriesCount >= 1,
+                    profile.hasBadge('First Claim') || territoriesCount >= 1,
                 criteria: 'Enclose and claim at least 1 real-world polygon in GPS tracking mode.',
                 reward: '+50 XP, "Pioneer Runner" Title',
               );

@@ -259,8 +259,7 @@ class _RunHudState extends State<RunHud> {
               if (runGoal != null && runGoal.isActive) ...[
                 Semantics(
                   button: true,
-                  label:
-                      'Run goal: ${runGoal.title}. Tap to configure.',
+                  label: 'Run goal: ${runGoal.title}. Tap to configure.',
                   child: GestureDetector(
                     onTap: onOpenGoalSelector,
                     behavior: HitTestBehavior.opaque,

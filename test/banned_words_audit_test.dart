@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:territory_runner/features/gameplay/territory_service.dart';
@@ -68,7 +69,9 @@ void main() {
               final literal = match.group(0)!;
               if (bannedRegex.hasMatch(literal)) {
                 // Check if it is an allowed raw key
-                final isAllowed = allowedRawSubstrings.any((allowed) => literal.contains(allowed));
+                final isAllowed = allowedRawSubstrings.any(
+                  (allowed) => literal.contains(allowed),
+                );
                 if (!isAllowed) {
                   violations.add('${entity.path}:${i + 1} -> $literal');
                 }
@@ -81,42 +84,45 @@ void main() {
       expect(
         violations,
         isEmpty,
-        reason: 'Found banned words in user-visible strings:\n${violations.join('\n')}',
+        reason:
+            'Found banned words in user-visible strings:\n${violations.join('\n')}',
       );
     });
 
-    testWidgets('PermissionPrimerSheet renders calm text without banned words or ALL-CAPS alerts',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: PermissionPrimerSheet(
-              onAccept: () {},
-              onDecline: () {},
+    testWidgets(
+      'PermissionPrimerSheet renders calm text without banned words or ALL-CAPS alerts',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: PermissionPrimerSheet(onAccept: () {}, onDecline: () {}),
             ),
           ),
-        ),
-      );
-
-      final textWidgets = tester.widgetList<Text>(find.byType(Text));
-      for (final text in textWidgets) {
-        final content = text.data ?? text.textSpan?.toPlainText() ?? '';
-        expect(
-          bannedRegex.hasMatch(content),
-          isFalse,
-          reason: 'PermissionPrimerSheet contains banned jargon: "$content"',
         );
-        // Assert no emoji or shouting ALL-CAPS alert headlines
-        expect(
-          content.contains('🚨') || content.contains('⚠️') || content.contains('TACTICAL'),
-          isFalse,
-          reason: 'Alert text should be calm, not shouting: "$content"',
-        );
-      }
-    });
 
-    testWidgets('ChallengesShelf renders calm sports terminology',
-        (WidgetTester tester) async {
+        final textWidgets = tester.widgetList<Text>(find.byType(Text));
+        for (final text in textWidgets) {
+          final content = text.data ?? text.textSpan?.toPlainText() ?? '';
+          expect(
+            bannedRegex.hasMatch(content),
+            isFalse,
+            reason: 'PermissionPrimerSheet contains banned jargon: "$content"',
+          );
+          // Assert no emoji or shouting ALL-CAPS alert headlines
+          expect(
+            content.contains('🚨') ||
+                content.contains('⚠️') ||
+                content.contains('TACTICAL'),
+            isFalse,
+            reason: 'Alert text should be calm, not shouting: "$content"',
+          );
+        }
+      },
+    );
+
+    testWidgets('ChallengesShelf renders calm sports terminology', (
+      WidgetTester tester,
+    ) async {
       final profile = RunnerProfile(
         id: 'test_p',
         username: 'Runner1',
@@ -148,48 +154,47 @@ void main() {
       }
     });
 
-    testWidgets('ProfileStatGrid renders calm metrics without sector/telemetry jargon',
-        (WidgetTester tester) async {
-      final profile = RunnerProfile(
-        id: 'test_p2',
-        username: 'Runner2',
-        totalHexesClaimed: 42,
-        totalDistanceKm: 120.5,
-      );
+    testWidgets(
+      'ProfileStatGrid renders calm metrics without sector/telemetry jargon',
+      (WidgetTester tester) async {
+        final profile = RunnerProfile(
+          id: 'test_p2',
+          username: 'Runner2',
+          totalHexesClaimed: 42,
+          totalDistanceKm: 120.5,
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: ProfileStatGrid(
-                profile: profile,
-                territoryService: TerritoryService(),
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ProfileStatGrid(
+                  profile: profile,
+                  territoryService: TerritoryService(),
+                ),
               ),
             ),
           ),
-        ),
-      );
-
-      final textWidgets = tester.widgetList<Text>(find.byType(Text));
-      for (final text in textWidgets) {
-        final content = text.data ?? text.textSpan?.toPlainText() ?? '';
-        expect(
-          bannedRegex.hasMatch(content),
-          isFalse,
-          reason: 'ProfileStatGrid contains banned jargon: "$content"',
         );
-      }
-    });
 
-    testWidgets('RunGoalSheet renders calm area and distance goals',
-        (WidgetTester tester) async {
+        final textWidgets = tester.widgetList<Text>(find.byType(Text));
+        for (final text in textWidgets) {
+          final content = text.data ?? text.textSpan?.toPlainText() ?? '';
+          expect(
+            bannedRegex.hasMatch(content),
+            isFalse,
+            reason: 'ProfileStatGrid contains banned jargon: "$content"',
+          );
+        }
+      },
+    );
+
+    testWidgets('RunGoalSheet renders calm area and distance goals', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: RunGoalSheet(
-              currentGoal: RunGoal.none,
-            ),
-          ),
+          home: Scaffold(body: RunGoalSheet(currentGoal: RunGoal.none)),
         ),
       );
 
