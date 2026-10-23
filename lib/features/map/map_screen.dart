@@ -937,9 +937,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     setState(() {
       _territoriesClaimedThisRun++;
     });
-    AppMotion.heavyBurst();
+    AppMotion.mediumTick();
     LoopCelebrationOverlay.show(context, areaSqMeters: claimed, xpAwarded: xp);
-    _appPrefs.triggerLoopClosedHaptic();
   }
 
   void _sealCurrentShape() {
@@ -2059,14 +2058,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     onFinishRun: () {
                       if (_isRunActive) {
                         _toggleRun();
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Tap the center play button to begin tracking',
-                            ),
-                          ),
-                        );
                       }
                     },
                   );

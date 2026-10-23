@@ -48,10 +48,7 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    );
+    _controller = AnimationController(vsync: this, duration: AppMotion.capture);
 
     _scaleAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(
       CurvedAnimation(

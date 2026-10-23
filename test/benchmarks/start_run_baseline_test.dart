@@ -12,6 +12,8 @@ import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/features/gameplay/territory_service.dart';
 import 'package:territory_runner/features/map/widgets/run_hud.dart';
 import 'package:territory_runner/features/map/widgets/hold_to_finish_button.dart';
+import 'package:territory_runner/features/map/widgets/summary_sheet.dart';
+import 'package:territory_runner/features/coach/llm_coach_service.dart';
 import 'package:territory_runner/main.dart';
 
 void main() {
@@ -466,6 +468,53 @@ void main() {
       }
 
       await tester.binding.setSurfaceSize(null);
+    },
+  );
+
+  testWidgets(
+    'Verification (U3): SummarySheet numbers count up within 500ms and Done is primary bottom action',
+    (tester) async {
+      final profile = RunnerProfile(
+        id: 'u3_runner',
+        username: 'PacerAlpha',
+        totalDistanceKm: 25.0,
+        xp: 1200,
+        level: 5,
+        badges: ['Pacer'],
+        totalHexesClaimed: 12,
+        currentStreak: 3,
+        faction: 'Obsidian Syndicate',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: SummarySheet(
+                distanceKm: 5.0,
+                durationSeconds: 1500,
+                territoriesClaimed: 4,
+                profile: profile,
+                coachService: LLMCoachService(),
+                areaSqMeters: 60000.0,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Frame 1: numbers start counting up from 0
+      await tester.pump();
+      expect(find.text('0.00 km'), findsOneWidget);
+
+      // At 500ms: numbers settle at full target values
+      await tester.pump(const Duration(milliseconds: 550));
+      expect(find.text('5.00 km'), findsOneWidget);
+      expect(find.text('+4'), findsOneWidget);
+
+      // Verify Done button exists as full primary button
+      final doneFinder = find.widgetWithText(PrimaryButton, 'Done');
+      expect(doneFinder, findsOneWidget);
     },
   );
 }
