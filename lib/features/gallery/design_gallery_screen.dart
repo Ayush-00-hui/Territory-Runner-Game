@@ -96,7 +96,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                   children: [
                     const Text('01:14:28', style: AppText.displayMedium),
                     const SizedBox(width: AppSpacing.s6),
-                    Text('MOVING', style: AppText.statUnit),
+                    Text('Moving', style: AppText.statUnit),
                   ],
                 ),
                 const Divider(height: AppSpacing.s24),

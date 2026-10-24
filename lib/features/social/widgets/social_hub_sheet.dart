@@ -362,7 +362,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                         side: const BorderSide(color: AppColors.accent),
                       ),
                       onPressed: _refreshData,
-                      child: const Text('RETRY CONNECTION'),
+                      child: const Text('Retry connection'),
                     ),
                   ],
                 ),
@@ -1094,7 +1094,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                     ),
                     onPressed: () => _acceptDuel(duel.id),
                     child: const Text(
-                      'ACCEPT DUEL',
+                      'Accept duel',
                       style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
@@ -1110,7 +1110,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                       ),
                     ),
                     onPressed: () => _declineDuel(duel.id),
-                    child: const Text('DECLINE'),
+                    child: const Text('Decline'),
                   ),
                 ),
               ],
@@ -1283,7 +1283,7 @@ class _SocialHubViewState extends State<SocialHubView> {
               }
             },
             child: const Text(
-              'DISPATCH INVITE',
+              'Send invite',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -1405,7 +1405,7 @@ class _SocialHubViewState extends State<SocialHubView> {
 
                   // Target Type Selector
                   Text(
-                    'BATTLE METRIC',
+                    'Metric',
                     style: AppText.label.copyWith(
                       color: AppColors.textMuted,
                       fontSize: 11,
@@ -1416,7 +1416,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                     children: [
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('AREA (m²)')),
+                          label: const Center(child: Text('Area (m²)')),
                           selected: targetType == 'area',
                           selectedColor: AppColors.accent,
                           backgroundColor: AppColors.surface2,
@@ -1435,7 +1435,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                       const SizedBox(width: AppSpacing.s8),
                       Expanded(
                         child: ChoiceChip(
-                          label: const Center(child: Text('DISTANCE (km)')),
+                          label: const Center(child: Text('Distance (km)')),
                           selected: targetType == 'distance',
                           selectedColor: AppColors.accent,
                           backgroundColor: AppColors.surface2,
@@ -1526,7 +1526,7 @@ class _SocialHubViewState extends State<SocialHubView> {
 
                   // XP Stake
                   Text(
-                    'XP STAKE',
+                    'XP stake',
                     style: AppText.label.copyWith(
                       color: AppColors.textMuted,
                       fontSize: 11,
@@ -1605,11 +1605,11 @@ class _SocialHubViewState extends State<SocialHubView> {
                       }
                     },
                     child: const Text(
-                      'LAUNCH 24-HOUR DUEL',
+                      'Launch 24-hour duel',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
-                        letterSpacing: 1.0,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ),

@@ -230,7 +230,7 @@ class LeaderboardSheet extends StatelessWidget {
                                   ],
                                 ),
                               ),
-                              const Text('CLAIMED', style: AppText.label),
+                              const Text('Claimed', style: AppText.label),
                             ],
                           ),
                         ],
