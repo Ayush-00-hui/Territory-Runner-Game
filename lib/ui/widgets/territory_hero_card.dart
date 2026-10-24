@@ -72,7 +72,7 @@ class TerritoryHeroCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('TOTAL TERRITORY', style: AppText.labelSmall),
+                  const Text('Total territory', style: AppText.labelSmall),
                   const SizedBox(height: AppSpacing.s4),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,

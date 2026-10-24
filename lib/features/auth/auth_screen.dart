@@ -60,7 +60,7 @@ class _AuthScreenState extends State<AuthScreen> {
     if (!mounted) return;
     AppToast.show(
       context,
-      'Welcome to the Grid, $displayName!',
+      'Welcome, $displayName!',
       type: AppToastType.success,
       icon: Icons.check_circle_rounded,
     );

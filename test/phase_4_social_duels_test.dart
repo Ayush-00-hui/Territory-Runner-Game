@@ -28,7 +28,7 @@ void main() {
       final friend = FriendUser.fromJson(json);
       expect(friend.id, equals('u1'));
       expect(friend.username, equals('NeonRacer'));
-      expect(friend.faction, equals('Cyber Vanguard'));
+      expect(friend.faction, equals('Vanguard'));
       expect(friend.totalAreaSqm, equals(150000.0));
       expect(friend.level, equals(7));
       expect(friend.xp, equals(12500));

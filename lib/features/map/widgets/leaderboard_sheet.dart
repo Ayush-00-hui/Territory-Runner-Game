@@ -196,7 +196,7 @@ class LeaderboardSheet extends StatelessWidget {
                                           borderRadius: AppSpacing.br8,
                                         ),
                                         child: const Text(
-                                          'YOU',
+                                          'You',
                                           style: TextStyle(
                                             color: AppColors.onAccent,
                                             fontSize: 9,

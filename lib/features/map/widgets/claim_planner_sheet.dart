@@ -307,10 +307,10 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'TARGET AREA',
+                'Target area',
                 style: AppText.label.copyWith(
                   color: AppColors.textSecondary,
-                  letterSpacing: 1.1,
+                  letterSpacing: 0.4,
                 ),
               ),
               Container(

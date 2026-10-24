@@ -172,7 +172,7 @@ void showFactionSelectionDialog(
                   if (context.mounted) {
                     AppToast.show(
                       context,
-                      'Aligned with ${f['name']} Syndicate',
+                      'Aligned with ${f['name']}',
                     );
                   }
                 },
@@ -230,7 +230,7 @@ void showFactionSelectionDialog(
                                       borderRadius: AppSpacing.br8,
                                     ),
                                     child: Text(
-                                      'ACTIVE',
+                                      'Active',
                                       style: AppText.labelSmall.copyWith(
                                         color: factionColor,
                                         fontSize: 9,
@@ -456,7 +456,7 @@ void showBadgeDetailModal(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'CRITERIA',
+                  'Criteria',
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 10,
@@ -474,7 +474,7 @@ void showBadgeDetailModal(
                 ),
                 const Divider(color: AppColors.border, height: 20),
                 Text(
-                  'REWARD',
+                  'Reward',
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 10,

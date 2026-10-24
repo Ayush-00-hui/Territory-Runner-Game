@@ -1015,7 +1015,7 @@ class _SocialHubViewState extends State<SocialHubView> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'YOU',
+                  'You',
                   style: TextStyle(
                     color: AppColors.textPrimary,
                     fontSize: 11,
@@ -1326,7 +1326,7 @@ class _SocialHubViewState extends State<SocialHubView> {
 
                   // Opponent Picker
                   Text(
-                    'OPPONENT RUNNER',
+                    'Opponent runner',
                     style: AppText.label.copyWith(
                       color: AppColors.textMuted,
                       fontSize: 11,

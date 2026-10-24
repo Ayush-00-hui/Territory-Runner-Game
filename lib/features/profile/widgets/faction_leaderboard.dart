@@ -467,15 +467,15 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
 
   Widget _buildLeaderboardContent(double userAreaSqm) {
     final currentUsername = widget.profile.username.isNotEmpty
-        ? widget.profile.username.toUpperCase()
-        : 'YOU';
+        ? widget.profile.username
+        : 'You';
 
     // If server has entries, check if user is in top entries
     final entries = List<LeaderboardEntry>.from(_leaderboard);
     final userIdx = entries.indexWhere(
       (e) =>
           e.userId == widget.profile.id ||
-          e.username.toUpperCase() == currentUsername,
+          e.username.toLowerCase() == currentUsername.toLowerCase(),
     );
 
     // If user has local territories and is not in list, add user
@@ -535,7 +535,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       children: entries.map((entry) {
         final isUser =
             entry.userId == widget.profile.id ||
-            entry.username.toUpperCase() == currentUsername;
+            entry.username.toLowerCase() == currentUsername.toLowerCase();
         return _buildLeaderCard(entry, isUser);
       }).toList(),
     );

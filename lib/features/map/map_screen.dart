@@ -378,7 +378,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         icon: Icons.error_rounded,
         type: AppToastType.error,
         duration: const Duration(seconds: 8),
-        actionLabel: 'VIEW RUN',
+        actionLabel: 'View run',
         onAction: () {
           SummarySheet.show(
             context: context,

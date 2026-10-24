@@ -63,12 +63,12 @@ void showProfileAuthModal(
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'ATHLETE CLOUD SYNC',
+                            'Athlete cloud sync',
                             style: TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
-                              letterSpacing: 1.1,
+                              letterSpacing: 0.4,
                             ),
                           ),
                         ],

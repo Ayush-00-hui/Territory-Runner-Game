@@ -686,7 +686,7 @@ class _RunHudState extends State<RunHud> {
                               const SizedBox(width: AppSpacing.s4),
                               Text(
                                 satelliteAccuracyMeters > 50.0
-                                    ? 'GPS LOST'
+                                    ? 'No GPS'
                                     : '±${satelliteAccuracyMeters.toStringAsFixed(0)}m',
                                 style: AppText.bodySmall.copyWith(
                                   fontSize: 11,
