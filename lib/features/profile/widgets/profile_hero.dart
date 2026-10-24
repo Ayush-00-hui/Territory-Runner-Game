@@ -51,10 +51,10 @@ class ProfileHeroCard extends StatelessWidget {
                       profile.username.isNotEmpty
                           ? profile.username[0].toUpperCase()
                           : 'R',
-                      style: const TextStyle(
+                      style: AppText.headingLarge.copyWith(
                         color: AppColors.onAccent,
                         fontSize: 22,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),

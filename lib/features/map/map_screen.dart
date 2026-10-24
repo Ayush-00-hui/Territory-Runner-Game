@@ -273,56 +273,14 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _wsAlertSub = _wsService.alertStream.listen((alert) {
       if (!mounted) return;
       _appPrefs.triggerAttackHaptic();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.bgElevated,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.rival, width: 1.5),
-          ),
-          content: Row(
-            children: [
-              const Icon(
-                Icons.warning_amber_rounded,
-                color: AppColors.rival,
-                size: 28,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'TERRITORY UNDER ATTACK!',
-                      style: TextStyle(
-                        color: AppColors.rival,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      alert.message,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          action: SnackBarAction(
-            label: 'DEFEND',
-            textColor: AppColors.rival,
-            onPressed: _defendWeakestTerritory,
-          ),
-          duration: const Duration(seconds: 8),
-        ),
+      AppToast.show(
+        context,
+        'Territory alert: ${alert.message}',
+        icon: Icons.warning_amber_rounded,
+        type: AppToastType.error,
+        actionLabel: 'Defend',
+        onAction: _defendWeakestTerritory,
+        duration: const Duration(seconds: 8),
       );
       _fetchVisibleRivals();
     });
@@ -396,24 +354,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void _onReconciliationToast() {
     final msg = SyncQueueService().reconciliationToastNotifier.value;
     if (msg != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.surface,
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: AppColors.accent, width: 1.2),
-          ),
-          content: Text(
-            msg,
-            style: const TextStyle(
-              color: AppColors.accent,
-              fontWeight: FontWeight.bold,
-              fontSize: 12.5,
-            ),
-          ),
-        ),
+      AppToast.show(
+        context,
+        msg,
+        icon: Icons.sync_rounded,
+        type: AppToastType.info,
+        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -574,7 +520,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               'RESUME RUN?',
               style: TextStyle(
                 color: AppColors.textPrimary,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 fontSize: 15,
                 letterSpacing: 1.0,
               ),
@@ -860,18 +806,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
             _lastAnnouncedKm = currentKmFloor;
             HapticFeedback.heavyImpact();
             _appPrefs.triggerMilestoneHaptic();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: AppColors.surface,
-                duration: const Duration(seconds: 4),
-                content: Text(
-                  '🏁 MILESTONE: $currentKmFloor.0 KM COMPLETED • Split Pace: ${_computeCurrentSplitPace()}',
-                  style: const TextStyle(
-                    color: AppColors.accent,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+            AppToast.show(
+              context,
+              'Milestone: $currentKmFloor.0 km completed • Split: ${_computeCurrentSplitPace()}',
+              icon: Icons.flag_rounded,
+              type: AppToastType.success,
+              duration: const Duration(seconds: 4),
             );
           }
         }
@@ -980,24 +920,13 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _activeGoal = goal;
         _goalCompletedAnnounced = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.surface,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: AppColors.gold, width: 1.2),
-          ),
-          content: Text(
-            goal.isActive
-                ? '🎯 Target set: ${goal.title}'
-                : 'Exploration mode: Open run',
-            style: const TextStyle(
-              color: AppColors.gold,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
+      AppToast.show(
+        context,
+        goal.isActive
+            ? 'Target set: ${goal.title}'
+            : 'Exploration mode: Open run',
+        icon: Icons.track_changes_rounded,
+        type: AppToastType.info,
       );
     }
   }
@@ -1017,36 +946,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _appPrefs.triggerGoalAchievedHaptic();
         HapticFeedback.heavyImpact();
         AppMotion.heavyBurst();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.surface,
-            duration: const Duration(seconds: 5),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: const BorderSide(color: AppColors.gold, width: 1.5),
-            ),
-            content: Row(
-              children: [
-                const Icon(
-                  Icons.emoji_events_rounded,
-                  color: AppColors.gold,
-                  size: 24,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    '🎯 TARGET ACCOMPLISHED!\n${_activeGoal.title} completed.',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        AppToast.show(
+          context,
+          'Target completed: ${_activeGoal.title}',
+          icon: Icons.emoji_events_rounded,
+          type: AppToastType.success,
+          duration: const Duration(seconds: 5),
         );
       }
     }
@@ -1233,36 +1138,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _toggleRun();
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.surface,
-        duration: const Duration(seconds: 5),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: AppColors.secondary, width: 1.2),
-        ),
-        content: Row(
-          children: [
-            const Icon(
-              Icons.navigation_rounded,
-              color: AppColors.secondary,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Active Guidance: Follow the Solar Orange path (${route.totalDistanceKm.toStringAsFixed(2)} km, ~${route.estimatedNewTerritoryAreaSqM.toStringAsFixed(0)} m² new land)',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12.5,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
+    AppToast.show(
+      context,
+      'Route guidance active: ${route.totalDistanceKm.toStringAsFixed(2)} km, ~${route.estimatedNewTerritoryAreaSqM.toStringAsFixed(0)} m²',
+      icon: Icons.navigation_rounded,
+      type: AppToastType.info,
+      duration: const Duration(seconds: 5),
     );
   }
 
@@ -1296,18 +1177,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     HapticFeedback.selectionClick();
     final territories = _territoryService.getCapturedTerritoryObjects();
     final double area = territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.surface,
-        duration: const Duration(seconds: 2),
-        content: Text(
-          'Location: ${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)} (Total owned: ${area.toStringAsFixed(0)} m²)',
-          style: const TextStyle(
-            color: AppColors.accent,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+    AppToast.show(
+      context,
+      'Location: ${point.latitude.toStringAsFixed(4)}, ${point.longitude.toStringAsFixed(4)} (${area.toStringAsFixed(0)} m² owned)',
+      icon: Icons.place_outlined,
+      type: AppToastType.info,
+      duration: const Duration(seconds: 2),
     );
   }
 
@@ -1355,18 +1230,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       waypoints.add(LatLng(lat, lng));
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: AppColors.surface,
-        duration: Duration(seconds: 2),
-        content: Text(
-          '⚡ Streaming 400m automated GPS loop scenario...',
-          style: TextStyle(
-            color: AppColors.accent,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+    AppToast.show(
+      context,
+      'Streaming 400m automated GPS loop scenario',
+      icon: Icons.play_arrow_rounded,
+      type: AppToastType.info,
+      duration: const Duration(seconds: 2),
     );
 
     int currentStep = 0;
@@ -1411,15 +1280,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     if (!mounted) return;
     setState(() {});
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        backgroundColor: AppColors.surface,
-        duration: Duration(seconds: 2),
-        content: Text(
-          'Rival territory simulated. Executing loop...',
-          style: TextStyle(color: AppColors.rival, fontWeight: FontWeight.bold),
-        ),
-      ),
+    AppToast.show(
+      context,
+      'Rival territory simulated. Executing loop...',
+      icon: Icons.play_arrow_rounded,
+      type: AppToastType.info,
+      duration: const Duration(seconds: 2),
     );
 
     if (!_isRunActive) {
@@ -1881,19 +1747,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _toggleRun();
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.surface,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-          content: Text(
-            '🛡️ DEFENSE ENGAGED: Run through your territory to restore 100% strength (${minStrength.round()}% active)',
-            style: const TextStyle(
-              color: AppColors.gold,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
+      AppToast.show(
+        context,
+        'Defense active: run through territory to restore strength (${minStrength.round()}% remaining)',
+        icon: Icons.shield_outlined,
+        type: AppToastType.warning,
+        duration: const Duration(seconds: 4),
       );
     }
   }
@@ -1916,56 +1775,14 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.bgElevated,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.rival, width: 1.5),
-          ),
-          content: const Row(
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: AppColors.rival,
-                size: 28,
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'TERRITORY UNDER ATTACK!',
-                      style: TextStyle(
-                        color: AppColors.rival,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 12,
-                        letterSpacing: 1.1,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      '⚠️ Rival ShadowRunner captured 3,500 m²! Defenses compromised (20% strength).',
-                      style: TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          action: SnackBarAction(
-            label: 'DEFEND',
-            textColor: AppColors.rival,
-            onPressed: _defendWeakestTerritory,
-          ),
-          duration: const Duration(seconds: 8),
-        ),
+      AppToast.show(
+        context,
+        'Territory alert: rival captured 3,500 m² (20% strength remaining)',
+        icon: Icons.warning_amber_rounded,
+        type: AppToastType.error,
+        actionLabel: 'Defend',
+        onAction: _defendWeakestTerritory,
+        duration: const Duration(seconds: 8),
       );
     }
   }
@@ -1992,15 +1809,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _mapController.move(nearest.position, 17.5);
       } catch (_) {}
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.surface,
-          duration: const Duration(seconds: 2),
-          content: Text(
-            '🎯 Tracking ${nearest.username} (${minDistance.round()}m away)',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
+      AppToast.show(
+        context,
+        'Tracking ${nearest.username} (${minDistance.round()}m away)',
+        icon: Icons.radar_rounded,
+        type: AppToastType.info,
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -2014,12 +1828,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         _activeRivalRunners.remove('sim_rival_phantom');
         _rivalBreadcrumbs.remove('sim_rival_phantom');
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          backgroundColor: AppColors.surface,
-          content: Text('⏹️ Live Rival Simulation stopped.'),
-          duration: Duration(seconds: 2),
-        ),
+      AppToast.show(
+        context,
+        'Live rival simulation stopped',
+        icon: Icons.stop_circle_outlined,
+        type: AppToastType.info,
+        duration: const Duration(seconds: 2),
       );
       return;
     }
@@ -2030,29 +1844,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     const double radiusMeters = 180.0;
     const double earthRadius = 6378137.0;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.surface,
-        content: Row(
-          children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.rival,
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                '🔴 Live Rival active: ⚡ Phantom_Vanguard is running near you!',
-              ),
-            ),
-          ],
-        ),
-        duration: const Duration(seconds: 3),
-      ),
+    AppToast.show(
+      context,
+      'Live rival active: Phantom_Vanguard is running nearby',
+      icon: Icons.person_pin_circle_outlined,
+      type: AppToastType.warning,
+      duration: const Duration(seconds: 3),
     );
 
     _rivalSimulationTimer = Timer.periodic(const Duration(milliseconds: 1000), (
@@ -2119,19 +1916,12 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _mapController.move(centroid, 17.0);
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppColors.surface,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-        content: Text(
-          'Territory alert: focused on $territoryId',
-          style: const TextStyle(
-            color: AppColors.rival,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
+    AppToast.show(
+      context,
+      'Territory alert: focused on $territoryId',
+      icon: Icons.center_focus_strong_rounded,
+      type: AppToastType.info,
+      duration: const Duration(seconds: 4),
     );
   }
 }

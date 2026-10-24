@@ -237,7 +237,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   'Social Syndicate & Duels',
                   style: AppText.headingSmall.copyWith(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: 0.6,
                     fontSize: 15,
                   ),
@@ -414,7 +414,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                 color: isSelected
                     ? AppColors.onAccent
                     : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 fontSize: 12,
                 letterSpacing: 0.4,
               ),
@@ -449,7 +449,7 @@ class _SocialHubViewState extends State<SocialHubView> {
               'Athletic squad',
               style: AppText.label.copyWith(
                 color: AppColors.textMuted,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,
                 fontSize: 11,
               ),
@@ -465,7 +465,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                 'Add runner',
                 style: TextStyle(
                   color: AppColors.accent,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
               ),
@@ -500,7 +500,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                       'Incoming squad invitations (${incomingRequests.length})',
                       style: const TextStyle(
                         color: AppColors.accent,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         fontSize: 11,
                         letterSpacing: 0.6,
                       ),
@@ -536,7 +536,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   'No squad members yet',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                     letterSpacing: 0.4,
                   ),
@@ -564,7 +564,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   icon: const Icon(Icons.person_add_rounded, size: 18),
                   label: const Text(
                     'Send friend request',
-                    style: TextStyle(fontWeight: FontWeight.w900),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -609,7 +609,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   req.requesterName,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
                 ),
@@ -670,7 +670,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   : 'R',
               style: const TextStyle(
                 color: AppColors.accent,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -685,7 +685,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                       friend.username,
                       style: const TextStyle(
                         color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                       ),
                     ),
@@ -705,7 +705,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                         style: const TextStyle(
                           color: AppColors.accent,
                           fontSize: 9,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -741,7 +741,7 @@ class _SocialHubViewState extends State<SocialHubView> {
             label: const Text(
               'Duel',
               style: TextStyle(
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 fontSize: 11,
                 letterSpacing: 0.3,
               ),
@@ -777,7 +777,7 @@ class _SocialHubViewState extends State<SocialHubView> {
               'Head-to-head battles',
               style: AppText.label.copyWith(
                 color: AppColors.textMuted,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,
                 fontSize: 11,
               ),
@@ -793,7 +793,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                 'New duel',
                 style: TextStyle(
                   color: AppColors.accent,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w700,
                   fontSize: 12,
                 ),
               ),
@@ -814,7 +814,7 @@ class _SocialHubViewState extends State<SocialHubView> {
             'Active duels (${activeDuels.length})',
             style: const TextStyle(
               color: AppColors.accent,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               fontSize: 11,
               letterSpacing: 0.6,
             ),
@@ -846,7 +846,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   'No duels in progress',
                   style: TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     fontSize: 14,
                     letterSpacing: 0.4,
                   ),
@@ -874,7 +874,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text(
                     'Create first duel',
-                    style: TextStyle(fontWeight: FontWeight.w900),
+                    style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                 ),
               ],
@@ -888,7 +888,7 @@ class _SocialHubViewState extends State<SocialHubView> {
             'Battle archive (${completedDuels.length})',
             style: AppText.label.copyWith(
               color: AppColors.textMuted,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.w700,
               letterSpacing: 0.8,
               fontSize: 11,
             ),
@@ -968,7 +968,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                     '${duel.targetType == 'distance' ? 'Distance' : 'Area'}: $targetDisplay',
                     style: const TextStyle(
                       color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       fontSize: 13,
                     ),
                   ),
@@ -985,7 +985,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                   statusText,
                   style: TextStyle(
                     color: statusColor,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     fontSize: 10,
                     letterSpacing: 0.5,
                   ),
@@ -1095,7 +1095,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                     onPressed: () => _acceptDuel(duel.id),
                     child: const Text(
                       'ACCEPT DUEL',
-                      style: TextStyle(fontWeight: FontWeight.w900),
+                      style: TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -1125,23 +1125,19 @@ class _SocialHubViewState extends State<SocialHubView> {
     try {
       final ok = await _apiClient.respondFriendRequest(reqId, action);
       if (ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Friend request ${action}ed!'),
-            backgroundColor: action == 'accept'
-                ? AppColors.accent
-                : AppColors.surface2,
-          ),
+        AppToast.show(
+          context,
+          'Friend request ${action}ed',
+          type: action == 'accept' ? AppToastType.success : AppToastType.info,
         );
         _refreshData();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        AppToast.show(
+          context,
+          'Error: $e',
+          type: AppToastType.error,
         );
       }
     }
@@ -1151,21 +1147,19 @@ class _SocialHubViewState extends State<SocialHubView> {
     try {
       final ok = await _apiClient.acceptDuel(duelId);
       if (ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Duel accepted! Battle engaged.'),
-            backgroundColor: AppColors.accent,
-          ),
+        AppToast.show(
+          context,
+          'Duel accepted',
+          type: AppToastType.success,
         );
         _refreshData();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        AppToast.show(
+          context,
+          'Error: $e',
+          type: AppToastType.error,
         );
       }
     }
@@ -1175,21 +1169,19 @@ class _SocialHubViewState extends State<SocialHubView> {
     try {
       final ok = await _apiClient.declineDuel(duelId);
       if (ok && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Duel declined.'),
-            backgroundColor: AppColors.surface2,
-          ),
+        AppToast.show(
+          context,
+          'Duel declined',
+          type: AppToastType.info,
         );
         _refreshData();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: AppColors.error,
-          ),
+        AppToast.show(
+          context,
+          'Error: $e',
+          type: AppToastType.error,
         );
       }
     }
@@ -1273,28 +1265,26 @@ class _SocialHubViewState extends State<SocialHubView> {
               try {
                 final ok = await _apiClient.sendFriendRequest(target);
                 if (ok && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Squad invite dispatched to $target!'),
-                      backgroundColor: AppColors.accent,
-                    ),
+                  AppToast.show(
+                    context,
+                    'Squad invite sent to $target',
+                    type: AppToastType.success,
                   );
                   _refreshData();
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed: $e'),
-                      backgroundColor: AppColors.error,
-                    ),
+                  AppToast.show(
+                    context,
+                    'Failed: $e',
+                    type: AppToastType.error,
                   );
                 }
               }
             },
             child: const Text(
               'DISPATCH INVITE',
-              style: TextStyle(fontWeight: FontWeight.w900),
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -1434,7 +1424,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                             color: targetType == 'area'
                                 ? AppColors.onAccent
                                 : AppColors.textPrimary,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                           onSelected: (_) => setSheetState(() {
                             targetType = 'area';
@@ -1453,7 +1443,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                             color: targetType == 'distance'
                                 ? AppColors.onAccent
                                 : AppColors.textPrimary,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w700,
                           ),
                           onSelected: (_) => setSheetState(() {
                             targetType = 'distance';
@@ -1555,7 +1545,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                           color: xpStake == stake
                               ? AppColors.onAccent
                               : AppColors.textPrimary,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                         onSelected: (_) => setSheetState(() => xpStake = stake),
                       );
@@ -1617,7 +1607,7 @@ class _SocialHubViewState extends State<SocialHubView> {
                     child: const Text(
                       'LAUNCH 24-HOUR DUEL',
                       style: TextStyle(
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
                         letterSpacing: 1.0,
                       ),
@@ -1646,7 +1636,7 @@ class _SocialHubViewState extends State<SocialHubView> {
       backgroundColor: AppColors.surface2,
       labelStyle: TextStyle(
         color: isSelected ? AppColors.onAccent : AppColors.textPrimary,
-        fontWeight: FontWeight.w800,
+        fontWeight: FontWeight.w700,
         fontSize: 12,
       ),
       onSelected: (_) => onSelected(value),

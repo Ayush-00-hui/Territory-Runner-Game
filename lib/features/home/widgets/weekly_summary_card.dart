@@ -253,7 +253,7 @@ class _WeeklyBarChartPainter extends CustomPainter {
         style: TextStyle(
           color: isToday ? AppColors.accent : AppColors.textMuted,
           fontSize: 10,
-          fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+          fontWeight: isToday ? FontWeight.w700 : FontWeight.w600,
           fontFamily: AppText.fontFamily,
         ),
       );

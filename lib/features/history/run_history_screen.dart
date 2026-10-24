@@ -473,7 +473,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               style: AppText.labelSmall.copyWith(
                 color: isSelected ? AppColors.accent : AppColors.textMuted,
                 fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 letterSpacing: 0.2,
               ),
             ),

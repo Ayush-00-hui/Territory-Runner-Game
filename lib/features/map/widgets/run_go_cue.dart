@@ -91,7 +91,7 @@ class _RunGoCueState extends State<RunGoCue>
                     'GO',
                     style: AppText.headingLarge.copyWith(
                       color: AppColors.accent,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 2.0,
                     ),
                   ),

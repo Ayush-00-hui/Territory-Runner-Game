@@ -111,7 +111,7 @@ class PermissionPrimerSheet extends StatelessWidget {
                       config.title,
                       style: AppText.headingSmall.copyWith(
                         fontSize: 15,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 1.2,
                         color: AppColors.textPrimary,
                       ),
@@ -203,7 +203,7 @@ class PermissionPrimerSheet extends StatelessWidget {
                   child: Text(
                     config.primaryButtonText,
                     style: const TextStyle(
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       fontSize: 13,
                       letterSpacing: 0.5,
                     ),

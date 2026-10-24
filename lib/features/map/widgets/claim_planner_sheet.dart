@@ -276,7 +276,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                               color: isSelected
                                   ? AppColors.secondary
                                   : AppColors.textSecondary,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                               fontSize: 10,
                               letterSpacing: 0.8,
                             ),
@@ -326,7 +326,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                   '${_targetAreaSqM.toStringAsFixed(0)} m²',
                   style: const TextStyle(
                     color: AppColors.secondary,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
                 ),
@@ -550,7 +550,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 9.5,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: 0.8,
                   ),
                 ),
@@ -562,7 +562,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
               style: TextStyle(
                 color: color,
                 fontSize: 16,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
               ),
             ),
             if (subtitle != null) ...[

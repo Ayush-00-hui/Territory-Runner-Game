@@ -122,7 +122,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             style: AppText.label.copyWith(
                               color: AppColors.textPrimary,
                               fontSize: 12,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                               letterSpacing: 1.4,
                             ),
                           ),
@@ -373,7 +373,7 @@ class _SlideView extends StatelessWidget {
                       style: AppText.label.copyWith(
                         color: AppColors.accent,
                         fontSize: 10,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 1.2,
                       ),
                     ),
@@ -385,7 +385,7 @@ class _SlideView extends StatelessWidget {
                     style: AppText.headingMedium.copyWith(
                       color: AppColors.textPrimary,
                       fontSize: 22,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: -0.5,
                     ),
                   ),

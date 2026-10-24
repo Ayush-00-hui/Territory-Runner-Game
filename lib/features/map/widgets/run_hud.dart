@@ -300,7 +300,7 @@ class _RunHudState extends State<RunHud> {
                                         runGoal.title,
                                         style: const TextStyle(
                                           color: AppColors.gold,
-                                          fontWeight: FontWeight.w900,
+                                          fontWeight: FontWeight.w700,
                                           fontSize: 10,
                                           letterSpacing: 0.8,
                                         ),

@@ -175,7 +175,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       TextStyle(
         color: AppColors.textPrimary,
         fontSize: 28,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         letterSpacing: 2.0,
         fontFamily: 'Inter',
       ),
@@ -227,7 +227,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       TextStyle(
         color: AppColors.textPrimary,
         fontSize: 44,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         letterSpacing: 1.5,
         fontFamily: 'Inter',
       ),
@@ -283,7 +283,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       TextStyle(
         color: AppColors.textPrimary,
         fontSize: 32,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         fontFamily: 'Inter',
         fontFeatures: const [FontFeature.tabularFigures()],
       ),
@@ -317,7 +317,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       TextStyle(
         color: AppColors.textPrimary,
         fontSize: 32,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         fontFamily: 'Inter',
         fontFeatures: const [FontFeature.tabularFigures()],
       ),
@@ -351,7 +351,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       TextStyle(
         color: accentColor,
         fontSize: 32,
-        fontWeight: FontWeight.w900,
+        fontWeight: FontWeight.w700,
         fontFamily: 'Inter',
         fontFeatures: const [FontFeature.tabularFigures()],
       ),
@@ -528,12 +528,10 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                   ),
                 ],
               ),
-              IconButton(
-                icon: const Icon(
-                  Icons.close_rounded,
-                  color: AppColors.textSecondary,
-                ),
-                onPressed: () => Navigator.pop(context),
+              AppIconButton(
+                icon: Icons.close_rounded,
+                tooltip: 'Close',
+                onTap: () => Navigator.pop(context),
               ),
             ],
           ),
@@ -899,7 +897,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                                 style: AppText.label.copyWith(
                                   color: AppColors.textPrimary,
                                   fontSize: 9.5,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                   letterSpacing: 1.0,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -946,7 +944,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                               widget.callsign.toUpperCase(),
                               style: AppText.headingMedium.copyWith(
                                 fontSize: 15,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -1041,7 +1039,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
           style: AppText.statSmall.copyWith(
             fontSize: 12.5,
             color: AppColors.textPrimary,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
           textAlign: TextAlign.center,

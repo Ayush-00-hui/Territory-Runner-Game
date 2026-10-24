@@ -234,7 +234,7 @@ void showFactionSelectionDialog(
                                       style: AppText.labelSmall.copyWith(
                                         color: factionColor,
                                         fontSize: 9,
-                                        fontWeight: FontWeight.w800,
+                                        fontWeight: FontWeight.w700,
                                       ),
                                     ),
                                   ),

@@ -456,7 +456,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               style: AppText.labelSmall.copyWith(
                 color: isSelected ? AppColors.accent : AppColors.textMuted,
                 fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
               ),
             ),
           ),
@@ -646,7 +646,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                           style: TextStyle(
                             color: AppColors.onAccent,
                             fontSize: 8.5,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),

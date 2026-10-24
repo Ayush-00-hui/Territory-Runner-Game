@@ -158,7 +158,6 @@ class AppToast extends StatelessWidget {
                 message,
                 style: AppText.bodyMedium.copyWith(
                   color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),

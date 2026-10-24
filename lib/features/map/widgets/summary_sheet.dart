@@ -612,7 +612,7 @@ class _SummarySheetState extends State<SummarySheet>
           style: AppText.statSmall.copyWith(
             fontSize: 14,
             color: color,
-            fontWeight: FontWeight.w900,
+            fontWeight: FontWeight.w700,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),

@@ -67,7 +67,7 @@ void showProfileAuthModal(
                             style: TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 17,
-                              fontWeight: FontWeight.w900,
+                              fontWeight: FontWeight.w700,
                               letterSpacing: 1.1,
                             ),
                           ),
@@ -112,12 +112,12 @@ void showProfileAuthModal(
                               ),
                               child: Center(
                                 child: Text(
-                                  '📱 Mobile OTP',
+                                  'Phone OTP',
                                   style: TextStyle(
                                     color: authMode == 0
                                         ? AppColors.onAccent
                                         : AppColors.textSecondary,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -142,12 +142,12 @@ void showProfileAuthModal(
                               ),
                               child: Center(
                                 child: Text(
-                                  '✉️ Email Login',
+                                  'Email',
                                   style: TextStyle(
                                     color: authMode == 1
                                         ? AppColors.onAccent
                                         : AppColors.textSecondary,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w700,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -349,7 +349,7 @@ void showProfileAuthModal(
                             : const Text(
                                 'Send SMS Verification Code',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 14,
                                 ),
                               ),
@@ -461,7 +461,7 @@ void showProfileAuthModal(
                             : const Text(
                                 'Verify Code & Connect',
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 14,
                                 ),
                               ),
@@ -601,7 +601,7 @@ void showProfileAuthModal(
                             ? 'Create Athlete Profile'
                             : 'Log In with Email',
                         style: const TextStyle(
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
                       ),

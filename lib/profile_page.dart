@@ -320,7 +320,7 @@ class _ProfilePageState extends State<ProfilePage>
                       fontSize: 11,
                       fontWeight: isSelected
                           ? FontWeight.w700
-                          : FontWeight.w500,
+                          : FontWeight.w600,
                     ),
                   ),
                 ),

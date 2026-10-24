@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:territory_runner/ui/ui.dart';
@@ -41,6 +43,58 @@ void main() {
         contains(const FontFeature.tabularFigures()),
       );
       expect(AppText.body.fontFamily, 'Inter');
+    });
+
+    test('Zero unbundled font weights (w500, w800, w900) across lib/ directory', () {
+      final libDir = Directory('lib');
+      final forbiddenPattern = RegExp(r'FontWeight\.(w500|w800|w900)');
+      final violations = <String>[];
+
+      for (final entity in libDir.listSync(recursive: true)) {
+        if (entity is File && entity.path.endsWith('.dart')) {
+          final lines = entity.readAsLinesSync();
+          for (var i = 0; i < lines.length; i++) {
+            final line = lines[i];
+            if (forbiddenPattern.hasMatch(line)) {
+              violations.add('${entity.path}:${i + 1} -> ${line.trim()}');
+            }
+          }
+        }
+      }
+
+      expect(
+        violations,
+        isEmpty,
+        reason:
+            'All typography must map to bundled Inter weights (400/600/700). Found violations:\n${violations.join('\n')}',
+      );
+    });
+
+    test('Zero raw showSnackBar calls across lib/ directory outside AppToast and AppTheme', () {
+      final libDir = Directory('lib');
+      final violations = <String>[];
+
+      for (final entity in libDir.listSync(recursive: true)) {
+        if (entity is File && entity.path.endsWith('.dart')) {
+          if (entity.path.endsWith('app_toast.dart') || entity.path.endsWith('app_theme.dart')) {
+            continue;
+          }
+          final lines = entity.readAsLinesSync();
+          for (var i = 0; i < lines.length; i++) {
+            final line = lines[i];
+            if (line.contains('showSnackBar')) {
+              violations.add('${entity.path}:${i + 1} -> ${line.trim()}');
+            }
+          }
+        }
+      }
+
+      expect(
+        violations,
+        isEmpty,
+        reason:
+            'All notifications must route through AppToast.show(). Found raw showSnackBar violations:\n${violations.join('\n')}',
+      );
     });
   });
 

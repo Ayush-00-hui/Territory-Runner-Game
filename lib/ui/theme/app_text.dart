@@ -174,7 +174,7 @@ class AppText {
   static const TextStyle statUnit = TextStyle(
     fontFamily: fontFamily,
     fontSize: 13,
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.w600,
     letterSpacing: 0.0,
     color: AppColors.textMuted,
   );

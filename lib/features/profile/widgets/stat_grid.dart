@@ -224,7 +224,6 @@ class ProfileStatCard extends StatelessWidget {
                 style: AppText.labelSmall.copyWith(
                   color: AppColors.textMuted,
                   fontSize: 11,
-                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),

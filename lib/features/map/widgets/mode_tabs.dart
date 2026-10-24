@@ -53,7 +53,7 @@ class ModeTabs extends StatelessWidget {
                     style: isSelected
                         ? AppText.label.copyWith(
                             color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           )
                         : AppText.label.copyWith(color: AppColors.textMuted),
                   ),

@@ -162,7 +162,7 @@ class LeaderboardSheet extends StatelessWidget {
                               '#${entry.rank}',
                               style: AppText.statSmall.copyWith(
                                 color: rankColor,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.w700,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -200,7 +200,7 @@ class LeaderboardSheet extends StatelessWidget {
                                           style: TextStyle(
                                             color: AppColors.onAccent,
                                             fontSize: 9,
-                                            fontWeight: FontWeight.w900,
+                                            fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                       ),
@@ -224,7 +224,7 @@ class LeaderboardSheet extends StatelessWidget {
                                     : '${entry.totalAreaSqm.toStringAsFixed(0)} m²',
                                 style: AppText.statSmall.copyWith(
                                   color: AppColors.accent,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                   fontFeatures: const [
                                     FontFeature.tabularFigures(),
                                   ],

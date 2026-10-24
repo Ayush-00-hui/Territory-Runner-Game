@@ -278,7 +278,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         style: AppText.headingSmall.copyWith(
                           color: AppColors.textPrimary,
                           fontSize: 16,
-                          fontWeight: FontWeight.w900,
+                          fontWeight: FontWeight.w700,
                           letterSpacing: 1.4,
                         ),
                       ),
@@ -305,7 +305,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 style: AppText.headingLarge.copyWith(
                   color: AppColors.textPrimary,
                   fontSize: 28,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: -0.5,
                 ),
               ),
@@ -406,7 +406,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         style: AppText.headingSmall.copyWith(
                           color: AppColors.textPrimary,
                           fontSize: 17,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.s6),
@@ -565,7 +565,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             color: AppColors.textPrimary,
                             fontSize: 24,
                             letterSpacing: 8,
-                            fontWeight: FontWeight.w900,
+                            fontWeight: FontWeight.w700,
                           ),
                           decoration: InputDecoration(
                             counterText: '',
@@ -659,7 +659,7 @@ class _AuthScreenState extends State<AuthScreen> {
                             'OR',
                             style: AppText.labelSmall.copyWith(
                               color: AppColors.textMuted,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w700,
                               letterSpacing: 1.5,
                             ),
                           ),
@@ -786,7 +786,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   color: isSelected
                       ? AppColors.textPrimary
                       : AppColors.textMuted,
-                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                   fontSize: 11.5,
                 ),
               ),

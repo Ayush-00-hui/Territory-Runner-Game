@@ -225,7 +225,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                                 '${standing.tier} Division',
                                 style: AppText.label.copyWith(
                                   color: tierColor,
-                                  fontWeight: FontWeight.w900,
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 13,
                                   letterSpacing: 0.6,
                                 ),
@@ -346,7 +346,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                 style: AppText.label.copyWith(
                   color: AppColors.textMuted,
                   fontSize: 11,
-                  fontWeight: FontWeight.w900,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
                 ),
               ),
@@ -432,7 +432,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
               style: TextStyle(
                 color: color,
                 fontSize: 9,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w700,
                 letterSpacing: 1.2,
               ),
             ),
@@ -474,7 +474,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
               style: AppText.caption.copyWith(
                 color: rankColor,
                 fontWeight: isMe || participant.rank <= 3
-                    ? FontWeight.w900
+                    ? FontWeight.w700
                     : FontWeight.bold,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -497,7 +497,7 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
                           color: isMe
                               ? AppColors.accent
                               : AppColors.textPrimary,
-                          fontWeight: isMe ? FontWeight.w900 : FontWeight.w600,
+                          fontWeight: isMe ? FontWeight.w700 : FontWeight.w600,
                           fontSize: 14,
                         ),
                       ),

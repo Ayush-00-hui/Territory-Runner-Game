@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/location_service.dart';
-import '../../../ui/theme/app_colors.dart';
-import '../../../ui/theme/app_spacing.dart';
-import '../../../ui/theme/app_text.dart';
-import '../../../ui/motion/motion.dart';
+import '../../../ui/ui.dart';
 import 'demo_controls.dart';
 
 /// Modal bottom sheet allowing selection of GNSS hardware vs Virtual Pacer velocity profiles.
@@ -174,15 +171,11 @@ class VirtualPacerSheet extends StatelessWidget {
         locationService.setVirtualPacer(mode);
         setModalState(() {});
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: AppColors.surface,
-            duration: const Duration(seconds: 2),
-            content: Text(
-              'Pacer mode: $title ⚡',
-              style: TextStyle(color: color, fontWeight: FontWeight.bold),
-            ),
-          ),
+        AppToast.show(
+          context,
+          'Pacer mode: $title',
+          type: AppToastType.info,
+          icon: Icons.speed_rounded,
         );
       },
       behavior: HitTestBehavior.opaque,
