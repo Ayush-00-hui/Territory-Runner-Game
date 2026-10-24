@@ -349,6 +349,42 @@ void main() {
           expect(tester.takeException(), isNull);
         },
       );
+      testWidgets(
+        'AppIconButton satisfies >= 48x48 dp hit target, tooltip, and semantics label',
+        (tester) async {
+          bool tapped = false;
+
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: Scaffold(
+                body: Center(
+                  child: AppIconButton(
+                    icon: Icons.tune_rounded,
+                    tooltip: 'Tools',
+                    semanticLabel: 'Open tools',
+                    onTap: () => tapped = true,
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final btnFinder = find.byType(AppIconButton);
+          expect(btnFinder, findsOneWidget);
+
+          final renderBox = tester.renderObject<RenderBox>(btnFinder);
+          expect(renderBox.size.width, greaterThanOrEqualTo(48.0));
+          expect(renderBox.size.height, greaterThanOrEqualTo(48.0));
+
+          expect(find.byTooltip('Tools'), findsOneWidget);
+          expect(find.bySemanticsLabel('Open tools'), findsOneWidget);
+
+          await tester.tap(btnFinder);
+          expect(tapped, isTrue);
+        },
+      );
     },
   );
 }

@@ -20,5 +20,6 @@ export 'widgets/app_dialog.dart';
 export 'widgets/permission_primer_sheet.dart';
 export 'widgets/calm_error_screen.dart';
 export 'widgets/measure_size.dart';
+export 'widgets/app_icon_button.dart';
 export 'theme/app_version.dart';
 export '../core/logging/app_logger.dart';

@@ -48,6 +48,7 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
   @override
   void initState() {
     super.initState();
+    AppMotion.mediumTick();
     _controller = AnimationController(vsync: this, duration: AppMotion.capture);
 
     _scaleAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(

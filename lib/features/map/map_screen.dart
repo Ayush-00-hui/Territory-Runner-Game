@@ -47,6 +47,7 @@ import 'widgets/loop_celebration_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
 import 'widgets/amoled_battery_saver_overlay.dart';
+import '../../profile_page.dart';
 import 'models/run_telemetry.dart';
 import 'notifiers/run_telemetry_notifier.dart';
 
@@ -1627,7 +1628,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       ],
                     ),
                   ),
-            // 2. Minimal Athletic Top Bar: Avatar (left), GpsSyncChip (right)
+            // 2. Minimal Athletic Top Bar: Avatar (opens Profile) + Faction chip (left), GpsSyncChip (right)
             Positioned(
               top: pad.top + 10,
               left: 16,
@@ -1635,22 +1636,74 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Semantics(
-                    button: true,
-                    label: 'Runner profile for $athleteName',
-                    child: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppColors.surfaceGlass,
-                      child: Text(
-                        athleteName.isNotEmpty
-                            ? athleteName[0].toUpperCase()
-                            : 'R',
-                        style: AppText.headingSmall.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Semantics(
+                        button: true,
+                        label: 'Runner profile for $athleteName. Tap to view profile.',
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            AppMotion.selectionTick();
+                            Navigator.push(
+                              context,
+                              AppMotion.pageRoute(
+                                builder: (_) => const ProfilePage(),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 48,
+                              minHeight: 48,
+                            ),
+                            alignment: Alignment.center,
+                            child: CircleAvatar(
+                              radius: 20,
+                              backgroundColor: AppColors.surfaceGlass,
+                              child: Text(
+                                athleteName.isNotEmpty
+                                    ? athleteName[0].toUpperCase()
+                                    : 'R',
+                                style: AppText.headingSmall.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      if (profile.faction.isNotEmpty) ...[
+                        const SizedBox(width: AppSpacing.s8),
+                        Semantics(
+                          label: 'Faction: ${profile.faction}',
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.s8,
+                              vertical: AppSpacing.s4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surfaceGlass,
+                              borderRadius: AppRadius.brFull,
+                              border: Border.all(
+                                color: AppColors.borderSubtle,
+                                width: 1.0,
+                              ),
+                            ),
+                            child: Text(
+                              profile.faction,
+                              style: AppText.labelSmall.copyWith(
+                                color: AppColors.accent,
+                                fontSize: 10,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   GpsSyncChip(
                     accuracyMeters: _satelliteAccuracyMeters,

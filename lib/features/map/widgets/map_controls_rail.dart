@@ -28,31 +28,25 @@ class MapControlsRail extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // 1. Tools Button
-        _RailCircleButton(
+        AppIconButton(
           icon: Icons.tune_rounded,
           tooltip: 'Run tools',
           semanticLabel: 'Open run tools sheet: goals, pacer and routes',
-          onTap: () {
-            AppMotion.selectionTick();
-            onOpenTools();
-          },
+          onTap: onOpenTools,
         ),
         const SizedBox(height: AppSpacing.s10),
 
         // 2. Map Layers Button
-        _RailCircleButton(
+        AppIconButton(
           icon: Icons.layers_rounded,
           tooltip: 'Map layers',
           semanticLabel: 'Select map style and overlays',
-          onTap: () {
-            AppMotion.selectionTick();
-            onOpenLayers();
-          },
+          onTap: onOpenLayers,
         ),
         const SizedBox(height: AppSpacing.s10),
 
         // 3. Recenter / Camera Lock Button
-        _RailCircleButton(
+        AppIconButton(
           icon: isCameraLocked
               ? Icons.my_location_rounded
               : Icons.pan_tool_rounded,
@@ -63,84 +57,9 @@ class MapControlsRail extends StatelessWidget {
           semanticLabel: isCameraLocked
               ? 'Recenter map on your position'
               : 'Lock camera to follow your movement',
-          onTap: () {
-            AppMotion.lightTick();
-            onRecenter();
-          },
+          onTap: onRecenter,
         ),
       ],
-    );
-  }
-}
-
-class _RailCircleButton extends StatefulWidget {
-  final IconData icon;
-  final Color? iconColor;
-  final String tooltip;
-  final String semanticLabel;
-  final VoidCallback onTap;
-
-  const _RailCircleButton({
-    required this.icon,
-    this.iconColor,
-    required this.tooltip,
-    required this.semanticLabel,
-    required this.onTap,
-  });
-
-  @override
-  State<_RailCircleButton> createState() => _RailCircleButtonState();
-}
-
-class _RailCircleButtonState extends State<_RailCircleButton> {
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final isReduced = AppMotion.isReducedMotion(context);
-
-    return Semantics(
-      button: true,
-      label: widget.semanticLabel,
-      child: Tooltip(
-        message: widget.tooltip,
-        child: GestureDetector(
-          onTapDown: (_) => setState(() => _isPressed = true),
-          onTapUp: (_) => setState(() => _isPressed = false),
-          onTapCancel: () => setState(() => _isPressed = false),
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: AnimatedScale(
-            scale: (_isPressed && !isReduced) ? 0.94 : 1.0,
-            duration: AppMotion.duration(context, AppMotion.fast),
-            curve: AppMotion.easeOut,
-            child: Container(
-              height: 48,
-              width: 48,
-              decoration: BoxDecoration(
-                color: _isPressed
-                    ? AppColors.surface2
-                    : AppColors.surfaceGlass,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _isPressed
-                      ? AppColors.accent
-                      : AppColors.borderSubtle,
-                  width: 1.0,
-                ),
-                boxShadow: AppElevation.floating,
-              ),
-              child: Center(
-                child: Icon(
-                  widget.icon,
-                  color: widget.iconColor ?? AppColors.textPrimary,
-                  size: 22,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
