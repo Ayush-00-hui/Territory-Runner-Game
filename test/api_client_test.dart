@@ -246,7 +246,7 @@ void main() {
         expect(standings, isNotNull);
         expect(standings!.totalAreaSqm, equals(100000.0));
         expect(standings.standings.length, equals(2));
-        expect(standings.standings[0].faction, equals('Cyber Vanguard'));
+        expect(standings.standings[0].faction, equals('Vanguard'));
         expect(standings.standings[0].percentage, equals(50.0));
       },
     );

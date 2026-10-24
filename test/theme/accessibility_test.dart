@@ -345,7 +345,7 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          expect(find.text('Hold stop'), findsOneWidget);
+          expect(find.text('Hold to finish'), findsOneWidget);
           expect(tester.takeException(), isNull);
         },
       );

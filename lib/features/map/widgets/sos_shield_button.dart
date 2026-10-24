@@ -158,7 +158,7 @@ class _SosShieldButtonState extends State<SosShieldButton>
                               child: Text(
                                 'SOS',
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: AppColors.textPrimary,
                                   fontSize: 8.5,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.6,
