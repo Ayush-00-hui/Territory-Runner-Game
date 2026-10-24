@@ -110,7 +110,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       vanguard = _standings!.standings.firstWhere(
         (s) => s.faction.toLowerCase().contains('vanguard'),
         orElse: () => const FactionStanding(
-          faction: 'Cyber Vanguard',
+          faction: FactionStanding.defaultFaction,
           totalAreaSqm: 0,
           memberCount: 0,
           percentage: 0,
@@ -138,7 +138,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       // Local fallback based on verified territories
       final userFaction = widget.profile.faction.toLowerCase();
       vanguard = FactionStanding(
-        faction: 'Cyber Vanguard',
+        faction: FactionStanding.defaultFaction,
         totalAreaSqm: userFaction.contains('vanguard') ? userAreaSqm : 0,
         memberCount: userFaction.contains('vanguard') ? 1 : 0,
         percentage: 0,

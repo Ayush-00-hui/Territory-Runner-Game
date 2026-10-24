@@ -1,5 +1,7 @@
 import 'package:hive/hive.dart';
 
+import 'faction_standing.dart';
+
 class RunnerProfile {
   String id;
   String username;
@@ -27,7 +29,7 @@ class RunnerProfile {
 
   static String canonicalBadge(String name) => badgeAliases[name] ?? name;
 
-  String get displayFaction => factionAliases[faction] ?? faction;
+  String get displayFaction => FactionStanding.canonicalFaction(faction);
 
   bool hasBadge(String name) {
     final canon = canonicalBadge(name);
@@ -42,7 +44,7 @@ class RunnerProfile {
   RunnerProfile({
     required this.id,
     required this.username,
-    this.faction = 'Cyber Vanguard',
+    this.faction = FactionStanding.defaultFaction,
     this.totalDistanceKm = 0.0,
     this.xp = 0,
     this.level = 1,
@@ -158,7 +160,7 @@ class RunnerProfile {
     return RunnerProfile(
       id: json['id'] as String? ?? 'local_user',
       username: json['username'] as String? ?? 'Runner',
-      faction: json['faction'] as String? ?? 'Cyber Vanguard',
+      faction: FactionStanding.canonicalFaction(json['faction'] as String?),
       totalDistanceKm: (json['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
       xp: json['xp'] as int? ?? 0,
       level: json['level'] as int? ?? 1,
@@ -193,7 +195,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
     return RunnerProfile(
       id: fields[0] as String,
       username: fields[1] as String,
-      faction: (fields[8] as String?) ?? 'Cyber Vanguard',
+      faction: FactionStanding.canonicalFaction(fields[8] as String?),
       totalDistanceKm: (fields[2] as num).toDouble(),
       xp: fields[3] as int,
       level: fields[4] as int,

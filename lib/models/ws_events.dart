@@ -1,5 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
+import 'faction_standing.dart';
+
 /// Live kinematic presence of a nearby runner broadcast over WebSocket
 class RunnerPresenceEvent {
   final String userId;
@@ -24,7 +26,7 @@ class RunnerPresenceEvent {
     return RunnerPresenceEvent(
       userId: json['user_id'] as String? ?? 'unknown',
       username: json['username'] as String? ?? 'Runner',
-      faction: json['faction'] as String? ?? 'Cyber Vanguard',
+      faction: FactionStanding.canonicalFaction(json['faction'] as String?),
       position: LatLng(
         (json['latitude'] as num?)?.toDouble() ?? 0.0,
         (json['longitude'] as num?)?.toDouble() ?? 0.0,

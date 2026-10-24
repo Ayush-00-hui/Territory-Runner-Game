@@ -1,3 +1,5 @@
+import 'faction_standing.dart';
+
 /// Strongly-typed leaderboard ranking entry returned by GET /v1/leaderboard.
 class LeaderboardEntry {
   final int rank;
@@ -23,7 +25,7 @@ class LeaderboardEntry {
       rank: (json['rank'] as num?)?.toInt() ?? 0,
       userId: json['user_id'] as String? ?? '',
       username: json['username'] as String? ?? 'Anonymous',
-      faction: json['faction'] as String? ?? 'Cyber Vanguard',
+      faction: FactionStanding.canonicalFaction(json['faction'] as String?),
       totalAreaSqm: (json['total_area_sqm'] as num?)?.toDouble() ?? 0.0,
       level: (json['level'] as num?)?.toInt() ?? 1,
       totalRuns: (json['total_runs'] as num?)?.toInt() ?? 0,

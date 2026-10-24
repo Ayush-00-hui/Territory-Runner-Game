@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'faction_standing.dart';
+
 @immutable
 class LeagueParticipant {
   final int rank;
@@ -27,7 +29,7 @@ class LeagueParticipant {
       rank: (json['rank'] as num?)?.toInt() ?? 1,
       userId: json['user_id'] as String? ?? '',
       username: json['username'] as String? ?? 'Runner',
-      faction: json['faction'] as String? ?? 'Cyber Vanguard',
+      faction: FactionStanding.canonicalFaction(json['faction'] as String?),
       tier: json['tier'] as String? ?? 'Bronze',
       weeklyAreaSqm: (json['weekly_area_sqm'] as num?)?.toDouble() ?? 0.0,
       weeklyRuns: (json['weekly_runs'] as num?)?.toInt() ?? 0,
@@ -84,7 +86,7 @@ class LeagueStanding {
     return LeagueStanding(
       userId: json['user_id'] as String? ?? '',
       username: json['username'] as String? ?? 'Runner',
-      faction: json['faction'] as String? ?? 'Cyber Vanguard',
+      faction: FactionStanding.canonicalFaction(json['faction'] as String?),
       tier: json['tier'] as String? ?? 'Bronze',
       rank: (json['rank'] as num?)?.toInt() ?? 1,
       totalParticipants: (json['total_participants'] as num?)?.toInt() ?? 0,

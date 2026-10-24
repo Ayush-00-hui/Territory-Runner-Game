@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:territory_runner/models/faction_standing.dart';
 import 'package:territory_runner/ui/ui.dart';
 
 void main() {
@@ -206,6 +207,62 @@ void main() {
       await tester.tap(find.text('GPS lock'));
       await tester.pumpAndSettle();
       expect(tapped, isTrue);
+    });
+
+    test('FactionStanding.canonicalFaction aliases Cyber Vanguard and persists cleanly', () {
+      expect(FactionStanding.canonicalFaction('Cyber Vanguard'), 'Vanguard');
+      expect(FactionStanding.canonicalFaction(null), 'Vanguard');
+      expect(FactionStanding.canonicalFaction(''), 'Vanguard');
+      expect(FactionStanding.canonicalFaction('Vanguard'), 'Vanguard');
+      expect(FactionStanding.canonicalFaction('Iron Syndicate'), 'Syndicate');
+      expect(FactionStanding.canonicalFaction('Neon Nomads'), 'Nomads');
+    });
+
+    testWidgets('SectionHeader aligns title and action on exact same baseline', (tester) async {
+      bool actionTapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SectionHeader(
+              title: 'Recent runs',
+              actionLabel: 'View all',
+              onAction: () => actionTapped = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Recent runs'), findsOneWidget);
+      expect(find.text('View all'), findsOneWidget);
+
+      final rowFinder = find.byType(Row);
+      expect(rowFinder, findsOneWidget);
+      final Row row = tester.widget(rowFinder);
+      expect(row.crossAxisAlignment, CrossAxisAlignment.baseline);
+      expect(row.textBaseline, TextBaseline.alphabetic);
+
+      await tester.tap(find.text('View all'));
+      await tester.pumpAndSettle();
+      expect(actionTapped, isTrue);
+    });
+
+    testWidgets('NeutralChip renders with leading widget and handles attention state', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: NeutralChip(
+              label: 'GPS searching',
+              needsAttention: true,
+              leading: Icon(Icons.gps_fixed, size: 12),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('GPS searching'), findsOneWidget);
+      expect(find.byIcon(Icons.gps_fixed), findsOneWidget);
     });
 
     testWidgets('TerritoryArt renders empty canvas gracefully', (tester) async {

@@ -110,7 +110,7 @@ void showFactionSelectionDialog(
 ) {
   final factions = [
     {
-      'name': 'Cyber Vanguard',
+      'name': 'Vanguard',
       'tag': 'Vanguard',
       'color': AppColors.accent,
       'icon': Icons.security_rounded,
