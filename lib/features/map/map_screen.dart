@@ -16,7 +16,6 @@ import '../../services/run_recovery_service.dart';
 import '../../services/gps_quality_service.dart';
 import '../gameplay/territory_service.dart';
 import '../routing/route_service.dart';
-import '../coach/pace_prediction_service.dart';
 import '../coach/llm_coach_service.dart';
 import '../../services/app_preferences.dart';
 import '../gameplay/polygon_enclosure_engine.dart';
@@ -32,13 +31,18 @@ import '../../services/auto_pause_engine.dart';
 import '../../services/firebase_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/battery_saver_service.dart';
-import 'widgets/mode_tabs.dart';
+import 'widgets/map_controls_rail.dart';
+import 'widgets/sos_shield_button.dart';
+import 'widgets/map_tools_sheet.dart';
+import 'widgets/gps_sync_chip.dart';
+import 'widgets/run_go_cue.dart';
+import 'widgets/map_layers_sheet.dart';
+import '../profile/widgets/offline_maps_sheet.dart';
 import 'widgets/run_hud.dart';
 import 'widgets/run_goal_sheet.dart';
 import 'widgets/map_layers.dart';
 import 'widgets/pacer_sheet.dart';
 import 'widgets/summary_sheet.dart';
-import 'widgets/leaderboard_sheet.dart';
 import 'widgets/loop_celebration_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
@@ -60,7 +64,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   final LocationService _locationService = LocationService();
   final TerritoryService _territoryService = TerritoryService();
   final RouteService _routeService = RouteService();
-  final PacePredictionService _paceService = PacePredictionService();
   final LLMCoachService _coachService = LLMCoachService();
   final AppPreferences _appPrefs = AppPreferences();
   final PolygonEnclosureEngine _polygonEngine = PolygonEnclosureEngine();
@@ -88,7 +91,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   LatLng? _currentLocation;
   bool _isRunActive = false;
   int _lastAnnouncedKm = 0;
-  int _selectedModeTab = 0;
   final ExerciseActivityType _selectedActivity = ExerciseActivityType.running;
 
   // Phase 3 High-Performance State Notifiers
@@ -97,6 +99,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     null,
   );
   final ValueNotifier<int> _runPathUpdateNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<double> _hudHeightNotifier = ValueNotifier<double>(180.0);
+  bool _showGoCue = false;
 
   // AI Route Suggestion State
   SuggestedRoute? _activeSuggestedRoute;
@@ -384,6 +388,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _telemetryNotifier.dispose();
     _liveLocationNotifier.dispose();
     _runPathUpdateNotifier.dispose();
+    _hudHeightNotifier.dispose();
     super.dispose();
   }
 
@@ -1114,6 +1119,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       setState(() {
         _isRunActive = true;
+        _showGoCue = true;
         _territoriesClaimedThisRun = 0;
         _accumulatedRunPreviewArea = 0.0;
         _accumulatedRunPreviewXp = 0;
@@ -1220,7 +1226,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void _startRunWithSuggestedRoute(SuggestedRoute route) {
     setState(() {
       _activeSuggestedRoute = route;
-      _selectedModeTab = 0; // Switch to Run mode tab
     });
 
     if (!_isRunActive) {
@@ -1258,48 +1263,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         ),
       ),
     );
-  }
-
-  Future<void> _suggestAiRoute() async {
-    if (_currentLocation == null) return;
-
-    final profile = _territoryService.getProfile();
-    final prediction = _paceService.predictTarget(profile);
-
-    final route = await _routeService.suggestRouteAsync(
-      currentLocation: _currentLocation!,
-      targetDistanceKm: prediction.predictedDistanceKm,
-    );
-
-    setState(() {
-      _activeSuggestedRoute = route;
-    });
-
-    if (route.polyline.length >= 2) {
-      try {
-        _mapController.fitCamera(
-          CameraFit.coordinates(
-            coordinates: route.polyline,
-            padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
-          ),
-        );
-      } catch (_) {}
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: AppColors.surface,
-          content: Text(
-            'AI Route synthesized: ${route.totalDistanceKm.toStringAsFixed(1)}km (~${route.estimatedNewTerritoryAreaSqM.toStringAsFixed(0)} m² new area)',
-            style: const TextStyle(
-              color: AppColors.accent,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      );
-    }
   }
 
   Future<void> _fetchVisibleRivals() async {
@@ -1514,6 +1477,74 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     HapticFeedback.heavyImpact();
   }
 
+  void _openToolsSheet() {
+    MapToolsSheet.show(
+      context: context,
+      onOpenPacer: () {
+        VirtualPacerSheet.show(
+          context: context,
+          locationService: _locationService,
+          onSimulateLoop: _runAutomatedLoopDemo,
+          onSimulateRivalCut: _runRivalConflictDemo,
+          onSimulateAnomaly: _simulateSpeedAnomaly,
+          onSimulateCoachDebrief: () {
+            SummarySheet.show(
+              context: context,
+              distanceKm: 3.52,
+              durationSeconds: 1140,
+              territoriesClaimed: 3,
+              profile: _territoryService.getProfile(),
+              coachService: _coachService,
+            );
+          },
+          onSimulateDecayAndAttack: _simulateDecayAndAttack,
+          isRivalSimulating: _isRivalSimulating,
+          onToggleRivalSimulation: _toggleRivalSimulation,
+        );
+      },
+      onOpenGoals: _openGoalSelector,
+      onOpenRoutePlanner: _openClaimPlanner,
+      onToggleAmoled: () {
+        AppMotion.mediumTick();
+        _batterySaverService.setAmoledHudActive(true);
+      },
+      onOpenOfflineMaps: () {
+        showOfflineMapsSheet(context);
+      },
+      onTriggerSos: () {
+        showSosBeaconSheet(context, _currentLocation);
+      },
+      activePacerLabel: _locationService.pacerMode != VirtualPacerMode.none
+          ? 'Pacer ${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+          : 'Pacer off',
+      activeGoalLabel: _activeGoal.isActive
+          ? _activeGoal.formatRemaining(
+              currentDistanceKm: _runDistanceKm,
+              currentDurationSeconds: _movingDurationSeconds,
+              currentAreaSqm: _accumulatedRunPreviewArea,
+            )
+          : 'No target set',
+      isAmoledActive: _batterySaverService.isBatterySaverEnabled,
+    );
+  }
+
+  void _openLayersSheet() {
+    MapLayersSheet.show(
+      context: context,
+      onStyleChanged: () {
+        if (mounted) setState(() {});
+      },
+      onLocateNearestRival: _panToNearestRival,
+    );
+  }
+
+  void _onRecenterTapped() {
+    setState(() {
+      _isCameraFollowLocked = true;
+    });
+    _recenter();
+  }
+
   @override
   Widget build(BuildContext context) {
     final pad = MediaQuery.paddingOf(context);
@@ -1596,480 +1627,145 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       ],
                     ),
                   ),
-
-            // 2. Top Header Bar
+            // 2. Minimal Athletic Top Bar: Avatar (left), GpsSyncChip (right)
             Positioned(
               top: pad.top + 10,
-              left: 20,
-              right: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              left: 16,
+              right: 16,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 20,
-                            backgroundColor: AppColors.surface2,
-                            child: Text(
-                              athleteName.isNotEmpty
-                                  ? athleteName[0].toUpperCase()
-                                  : 'A',
-                              style: AppText.headingSmall.copyWith(
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Good run,',
-                                style: AppText.bodySmall.copyWith(
-                                  color: AppColors.textMuted,
-                                ),
-                              ),
-                              Text(
-                                athleteName,
-                                style: AppText.headingSmall.copyWith(
-                                  color: AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SyncChip(),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceGlass,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.borderSubtle),
-                            ),
-                            child: Text(
-                              profile.faction.isNotEmpty
-                                  ? profile.faction
-                                  : 'Run to own.',
-                              style: AppText.bodyBold.copyWith(
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Sub-header Mode Pill Tabs
-                  ModeTabs(
-                    selectedIndex: _selectedModeTab,
-                    onTabSelected: (index) {
-                      setState(() => _selectedModeTab = index);
-                      if (index == 1) {
-                        _openClaimPlanner();
-                      } else if (index == 2) {
-                        LeaderboardSheet.show(
-                          context: context,
-                          apiClient: _apiClient,
-                          currentUserId: _territoryService.getProfile().id,
-                        );
-                      }
-                    },
-                  ),
-
-                  // Live Rival Sector Radar Pill
-                  if (_activeRivalRunners.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    GestureDetector(
-                      onTap: _panToNearestRival,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 7,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.surfaceGlass,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppColors.rival.withValues(alpha: 0.8),
-                            width: 1.2,
-                          ),
-                          boxShadow: AppElevation.floating,
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.rival,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${_activeRivalRunners.length} rival${_activeRivalRunners.length > 1 ? 's' : ''} nearby',
-                              style: const TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11,
-                                letterSpacing: 0.4,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            const Icon(
-                              Icons.gps_fixed_rounded,
-                              color: AppColors.rival,
-                              size: 13,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // 3. Floating Overlays: Pacer Pill (left) & Territory Claimed Pill (right)
-            Positioned(
-              left: 20,
-              bottom: pad.bottom + 215,
-              child: GestureDetector(
-                onTap: () {
-                  AppMotion.lightTick();
-                  VirtualPacerSheet.show(
-                    context: context,
-                    locationService: _locationService,
-                    onSimulateLoop: _runAutomatedLoopDemo,
-                    onSimulateRivalCut: _runRivalConflictDemo,
-                    onSimulateAnomaly: _simulateSpeedAnomaly,
-                    onSimulateCoachDebrief: () {
-                      SummarySheet.show(
-                        context: context,
-                        distanceKm: 3.52,
-                        durationSeconds: 1140,
-                        territoriesClaimed: 3,
-                        profile: _territoryService.getProfile(),
-                        coachService: _coachService,
-                      );
-                    },
-                    onSimulateDecayAndAttack: _simulateDecayAndAttack,
-                    isRivalSimulating: _isRivalSimulating,
-                    onToggleRivalSimulation: _toggleRivalSimulation,
-                  );
-                },
-                behavior: HitTestBehavior.opaque,
-                child: Container(
-                  constraints: const BoxConstraints(minHeight: 48),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceGlass,
-                    borderRadius: AppSpacing.br16,
-                    border: Border.all(
-                      color: _locationService.pacerMode != VirtualPacerMode.none
-                          ? AppColors.info
-                          : AppColors.borderSubtle,
-                    ),
-                    boxShadow:
-                        _locationService.pacerMode != VirtualPacerMode.none
-                        ? AppSpacing.subtleElevation
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.directions_run_rounded,
-                        size: 18,
-                        color:
-                            _locationService.pacerMode != VirtualPacerMode.none
-                            ? AppColors.info
-                            : AppColors.textMuted,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _locationService.pacerMode != VirtualPacerMode.none
-                            ? 'Pacer ${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
-                            : 'Pacer off',
-                        style: AppText.label.copyWith(
-                          color:
-                              _locationService.pacerMode !=
-                                  VirtualPacerMode.none
-                              ? AppColors.info
-                              : AppColors.textMuted,
-                          fontSize: 11,
+                  Semantics(
+                    button: true,
+                    label: 'Runner profile for $athleteName',
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.surfaceGlass,
+                      child: Text(
+                        athleteName.isNotEmpty
+                            ? athleteName[0].toUpperCase()
+                            : 'R',
+                        style: AppText.headingSmall.copyWith(
+                          color: AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  GpsSyncChip(
+                    accuracyMeters: _satelliteAccuracyMeters,
+                    isGpsSearching: _currentLocation == null,
+                  ),
+                ],
               ),
             ),
 
-            Positioned(
-              right: 20,
-              bottom: pad.bottom + 215,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Floating Defend CTA for Weak Territories (sits directly above You own card)
-                  ValueListenableBuilder<List<Territory>>(
-                    valueListenable: _territoriesNotifier,
-                    builder: (context, territories, _) {
-                      if (_isRunActive ||
-                          !territories.any(
-                            (t) =>
-                                t.ownerId == _firebaseService.currentUserId &&
-                                t.isWeak(),
-                          )) {
-                        return const SizedBox.shrink();
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: Semantics(
-                          button: true,
-                          label: 'Defend weakest territory',
-                          child: GestureDetector(
-                            onTap: _defendWeakestTerritory,
-                            behavior: HitTestBehavior.opaque,
-                            child: Container(
-                              constraints: const BoxConstraints(minHeight: 48),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.surfaceGlass,
-                                borderRadius: AppSpacing.br16,
-                                border: Border.all(
-                                  color: AppColors.rival,
-                                  width: 1.5,
-                                ),
-                                boxShadow: AppElevation.floating,
-                              ),
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.shield_outlined,
-                                    color: AppColors.rival,
-                                    size: 18,
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Defend',
-                                    style: TextStyle(
-                                      color: AppColors.rival,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+            // 3. Ergonomic Floating Controls (Dynamically anchored above measured HUD height)
+            ValueListenableBuilder<bool>(
+              valueListenable: _appPrefs.leftHandedModeNotifier,
+              builder: (context, isLeftHanded, _) {
+                return ValueListenableBuilder<double>(
+                  valueListenable: _hudHeightNotifier,
+                  builder: (context, hudHeight, _) {
+                    final bottomOffset = pad.bottom + 12 + hudHeight + 12;
+
+                    return Stack(
+                      children: [
+                        // Thumb Controls Rail (Tools, Layers, Recenter)
+                        Positioned(
+                          left: isLeftHanded ? 16 : null,
+                          right: isLeftHanded ? null : 16,
+                          bottom: bottomOffset,
+                          child: MapControlsRail(
+                            isCameraLocked: _isCameraFollowLocked,
+                            onOpenTools: _openToolsSheet,
+                            onOpenLayers: _openLayersSheet,
+                            onRecenter: _onRecenterTapped,
                           ),
                         ),
-                      );
-                    },
-                  ),
 
-                  // Territory Claimed Pill
-                  Container(
-                    constraints: const BoxConstraints(minHeight: 48),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceGlass,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: AppColors.accent.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('You own', style: AppText.label),
-                        ValueListenableBuilder<double>(
-                          valueListenable: _totalAreaSqKmNotifier,
-                          builder: (context, totalAreaSqKm, _) {
-                            return Text(
-                              totalAreaSqKm > 0
-                                  ? '${totalAreaSqKm.toStringAsFixed(2)} km²'
-                                  : '0.00 km²',
-                              style: AppText.statSmall.copyWith(
-                                color: AppColors.accent,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            );
-                          },
+                        // Isolated Safety SOS Shield Button (Mirrored away from thumb rail)
+                        Positioned(
+                          left: isLeftHanded ? null : 16,
+                          right: isLeftHanded ? 16 : null,
+                          bottom: bottomOffset,
+                          child: SosShieldButton(
+                            onTriggerSos: () {
+                              showSosBeaconSheet(context, _currentLocation);
+                            },
+                          ),
                         ),
-                        const Text('here', style: AppText.label),
                       ],
-                    ),
-                  ),
-                ],
-              ),
+                    );
+                  },
+                );
+              },
             ),
 
-            // 4. Floating Control Buttons: Left Rail (Tactical & Route Planning)
-            Positioned(
-              left: 20,
-              bottom: pad.bottom + 275,
-              child: Column(
-                children: [
-                  _buildFloatingCircleButton(
-                    icon: Icons.layers_rounded,
-                    color: AppColors.textSecondary,
-                    tooltip: 'Route planner',
-                    semanticLabel: 'Suggest running route',
-                    onTap: _suggestAiRoute,
-                  ),
-                  const SizedBox(height: 10),
-                  _buildFloatingCircleButton(
-                    icon: Icons.flag_rounded,
-                    color: _activeGoal.isActive
-                        ? AppColors.gold
-                        : AppColors.textSecondary,
-                    tooltip: 'Campaign Goals',
-                    semanticLabel: 'Open goals selector',
-                    onTap: _openGoalSelector,
-                  ),
-                  if (_batterySaverService.isBatterySaverEnabled &&
-                      _isRunActive) ...[
-                    const SizedBox(height: 10),
-                    _buildFloatingCircleButton(
-                      icon: Icons.battery_saver_rounded,
-                      color: AppColors.accent,
-                      tooltip: 'AMOLED Low-Power Screen',
-                      semanticLabel:
-                          'Activate AMOLED pure black battery saver screen',
-                      onTap: () {
-                        AppMotion.mediumTick();
-                        _batterySaverService.setAmoledHudActive(true);
-                      },
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // 5. Floating Control Buttons: Right Rail (Navigation, Auto-Follow & SOS Safety)
-            Positioned(
-              right: 20,
-              bottom: pad.bottom + 275,
-              child: Column(
-                children: [
-                  _buildFloatingCircleButton(
-                    icon: Icons.emergency_rounded,
-                    color: AppColors.error,
-                    tooltip: 'Emergency SOS Beacon',
-                    semanticLabel: 'Trigger emergency SOS distress beacon',
-                    onTap: () {
-                      AppMotion.mediumTick();
-                      showSosBeaconSheet(context, _currentLocation);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildFloatingCircleButton(
-                    icon: _isCameraFollowLocked
-                        ? Icons.gps_fixed_rounded
-                        : Icons.pan_tool_rounded,
-                    color: _isCameraFollowLocked
-                        ? AppColors.accent
-                        : AppColors.textSecondary,
-                    tooltip: _isCameraFollowLocked
-                        ? 'Unlock Camera Pan'
-                        : 'Lock Camera Follow',
-                    semanticLabel: 'Toggle camera auto-follow',
-                    onTap: () {
-                      setState(() {
-                        _isCameraFollowLocked = !_isCameraFollowLocked;
-                      });
-                      HapticFeedback.selectionClick();
-                      if (_isCameraFollowLocked) _recenter();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildFloatingCircleButton(
-                    icon: Icons.my_location_rounded,
-                    color: AppColors.textSecondary,
-                    tooltip: 'Recenter Map',
-                    semanticLabel: 'Recenter map to runner position',
-                    onTap: _recenter,
-                  ),
-                ],
-              ),
-            ),
-
-            // 5. Strava-Grade Live Telemetry HUD Obsidian Glass Card
+            // 4. Strava-Grade Live Telemetry HUD Obsidian Glass Card
             Positioned(
               left: 16,
               right: 16,
               bottom: pad.bottom + 12,
-              child: ValueListenableBuilder<RunTelemetry>(
-                valueListenable: _telemetryNotifier,
-                builder: (context, telemetry, _) {
-                  return RunHud(
-                    isRunActive: _isRunActive,
-                    isSearchingGps: _currentLocation == null,
-                    isAutoPaused: telemetry.isAutoPaused,
-                    distanceKm: telemetry.distanceKm,
-                    elapsedSeconds: telemetry.elapsedSeconds,
-                    movingSeconds: telemetry.movingSeconds,
-                    splitPace: telemetry.splitPace,
-                    currentSpeedKmh: telemetry.currentSpeedKmh,
-                    satelliteAccuracyMeters: telemetry.satelliteAccuracyMeters,
-                    territoriesClaimed: telemetry.territoriesClaimed,
-                    distanceToClosureMeters: telemetry.distanceToClosureMeters,
-                    proximityToClosure: telemetry.proximityToClosure,
-                    targetPace:
-                        _locationService.pacerMode != VirtualPacerMode.none
-                        ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
-                        : null,
-                    runGoal: telemetry.activeGoal ?? _activeGoal,
-                    currentAreaSqm: telemetry.currentAreaSqm,
-                    onOpenGoalSelector: _openGoalSelector,
-                    isBatterySaverActive:
-                        _batterySaverService.isBatterySaverEnabled,
-                    onToggleAmoledSaver: () {
-                      AppMotion.mediumTick();
-                      _batterySaverService.setAmoledHudActive(true);
-                    },
-                    onToggleRun: _toggleRun,
-                    onSealShape: _sealCurrentShape,
-                    onFinishRun: () {
-                      if (_isRunActive) {
-                        _toggleRun();
-                      }
-                    },
-                  );
+              child: MeasureSize(
+                onChange: (size) {
+                  if (_hudHeightNotifier.value != size.height) {
+                    _hudHeightNotifier.value = size.height;
+                  }
                 },
+                child: ValueListenableBuilder<RunTelemetry>(
+                  valueListenable: _telemetryNotifier,
+                  builder: (context, telemetry, _) {
+                    return RunHud(
+                      isRunActive: _isRunActive,
+                      isSearchingGps: _currentLocation == null,
+                      isAutoPaused: telemetry.isAutoPaused,
+                      distanceKm: telemetry.distanceKm,
+                      elapsedSeconds: telemetry.elapsedSeconds,
+                      movingSeconds: telemetry.movingSeconds,
+                      splitPace: telemetry.splitPace,
+                      currentSpeedKmh: telemetry.currentSpeedKmh,
+                      satelliteAccuracyMeters:
+                          telemetry.satelliteAccuracyMeters,
+                      territoriesClaimed: telemetry.territoriesClaimed,
+                      distanceToClosureMeters:
+                          telemetry.distanceToClosureMeters,
+                      proximityToClosure: telemetry.proximityToClosure,
+                      targetPace:
+                          _locationService.pacerMode != VirtualPacerMode.none
+                              ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+                              : null,
+                      runGoal: telemetry.activeGoal ?? _activeGoal,
+                      currentAreaSqm: telemetry.currentAreaSqm,
+                      onOpenGoalSelector: _openGoalSelector,
+                      isBatterySaverActive:
+                          _batterySaverService.isBatterySaverEnabled,
+                      onToggleAmoledSaver: () {
+                        AppMotion.mediumTick();
+                        _batterySaverService.setAmoledHudActive(true);
+                      },
+                      onToggleRun: _toggleRun,
+                      onSealShape: _sealCurrentShape,
+                      onFinishRun: () {
+                        if (_isRunActive) {
+                          _toggleRun();
+                        }
+                      },
+                    );
+                  },
+                ),
               ),
             ),
+
+            // 5. Non-blocking Go Cue (<= 400 ms)
+            if (_showGoCue)
+              Positioned.fill(
+                child: RunGoCue(
+                  onDismissed: () {
+                    if (mounted) setState(() => _showGoCue = false);
+                  },
+                ),
+              ),
 
             // 6. AMOLED Pure Black Low-Power Screen Overlay (when active)
             ValueListenableBuilder<bool>(
@@ -2095,37 +1791,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
               },
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFloatingCircleButton({
-    required IconData icon,
-    required VoidCallback onTap,
-    Color color = AppColors.textSecondary,
-    String? tooltip,
-    String? semanticLabel,
-  }) {
-    return Semantics(
-      button: true,
-      label: semanticLabel ?? tooltip,
-      child: Tooltip(
-        message: tooltip ?? '',
-        child: GestureDetector(
-          onTap: onTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            height: 48,
-            width: 48,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceGlass,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.borderSubtle),
-              boxShadow: AppElevation.floating,
-            ),
-            child: Icon(icon, color: color, size: 22),
-          ),
         ),
       ),
     );

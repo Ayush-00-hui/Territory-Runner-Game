@@ -177,6 +177,38 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             },
           ),
           const Divider(height: 1, color: AppColors.border),
+          SwitchListTile(
+            secondary: const Icon(
+              Icons.pan_tool_alt_rounded,
+              color: AppColors.accent,
+              size: 20,
+            ),
+            title: Text(
+              'Left-handed map layout',
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            subtitle: Text(
+              'Position thumb controls on the left for one-handed reach',
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
+            ),
+            activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accentContainer,
+            value: _appPrefs.isLeftHandedMode,
+            onChanged: (val) {
+              AppMotion.selectionTick();
+              setState(() {
+                _appPrefs.toggleLeftHandedMode(val);
+              });
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
             icon: Icons.notifications_active_rounded,
             title: 'Rival alerts',

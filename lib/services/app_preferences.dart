@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
@@ -16,13 +17,18 @@ class AppPreferences {
 
   static const String _prefHapticsKey = 'pref_voice_coach_haptics_enabled';
   static const String _prefUnitKey = 'pref_distance_unit';
+  static const String _prefLeftHandedKey = 'pref_left_handed_mode';
 
   bool _isHapticsEnabled = true;
   DistanceUnit _unit = DistanceUnit.metric;
+  bool _isLeftHandedMode = false;
   bool _isInitialized = false;
+
+  final ValueNotifier<bool> leftHandedModeNotifier = ValueNotifier<bool>(false);
 
   bool get isHapticsEnabled => _isHapticsEnabled;
   DistanceUnit get unit => _unit;
+  bool get isLeftHandedMode => _isLeftHandedMode;
   bool get isInitialized => _isInitialized;
 
   AppPreferences._internal() {
@@ -35,6 +41,8 @@ class AppPreferences {
     try {
       final prefs = await SharedPreferences.getInstance();
       _isHapticsEnabled = prefs.getBool(_prefHapticsKey) ?? true;
+      _isLeftHandedMode = prefs.getBool(_prefLeftHandedKey) ?? false;
+      leftHandedModeNotifier.value = _isLeftHandedMode;
       final unitStr = prefs.getString(_prefUnitKey) ?? 'metric';
       _unit = unitStr == 'imperial'
           ? DistanceUnit.imperial
@@ -43,6 +51,16 @@ class AppPreferences {
     } catch (e) {
       AppLogger.debug('Init note: $e', tag: 'AppPreferences');
     }
+  }
+
+  /// Toggles persistent left-handed mirror mode for map screen controls
+  Future<void> toggleLeftHandedMode(bool enabled) async {
+    _isLeftHandedMode = enabled;
+    leftHandedModeNotifier.value = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefLeftHandedKey, enabled);
+    } catch (_) {}
   }
 
   /// Toggles persistent tactical haptic feedback
