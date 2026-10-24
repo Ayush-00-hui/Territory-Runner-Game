@@ -1,229 +1,279 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 
+import '../../../models/territory.dart';
+import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
 
-/// Performance-first Home Hero Card featuring Today's Goal Ring, GPS Status, and primary Start Run CTA.
-class QuickLaunchHero extends StatefulWidget {
+/// Performance-first Home Hero Card featuring real daily goal progress or quiet goal setup,
+/// zero fake numbers, and the primary Start Run action.
+class QuickLaunchHero extends StatelessWidget {
+  final List<Territory> territories;
   final VoidCallback? onStartRun;
   final bool isActive;
 
-  const QuickLaunchHero({super.key, this.onStartRun, this.isActive = true});
+  const QuickLaunchHero({
+    super.key,
+    this.territories = const [],
+    this.onStartRun,
+    this.isActive = true,
+  });
 
-  @override
-  State<QuickLaunchHero> createState() => _QuickLaunchHeroState();
-}
+  /// Computes real running distance in kilometers completed today
+  double _computeTodayKm() {
+    final now = DateTime.now();
+    double totalKm = 0.0;
+    const distance = Distance();
 
-class _QuickLaunchHeroState extends State<QuickLaunchHero> {
-  bool _isGpsReady = false;
-  Timer? _checkTimer;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.isActive) {
-      _checkGpsStatus();
-      _checkTimer = Timer.periodic(
-        const Duration(seconds: 8),
-        (_) => _checkGpsStatus(),
-      );
-    }
-  }
-
-  @override
-  void didUpdateWidget(QuickLaunchHero oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.isActive != oldWidget.isActive) {
-      if (widget.isActive) {
-        _checkGpsStatus();
-        _checkTimer ??= Timer.periodic(
-          const Duration(seconds: 8),
-          (_) => _checkGpsStatus(),
-        );
-      } else {
-        _checkTimer?.cancel();
-        _checkTimer = null;
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _checkTimer?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _checkGpsStatus() async {
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          setState(() {
-            _isGpsReady = false;
-          });
+    for (final t in territories) {
+      if (t.capturedAt.year == now.year &&
+          t.capturedAt.month == now.month &&
+          t.capturedAt.day == now.day) {
+        if (t.polygon.length >= 2) {
+          double meters = 0.0;
+          for (int i = 0; i < t.polygon.length - 1; i++) {
+            meters += distance(t.polygon[i], t.polygon[i + 1]);
+          }
+          meters += distance(t.polygon.last, t.polygon.first);
+          totalKm += meters / 1000.0;
         }
-        return;
-      }
-
-      final permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        if (mounted) {
-          setState(() {
-            _isGpsReady = false;
-          });
-        }
-        return;
-      }
-
-      final lastPos = await Geolocator.getLastKnownPosition();
-      if (mounted) {
-        setState(() {
-          _isGpsReady = lastPos != null && lastPos.accuracy < 25;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isGpsReady = true;
-        });
       }
     }
+    return totalKm;
+  }
+
+  void _showGoalPicker(BuildContext context, double? currentGoal) {
+    AppMotion.lightTick();
+    double? selectedGoal = currentGoal ?? 5.0;
+
+    AppSheet.show(
+      context: context,
+      builder: (sheetCtx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          return AppSheet(
+            title: 'Daily distance goal',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Set an athletic target for your daily runs. Your goal ring advances with real completed routes.',
+                  style: AppText.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.s16),
+                Wrap(
+                  spacing: AppSpacing.s8,
+                  runSpacing: AppSpacing.s8,
+                  children: [3.0, 5.0, 8.0, 10.0].map((km) {
+                    final isSel = selectedGoal == km;
+                    return AppChip(
+                      label:
+                          '${km.toStringAsFixed(km.truncateToDouble() == km ? 0 : 1)} km',
+                      isSelected: isSel,
+                      onTap: () {
+                        setSheetState(() => selectedGoal = km);
+                      },
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: AppSpacing.s24),
+                PrimaryButton(
+                  label: 'Save goal',
+                  onPressed: () {
+                    AppPreferences().setDailyGoalKm(selectedGoal);
+                    Navigator.pop(sheetCtx);
+                  },
+                ),
+                if (currentGoal != null && currentGoal > 0) ...[
+                  const SizedBox(height: AppSpacing.s8),
+                  TextButton(
+                    onPressed: () {
+                      AppPreferences().setDailyGoalKm(null);
+                      Navigator.pop(sheetCtx);
+                    },
+                    child: Text(
+                      'Clear daily goal',
+                      style: AppText.labelMedium.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    const double goalTargetKm = 5.0;
-    const double currentDayKm = 3.4;
-    final double goalProgress = (currentDayKm / goalTargetKm).clamp(0.0, 1.0);
+    final double todayKm = _computeTodayKm();
 
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.s20),
-      child: Column(
-        children: [
-          Row(
+    return ValueListenableBuilder<double?>(
+      valueListenable: AppPreferences().dailyGoalKmNotifier,
+      builder: (context, goalTargetKm, _) {
+        final bool hasGoal = goalTargetKm != null && goalTargetKm > 0;
+        final double goalProgress = hasGoal
+            ? (todayKm / goalTargetKm).clamp(0.0, 1.0)
+            : 0.0;
+
+        return AppCard(
+          padding: const EdgeInsets.all(AppSpacing.s20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Today's Goal Ring
-              ProgressRing(
-                progress: goalProgress,
-                size: 58,
-                strokeWidth: 5.5,
-                progressColor: AppColors.accent,
-                trackColor: AppColors.surface2,
-                center: Text(
-                  '${(goalProgress * 100).round()}%',
-                  style: AppText.labelSmall.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Daily goal', style: AppText.labelSmall),
-                    const SizedBox(height: AppSpacing.s2),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            '$currentDayKm',
-                            style: AppText.displaySmall.copyWith(
+              if (hasGoal) ...[
+                // Real Today's Goal Ring
+                InkWell(
+                  onTap: () => _showGoalPicker(context, goalTargetKm),
+                  borderRadius: AppRadius.br16,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        ProgressRing(
+                          progress: goalProgress,
+                          size: 58,
+                          strokeWidth: 5.5,
+                          progressColor: AppColors.accent,
+                          trackColor: AppColors.surface2,
+                          center: Text(
+                            '${(goalProgress * 100).round()}%',
+                            style: AppText.labelSmall.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
                               fontFeatures: const [
                                 FontFeature.tabularFigures(),
                               ],
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.s4),
-                          Text(
-                            '/ ${goalTargetKm.toStringAsFixed(1)} km',
-                            style: AppText.statUnit,
+                        ),
+                        const SizedBox(width: AppSpacing.s14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Daily goal', style: AppText.labelSmall),
+                              const SizedBox(height: AppSpacing.s2),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
+                                  children: [
+                                    Text(
+                                      todayKm.toStringAsFixed(1),
+                                      style: AppText.displaySmall.copyWith(
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.s4),
+                                    Text(
+                                      '/ ${goalTargetKm.toStringAsFixed(1)} km',
+                                      style: AppText.statUnit,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: AppSpacing.s8),
+                        Text(
+                          'Edit',
+                          style: AppText.labelSmall.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s8),
-
-              // GPS Status Pill
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.s8,
-                  vertical: AppSpacing.s4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: AppRadius.brFull,
-                  border: Border.all(
-                    color: _isGpsReady
-                        ? AppColors.success.withValues(alpha: 0.4)
-                        : AppColors.warning.withValues(alpha: 0.4),
-                    width: 1.0,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _isGpsReady
-                            ? AppColors.success
-                            : AppColors.warning,
+              ] else ...[
+                // Quiet "Set a goal" row when no goal is configured
+                InkWell(
+                  onTap: () => _showGoalPicker(context, null),
+                  borderRadius: AppRadius.br12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s14,
+                      vertical: AppSpacing.s10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: AppRadius.br12,
+                      border: Border.all(
+                        color: AppColors.borderSubtle,
+                        width: 1.0,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.s6),
-                    Text(
-                      _isGpsReady ? 'Ready' : 'Locking...',
-                      style: AppText.labelSmall.copyWith(
-                        color: _isGpsReady
-                            ? AppColors.success
-                            : AppColors.warning,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.2,
-                      ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.track_changes_rounded,
+                          size: 18,
+                          color: AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: AppSpacing.s10),
+                        Expanded(
+                          child: Text(
+                            'Daily distance goal',
+                            style: AppText.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Set a goal',
+                          style: AppText.labelMedium.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          size: 16,
+                          color: AppColors.accent,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
+              ],
+
+              const SizedBox(height: AppSpacing.s16),
+
+              // Primary CTA Button
+              PrimaryButton(
+                label: 'Start run',
+                icon: Icons.play_arrow_rounded,
+                onPressed: () {
+                  AppMotion.mediumTick();
+                  onStartRun?.call();
+                },
+              ),
+              const SizedBox(height: AppSpacing.s10),
+
+              // Motivation subtext
+              Text(
+                'Run closed loops to claim territory on foot.',
+                textAlign: TextAlign.center,
+                style: AppText.bodySmall,
               ),
             ],
           ),
-
-          const SizedBox(height: AppSpacing.s16),
-
-          // Primary CTA Button
-          PrimaryButton(
-            label: 'Start run',
-            icon: Icons.play_arrow_rounded,
-            onPressed: () {
-              AppMotion.mediumTick();
-              widget.onStartRun?.call();
-            },
-          ),
-          const SizedBox(height: AppSpacing.s10),
-
-          // Subtle motivation subtext
-          Text(
-            'Run closed loops to claim territory on foot.',
-            textAlign: TextAlign.center,
-            style: AppText.bodySmall,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -1542,34 +1542,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                           ),
                         ),
                       ),
-                      if (profile.faction.isNotEmpty) ...[
-                        const SizedBox(width: AppSpacing.s8),
-                        Semantics(
-                          label: 'Faction: ${profile.faction}',
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.s8,
-                              vertical: AppSpacing.s4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceGlass,
-                              borderRadius: AppRadius.brFull,
-                              border: Border.all(
-                                color: AppColors.borderSubtle,
-                                width: 1.0,
-                              ),
-                            ),
-                            child: Text(
-                              profile.faction,
-                              style: AppText.labelSmall.copyWith(
-                                color: AppColors.accent,
-                                fontSize: 10,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                   GpsSyncChip(

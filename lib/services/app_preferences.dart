@@ -18,17 +18,22 @@ class AppPreferences {
   static const String _prefHapticsKey = 'pref_voice_coach_haptics_enabled';
   static const String _prefUnitKey = 'pref_distance_unit';
   static const String _prefLeftHandedKey = 'pref_left_handed_mode';
+  static const String _prefDailyGoalKmKey = 'pref_daily_goal_km';
 
   bool _isHapticsEnabled = true;
   DistanceUnit _unit = DistanceUnit.metric;
   bool _isLeftHandedMode = false;
+  double? _dailyGoalKm;
   bool _isInitialized = false;
 
   final ValueNotifier<bool> leftHandedModeNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<double?> dailyGoalKmNotifier =
+      ValueNotifier<double?>(null);
 
   bool get isHapticsEnabled => _isHapticsEnabled;
   DistanceUnit get unit => _unit;
   bool get isLeftHandedMode => _isLeftHandedMode;
+  double? get dailyGoalKm => _dailyGoalKm;
   bool get isInitialized => _isInitialized;
 
   AppPreferences._internal() {
@@ -43,6 +48,8 @@ class AppPreferences {
       _isHapticsEnabled = prefs.getBool(_prefHapticsKey) ?? true;
       _isLeftHandedMode = prefs.getBool(_prefLeftHandedKey) ?? false;
       leftHandedModeNotifier.value = _isLeftHandedMode;
+      _dailyGoalKm = prefs.getDouble(_prefDailyGoalKmKey);
+      dailyGoalKmNotifier.value = _dailyGoalKm;
       final unitStr = prefs.getString(_prefUnitKey) ?? 'metric';
       _unit = unitStr == 'imperial'
           ? DistanceUnit.imperial
@@ -51,6 +58,20 @@ class AppPreferences {
     } catch (e) {
       AppLogger.debug('Init note: $e', tag: 'AppPreferences');
     }
+  }
+
+  /// Sets or clears the user's daily running distance goal in kilometers
+  Future<void> setDailyGoalKm(double? goalKm) async {
+    _dailyGoalKm = (goalKm != null && goalKm > 0) ? goalKm : null;
+    dailyGoalKmNotifier.value = _dailyGoalKm;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_dailyGoalKm != null) {
+        await prefs.setDouble(_prefDailyGoalKmKey, _dailyGoalKm!);
+      } else {
+        await prefs.remove(_prefDailyGoalKmKey);
+      }
+    } catch (_) {}
   }
 
   /// Toggles persistent left-handed mirror mode for map screen controls

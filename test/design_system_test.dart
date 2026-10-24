@@ -2,7 +2,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:territory_runner/features/home/widgets/home_header.dart';
+import 'package:territory_runner/features/home/widgets/quick_launch_hero.dart';
+import 'package:territory_runner/features/home/widgets/weekly_summary_card.dart';
 import 'package:territory_runner/models/faction_standing.dart';
+import 'package:territory_runner/models/runner_profile.dart';
+import 'package:territory_runner/services/app_preferences.dart';
 import 'package:territory_runner/ui/ui.dart';
 
 void main() {
@@ -344,6 +350,101 @@ void main() {
       await tester.pumpAndSettle();
       expect(runTapped, isTrue);
     });
+
+    testWidgets(
+      'QuickLaunchHero renders quiet Set a goal row when goal is null and zero fake 3.4km',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        await AppPreferences().setDailyGoalKm(null);
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: QuickLaunchHero(territories: []),
+            ),
+          ),
+        );
+
+        expect(find.text('Set a goal'), findsOneWidget);
+        expect(find.text('3.4'), findsNothing);
+        expect(find.text('Start run'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'QuickLaunchHero renders goal ring when dailyGoalKm is set',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        await AppPreferences().setDailyGoalKm(5.0);
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: QuickLaunchHero(territories: []),
+            ),
+          ),
+        );
+
+        expect(find.text('Daily goal'), findsOneWidget);
+        expect(find.text('/ 5.0 km'), findsOneWidget);
+        expect(find.text('0.0'), findsOneWidget);
+        expect(find.text('3.4'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'HomeHeader renders level ring avatar and CombinedStatusIndicator without faction or streak chip',
+      (tester) async {
+        final profile = RunnerProfile(
+          id: 'runner-1',
+          username: 'ApexRunner',
+          level: 4,
+          xp: 350,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: HomeHeader(profile: profile),
+            ),
+          ),
+        );
+
+        expect(find.text('ApexRunner'), findsOneWidget);
+        expect(find.text('Level 4'), findsOneWidget);
+        expect(find.byType(CombinedStatusIndicator), findsOneWidget);
+        expect(find.text('Cyber Vanguard'), findsNothing);
+        expect(
+          find.byIcon(Icons.local_fire_department_rounded),
+          findsNothing,
+        );
+      },
+    );
+
+    testWidgets(
+      'WeeklySummaryCard displays real empty state when no runs logged',
+      (tester) async {
+        final profile = RunnerProfile(id: 'r1', username: 'Test');
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: WeeklySummaryCard(
+                profile: profile,
+                territories: const [],
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('0.0'), findsOneWidget);
+        expect(find.text('0'), findsAtLeastNWidgets(1));
+        expect(
+          find.text('No runs logged this week. Start a run to begin.'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 
   group('Motion and Toast Performance Budgets', () {
