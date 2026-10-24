@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/ui.dart';
 
+/// Accidental-tap protected Hold-to-Finish button (R2).
+/// When inactive: disabled and greyed with "Hold to finish", tapping shows hint "Start a run first".
+/// When active: smooth ring fill on 1.4s press-and-hold with haptic milestones.
 class HoldToFinishButton extends StatefulWidget {
   final bool isRunActive;
   final VoidCallback onFinish;
@@ -91,43 +94,55 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
   Widget build(BuildContext context) {
     if (!widget.isRunActive) {
       return Semantics(
-        button: false,
-        label: 'Run tracking inactive. Tap center play button to begin.',
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.s12,
-            vertical: AppSpacing.s12,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: AppSpacing.br16,
-            border: Border.all(color: AppColors.borderSubtle),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                Icons.lock_outline_rounded,
-                color: AppColors.disabled,
-                size: 16,
-              ),
-              const SizedBox(width: AppSpacing.s4),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    'Locked',
-                    style: AppText.labelSmall.copyWith(
-                      color: AppColors.disabled,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
+        button: true,
+        enabled: false,
+        label: 'Hold to finish. Disabled. Start a run first.',
+        child: GestureDetector(
+          onTap: () {
+            AppMotion.lightTick();
+            AppToast.show(
+              context,
+              'Start a run first',
+              duration: const Duration(seconds: 2),
+            );
+          },
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s10,
+              vertical: AppSpacing.s12,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: AppSpacing.br16,
+              border: Border.all(color: AppColors.borderSubtle, width: 1.0),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.stop_circle_outlined,
+                  color: AppColors.textMuted,
+                  size: 16,
+                ),
+                const SizedBox(width: AppSpacing.s4),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'Hold to finish',
+                      style: AppText.labelSmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
@@ -135,7 +150,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
 
     return Semantics(
       button: true,
-      label: 'Hold for 1.5 seconds to finish and submit run',
+      label: 'Hold 1.4 seconds to finish run',
       child: Listener(
         onPointerDown: _onPointerDown,
         onPointerUp: _onPointerUp,
@@ -158,11 +173,16 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
                   vertical: AppSpacing.s10,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.rival.withValues(
-                    alpha: 0.15 + (progress * 0.4),
+                  color: AppColors.error.withValues(
+                    alpha: 0.12 + (progress * 0.35),
                   ),
                   borderRadius: AppSpacing.br16,
-                  border: Border.all(color: AppColors.rival, width: 1.5),
+                  border: Border.all(
+                    color: _isHolding
+                        ? AppColors.error
+                        : AppColors.error.withValues(alpha: 0.5),
+                    width: 1.5,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -177,17 +197,17 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
                           child: CircularProgressIndicator(
                             value: progress,
                             strokeWidth: 2.5,
-                            backgroundColor: AppColors.rival.withValues(
-                              alpha: 0.25,
+                            backgroundColor: AppColors.error.withValues(
+                              alpha: 0.2,
                             ),
                             valueColor: const AlwaysStoppedAnimation<Color>(
-                              AppColors.textPrimary,
+                              AppColors.error,
                             ),
                           ),
                         ),
                         const Icon(
                           Icons.stop_rounded,
-                          color: AppColors.rival,
+                          color: AppColors.error,
                           size: 14,
                         ),
                       ],
@@ -197,11 +217,9 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          _isHolding
-                              ? 'Hold ${(1.4 * (1.0 - progress)).toStringAsFixed(1)}s'
-                              : 'Hold stop',
+                          _isHolding ? 'Finishing...' : 'Hold to finish',
                           style: AppText.labelSmall.copyWith(
-                            color: AppColors.rival,
+                            color: AppColors.error,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],

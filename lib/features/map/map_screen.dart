@@ -54,6 +54,10 @@ import 'notifiers/run_telemetry_notifier.dart';
 class MapScreenFeature extends StatefulWidget {
   final bool isActive;
 
+  /// Global notifier indicating whether a run is actively in progress
+  static final ValueNotifier<bool> isRunActiveNotifier =
+      ValueNotifier<bool>(false);
+
   const MapScreenFeature({super.key, this.isActive = true});
 
   @override
@@ -348,6 +352,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _liveLocationNotifier.dispose();
     _runPathUpdateNotifier.dispose();
     _hudHeightNotifier.dispose();
+    MapScreenFeature.isRunActiveNotifier.value = false;
     super.dispose();
   }
 
@@ -608,6 +613,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void _resumeRun(ActiveRunSnapshot snapshot) {
     setState(() {
       _isRunActive = true;
+      MapScreenFeature.isRunActiveNotifier.value = true;
       _runCoordinates.clear();
       _runCoordinates.addAll(snapshot.coordinates);
       _recentPositions.clear();
@@ -1025,6 +1031,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       setState(() {
         _isRunActive = true;
+        MapScreenFeature.isRunActiveNotifier.value = true;
         _showGoCue = true;
         _territoriesClaimedThisRun = 0;
         _accumulatedRunPreviewArea = 0.0;
@@ -1063,6 +1070,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _refreshTerritoryCache();
       setState(() {
         _isRunActive = false;
+        MapScreenFeature.isRunActiveNotifier.value = false;
         _isAutoPaused = false;
         _lastShownRejectionReason = null;
         _highlightedTerritoryId = null;
@@ -1419,14 +1427,20 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     final String athleteName = profile.username.isNotEmpty
         ? profile.username
         : 'Runner';
-    return KeyboardListener(
-      focusNode: _keyboardFocusNode,
-      autofocus: true,
-      onKeyEvent: _handleKeyEvent,
-      child: Scaffold(
-        backgroundColor: AppColors.bgDeep,
-        body: Stack(
-          fit: StackFit.expand,
+    return PopScope(
+      canPop: !_isRunActive,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _showExitRunConfirmation();
+      },
+      child: KeyboardListener(
+        focusNode: _keyboardFocusNode,
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: Scaffold(
+          backgroundColor: AppColors.bgDeep,
+          body: Stack(
+            fit: StackFit.expand,
           children: [
             // 1. The Interactive Fullscreen Map wrapped in RepaintBoundary
             _currentLocation == null
@@ -1685,7 +1699,57 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           ],
         ),
       ),
+    ),
+  );
+}
+
+  Future<void> _showExitRunConfirmation() async {
+    AppMotion.lightTick();
+    final bool? shouldExit = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.br24,
+          side: const BorderSide(color: AppColors.borderSubtle, width: 1.0),
+        ),
+        title: Text(
+          'Pause or keep running?',
+          style: AppText.titleMedium.copyWith(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'Your run is currently active. Do you want to pause your run and exit, or keep running?',
+          style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.s16,
+          0,
+          AppSpacing.s16,
+          AppSpacing.s16,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Pause run',
+              style: AppText.labelMedium.copyWith(color: AppColors.textMuted),
+            ),
+          ),
+          PrimaryButton(
+            label: 'Keep running',
+            icon: Icons.directions_run_rounded,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+        ],
+      ),
     );
+
+    if (shouldExit == true && mounted) {
+      if (_isRunActive) {
+        _toggleRun();
+      }
+    }
   }
 
   void _defendWeakestTerritory() {

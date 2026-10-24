@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/ui.dart';
 
-/// Isolated, safety-critical 48 dp SOS Shield Button.
-/// Requires a 1.5 s press-and-hold with a radial progress ring
-/// before triggering emergency distress services.
+/// Isolated, safety-critical 48 dp SOS Button (R1).
+/// Features an unmistakable shield with bold "SOS" typography,
+/// a visible 1.5 s radial progress ring, milestone haptic ticks,
+/// and clear semantic labels.
 class SosShieldButton extends StatefulWidget {
   final VoidCallback onTriggerSos;
 
@@ -21,22 +22,37 @@ class _SosShieldButtonState extends State<SosShieldButton>
   late final AnimationController _controller;
   bool _completed = false;
   DateTime? _holdStartTime;
+  int _lastTickMilestone = 0;
 
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 1500),
-        )..addStatusListener((status) {
-          if (status == AnimationStatus.completed && !_completed) {
-            _completed = true;
-            AppMotion.heavyBurst();
-            widget.onTriggerSos();
-            _controller.reset();
-          }
-        });
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )
+      ..addListener(() {
+        final progress = _controller.value;
+        if (progress >= 0.75 && _lastTickMilestone < 3) {
+          _lastTickMilestone = 3;
+          AppMotion.lightTick();
+        } else if (progress >= 0.50 && _lastTickMilestone < 2) {
+          _lastTickMilestone = 2;
+          AppMotion.lightTick();
+        } else if (progress >= 0.25 && _lastTickMilestone < 1) {
+          _lastTickMilestone = 1;
+          AppMotion.lightTick();
+        }
+      })
+      ..addStatusListener((status) {
+        if (status == AnimationStatus.completed && !_completed) {
+          _completed = true;
+          AppMotion.heavyBurst();
+          widget.onTriggerSos();
+          _controller.reset();
+          _lastTickMilestone = 0;
+        }
+      });
   }
 
   @override
@@ -47,6 +63,7 @@ class _SosShieldButtonState extends State<SosShieldButton>
 
   void _onPointerDown(PointerDownEvent _) {
     _completed = false;
+    _lastTickMilestone = 0;
     _holdStartTime = DateTime.now();
     AppMotion.lightTick();
     _controller.forward();
@@ -67,11 +84,12 @@ class _SosShieldButtonState extends State<SosShieldButton>
         : Duration.zero;
 
     _controller.reverse();
+    _lastTickMilestone = 0;
 
     if (heldDuration.inMilliseconds < 400 && mounted) {
       AppToast.show(
         context,
-        'Hold 1.5s to trigger Emergency SOS',
+        'Hold 1.5s for Emergency SOS',
         duration: const Duration(seconds: 2),
       );
     }
@@ -81,7 +99,7 @@ class _SosShieldButtonState extends State<SosShieldButton>
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Emergency SOS. Hold 1.5 seconds to trigger distress beacon.',
+      label: 'Emergency SOS. Hold 1.5 seconds for emergency assistance.',
       child: Tooltip(
         message: 'Emergency SOS (Hold 1.5s)',
         child: Listener(
@@ -104,30 +122,52 @@ class _SosShieldButtonState extends State<SosShieldButton>
                   width: 48,
                   decoration: BoxDecoration(
                     color: isPressing
-                        ? AppColors.error.withValues(alpha: 0.18)
+                        ? AppColors.error.withValues(alpha: 0.22)
                         : AppColors.surfaceGlass,
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isPressing
                           ? AppColors.error
-                          : AppColors.error.withValues(alpha: 0.4),
-                      width: 1.2,
+                          : AppColors.error.withValues(alpha: 0.5),
+                      width: 1.5,
                     ),
                     boxShadow: AppElevation.floating,
                   ),
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
+                      // Smooth radial progress ring filling during hold
                       if (progress > 0.0)
                         Positioned.fill(
                           child: CustomPaint(
                             painter: _SosProgressPainter(progress: progress),
                           ),
                         ),
-                      const Icon(
-                        Icons.emergency_rounded,
-                        color: AppColors.error,
-                        size: 24,
+                      // Unmistakable emergency shield with bold "SOS" lettering
+                      Center(
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            const Icon(
+                              Icons.shield_rounded,
+                              color: AppColors.error,
+                              size: 30,
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                'SOS',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.6,
+                                  fontFamily: AppText.fontFamily,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -148,15 +188,13 @@ class _SosProgressPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (progress <= 0.0) return;
-    final strokeWidth = 2.5;
-    final radius = (size.width - strokeWidth) / 2;
     final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - 4) / 2;
 
-    final paint = Paint()
+    final ringPaint = Paint()
       ..color = AppColors.error
-      ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0
       ..strokeCap = StrokeCap.round;
 
     final sweepAngle = 2 * math.pi * progress;
@@ -165,7 +203,7 @@ class _SosProgressPainter extends CustomPainter {
       -math.pi / 2,
       sweepAngle,
       false,
-      paint,
+      ringPaint,
     );
   }
 

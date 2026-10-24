@@ -852,17 +852,38 @@ class _RunHudState extends State<RunHud> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Left "SEAL SHAPE" manual trigger
+                  // Left "Close loop" control (R2)
                   Flexible(
                     child: Semantics(
                       button: true,
-                      label: 'Seal territory shape',
+                      enabled: isRunActive,
+                      label: isNearClosure
+                          ? 'Close loop. Ready to claim territory.'
+                          : (isRunActive
+                              ? 'Close loop. Available when near your route start.'
+                              : 'Close loop. Disabled. Start a run first.'),
                       child: GestureDetector(
                         onTapDown: (_) => setState(() => _isSealPressed = true),
                         onTapUp: (_) => setState(() => _isSealPressed = false),
                         onTapCancel: () =>
                             setState(() => _isSealPressed = false),
                         onTap: () {
+                          if (!isRunActive) {
+                            AppMotion.lightTick();
+                            AppToast.show(context, 'Start a run first');
+                            return;
+                          }
+                          if (!isNearClosure) {
+                            AppMotion.lightTick();
+                            final distText = closureDist != null
+                                ? ' (${closureDist.round()}m away)'
+                                : '';
+                            AppToast.show(
+                              context,
+                              'Run back near your start point$distText to close the loop',
+                            );
+                            return;
+                          }
                           AppMotion.mediumTick();
                           onSealShape();
                         },
@@ -880,13 +901,15 @@ class _RunHudState extends State<RunHud> {
                               vertical: AppSpacing.s12,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.surface,
+                              color: isNearClosure
+                                  ? AppColors.accent.withValues(alpha: 0.15)
+                                  : AppColors.surface2,
                               borderRadius: AppSpacing.br16,
                               border: Border.all(
                                 color: isNearClosure
                                     ? AppColors.accent
                                     : AppColors.borderSubtle,
-                                width: isNearClosure ? 1.5 : 1.2,
+                                width: isNearClosure ? 1.5 : 1.0,
                               ),
                             ),
                             child: Row(
@@ -894,18 +917,24 @@ class _RunHudState extends State<RunHud> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Icon(
-                                  Icons.shield_rounded,
+                                  Icons.sync_rounded,
                                   color: isNearClosure
                                       ? AppColors.accent
-                                      : AppColors.textSecondary,
+                                      : (isRunActive
+                                          ? AppColors.textSecondary
+                                          : AppColors.textMuted),
                                   size: 16,
                                 ),
                                 const SizedBox(width: AppSpacing.s4),
-                                const Flexible(
+                                Flexible(
                                   child: Text(
                                     'Close loop',
                                     style: TextStyle(
-                                      color: AppColors.textPrimary,
+                                      color: isNearClosure
+                                          ? AppColors.accent
+                                          : (isRunActive
+                                              ? AppColors.textPrimary
+                                              : AppColors.textMuted),
                                       fontWeight: FontWeight.w700,
                                       fontSize: 11,
                                     ),

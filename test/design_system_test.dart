@@ -6,6 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:territory_runner/features/home/widgets/home_header.dart';
 import 'package:territory_runner/features/home/widgets/quick_launch_hero.dart';
 import 'package:territory_runner/features/home/widgets/weekly_summary_card.dart';
+import 'package:territory_runner/features/map/map_screen.dart';
+import 'package:territory_runner/features/map/widgets/hold_to_finish_button.dart';
+import 'package:territory_runner/features/map/widgets/run_hud.dart';
+import 'package:territory_runner/features/map/widgets/sos_shield_button.dart';
 import 'package:territory_runner/models/faction_standing.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/services/app_preferences.dart';
@@ -454,6 +458,192 @@ void main() {
       expect(AppMotion.sheet.inMilliseconds, lessThanOrEqualTo(250));
       expect(AppMotion.countUp.inMilliseconds, lessThanOrEqualTo(500));
       expect(AppMotion.capture.inMilliseconds, lessThanOrEqualTo(600));
+    });
+  });
+
+  group('Phase D3 Active Run Experience Controls (R1-R4)', () {
+    testWidgets(
+      'R1: SosShieldButton renders 48dp shield with bold SOS typography and clear semantics',
+      (tester) async {
+        bool triggered = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: SosShieldButton(
+                  onTriggerSos: () {
+                    triggered = true;
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // Verify shield icon and SOS text
+        expect(find.byIcon(Icons.shield_rounded), findsOneWidget);
+        expect(find.text('SOS'), findsOneWidget);
+        expect(find.byIcon(Icons.emergency_rounded), findsNothing);
+
+        // Verify clean, safety-critical semantics
+        final semantics = tester.getSemantics(find.byType(SosShieldButton));
+        expect(semantics.label, contains('Emergency SOS'));
+        expect(semantics.label, isNot(contains('beacon')));
+
+        // Quick tap should not trigger
+        await tester.tap(find.byType(SosShieldButton));
+        await tester.pump();
+        expect(triggered, isFalse);
+      },
+    );
+
+    testWidgets(
+      'R2: HoldToFinishButton displays disabled state with hint toast before run starts',
+      (tester) async {
+        bool finished = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: HoldToFinishButton(
+                  isRunActive: false,
+                  onFinish: () {
+                    finished = true;
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // Verify label is 'Hold to finish' (not 'Locked')
+        expect(find.text('Hold to finish'), findsOneWidget);
+        expect(find.text('Locked'), findsNothing);
+        expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+
+        // Semantics should indicate disabled
+        final semantics = tester.getSemantics(find.byType(HoldToFinishButton));
+        expect(semantics.label, contains('Hold to finish'));
+        expect(semantics.label, contains('Start a run first'));
+
+        // Tap shows toast hint and does NOT finish
+        await tester.tap(find.byType(HoldToFinishButton));
+        await tester.pump();
+        expect(finished, isFalse);
+      },
+    );
+
+    testWidgets(
+      'R2: HoldToFinishButton active state allows hold to finish',
+      (tester) async {
+        bool finished = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: HoldToFinishButton(
+                  isRunActive: true,
+                  onFinish: () {
+                    finished = true;
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('Hold to finish'), findsOneWidget);
+        expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+
+        final semantics = tester.getSemantics(find.byType(HoldToFinishButton));
+        expect(semantics.label, contains('Hold to finish'));
+        expect(semantics.label, isNot(contains('Start a run first')));
+        expect(finished, isFalse);
+      },
+    );
+
+    testWidgets(
+      'R2: RunHud Close loop control uses loop icon and provides clear availability guidance',
+      (tester) async {
+        bool loopSealed = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RunHud(
+                isRunActive: true,
+                isAutoPaused: false,
+                distanceKm: 1.2,
+                elapsedSeconds: 320,
+                movingSeconds: 310,
+                splitPace: "4'30\"",
+                currentSpeedKmh: 11.5,
+                satelliteAccuracyMeters: 3.5,
+                territoriesClaimed: 1,
+                distanceToClosureMeters: 45.0, // Not within closure threshold (< 20m)
+                onToggleRun: () {},
+                onSealShape: () {
+                  loopSealed = true;
+                },
+                onFinishRun: () {},
+              ),
+            ),
+          ),
+        );
+
+        // Verify 'Close loop' label (not 'Seal shape')
+        expect(find.text('Close loop'), findsOneWidget);
+        expect(find.text('Seal shape'), findsNothing);
+
+        // Verify loop sync icon (not a shield)
+        expect(find.byIcon(Icons.sync_rounded), findsOneWidget);
+
+        // Tap when not near closure triggers hint toast rather than premature closure
+        await tester.tap(find.text('Close loop'));
+        await tester.pump();
+        expect(loopSealed, isFalse);
+      },
+    );
+
+    test(
+      'R3: MapScreenFeature.isRunActiveNotifier coordinates bottom nav visibility',
+      () {
+        expect(MapScreenFeature.isRunActiveNotifier.value, isFalse);
+
+        bool notified = false;
+        void listener() {
+          notified = true;
+        }
+
+        MapScreenFeature.isRunActiveNotifier.addListener(listener);
+        MapScreenFeature.isRunActiveNotifier.value = true;
+
+        expect(MapScreenFeature.isRunActiveNotifier.value, isTrue);
+        expect(notified, isTrue);
+
+        // Reset back to idle
+        MapScreenFeature.isRunActiveNotifier.removeListener(listener);
+        MapScreenFeature.isRunActiveNotifier.value = false;
+        expect(MapScreenFeature.isRunActiveNotifier.value, isFalse);
+      },
+    );
+
+    test('R4: Zero legacy jargon in map active run controls and tooltips', () {
+      final hudFile = File('lib/features/map/widgets/run_hud.dart');
+      final holdFile = File('lib/features/map/widgets/hold_to_finish_button.dart');
+      final sosFile = File('lib/features/map/widgets/sos_shield_button.dart');
+
+      final hudContent = hudFile.readAsStringSync();
+      final holdContent = holdFile.readAsStringSync();
+      final sosContent = sosFile.readAsStringSync();
+
+      expect(hudContent.contains("'Seal shape'"), isFalse);
+      expect(holdContent.contains("'Locked'"), isFalse);
+      expect(sosContent.contains("distress beacon"), isFalse);
+      expect(sosContent.contains("Beacon of distress"), isFalse);
     });
   });
 }

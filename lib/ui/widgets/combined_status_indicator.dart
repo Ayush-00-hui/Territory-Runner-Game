@@ -163,7 +163,7 @@ class _CombinedStatusIndicatorState extends State<CombinedStatusIndicator> {
             // 1. GPS Diagnostic Row
             _buildDiagnosticRow(
               icon: Icons.my_location_rounded,
-              title: 'GPS satellite telemetry',
+              title: 'GPS signal',
               subtitle: !_isLocationServiceEnabled
                   ? 'Location services are disabled on this device.'
                   : widget.isGpsSearching
