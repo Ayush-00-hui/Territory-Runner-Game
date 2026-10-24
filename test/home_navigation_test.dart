@@ -77,7 +77,7 @@ void main() {
   });
 
   group('Home & Navigation Component Tests', () {
-    testWidgets('HomeHeader renders callsign, level, and streak', (
+    testWidgets('HomeHeader renders callsign and level progress avatar', (
       tester,
     ) async {
       final profile = RunnerProfile(
@@ -100,8 +100,7 @@ void main() {
 
       expect(find.text('VortexRunner'), findsOneWidget);
       expect(find.text('Level 5'), findsOneWidget);
-      expect(find.text('Cyber Vanguard'), findsOneWidget);
-      expect(find.text('7'), findsOneWidget);
+      expect(find.byType(CombinedStatusIndicator), findsOneWidget);
     });
 
     testWidgets('WeeklySummaryCard renders distance, territory, and runs', (
@@ -136,8 +135,6 @@ void main() {
         ),
       );
 
-      expect(find.text('Weekly summary'), findsOneWidget);
-      expect(find.text('7 days'), findsOneWidget);
       expect(find.text('Distance'), findsOneWidget);
       expect(find.text('Territory'), findsOneWidget);
       expect(find.text('Runs'), findsOneWidget);
@@ -202,24 +199,24 @@ void main() {
         );
         expect(greetingFinder, findsOneWidget);
 
-        // 2. GPS status chip with active colored dot
-        expect(find.byType(GpsStatusChip), findsOneWidget);
+        // 2. CombinedStatusIndicator with active colored dot
+        expect(find.byType(CombinedStatusIndicator), findsOneWidget);
 
         // 3. Start run hero card
         expect(find.text('Start run'), findsOneWidget);
 
         // Verify vertical coordinates: Start run hero is fully above the fold on 360x640 (< 520 dp)
         final greetingY = tester.getTopLeft(greetingFinder).dy;
-        final gpsChipY = tester.getTopLeft(find.byType(GpsStatusChip)).dy;
+        final statusChipY = tester.getTopLeft(find.byType(CombinedStatusIndicator)).dy;
         final startRunY = tester.getTopLeft(find.text('Start run')).dy;
         final weeklySummaryY = tester
             .getTopLeft(find.text('Weekly summary'))
             .dy;
 
         expect(greetingY, lessThan(100.0));
-        expect(gpsChipY, greaterThan(greetingY));
-        expect(gpsChipY, lessThan(200.0));
-        expect(startRunY, greaterThan(gpsChipY));
+        expect(statusChipY, greaterThan(greetingY));
+        expect(statusChipY, lessThan(200.0));
+        expect(startRunY, greaterThan(statusChipY));
         expect(
           startRunY,
           lessThan(500.0),

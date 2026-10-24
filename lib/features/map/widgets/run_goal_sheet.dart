@@ -131,24 +131,26 @@ class _RunGoalSheetState extends State<RunGoalSheet>
                 ),
               ),
               const SizedBox(width: AppSpacing.s10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Run goal',
-                    style: AppText.headingSmall.copyWith(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Run goal',
+                      style: AppText.headingSmall.copyWith(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                  Text(
-                    'Set a target for your run',
-                    style: AppText.label.copyWith(
-                      color: AppColors.textMuted,
-                      fontSize: 11,
+                    Text(
+                      'Set a target for your run',
+                      style: AppText.label.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -164,6 +166,9 @@ class _RunGoalSheetState extends State<RunGoalSheet>
             ),
             child: TabBar(
               controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              padding: EdgeInsets.zero,
               indicatorSize: TabBarIndicatorSize.tab,
               indicator: BoxDecoration(
                 color: AppColors.accent,
@@ -243,7 +248,7 @@ class _RunGoalSheetState extends State<RunGoalSheet>
             Expanded(
               child: _buildPresetCard(
                 '3.0 km',
-                'Quick Strike',
+                'Quick Run',
                 3.0,
                 _selectedValue == 3.0,
               ),
@@ -265,7 +270,7 @@ class _RunGoalSheetState extends State<RunGoalSheet>
             Expanded(
               child: _buildPresetCard(
                 '10.0 km',
-                'Endurance Sweep',
+                'Endurance Run',
                 10.0,
                 _selectedValue == 10.0,
               ),
@@ -324,7 +329,7 @@ class _RunGoalSheetState extends State<RunGoalSheet>
             Expanded(
               child: _buildPresetCard(
                 '60 min',
-                'Full Campaign',
+                'Long Run',
                 3600.0,
                 _selectedValue == 3600.0,
               ),
@@ -365,7 +370,7 @@ class _RunGoalSheetState extends State<RunGoalSheet>
             Expanded(
               child: _buildPresetCard(
                 '50,000 m²',
-                'District Dominion',
+                'District Claim',
                 50000.0,
                 _selectedValue == 50000.0,
               ),

@@ -233,48 +233,54 @@ class _SummarySheetState extends State<SummarySheet>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: (widget.rejectionReason != null
-                                ? AppColors.error
-                                : AppColors.accent)
-                            .withValues(alpha: 0.15),
-                        borderRadius: AppSpacing.br8,
-                        border: Border.all(
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
                           color: (widget.rejectionReason != null
                                   ? AppColors.error
                                   : AppColors.accent)
-                              .withValues(alpha: 0.35),
+                              .withValues(alpha: 0.15),
+                          borderRadius: AppSpacing.br8,
+                          border: Border.all(
+                            color: (widget.rejectionReason != null
+                                    ? AppColors.error
+                                    : AppColors.accent)
+                                .withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Text(
+                          widget.rejectionReason != null
+                              ? 'Run rejected'
+                              : 'Run complete',
+                          style: AppText.labelSmall.copyWith(
+                            color: widget.rejectionReason != null
+                                ? AppColors.error
+                                : AppColors.accent,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
-                      child: Text(
-                        widget.rejectionReason != null
-                            ? 'Run rejected'
-                            : 'Run complete',
-                        style: AppText.labelSmall.copyWith(
-                          color: widget.rejectionReason != null
-                              ? AppColors.error
-                              : AppColors.accent,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 10,
+                      const SizedBox(width: AppSpacing.s10),
+                      Expanded(
+                        child: Text(
+                          '${widget.profile.username} • ${widget.profile.faction}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textMuted,
+                            fontSize: 11,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: AppSpacing.s10),
-                    Text(
-                      '${widget.profile.username} • ${widget.profile.faction}',
-                      style: AppText.bodySmall.copyWith(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(
@@ -362,40 +368,48 @@ class _SummarySheetState extends State<SummarySheet>
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildMetricColumn(
-                        'Distance',
-                        '${curKm.toStringAsFixed(2)} km',
-                        AppColors.accent,
+                      Expanded(
+                        child: _buildMetricColumn(
+                          'Distance',
+                          '${curKm.toStringAsFixed(2)} km',
+                          AppColors.accent,
+                        ),
                       ),
                       Container(
                         width: 1,
                         height: 36,
                         color: AppColors.borderSubtle,
                       ),
-                      _buildMetricColumn(
-                        'Time',
-                        _formatDuration(curSec),
-                        AppColors.textPrimary,
+                      Expanded(
+                        child: _buildMetricColumn(
+                          'Time',
+                          _formatDuration(curSec),
+                          AppColors.textPrimary,
+                        ),
                       ),
                       Container(
                         width: 1,
                         height: 36,
                         color: AppColors.borderSubtle,
                       ),
-                      _buildMetricColumn(
-                        'Pace',
-                        '${_formatPace(curKm, curSec)}/km',
-                        AppColors.textPrimary,
+                      Expanded(
+                        child: _buildMetricColumn(
+                          'Pace',
+                          '${_formatPace(curKm, curSec)}/km',
+                          AppColors.textPrimary,
+                        ),
                       ),
                       Container(
                         width: 1,
                         height: 36,
                         color: AppColors.borderSubtle,
                       ),
-                      _buildMetricColumn(
-                        'Territory',
-                        '+$curTerr',
-                        AppColors.accent,
+                      Expanded(
+                        child: _buildMetricColumn(
+                          'Territory',
+                          '+$curTerr',
+                          AppColors.accent,
+                        ),
                       ),
                     ],
                   ),
@@ -567,9 +581,11 @@ class _SummarySheetState extends State<SummarySheet>
                                   ),
                                 ),
                                 SizedBox(width: AppSpacing.s10),
-                                Text(
-                                  'Coach analyzing run stats...',
-                                  style: AppText.bodySmall,
+                                Flexible(
+                                  child: Text(
+                                    'Coach analyzing run stats...',
+                                    style: AppText.bodySmall,
+                                  ),
                                 ),
                               ],
                             ),
@@ -586,13 +602,15 @@ class _SummarySheetState extends State<SummarySheet>
                                   size: 15,
                                 ),
                                 const SizedBox(width: AppSpacing.s6),
-                                Text(
-                                  'Coach debrief • ${insight?.moodTag.name.toLowerCase() ?? 'coach'}',
-                                  style: AppText.label.copyWith(
-                                    color: AppColors.accent,
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.4,
+                                Expanded(
+                                  child: Text(
+                                    'Coach debrief • ${insight?.moodTag.name.toLowerCase() ?? 'coach'}',
+                                    style: AppText.label.copyWith(
+                                      color: AppColors.accent,
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.4,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -741,22 +759,29 @@ class _SummarySheetState extends State<SummarySheet>
 
   Widget _buildMetricColumn(String label, String value, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: AppText.label.copyWith(
             color: AppColors.textMuted,
             fontSize: 9.5,
           ),
         ),
         const SizedBox(height: 3),
-        Text(
-          value,
-          style: AppText.statSmall.copyWith(
-            fontSize: 14,
-            color: color,
-            fontWeight: FontWeight.w700,
-            fontFeatures: const [FontFeature.tabularFigures()],
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            maxLines: 1,
+            style: AppText.statSmall.copyWith(
+              fontSize: 14,
+              color: color,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],
@@ -784,13 +809,18 @@ class _SummarySheetState extends State<SummarySheet>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Splits & pace',
-                style: AppText.labelSmall.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: Text(
+                  'Splits & pace',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.labelSmall.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
+              const SizedBox(width: AppSpacing.s8),
               Text(
                 'Avg ${_formatPace(widget.distanceKm, widget.durationSeconds)}/km',
                 style: AppText.labelSmall.copyWith(
@@ -812,9 +842,11 @@ class _SummarySheetState extends State<SummarySheet>
               child: Row(
                 children: [
                   SizedBox(
-                    width: 38,
+                    width: 46,
                     child: Text(
                       'Km ${split.kmIndex}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: AppText.labelSmall.copyWith(
                         color: AppColors.textSecondary,
                         fontWeight: FontWeight.w600,
@@ -874,12 +906,15 @@ class _SummarySheetState extends State<SummarySheet>
           Expanded(
             child: Text(
               'Saved locally • Synced to cloud',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: AppText.bodySmall.copyWith(
                 color: AppColors.textSecondary,
                 fontSize: 11,
               ),
             ),
           ),
+          const SizedBox(width: AppSpacing.s6),
           Text(
             'Verified',
             style: AppText.labelSmall.copyWith(
