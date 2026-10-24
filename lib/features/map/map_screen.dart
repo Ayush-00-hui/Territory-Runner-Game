@@ -88,6 +88,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   StreamSubscription<String>? _wsRunnerLeftSub;
   StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
   StreamSubscription<ConquestBroadcastEvent>? _wsBroadcastSub;
+  StreamSubscription<bool>? _wsConnectionSub;
 
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
@@ -295,6 +296,32 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
     });
 
+    _wsConnectionSub = _wsService.isConnectedStream.listen((isConnected) {
+      if (!mounted) return;
+      if (!isConnected) {
+        // Live features stay off while disconnected
+        setState(() {
+          _activeRivalRunners.clear();
+          _rivalBreadcrumbs.clear();
+        });
+      } else {
+        // Rival markers and attack alerts resume automatically on reconnect
+        if (_currentLocation != null) {
+          final viewportCells = GeohashUtils.computeViewportCells(
+            _currentLocation!,
+          );
+          _wsService.sendViewportSubscription(viewportCells, force: true);
+          _wsService.sendPresenceUpdate(
+            latitude: _currentLocation!.latitude,
+            longitude: _currentLocation!.longitude,
+            speed: _currentSpeedKmh / 3.6,
+            heading: 0,
+          );
+        }
+        _fetchVisibleRivals();
+      }
+    });
+
     _runRecoveryService.init();
 
     if (widget.isActive) {
@@ -345,6 +372,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _wsRunnerLeftSub?.cancel();
     _wsAlertSub?.cancel();
     _wsBroadcastSub?.cancel();
+    _wsConnectionSub?.cancel();
     _wsService.disconnect();
     _locationService.stopTracking();
     _keyboardFocusNode.dispose();

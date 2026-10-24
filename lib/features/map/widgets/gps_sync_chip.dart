@@ -73,19 +73,12 @@ class GpsSyncChip extends StatelessWidget {
           label: 'Status: GPS $gpsLabel, Cloud $syncDescription',
           child: GestureDetector(
             onTap: () {
-              AppMotion.selectionTick();
-              final detail = accuracyMeters != null
-                  ? 'GPS accuracy: ${accuracyMeters!.toStringAsFixed(1)} m • $syncDescription'
-                  : 'GPS acquiring fix • $syncDescription';
-              AppToast.show(
+              CombinedStatusIndicator.showDiagnosticSheet(
                 context,
-                detail,
-                duration: const Duration(seconds: 2),
+                accuracyMeters: accuracyMeters,
+                isGpsSearching: isGpsSearching,
+                syncQueue: queue,
               );
-              if (syncStatus == SyncStatus.offline ||
-                  syncStatus == SyncStatus.pending) {
-                queue.syncPendingRuns();
-              }
             },
             behavior: HitTestBehavior.opaque,
             child: Container(
