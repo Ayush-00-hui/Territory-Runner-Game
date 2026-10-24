@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../ui/ui.dart';
 
-/// Debug-only Design Gallery showcasing all Charcoal + Ember design tokens,
+/// Debug-only Design Gallery showcasing all Graphite + Bone + Moss design tokens,
 /// typography styles, and component states.
 class DesignGalleryScreen extends StatefulWidget {
   const DesignGalleryScreen({super.key});
@@ -16,6 +17,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
   int _selectedChipIndex = 0;
   bool _isButtonLoading = false;
   double _progressVal = 0.68;
+  int _bottomNavIndex = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -40,26 +42,26 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
         children: [
           // 1. Color Palette
           const SectionHeader(
-            title: 'Ink + Pacer Blue Palette',
+            title: 'Graphite + Bone + Moss Palette',
             overline: 'COLOR SYSTEM',
-            subtitle: 'Dark-only sporty, minimal & premium tokens',
+            subtitle: 'Calm, minimal, human-designed athletic tokens',
           ),
           const SizedBox(height: AppSpacing.s8),
           _buildColorGrid([
-            _ColorSwatch('bgDeep', AppColors.bgDeep, '#090B0F'),
-            _ColorSwatch('bgElevated', AppColors.bgElevated, '#0E1116'),
-            _ColorSwatch('surface', AppColors.surface, '#12151B'),
-            _ColorSwatch('surface2', AppColors.surface2, '#191D25'),
-            _ColorSwatch('border', AppColors.border, '#262B35'),
-            _ColorSwatch('accent (mine)', AppColors.accent, '#4C8DFF'),
-            _ColorSwatch('rival', AppColors.rival, '#FF7A59'),
-            _ColorSwatch('warning', AppColors.warning, '#F5B544'),
-            _ColorSwatch('error', AppColors.error, '#F2677A'),
-            _ColorSwatch('success', AppColors.success, '#4FD1A5'),
+            _ColorSwatch('bgDeep', AppColors.bgDeep, '#0D0E0C'),
+            _ColorSwatch('bgElevated', AppColors.bgElevated, '#11120F'),
+            _ColorSwatch('surface', AppColors.surface, '#141512'),
+            _ColorSwatch('surface2', AppColors.surface2, '#1B1C18'),
+            _ColorSwatch('border', AppColors.border, '#2A2B26'),
+            _ColorSwatch('accent (mine)', AppColors.accent, '#A3C586'),
+            _ColorSwatch('rival', AppColors.rival, '#86A5D3'),
+            _ColorSwatch('warning', AppColors.warning, '#D9A441'),
+            _ColorSwatch('error', AppColors.error, '#E0716B'),
+            _ColorSwatch('success', AppColors.success, '#A3C586'),
             _ColorSwatch('info', AppColors.info, '#94A3B8'),
-            _ColorSwatch('gold', AppColors.gold, '#D9B45B'),
-            _ColorSwatch('silver', AppColors.silver, '#B8BCC4'),
-            _ColorSwatch('bronze', AppColors.bronze, '#B98558'),
+            _ColorSwatch('gold', AppColors.gold, '#CDAE6A'),
+            _ColorSwatch('silver', AppColors.silver, '#B5B6B0'),
+            _ColorSwatch('bronze', AppColors.bronze, '#B0825A'),
           ]),
 
           const SizedBox(height: AppSpacing.s24),
@@ -212,7 +214,11 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                 isSelected: _selectedChipIndex == 2,
                 onTap: () => setState(() => _selectedChipIndex = 2),
               ),
-              const SyncChip(),
+              NeutralChip(label: 'Neutral chip', onTap: () {}),
+              const CombinedStatusIndicator(
+                isGpsSearching: false,
+                accuracyMeters: 4.8,
+              ),
             ],
           ),
 
@@ -397,6 +403,66 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                 AppToast.show(
                   context,
                   'Retrying GPS acquisition...',
+                  type: AppToastType.info,
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s24),
+
+          // 8. Territory Art & Hero Card
+          const SectionHeader(
+            title: 'Territory Art & Hero Card',
+            overline: 'OFFLINE VECTOR ART',
+            subtitle:
+                'Flat polygon silhouettes with contour motifs and count-up',
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          TerritoryHeroCard(
+            territories: const [],
+            totalAreaSqm: 142500,
+            weeklyGainedAreaSqm: 12400,
+            onStartRun: () {
+              AppToast.show(
+                context,
+                'Start run triggered from gallery',
+                type: AppToastType.info,
+              );
+            },
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          const TerritoryArt(
+            polygons: [
+              [
+                LatLng(37.7749, -122.4194),
+                LatLng(37.7799, -122.4194),
+                LatLng(37.7799, -122.4144),
+                LatLng(37.7749, -122.4144),
+              ],
+            ],
+            totalAreaSqm: 38200,
+            subtitle: 'Mission District Loop',
+            height: 180,
+          ),
+
+          const SizedBox(height: AppSpacing.s24),
+
+          // 9. Premium Bottom Navigation
+          const SectionHeader(
+            title: 'Premium Bottom Navigation',
+            overline: 'PRIMARY NAVIGATION',
+            subtitle: '5 destinations with prominent circular Run action',
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          ClipRRect(
+            borderRadius: AppRadius.br12,
+            child: PremiumBottomNav(
+              selectedIndex: _bottomNavIndex,
+              onTabSelected: (i) => setState(() => _bottomNavIndex = i),
+              onStartRun: () {
+                AppToast.show(
+                  context,
+                  'Run button tapped',
                   type: AppToastType.info,
                 );
               },

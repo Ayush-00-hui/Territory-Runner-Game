@@ -461,7 +461,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             ProfileOptionTile(
               icon: Icons.palette_rounded,
               title: 'Design System Gallery (Dev)',
-              subtitle: 'Inspect Ink + Pacer Blue tokens and UI components',
+              subtitle:
+                  'Inspect Graphite, Bone and Moss tokens and UI components',
               onTap: () {
                 AppMotion.selectionTick();
                 Navigator.of(context).push(

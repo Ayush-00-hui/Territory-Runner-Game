@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:latlong2/latlong.dart';
@@ -182,6 +184,28 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
         ? '${(totalArea / 1000000.0).toStringAsFixed(2)} km²'
         : '${totalArea.toStringAsFixed(0)} m²';
 
+    // Compute personal records from real runs only (Phase D4)
+    final hasRuns = rawTerritories.isNotEmpty;
+    final double longestRunKm = hasRuns
+        ? rawTerritories
+              .map((t) => _estimateDistanceKm(t.polygon))
+              .fold<double>(0.0, math.max)
+        : 0.0;
+    final double biggestCaptureSqm = hasRuns
+        ? rawTerritories.map((t) => t.areaSqMeters).fold<double>(0.0, math.max)
+        : 0.0;
+    final String biggestCaptureFormatted = hasRuns && biggestCaptureSqm > 0
+        ? (biggestCaptureSqm >= 10000
+              ? '${(biggestCaptureSqm / 1000000.0).toStringAsFixed(2)} km²'
+              : '${biggestCaptureSqm.toStringAsFixed(0)} m²')
+        : '--';
+    final String longestRunFormatted = hasRuns && longestRunKm > 0
+        ? '${longestRunKm.toStringAsFixed(2)} km'
+        : '--';
+    final String streakFormatted = profile.currentStreak > 0
+        ? '${profile.currentStreak}d'
+        : '--';
+
     final isNewestSort = _sortOption == HistorySortOption.newest;
     final groupedRuns = isNewestSort ? _groupByPeriod(territories) : null;
 
@@ -195,7 +219,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               AppSpacing.s16,
               AppSpacing.s8,
               AppSpacing.s16,
-              AppSpacing.s16,
+              AppSpacing.s12,
             ),
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.s16),
@@ -239,6 +263,83 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ),
+
+        // Personal records section (Phase D4)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.s16,
+              0,
+              AppSpacing.s16,
+              AppSpacing.s14,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SectionHeader(title: 'Personal records'),
+                const SizedBox(height: AppSpacing.s8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: AppSpacing.br16,
+                    border: Border.all(color: AppColors.borderSubtle),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildSummaryMetric(
+                          'Longest run',
+                          longestRunFormatted,
+                          AppColors.textPrimary,
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: AppColors.borderSubtle,
+                      ),
+                      Expanded(
+                        child: _buildSummaryMetric(
+                          'Biggest capture',
+                          biggestCaptureFormatted,
+                          AppColors.accent,
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: AppColors.borderSubtle,
+                      ),
+                      Expanded(
+                        child: _buildSummaryMetric(
+                          'Fastest km',
+                          '--',
+                          AppColors.textPrimary,
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 32,
+                        color: AppColors.borderSubtle,
+                      ),
+                      Expanded(
+                        child: _buildSummaryMetric(
+                          'Streak',
+                          streakFormatted,
+                          AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -358,10 +459,10 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   message: 'Try changing your filters or start a new run to claim territory.',
                   actionLabel: _timeFilter != HistoryFilter.all
                       ? 'Reset filters'
-                      : null,
+                      : 'Start a run',
                   onAction: _timeFilter != HistoryFilter.all
                       ? () => setState(() => _timeFilter = HistoryFilter.all)
-                      : null,
+                      : () => Navigator.pop(context),
                 ),
               ),
             ),

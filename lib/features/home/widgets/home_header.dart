@@ -3,16 +3,21 @@ import 'package:flutter/material.dart';
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
 
+/// Executive Athlete Home Header
+/// Features avatar with thin athletic level ring, greeting, callsign,
+/// and the unified CombinedStatusIndicator (GPS + Sync).
+/// Streak and faction are moved to Profile per H3.
 class HomeHeader extends StatelessWidget {
   final RunnerProfile profile;
+  final double? accuracyMeters;
+  final bool isGpsSearching;
 
-  const HomeHeader({super.key, required this.profile});
-
-  Color _factionColor(String faction) {
-    if (faction.contains('Solar')) return AppColors.warning;
-    if (faction.contains('Quantum')) return AppColors.info;
-    return AppColors.accent;
-  }
+  const HomeHeader({
+    super.key,
+    required this.profile,
+    this.accuracyMeters,
+    this.isGpsSearching = false,
+  });
 
   String _greeting() {
     final hour = DateTime.now().hour;
@@ -23,34 +28,41 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final factionColor = _factionColor(profile.faction);
     final callsign = profile.username.isNotEmpty ? profile.username : 'Runner';
+    final int nextLevelXp = profile.level * 250;
+    final double levelProgress = (profile.xp / nextLevelXp).clamp(0.05, 1.0);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Avatar circle with athletic initial
-        Container(
-          height: 48,
-          width: 48,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            shape: BoxShape.circle,
-            border: Border.all(color: AppColors.accent, width: 1.5),
-          ),
-          child: Center(
-            child: Text(
-              callsign.isNotEmpty ? callsign[0].toUpperCase() : 'R',
-              style: AppText.titleLarge.copyWith(
-                color: AppColors.accent,
-                fontWeight: FontWeight.w700,
+        // Avatar circle with thin athletic level progression ring (replaces Level chip)
+        ProgressRing(
+          progress: levelProgress,
+          size: 50,
+          strokeWidth: 2.5,
+          progressColor: AppColors.accent,
+          trackColor: AppColors.surface2,
+          center: Container(
+            height: 42,
+            width: 42,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.surface,
+            ),
+            child: Center(
+              child: Text(
+                callsign.isNotEmpty ? callsign[0].toUpperCase() : 'R',
+                style: AppText.titleMedium.copyWith(
+                  color: AppColors.accent,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
         ),
         const SizedBox(width: AppSpacing.s12),
 
-        // Greeting, Callsign and Faction / Level badges
+        // Greeting, Callsign, and Level indicator
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,91 +76,10 @@ class HomeHeader extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: AppSpacing.s4),
-              Wrap(
-                spacing: AppSpacing.s6,
-                runSpacing: AppSpacing.s2,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  // Level capsule
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface2,
-                      borderRadius: AppRadius.br8,
-                      border: Border.all(
-                        color: AppColors.borderSubtle,
-                        width: 1.0,
-                      ),
-                    ),
-                    child: Text(
-                      'Level ${profile.level}',
-                      style: AppText.labelSmall.copyWith(
-                        color: AppColors.accent,
-                        fontSize: 10,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                  ),
-                  // Faction tag
-                  if (profile.faction.isNotEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: factionColor.withValues(alpha: 0.12),
-                        borderRadius: AppRadius.br8,
-                        border: Border.all(
-                          color: factionColor.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Text(
-                        profile.faction,
-                        style: AppText.labelSmall.copyWith(
-                          color: factionColor,
-                          fontSize: 10,
-                          letterSpacing: 0.1,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(width: AppSpacing.s8),
-
-        // Streak badge with amber flame
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.s10,
-            vertical: AppSpacing.s6,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.surface2,
-            borderRadius: AppRadius.brFull,
-            border: Border.all(color: AppColors.borderSubtle, width: 1.0),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.local_fire_department_rounded,
-                color: AppColors.warning,
-                size: 16,
-              ),
-              const SizedBox(width: AppSpacing.s4),
+              const SizedBox(height: AppSpacing.s2),
               Text(
-                '${profile.currentStreak}',
-                style: AppText.labelLarge.copyWith(fontWeight: FontWeight.w700),
+                'Level ${profile.level}',
+                style: AppText.caption.copyWith(color: AppColors.textSecondary),
               ),
             ],
           ),
@@ -156,8 +87,11 @@ class HomeHeader extends StatelessWidget {
 
         const SizedBox(width: AppSpacing.s8),
 
-        // Live Sync status chip
-        const SyncChip(),
+        // Unified calm status indicator: combines GPS and Cloud Sync (dot + label, tap for details)
+        CombinedStatusIndicator(
+          accuracyMeters: accuracyMeters,
+          isGpsSearching: isGpsSearching,
+        ),
       ],
     );
   }

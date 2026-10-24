@@ -142,7 +142,7 @@ void main() {
             (w) =>
                 w is Semantics &&
                 w.properties.label ==
-                    'Run tracking inactive. Tap center play button to begin.',
+                    'Hold to finish. Disabled. Start a run first.',
           ),
           findsOneWidget,
         );
@@ -161,8 +161,7 @@ void main() {
             (w) =>
                 w is Semantics &&
                 w.properties.button == true &&
-                w.properties.label ==
-                    'Hold for 1.5 seconds to finish and submit run',
+                w.properties.label == 'Hold 1.4 seconds to finish run',
           ),
           findsOneWidget,
         );
@@ -207,13 +206,13 @@ void main() {
         findsOneWidget,
       );
 
-      // Seal shape button semantics
+      // Close loop button semantics
       expect(
         find.byWidgetPredicate(
           (w) =>
               w is Semantics &&
               w.properties.button == true &&
-              w.properties.label == 'Seal territory shape',
+              (w.properties.label?.contains('Close loop') ?? false),
         ),
         findsOneWidget,
       );

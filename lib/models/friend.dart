@@ -1,3 +1,5 @@
+import 'faction_standing.dart';
+
 class FriendUser {
   final String id;
   final String username;
@@ -21,7 +23,7 @@ class FriendUser {
     return FriendUser(
       id: json['id'] as String? ?? '',
       username: json['username'] as String? ?? 'Runner',
-      faction: json['faction'] as String? ?? 'Cyber Vanguard',
+      faction: FactionStanding.canonicalFaction(json['faction'] as String?),
       totalAreaSqm: (json['total_area_sqm'] as num?)?.toDouble() ?? 0.0,
       level: (json['level'] as num?)?.toInt() ?? 1,
       xp: (json['xp'] as num?)?.toInt() ?? 0,
@@ -68,8 +70,9 @@ class FriendRequestDetail {
       id: json['id'] as String? ?? '',
       requesterId: json['requester_id'] as String? ?? '',
       requesterName: json['requester_name'] as String? ?? 'Runner',
-      requesterFaction:
-          json['requester_faction'] as String? ?? 'Cyber Vanguard',
+      requesterFaction: FactionStanding.canonicalFaction(
+        json['requester_faction'] as String?,
+      ),
       addresseeId: json['addressee_id'] as String? ?? '',
       addresseeName: json['addressee_name'] as String? ?? 'Runner',
       status: json['status'] as String? ?? 'pending',

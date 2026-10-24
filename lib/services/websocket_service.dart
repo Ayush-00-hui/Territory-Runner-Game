@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -13,8 +14,10 @@ import 'firebase_service.dart';
 import 'privacy_zone_service.dart';
 import 'user_settings_service.dart';
 
-/// Real-Time WebSocket Service for live rival runner presence and territory alerts
-class WebSocketService {
+/// Real-Time WebSocket Service for live rival runner presence and territory alerts.
+/// Features resilient exponential backoff with jitter, zero unhandled exceptions,
+/// authentication-failure pausing, and offline/lifecycle-aware reconnection.
+class WebSocketService with WidgetsBindingObserver {
   static final WebSocketService _instance = WebSocketService._internal();
   factory WebSocketService() => _instance;
 
@@ -22,14 +25,22 @@ class WebSocketService {
   final ApiClient _apiClient;
   final PrivacyZoneService _privacyZoneService;
   final UserSettingsService _userSettingsService;
+  WebSocketChannel Function(Uri uri, {Iterable<String>? protocols})?
+  _channelFactory;
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
+  StreamSubscription? _authSub;
   Timer? _reconnectTimer;
   Timer? _heartbeatTimer;
+  Timer? _stableConnectionTimer;
 
   bool _isConnected = false;
+  bool _isConnecting = false;
   bool _isDisposed = false;
+  bool _isAuthBlocked = false;
+  bool _isOffline = false;
+  bool _isAppBackgrounded = false;
   int _reconnectAttempts = 0;
 
   DateTime? _lastPresenceSentTime;
@@ -60,7 +71,12 @@ class WebSocketService {
   Stream<ConquestBroadcastEvent> get broadcastStream =>
       _broadcastController.stream;
   Stream<bool> get isConnectedStream => _connectionStateController.stream;
+
   bool get isConnected => _isConnected;
+  bool get isConnecting => _isConnecting;
+  bool get isAuthBlocked => _isAuthBlocked;
+  bool get isOffline => _isOffline;
+  bool get isLiveAvailable => _isConnected;
   int get reconnectAttempts => _reconnectAttempts;
 
   WebSocketService._internal({
@@ -71,7 +87,9 @@ class WebSocketService {
   }) : _firebaseService = firebaseService ?? FirebaseService(),
        _apiClient = apiClient ?? ApiClient(),
        _privacyZoneService = privacyZoneService ?? PrivacyZoneService(),
-       _userSettingsService = userSettingsService ?? UserSettingsService();
+       _userSettingsService = userSettingsService ?? UserSettingsService() {
+    _initObservers();
+  }
 
   /// Visible for testing constructor
   @visibleForTesting
@@ -80,10 +98,43 @@ class WebSocketService {
     ApiClient? apiClient,
     PrivacyZoneService? privacyZoneService,
     UserSettingsService? userSettingsService,
+    WebSocketChannel Function(Uri uri, {Iterable<String>? protocols})?
+    channelFactory,
+    bool registerLifecycleObserver = true,
   }) : _firebaseService = firebaseService ?? FirebaseService(),
        _apiClient = apiClient ?? ApiClient(),
        _privacyZoneService = privacyZoneService ?? PrivacyZoneService(),
-       _userSettingsService = userSettingsService ?? UserSettingsService();
+       _userSettingsService = userSettingsService ?? UserSettingsService() {
+    _channelFactory = channelFactory;
+    if (registerLifecycleObserver) {
+      _initObservers();
+    }
+  }
+
+  @visibleForTesting
+  set channelFactory(
+    WebSocketChannel Function(Uri uri, {Iterable<String>? protocols})? factory,
+  ) {
+    _channelFactory = factory;
+  }
+
+  void _initObservers() {
+    try {
+      WidgetsBinding.instance.addObserver(this);
+    } catch (_) {
+      // In test environments WidgetsBinding may not be attached
+    }
+
+    try {
+      _authSub = _firebaseService.auth?.idTokenChanges().listen((user) {
+        if (user != null && _isAuthBlocked) {
+          onTokenRefreshed();
+        }
+      });
+    } catch (_) {
+      // Mock / non-Firebase environment
+    }
+  }
 
   /// Computes the WebSocket URI and subprotocols according to authentication mode.
   /// When authenticated with Firebase, ID token is sent via Sec-WebSocket-Protocol (`bearer`, `<token>`)
@@ -92,9 +143,11 @@ class WebSocketService {
   Future<({Uri uri, Iterable<String>? protocols})> buildConnectionParams({
     bool forceRefresh = false,
   }) async {
-    final httpBase = _apiClient.baseUrl;
+    final httpBase = _apiClient.baseUrl.trim();
     final wsScheme = httpBase.startsWith('https') ? 'wss' : 'ws';
-    final hostAndPort = httpBase.replaceFirst(RegExp(r'^https?://'), '');
+    final hostAndPort = httpBase
+        .replaceFirst(RegExp(r'^https?://'), '')
+        .replaceAll(RegExp(r'/+$'), '');
 
     String? token;
     final user = _firebaseService.currentUser;
@@ -122,65 +175,106 @@ class WebSocketService {
     }
   }
 
-  /// Establishes the real-time WebSocket connection to the Go backend
+  /// Establishes the real-time WebSocket connection to the Go backend.
+  /// Completely catches all async errors from connect, ready, stream, and sink.
   Future<void> connect() async {
-    if (_isConnected || _isDisposed) return;
+    if (_isConnected || _isConnecting || _isDisposed) return;
+    if (_isAuthBlocked) {
+      AppLogger.debug(
+        'WebSocket connect skipped: authentication blocked until token refresh.',
+        tag: 'WebSocketService',
+      );
+      return;
+    }
+    if (_isOffline) {
+      AppLogger.debug(
+        'WebSocket connect skipped: device is offline.',
+        tag: 'WebSocketService',
+      );
+      return;
+    }
+    if (_isAppBackgrounded) {
+      AppLogger.debug(
+        'WebSocket connect skipped: app is in background.',
+        tag: 'WebSocketService',
+      );
+      return;
+    }
 
+    _isConnecting = true;
     _reconnectTimer?.cancel();
-    final forceRefresh = _reconnectAttempts > 0;
+    _reconnectTimer = null;
+
+    final forceRefresh = _reconnectAttempts > 0 && !_isAuthBlocked;
     final params = await buildConnectionParams(forceRefresh: forceRefresh);
 
     try {
-      _channel = WebSocketChannel.connect(
-        params.uri,
-        protocols: params.protocols,
-      );
-      _isConnected = true;
-      _reconnectAttempts = 0;
-      _connectionStateController.add(true);
-      AppLogger.info(
-        'Connected to real-time hub: ${params.uri}',
-        tag: 'WebSocketService',
-      );
+      final channel = _channelFactory != null
+          ? _channelFactory!(params.uri, protocols: params.protocols)
+          : WebSocketChannel.connect(params.uri, protocols: params.protocols);
+      _channel = channel;
 
-      _startHeartbeat();
-
-      if (_lastSubscribedCells.isNotEmpty) {
-        sendViewportSubscription(_lastSubscribedCells);
-      }
-
-      _subscription = _channel!.stream.listen(
+      _subscription = channel.stream.listen(
         _onMessageReceived,
         onError: (err) {
-          AppLogger.warning('WebSocket error: $err', tag: 'WebSocketService');
-          _handleDisconnect();
+          _handleDisconnect(error: err);
         },
         onDone: () {
-          AppLogger.info(
-            'WebSocket connection closed by server',
-            tag: 'WebSocketService',
-          );
           _handleDisconnect();
         },
+        cancelOnError: true,
       );
+
+      // CRITICAL: Await channel.ready inside try/catch to ensure handshake succeeds
+      // and prevent channel.ready errors from escaping as unhandled Zone exceptions.
+      await channel.ready;
+
+      _onConnected(params.uri);
     } catch (e) {
-      AppLogger.warning(
-        'Failed to initiate WebSocket connection: $e',
-        tag: 'WebSocketService',
-      );
-      _handleDisconnect();
+      _handleDisconnect(error: e);
+    } finally {
+      _isConnecting = false;
+    }
+  }
+
+  void _onConnected(Uri uri) {
+    if (_isDisposed) {
+      disconnect();
+      return;
+    }
+
+    _isConnected = true;
+    _connectionStateController.add(true);
+    AppLogger.info('WebSocket connected: $uri', tag: 'WebSocketService');
+
+    _startHeartbeat();
+
+    // Start 30s timer for connection stabilization before resetting backoff
+    _stableConnectionTimer?.cancel();
+    _stableConnectionTimer = Timer(const Duration(seconds: 30), () {
+      if (_isConnected) {
+        _reconnectAttempts = 0;
+        AppLogger.debug(
+          'WebSocket connection stable for 30s. Backoff reset.',
+          tag: 'WebSocketService',
+        );
+      }
+    });
+
+    if (_lastSubscribedCells.isNotEmpty) {
+      sendViewportSubscription(_lastSubscribedCells, force: true);
     }
   }
 
   /// Sends a lightweight subscription message declaring the runner's visible viewport spatial cells.
-  void sendViewportSubscription(List<String> cells) {
-    if (listEquals(_lastSubscribedCells, cells)) return;
+  void sendViewportSubscription(List<String> cells, {bool force = false}) {
+    if (!force && listEquals(_lastSubscribedCells, cells)) return;
     _lastSubscribedCells = List.from(cells);
     if (!_isConnected || _channel == null || cells.isEmpty) return;
 
     try {
       final packet = {'type': 'viewport_subscribe', 'cells': cells};
-      _channel!.sink.add(jsonEncode(packet));
+      _channel?.sink.add(jsonEncode(packet));
     } catch (e) {
       AppLogger.warning(
         'Failed to send viewport subscription: $e',
@@ -197,7 +291,6 @@ class WebSocketService {
       switch (type) {
         case 'runner_presence':
           final event = RunnerPresenceEvent.fromJson(json);
-          // Don't echo self presence
           if (event.userId != _firebaseService.currentUserId) {
             _presenceController.add(event);
           }
@@ -232,9 +325,6 @@ class WebSocketService {
   }
 
   /// Sends periodic position updates to nearby peers or friends.
-  /// Suppresses updates if live_visibility is 'off', coordinate falls inside a privacy zone,
-  /// or when throttled by minPresenceInterval or stationary jitter.
-  /// Returns true if dispatched to the WebSocket sink, or false if suppressed or throttled.
   bool sendPresenceUpdate({
     required double latitude,
     required double longitude,
@@ -244,14 +334,12 @@ class WebSocketService {
   }) {
     if (!_isConnected || _channel == null) return false;
 
-    // 0. Client-side Live Visibility Consent Check (Defense-in-depth)
     if (_userSettingsService.liveVisibility == LiveVisibility.off) {
       return false;
     }
 
     final targetPoint = LatLng(latitude, longitude);
 
-    // 1. Client-Side Privacy Zone Suppression (Defense-in-depth)
     if (_privacyZoneService.isPointInPrivacyZone(targetPoint)) {
       AppLogger.debug(
         'Presence update suppressed: coordinate is within an active privacy exclusion zone',
@@ -262,7 +350,6 @@ class WebSocketService {
 
     final now = DateTime.now();
 
-    // 2. Frequency Throttling (unless forced)
     if (!force && _lastPresenceSentTime != null) {
       final elapsed = now.difference(_lastPresenceSentTime!);
       if (elapsed < minPresenceInterval) {
@@ -270,7 +357,6 @@ class WebSocketService {
       }
     }
 
-    // 3. Stationary Jitter Deduplication
     if (!force && _lastSentLat != null && _lastSentLng != null) {
       final distanceMoved = _distanceCalc.as(
         LengthUnit.Meter,
@@ -291,7 +377,7 @@ class WebSocketService {
     };
 
     try {
-      _channel!.sink.add(jsonEncode(packet));
+      _channel?.sink.add(jsonEncode(packet));
       _lastPresenceSentTime = now;
       _lastSentLat = latitude;
       _lastSentLng = longitude;
@@ -318,54 +404,222 @@ class WebSocketService {
     });
   }
 
-  void _handleDisconnect() {
+  void _handleDisconnect({Object? error}) {
     _isConnected = false;
     _connectionStateController.add(false);
+
+    _stableConnectionTimer?.cancel();
+    _stableConnectionTimer = null;
     _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
     _subscription?.cancel();
     _subscription = null;
+
+    try {
+      _channel?.sink.close();
+    } catch (_) {}
     _channel = null;
 
     if (_isDisposed) return;
 
-    // Exponential backoff with jitter (max 15s)
+    final formattedError = _cleanErrorString(error);
+
+    // 1. Check for Authentication Failure (401/403)
+    if (_isAuthError(error)) {
+      _isAuthBlocked = true;
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+      AppLogger.warning(
+        'WebSocket authentication failed (401/403). Retries paused until token refresh.',
+        tag: 'WebSocketService',
+      );
+      return;
+    }
+
+    // 2. Check for Offline condition
+    if (_isOfflineError(error) || _isOffline) {
+      _isOffline = true;
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+      AppLogger.info(
+        'WebSocket offline ($formattedError). Retries paused until connectivity returns.',
+        tag: 'WebSocketService',
+      );
+      return;
+    }
+
+    // 3. Check for App Background condition
+    if (_isAppBackgrounded) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+      AppLogger.info(
+        'WebSocket paused while app in background.',
+        tag: 'WebSocketService',
+      );
+      return;
+    }
+
+    // 4. Exponential backoff with jitter (2s doubling to 60s cap)
     _reconnectAttempts++;
     final delay = computeBackoffDelay(_reconnectAttempts);
 
-    AppLogger.debug(
-      'Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts)...',
+    AppLogger.info(
+      'WebSocket disconnected ($formattedError). Reconnecting in ${delay.inSeconds}s (attempt $_reconnectAttempts)...',
       tag: 'WebSocketService',
     );
+
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, connect);
   }
 
-  /// Calculates exponential backoff duration with random jitter up to 15 seconds.
+  /// Calculates exponential backoff duration with random jitter.
+  /// 2s doubling up to a 60s cap, plus 0-1000ms jitter.
   static Duration computeBackoffDelay(int attempts, {math.Random? random}) {
-    final backoffSec = math.min(15, math.pow(2, math.min(attempts, 4)).toInt());
+    if (attempts <= 0) return Duration.zero;
+    final expSec = 2 * math.pow(2, math.max(0, attempts - 1)).toInt();
+    final clampedSec = math.min(60, expSec);
     final jitterMs = (random ?? math.Random()).nextInt(1000);
-    return Duration(seconds: backoffSec, milliseconds: jitterMs);
+    return Duration(seconds: clampedSec, milliseconds: jitterMs);
+  }
+
+  /// Formats raw error for concise logging, cleaning internal Dart SDK fragment artifact.
+  static String _cleanErrorString(Object? error) {
+    if (error == null) return 'connection closed';
+    var str = error.toString();
+    // Clean up internal Dart SDK empty fragment artifact (e.g. "...runner#' was not upgraded")
+    str = str.replaceAll('#\' was not upgraded', '\' was not upgraded');
+    return str;
+  }
+
+  static bool _isAuthError(Object? error) {
+    if (error == null) return false;
+    final s = error.toString().toLowerCase();
+    return s.contains('401') ||
+        s.contains('403') ||
+        s.contains('unauthorized') ||
+        s.contains('forbidden') ||
+        s.contains('was not upgraded to websocket');
+  }
+
+  static bool _isOfflineError(Object? error) {
+    if (error == null) return false;
+    final s = error.toString().toLowerCase();
+    return s.contains('network is unreachable') ||
+        s.contains('no address associated with hostname') ||
+        s.contains('failed host lookup') ||
+        s.contains('network unreachable');
+  }
+
+  /// Called when device connectivity changes
+  void onConnectivityChanged(bool isOnline) {
+    if (_isOffline == !isOnline) return;
+    _isOffline = !isOnline;
+    AppLogger.info(
+      'WebSocket network state: ${isOnline ? "online" : "offline"}',
+      tag: 'WebSocketService',
+    );
+    if (isOnline &&
+        !_isConnected &&
+        !_isDisposed &&
+        !_isAuthBlocked &&
+        !_isAppBackgrounded) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+      connect();
+    }
+  }
+
+  /// Called when Firebase ID token is refreshed
+  void onTokenRefreshed() {
+    AppLogger.info(
+      'WebSocket auth token refreshed. Resuming retries.',
+      tag: 'WebSocketService',
+    );
+    _isAuthBlocked = false;
+    _reconnectAttempts = 0;
+    if (!_isConnected && !_isDisposed && !_isOffline && !_isAppBackgrounded) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+      connect();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    onAppLifecycleStateChanged(state);
+  }
+
+  @visibleForTesting
+  void onAppLifecycleStateChanged(AppLifecycleState state) {
+    final isBackground =
+        state == AppLifecycleState.paused || state == AppLifecycleState.hidden;
+    _isAppBackgrounded = isBackground;
+    if (state == AppLifecycleState.resumed) {
+      AppLogger.info(
+        'WebSocket app resumed to foreground.',
+        tag: 'WebSocketService',
+      );
+      if (!_isConnected && !_isDisposed && !_isAuthBlocked && !_isOffline) {
+        _reconnectTimer?.cancel();
+        _reconnectTimer = null;
+        connect();
+      }
+    }
   }
 
   @visibleForTesting
   void setMockChannel(WebSocketChannel channel) {
     _channel = channel;
     _isConnected = true;
+    _connectionStateController.add(true);
   }
+
+  @visibleForTesting
+  void setMockConnected(bool connected) {
+    _isConnected = connected;
+    _connectionStateController.add(connected);
+  }
+
+  @visibleForTesting
+  bool get isAppBackgrounded => _isAppBackgrounded;
+
+  @visibleForTesting
+  Timer? get reconnectTimer => _reconnectTimer;
+
+  @visibleForTesting
+  Timer? get stableConnectionTimer => _stableConnectionTimer;
+
+  @visibleForTesting
+  Timer? get heartbeatTimer => _heartbeatTimer;
+
+  @visibleForTesting
+  bool get isDisposed => _isDisposed;
 
   /// Gracefully closes connection
   void disconnect() {
     _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _stableConnectionTimer?.cancel();
+    _stableConnectionTimer = null;
     _subscription?.cancel();
-    _channel?.sink.close();
+    _subscription = null;
+    try {
+      _channel?.sink.close();
+    } catch (_) {}
     _channel = null;
     _isConnected = false;
+    _isConnecting = false;
     _connectionStateController.add(false);
   }
 
   void dispose() {
     _isDisposed = true;
+    try {
+      WidgetsBinding.instance.removeObserver(this);
+    } catch (_) {}
+    _authSub?.cancel();
     disconnect();
     _presenceController.close();
     _runnerLeftController.close();

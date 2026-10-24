@@ -256,8 +256,8 @@ class ApiClient {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return RunnerProfile(
         id: data['id'] as String? ?? _firebaseService.currentUserId,
-        username: data['username'] as String? ?? 'CyberRunner',
-        faction: data['faction'] as String? ?? 'Cyber Vanguard',
+        username: data['username'] as String? ?? 'Runner',
+        faction: FactionStanding.canonicalFaction(data['faction'] as String?),
         xp: (data['xp'] as num?)?.toInt() ?? 0,
         level: (data['level'] as num?)?.toInt() ?? 1,
         totalHexesClaimed: (data['total_runs'] as num?)?.toInt() ?? 0,

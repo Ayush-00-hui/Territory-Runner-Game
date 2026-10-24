@@ -49,28 +49,32 @@ class MapLayers {
         if (isMapboxDark) {
           return tileWidget;
         }
+        // Luminance-based dark map pipeline:
+        // 1. Grayscale via luma: (0.2126 R + 0.7152 G + 0.0722 B)
+        // 2. Invert & contrast compression with chromatic water separation
+        // 3. Warm graphite tint: land ~#161618, water ~#111114, roads ~#0A090C, labels ~#7E8079
         return ColorFiltered(
           colorFilter: const ColorFilter.matrix(<double>[
-            -0.85,
-            0,
-            0,
-            0,
-            220,
-            0,
-            -0.85,
-            0,
-            0,
-            220,
-            0,
-            0,
-            -0.85,
-            0,
-            220,
-            0,
-            0,
-            0,
+            0.2884,
+            -0.4065,
+            -0.4503,
+            0.0,
+            155.0,
+            0.3002,
+            -0.4180,
+            -0.4630,
+            0.0,
+            158.0,
+            0.2566,
+            -0.3899,
+            -0.4019,
+            0.0,
+            149.0,
+            0.0,
+            0.0,
+            0.0,
             1.0,
-            0,
+            0.0,
           ]),
           child: tileWidget,
         );

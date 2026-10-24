@@ -84,12 +84,15 @@ void main() {
         expect(find.text('K'), findsOneWidget); // Avatar initial
 
         // Verify level and faction badges
-        expect(find.text('Level 5 athlete'), findsOneWidget);
+        expect(find.text('Level 5'), findsOneWidget);
         expect(find.text('Cyber Vanguard'), findsOneWidget);
 
         // Verify streak counter
         expect(find.text('12'), findsOneWidget);
-        expect(find.byIcon(Icons.local_fire_department), findsOneWidget);
+        expect(
+          find.byIcon(Icons.local_fire_department_outlined),
+          findsOneWidget,
+        );
 
         // Verify Tier progress text
         expect(find.text('Tier progression'), findsOneWidget);

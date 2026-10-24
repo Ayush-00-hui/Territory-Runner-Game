@@ -264,7 +264,23 @@ class _MainScreenState extends State<MainScreen> {
               : const SizedBox.shrink(),
         ],
       ),
-      bottomNavigationBar: _buildPremiumBottomNav(context),
+      bottomNavigationBar: ValueListenableBuilder<bool>(
+        valueListenable: MapScreenFeature.isRunActiveNotifier,
+        builder: (context, isRunActive, _) {
+          return AnimatedSlide(
+            offset: isRunActive ? const Offset(0, 1.2) : Offset.zero,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: AnimatedOpacity(
+              opacity: isRunActive ? 0.0 : 1.0,
+              duration: const Duration(milliseconds: 180),
+              child: isRunActive
+                  ? const SizedBox(height: 0)
+                  : _buildPremiumBottomNav(context),
+            ),
+          );
+        },
+      ),
     );
   }
 

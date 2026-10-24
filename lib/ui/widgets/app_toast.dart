@@ -42,6 +42,13 @@ class AppToast extends StatelessWidget {
     final messenger = messengerKey.currentState;
     if (messenger == null) return;
 
+    // Performance budget: <= 3s without action, <= 4s with action
+    final effectiveDuration = duration.inSeconds > 4
+        ? const Duration(seconds: 3)
+        : (duration.inSeconds > 3 && onAction == null
+              ? const Duration(seconds: 3)
+              : duration);
+
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
@@ -53,7 +60,7 @@ class AppToast extends StatelessWidget {
           vertical: AppSpacing.s12,
         ),
         padding: EdgeInsets.zero,
-        duration: duration,
+        duration: effectiveDuration,
         content: AppToast(
           message: message,
           icon: icon,
@@ -80,6 +87,13 @@ class AppToast extends StatelessWidget {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
 
+    // Performance budget: <= 3s without action, <= 4s with action
+    final effectiveDuration = duration.inSeconds > 4
+        ? const Duration(seconds: 3)
+        : (duration.inSeconds > 3 && onAction == null
+              ? const Duration(seconds: 3)
+              : duration);
+
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
@@ -91,7 +105,7 @@ class AppToast extends StatelessWidget {
           vertical: AppSpacing.s12,
         ),
         padding: EdgeInsets.zero,
-        duration: duration,
+        duration: effectiveDuration,
         content: AppToast(
           message: message,
           icon: icon,

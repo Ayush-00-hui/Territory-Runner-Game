@@ -54,6 +54,11 @@ import 'notifiers/run_telemetry_notifier.dart';
 class MapScreenFeature extends StatefulWidget {
   final bool isActive;
 
+  /// Global notifier indicating whether a run is actively in progress
+  static final ValueNotifier<bool> isRunActiveNotifier = ValueNotifier<bool>(
+    false,
+  );
+
   const MapScreenFeature({super.key, this.isActive = true});
 
   @override
@@ -84,6 +89,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   StreamSubscription<String>? _wsRunnerLeftSub;
   StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
   StreamSubscription<ConquestBroadcastEvent>? _wsBroadcastSub;
+  StreamSubscription<bool>? _wsConnectionSub;
 
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<BoxEvent>? _territorySub;
@@ -291,6 +297,32 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
     });
 
+    _wsConnectionSub = _wsService.isConnectedStream.listen((isConnected) {
+      if (!mounted) return;
+      if (!isConnected) {
+        // Live features stay off while disconnected
+        setState(() {
+          _activeRivalRunners.clear();
+          _rivalBreadcrumbs.clear();
+        });
+      } else {
+        // Rival markers and attack alerts resume automatically on reconnect
+        if (_currentLocation != null) {
+          final viewportCells = GeohashUtils.computeViewportCells(
+            _currentLocation!,
+          );
+          _wsService.sendViewportSubscription(viewportCells, force: true);
+          _wsService.sendPresenceUpdate(
+            latitude: _currentLocation!.latitude,
+            longitude: _currentLocation!.longitude,
+            speed: _currentSpeedKmh / 3.6,
+            heading: 0,
+          );
+        }
+        _fetchVisibleRivals();
+      }
+    });
+
     _runRecoveryService.init();
 
     if (widget.isActive) {
@@ -341,6 +373,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _wsRunnerLeftSub?.cancel();
     _wsAlertSub?.cancel();
     _wsBroadcastSub?.cancel();
+    _wsConnectionSub?.cancel();
     _wsService.disconnect();
     _locationService.stopTracking();
     _keyboardFocusNode.dispose();
@@ -348,6 +381,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     _liveLocationNotifier.dispose();
     _runPathUpdateNotifier.dispose();
     _hudHeightNotifier.dispose();
+    MapScreenFeature.isRunActiveNotifier.value = false;
     super.dispose();
   }
 
@@ -373,7 +407,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
         icon: Icons.error_rounded,
         type: AppToastType.error,
         duration: const Duration(seconds: 8),
-        actionLabel: 'VIEW RUN',
+        actionLabel: 'View run',
         onAction: () {
           SummarySheet.show(
             context: context,
@@ -608,6 +642,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   void _resumeRun(ActiveRunSnapshot snapshot) {
     setState(() {
       _isRunActive = true;
+      MapScreenFeature.isRunActiveNotifier.value = true;
       _runCoordinates.clear();
       _runCoordinates.addAll(snapshot.coordinates);
       _recentPositions.clear();
@@ -1025,6 +1060,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
       setState(() {
         _isRunActive = true;
+        MapScreenFeature.isRunActiveNotifier.value = true;
         _showGoCue = true;
         _territoriesClaimedThisRun = 0;
         _accumulatedRunPreviewArea = 0.0;
@@ -1063,6 +1099,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       _refreshTerritoryCache();
       setState(() {
         _isRunActive = false;
+        MapScreenFeature.isRunActiveNotifier.value = false;
         _isAutoPaused = false;
         _lastShownRejectionReason = null;
         _highlightedTerritoryId = null;
@@ -1419,301 +1456,334 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     final String athleteName = profile.username.isNotEmpty
         ? profile.username
         : 'Runner';
-    return KeyboardListener(
-      focusNode: _keyboardFocusNode,
-      autofocus: true,
-      onKeyEvent: _handleKeyEvent,
-      child: Scaffold(
-        backgroundColor: AppColors.bgDeep,
-        body: Stack(
-          fit: StackFit.expand,
-          children: [
-            // 1. The Interactive Fullscreen Map wrapped in RepaintBoundary
-            _currentLocation == null
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.accent),
-                  )
-                : RepaintBoundary(
-                    child: FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        initialCenter: _currentLocation!,
-                        initialZoom: 17.0,
-                        backgroundColor: AppColors.bgDeep,
-                        onTap: (tapPosition, point) => _inspectSectorAt(point),
-                        interactionOptions: const InteractionOptions(
-                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                        ),
-                      ),
-                      children: [
-                        MapLayers.buildTileLayer(),
-                        ValueListenableBuilder<List<Territory>>(
-                          valueListenable: _territoriesNotifier,
-                          builder: (context, territories, _) =>
-                              MapLayers.buildPolygonLayer(
-                                territories,
-                                highlightedTerritoryId: _highlightedTerritoryId,
-                              ),
-                        ),
-                        ValueListenableBuilder<List<Territory>>(
-                          valueListenable: _territoriesNotifier,
-                          builder: (context, territories, _) =>
-                              MapLayers.buildTerritoryBadgesLayer(territories),
-                        ),
-                        ValueListenableBuilder<int>(
-                          valueListenable: _runPathUpdateNotifier,
-                          builder: (context, _, child) =>
-                              MapLayers.buildPolylineLayer(
-                                isRunActive: _isRunActive,
-                                runCoordinates: _runCoordinates,
-                                currentEnclosurePath:
-                                    _polygonEngine.currentPath,
-                                suggestedRouteCoordinates:
-                                    _activeSuggestedRoute?.polyline,
-                                rivalBreadcrumbs: _rivalBreadcrumbs,
-                                activeRivalRunners: _activeRivalRunners,
-                              ),
-                        ),
-                        ValueListenableBuilder<LatLng?>(
-                          valueListenable: _liveLocationNotifier,
-                          builder: (context, loc, child) =>
-                              MapLayers.buildMarkerLayer(
-                                currentLocation: loc ?? _currentLocation,
-                                activeRivalRunners: _activeRivalRunners,
-                              ),
-                        ),
-                        if (AppConstants.tileAttribution.isNotEmpty)
-                          RichAttributionWidget(
-                            attributions: [
-                              TextSourceAttribution(
-                                AppConstants.tileAttribution,
-                                prependCopyright: false,
-                              ),
-                            ],
+    return PopScope(
+      canPop: !_isRunActive,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _showExitRunConfirmation();
+      },
+      child: KeyboardListener(
+        focusNode: _keyboardFocusNode,
+        autofocus: true,
+        onKeyEvent: _handleKeyEvent,
+        child: Scaffold(
+          backgroundColor: AppColors.bgDeep,
+          body: Stack(
+            fit: StackFit.expand,
+            children: [
+              // 1. The Interactive Fullscreen Map wrapped in RepaintBoundary
+              _currentLocation == null
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    )
+                  : RepaintBoundary(
+                      child: FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: _currentLocation!,
+                          initialZoom: 17.0,
+                          backgroundColor: AppColors.bgDeep,
+                          onTap: (tapPosition, point) =>
+                              _inspectSectorAt(point),
+                          interactionOptions: const InteractionOptions(
+                            flags:
+                                InteractiveFlag.all & ~InteractiveFlag.rotate,
                           ),
-                      ],
-                    ),
-                  ),
-            // 2. Minimal Athletic Top Bar: Avatar (opens Profile) + Faction chip (left), GpsSyncChip (right)
-            Positioned(
-              top: pad.top + 10,
-              left: 16,
-              right: 16,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Semantics(
-                        button: true,
-                        label:
-                            'Runner profile for $athleteName. Tap to view profile.',
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            AppMotion.selectionTick();
-                            Navigator.push(
-                              context,
-                              AppMotion.pageRoute(
-                                builder: (_) => const ProfilePage(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            constraints: const BoxConstraints(
-                              minWidth: 48,
-                              minHeight: 48,
+                        ),
+                        children: [
+                          MapLayers.buildTileLayer(),
+                          ValueListenableBuilder<List<Territory>>(
+                            valueListenable: _territoriesNotifier,
+                            builder: (context, territories, _) =>
+                                MapLayers.buildPolygonLayer(
+                                  territories,
+                                  highlightedTerritoryId:
+                                      _highlightedTerritoryId,
+                                ),
+                          ),
+                          ValueListenableBuilder<List<Territory>>(
+                            valueListenable: _territoriesNotifier,
+                            builder: (context, territories, _) =>
+                                MapLayers.buildTerritoryBadgesLayer(
+                                  territories,
+                                ),
+                          ),
+                          ValueListenableBuilder<int>(
+                            valueListenable: _runPathUpdateNotifier,
+                            builder: (context, _, child) =>
+                                MapLayers.buildPolylineLayer(
+                                  isRunActive: _isRunActive,
+                                  runCoordinates: _runCoordinates,
+                                  currentEnclosurePath:
+                                      _polygonEngine.currentPath,
+                                  suggestedRouteCoordinates:
+                                      _activeSuggestedRoute?.polyline,
+                                  rivalBreadcrumbs: _rivalBreadcrumbs,
+                                  activeRivalRunners: _activeRivalRunners,
+                                ),
+                          ),
+                          ValueListenableBuilder<LatLng?>(
+                            valueListenable: _liveLocationNotifier,
+                            builder: (context, loc, child) =>
+                                MapLayers.buildMarkerLayer(
+                                  currentLocation: loc ?? _currentLocation,
+                                  activeRivalRunners: _activeRivalRunners,
+                                ),
+                          ),
+                          if (AppConstants.tileAttribution.isNotEmpty)
+                            RichAttributionWidget(
+                              attributions: [
+                                TextSourceAttribution(
+                                  AppConstants.tileAttribution,
+                                  prependCopyright: false,
+                                ),
+                              ],
                             ),
-                            alignment: Alignment.center,
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: AppColors.surfaceGlass,
-                              child: Text(
-                                athleteName.isNotEmpty
-                                    ? athleteName[0].toUpperCase()
-                                    : 'R',
-                                style: AppText.headingSmall.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
+                        ],
+                      ),
+                    ),
+              // 2. Minimal Athletic Top Bar: Avatar (opens Profile) + Faction chip (left), GpsSyncChip (right)
+              Positioned(
+                top: pad.top + 10,
+                left: 16,
+                right: 16,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Semantics(
+                          button: true,
+                          label:
+                              'Runner profile for $athleteName. Tap to view profile.',
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              AppMotion.selectionTick();
+                              Navigator.push(
+                                context,
+                                AppMotion.pageRoute(
+                                  builder: (_) => const ProfilePage(),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minWidth: 48,
+                                minHeight: 48,
+                              ),
+                              alignment: Alignment.center,
+                              child: CircleAvatar(
+                                radius: 20,
+                                backgroundColor: AppColors.surfaceGlass,
+                                child: Text(
+                                  athleteName.isNotEmpty
+                                      ? athleteName[0].toUpperCase()
+                                      : 'R',
+                                  style: AppText.headingSmall.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      if (profile.faction.isNotEmpty) ...[
-                        const SizedBox(width: AppSpacing.s8),
-                        Semantics(
-                          label: 'Faction: ${profile.faction}',
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.s8,
-                              vertical: AppSpacing.s4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceGlass,
-                              borderRadius: AppRadius.brFull,
-                              border: Border.all(
-                                color: AppColors.borderSubtle,
-                                width: 1.0,
-                              ),
-                            ),
-                            child: Text(
-                              profile.faction,
-                              style: AppText.labelSmall.copyWith(
-                                color: AppColors.accent,
-                                fontSize: 10,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
-                    ],
-                  ),
-                  GpsSyncChip(
-                    accuracyMeters: _satelliteAccuracyMeters,
-                    isGpsSearching: _currentLocation == null,
-                  ),
-                ],
+                    ),
+                    GpsSyncChip(
+                      accuracyMeters: _satelliteAccuracyMeters,
+                      isGpsSearching: _currentLocation == null,
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            // 3. Ergonomic Floating Controls (Dynamically anchored above measured HUD height)
-            ValueListenableBuilder<bool>(
-              valueListenable: _appPrefs.leftHandedModeNotifier,
-              builder: (context, isLeftHanded, _) {
-                return ValueListenableBuilder<double>(
-                  valueListenable: _hudHeightNotifier,
-                  builder: (context, hudHeight, _) {
-                    final bottomOffset = pad.bottom + 12 + hudHeight + 12;
+              // 3. Ergonomic Floating Controls (Dynamically anchored above measured HUD height)
+              ValueListenableBuilder<bool>(
+                valueListenable: _appPrefs.leftHandedModeNotifier,
+                builder: (context, isLeftHanded, _) {
+                  return ValueListenableBuilder<double>(
+                    valueListenable: _hudHeightNotifier,
+                    builder: (context, hudHeight, _) {
+                      final bottomOffset = pad.bottom + 12 + hudHeight + 12;
 
-                    return Stack(
-                      children: [
-                        // Thumb Controls Rail (Tools, Layers, Recenter)
-                        Positioned(
-                          left: isLeftHanded ? 16 : null,
-                          right: isLeftHanded ? null : 16,
-                          bottom: bottomOffset,
-                          child: MapControlsRail(
-                            isCameraLocked: _isCameraFollowLocked,
-                            onOpenTools: _openToolsSheet,
-                            onOpenLayers: _openLayersSheet,
-                            onRecenter: _onRecenterTapped,
+                      return Stack(
+                        children: [
+                          // Thumb Controls Rail (Tools, Layers, Recenter)
+                          Positioned(
+                            left: isLeftHanded ? 16 : null,
+                            right: isLeftHanded ? null : 16,
+                            bottom: bottomOffset,
+                            child: MapControlsRail(
+                              isCameraLocked: _isCameraFollowLocked,
+                              onOpenTools: _openToolsSheet,
+                              onOpenLayers: _openLayersSheet,
+                              onRecenter: _onRecenterTapped,
+                            ),
                           ),
-                        ),
 
-                        // Isolated Safety SOS Shield Button (Mirrored away from thumb rail)
-                        Positioned(
-                          left: isLeftHanded ? null : 16,
-                          right: isLeftHanded ? 16 : null,
-                          bottom: bottomOffset,
-                          child: SosShieldButton(
-                            onTriggerSos: () {
-                              showSosBeaconSheet(context, _currentLocation);
-                            },
+                          // Isolated Safety SOS Shield Button (Mirrored away from thumb rail)
+                          Positioned(
+                            left: isLeftHanded ? null : 16,
+                            right: isLeftHanded ? 16 : null,
+                            bottom: bottomOffset,
+                            child: SosShieldButton(
+                              onTriggerSos: () {
+                                showSosBeaconSheet(context, _currentLocation);
+                              },
+                            ),
                           ),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-
-            // 4. Strava-Grade Live Telemetry HUD Obsidian Glass Card
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: pad.bottom + 12,
-              child: MeasureSize(
-                onChange: (size) {
-                  if (_hudHeightNotifier.value != size.height) {
-                    _hudHeightNotifier.value = size.height;
-                  }
+                        ],
+                      );
+                    },
+                  );
                 },
-                child: ValueListenableBuilder<RunTelemetry>(
-                  valueListenable: _telemetryNotifier,
-                  builder: (context, telemetry, _) {
-                    return RunHud(
-                      isRunActive: _isRunActive,
-                      isSearchingGps: _currentLocation == null,
-                      isAutoPaused: telemetry.isAutoPaused,
-                      distanceKm: telemetry.distanceKm,
-                      elapsedSeconds: telemetry.elapsedSeconds,
-                      movingSeconds: telemetry.movingSeconds,
-                      splitPace: telemetry.splitPace,
-                      currentSpeedKmh: telemetry.currentSpeedKmh,
-                      satelliteAccuracyMeters:
-                          telemetry.satelliteAccuracyMeters,
-                      territoriesClaimed: telemetry.territoriesClaimed,
-                      distanceToClosureMeters:
-                          telemetry.distanceToClosureMeters,
-                      proximityToClosure: telemetry.proximityToClosure,
-                      targetPace:
-                          _locationService.pacerMode != VirtualPacerMode.none
-                          ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
-                          : null,
-                      runGoal: telemetry.activeGoal ?? _activeGoal,
-                      currentAreaSqm: telemetry.currentAreaSqm,
-                      onOpenGoalSelector: _openGoalSelector,
-                      isBatterySaverActive:
-                          _batterySaverService.isBatterySaverEnabled,
-                      onToggleAmoledSaver: () {
-                        AppMotion.mediumTick();
-                        _batterySaverService.setAmoledHudActive(true);
-                      },
-                      onToggleRun: _toggleRun,
-                      onSealShape: _sealCurrentShape,
-                      onFinishRun: () {
-                        if (_isRunActive) {
-                          _toggleRun();
-                        }
-                      },
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // 5. Non-blocking Go Cue (<= 400 ms)
-            if (_showGoCue)
-              Positioned.fill(
-                child: RunGoCue(
-                  onDismissed: () {
-                    if (mounted) setState(() => _showGoCue = false);
-                  },
-                ),
               ),
 
-            // 6. AMOLED Pure Black Low-Power Screen Overlay (when active)
-            ValueListenableBuilder<bool>(
-              valueListenable: _batterySaverService.isAmoledHudActiveNotifier,
-              builder: (context, isAmoledActive, _) {
-                if (!isAmoledActive || !_isRunActive) {
-                  return const SizedBox.shrink();
-                }
-                return ValueListenableBuilder<RunTelemetry>(
-                  valueListenable: _telemetryNotifier,
-                  builder: (context, telemetry, _) {
-                    return AmoledBatterySaverOverlay(
-                      distanceKm: telemetry.distanceKm,
-                      elapsedSeconds: telemetry.elapsedSeconds,
-                      splitPace: telemetry.splitPace,
-                      currentSpeedKmh: telemetry.currentSpeedKmh,
-                      runGoal: telemetry.activeGoal ?? _activeGoal,
-                      onWake: () =>
-                          _batterySaverService.setAmoledHudActive(false),
-                    );
+              // 4. Strava-Grade Live Telemetry HUD Obsidian Glass Card
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: pad.bottom + 12,
+                child: MeasureSize(
+                  onChange: (size) {
+                    if (_hudHeightNotifier.value != size.height) {
+                      _hudHeightNotifier.value = size.height;
+                    }
                   },
-                );
-              },
-            ),
-          ],
+                  child: ValueListenableBuilder<RunTelemetry>(
+                    valueListenable: _telemetryNotifier,
+                    builder: (context, telemetry, _) {
+                      return RunHud(
+                        isRunActive: _isRunActive,
+                        isSearchingGps: _currentLocation == null,
+                        isAutoPaused: telemetry.isAutoPaused,
+                        distanceKm: telemetry.distanceKm,
+                        elapsedSeconds: telemetry.elapsedSeconds,
+                        movingSeconds: telemetry.movingSeconds,
+                        splitPace: telemetry.splitPace,
+                        currentSpeedKmh: telemetry.currentSpeedKmh,
+                        satelliteAccuracyMeters:
+                            telemetry.satelliteAccuracyMeters,
+                        territoriesClaimed: telemetry.territoriesClaimed,
+                        distanceToClosureMeters:
+                            telemetry.distanceToClosureMeters,
+                        proximityToClosure: telemetry.proximityToClosure,
+                        targetPace:
+                            _locationService.pacerMode != VirtualPacerMode.none
+                            ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+                            : null,
+                        runGoal: telemetry.activeGoal ?? _activeGoal,
+                        currentAreaSqm: telemetry.currentAreaSqm,
+                        onOpenGoalSelector: _openGoalSelector,
+                        isBatterySaverActive:
+                            _batterySaverService.isBatterySaverEnabled,
+                        onToggleAmoledSaver: () {
+                          AppMotion.mediumTick();
+                          _batterySaverService.setAmoledHudActive(true);
+                        },
+                        onToggleRun: _toggleRun,
+                        onSealShape: _sealCurrentShape,
+                        onFinishRun: () {
+                          if (_isRunActive) {
+                            _toggleRun();
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              // 5. Non-blocking Go Cue (<= 400 ms)
+              if (_showGoCue)
+                Positioned.fill(
+                  child: RunGoCue(
+                    onDismissed: () {
+                      if (mounted) setState(() => _showGoCue = false);
+                    },
+                  ),
+                ),
+
+              // 6. AMOLED Pure Black Low-Power Screen Overlay (when active)
+              ValueListenableBuilder<bool>(
+                valueListenable: _batterySaverService.isAmoledHudActiveNotifier,
+                builder: (context, isAmoledActive, _) {
+                  if (!isAmoledActive || !_isRunActive) {
+                    return const SizedBox.shrink();
+                  }
+                  return ValueListenableBuilder<RunTelemetry>(
+                    valueListenable: _telemetryNotifier,
+                    builder: (context, telemetry, _) {
+                      return AmoledBatterySaverOverlay(
+                        distanceKm: telemetry.distanceKm,
+                        elapsedSeconds: telemetry.elapsedSeconds,
+                        splitPace: telemetry.splitPace,
+                        currentSpeedKmh: telemetry.currentSpeedKmh,
+                        runGoal: telemetry.activeGoal ?? _activeGoal,
+                        onWake: () =>
+                            _batterySaverService.setAmoledHudActive(false),
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _showExitRunConfirmation() async {
+    AppMotion.lightTick();
+    final bool? shouldExit = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.br24,
+          side: const BorderSide(color: AppColors.borderSubtle, width: 1.0),
+        ),
+        title: Text(
+          'Pause or keep running?',
+          style: AppText.titleMedium.copyWith(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'Your run is currently active. Do you want to pause your run and exit, or keep running?',
+          style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(
+          AppSpacing.s16,
+          0,
+          AppSpacing.s16,
+          AppSpacing.s16,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Pause run',
+              style: AppText.labelMedium.copyWith(color: AppColors.textMuted),
+            ),
+          ),
+          PrimaryButton(
+            label: 'Keep running',
+            icon: Icons.directions_run_rounded,
+            onPressed: () => Navigator.of(ctx).pop(false),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldExit == true && mounted) {
+      if (_isRunActive) {
+        _toggleRun();
+      }
+    }
   }
 
   void _defendWeakestTerritory() {

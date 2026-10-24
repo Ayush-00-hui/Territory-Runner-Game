@@ -6,7 +6,6 @@ import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
 import '../../services/sync_queue.dart';
 import '../../ui/ui.dart';
-import 'widgets/gps_status_chip.dart';
 import 'widgets/home_header.dart';
 import 'widgets/offline_sync_banner.dart';
 import 'widgets/quick_launch_hero.dart';
@@ -21,14 +20,14 @@ class HomeScreen extends StatelessWidget {
 
   const HomeScreen({super.key, this.onStartRun, this.isActive = true});
 
-  Widget _buildSkeleton(BuildContext context, double topPad) {
+  Widget _buildSkeleton(BuildContext context, double topPad, double bottomPad) {
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(
         AppSpacing.s16,
         topPad + AppSpacing.s12,
         AppSpacing.s16,
-        AppSpacing.s32,
+        bottomPad,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,17 +52,17 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
               SkeletonBox(
-                width: 48,
+                width: 64,
                 height: 28,
                 borderRadius: AppRadius.brFull,
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.s12),
-          SkeletonBox(width: 130, height: 32, borderRadius: AppRadius.brFull),
-          const SizedBox(height: AppSpacing.s12),
-          SkeletonBox(height: 190, borderRadius: AppRadius.br24),
           const SizedBox(height: AppSpacing.s20),
+          SkeletonBox(height: 180, borderRadius: AppRadius.br24),
+          const SizedBox(height: AppSpacing.s24),
+          SkeletonBox(height: 24, width: 140),
+          const SizedBox(height: AppSpacing.s12),
           SkeletonBox(height: 150, borderRadius: AppRadius.br16),
           const SizedBox(height: AppSpacing.s24),
           SkeletonBox(height: 72, borderRadius: AppRadius.br16),
@@ -76,13 +75,16 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final territoryService = TerritoryService();
     final topPad = MediaQuery.paddingOf(context).top;
+    // Bottom padding = Nav height (72dp) + safe area + athletic buffer
+    final bottomNavPad =
+        72.0 + MediaQuery.paddingOf(context).bottom + AppSpacing.s24;
 
     final isBoxReady =
         Hive.isBoxOpen('profile') && Hive.isBoxOpen('territories_v3');
     if (!isBoxReady) {
       return Scaffold(
         backgroundColor: AppColors.bgDeep,
-        body: _buildSkeleton(context, topPad),
+        body: _buildSkeleton(context, topPad, bottomNavPad),
       );
     }
 
@@ -115,41 +117,34 @@ class HomeScreen extends StatelessWidget {
                     AppSpacing.s16,
                     topPad + AppSpacing.s12,
                     AppSpacing.s16,
-                    AppSpacing.s32,
+                    bottomNavPad,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Athlete Header Row
+                      // Athlete Header Row (with level ring avatar + single CombinedStatusIndicator)
                       HomeHeader(profile: profile),
 
-                      const SizedBox(height: AppSpacing.s12),
-
-                      // Live Status: Athletic GPS Status Chip with active colored dot
-                      Row(children: [GpsStatusChip(isActive: isActive)]),
-
-                      const SizedBox(height: AppSpacing.s12),
+                      const SizedBox(height: AppSpacing.s16),
 
                       // Offline Sync Banner (Appears only when pending runs exist)
                       const OfflineSyncBanner(),
 
-                      // Quick Launch "START RUN" Hero (Above the fold on 360x640)
+                      // Quick Launch Hero (Real daily goal or quiet goal setup + 56dp CTA)
                       QuickLaunchHero(
+                        territories: territories,
                         onStartRun: onStartRun,
                         isActive: isActive,
                       ),
 
-                      const SizedBox(height: AppSpacing.s20),
-
-                      // Weekly Performance Summary & 7-Day Bar Chart (Below the fold)
+                      // Weekly Performance Summary Header & Card
+                      const SectionHeader(title: 'Weekly summary'),
                       WeeklySummaryCard(
                         profile: profile,
                         territories: territories,
                       ),
 
-                      const SizedBox(height: AppSpacing.s24),
-
-                      // Recent Activity Header
+                      // Recent Activity Header (with baseline-aligned "View all" action)
                       SectionHeader(
                         title: 'Recent runs',
                         actionLabel: 'View all',
@@ -163,7 +158,6 @@ class HomeScreen extends StatelessWidget {
                           );
                         },
                       ),
-                      const SizedBox(height: AppSpacing.s12),
 
                       // Recent Activity Feed
                       RecentActivityFeed(

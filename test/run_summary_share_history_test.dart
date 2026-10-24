@@ -236,5 +236,129 @@ void main() {
 
       expect(find.text('Closed loop'), findsOneWidget);
     });
+
+    testWidgets(
+      'Phase D4: SummarySheet renders headline sentence, route replay, splits and sync badge',
+      (tester) async {
+        final profile = RunnerProfile(
+          id: 'd4_runner',
+          username: 'PaceMaker',
+          totalDistanceKm: 15.0,
+          xp: 600,
+          level: 3,
+          badges: [],
+          totalHexesClaimed: 4,
+          currentStreak: 2,
+          faction: 'Moss Collective',
+        );
+
+        final routePoints = [
+          const LatLng(37.7749, -122.4194),
+          const LatLng(37.7849, -122.4194),
+          const LatLng(37.7849, -122.4094),
+          const LatLng(37.7749, -122.4094),
+        ];
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: SummarySheet(
+                  distanceKm: 2.50,
+                  durationSeconds: 900,
+                  territoriesClaimed: 2,
+                  profile: profile,
+                  coachService: FakeCoachService(),
+                  routePoints: routePoints,
+                  areaSqMeters: 18500.0,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        // Verify immediate headline sentence
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(
+          find.text('You claimed 0.02 km² across 2 territories.'),
+          findsOneWidget,
+        );
+
+        // Verify route replay toggle is present
+        expect(
+          find.byWidgetPredicate(
+            (w) =>
+                w is Text &&
+                (w.data == 'Tap to skip' || w.data == 'Replay route'),
+          ),
+          findsOneWidget,
+        );
+
+        // Advance replay animation
+        await tester.pump(const Duration(milliseconds: 1500));
+        await tester.pumpAndSettle();
+
+        // Verify splits section & sync status badge
+        expect(find.text('Splits & pace'), findsOneWidget);
+        expect(find.text('Km 1'), findsOneWidget);
+        expect(find.text('Saved locally • Synced to cloud'), findsOneWidget);
+
+        // Actions
+        expect(find.text('Done'), findsOneWidget);
+        expect(find.text('Share run'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Phase D4: RunHistoryScreen renders Personal records section with real data',
+      (tester) async {
+        final profile = RunnerProfile(
+          id: 'record_runner',
+          username: 'RecordBreaker',
+          totalDistanceKm: 50.0,
+          xp: 2000,
+          level: 5,
+          badges: [],
+          totalHexesClaimed: 10,
+          currentStreak: 7,
+          faction: 'Graphite Club',
+        );
+
+        final territory = Territory(
+          id: 'conquest_record',
+          ownerId: 'record_runner',
+          polygon: [
+            const LatLng(37.7749, -122.4194),
+            const LatLng(37.7849, -122.4194),
+            const LatLng(37.7849, -122.4094),
+            const LatLng(37.7749, -122.4094),
+          ],
+          areaSqMeters: 32000.0,
+          capturedAt: DateTime.now(),
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: RunHistoryScreen(
+              initialProfile: profile,
+              initialTerritories: [territory],
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Verify Personal records section header and metrics
+        expect(find.text('Personal records'), findsOneWidget);
+        expect(find.text('Longest run'), findsOneWidget);
+        expect(find.text('Biggest capture'), findsOneWidget);
+        expect(find.text('Fastest km'), findsOneWidget);
+        expect(find.text('Streak'), findsOneWidget);
+
+        // Verify streak shows '7d'
+        expect(find.text('7d'), findsOneWidget);
+        // Both Total area and Biggest capture show '0.03 km²'
+        expect(find.text('0.03 km²'), findsNWidgets(2));
+      },
+    );
   });
 }

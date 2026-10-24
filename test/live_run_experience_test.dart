@@ -55,7 +55,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Locked'), findsOneWidget);
+      expect(find.text('Hold to finish'), findsOneWidget);
     });
 
     testWidgets('HoldToFinishButton triggers finish callback when held', (
@@ -73,13 +73,13 @@ void main() {
         ),
       );
 
-      expect(find.text('Hold stop'), findsOneWidget);
+      expect(find.text('Hold to finish'), findsOneWidget);
 
       final gesture = await tester.startGesture(
-        tester.getCenter(find.text('Hold stop')),
+        tester.getCenter(find.text('Hold to finish')),
       );
       await tester.pump(const Duration(milliseconds: 100));
-      expect(find.textContaining('Hold'), findsOneWidget);
+      expect(find.text('Finishing...'), findsOneWidget);
       expect(finished, isFalse);
 
       await tester.pumpAndSettle();

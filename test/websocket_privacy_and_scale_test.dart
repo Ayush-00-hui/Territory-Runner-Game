@@ -198,30 +198,38 @@ void main() {
       },
     );
 
-    test('Exponential backoff with jitter bounds and 15s ceiling', () {
+    test('Exponential backoff with jitter bounds and 60s ceiling', () {
       final minRandom = math.Random(0);
 
-      // Attempt 1: 2^1 = 2 seconds + jitter
+      // Attempt 1: 2s + jitter
       final delay1 = WebSocketService.computeBackoffDelay(1, random: minRandom);
       expect(delay1.inSeconds, inInclusiveRange(2, 3));
 
-      // Attempt 2: 2^2 = 4 seconds + jitter
+      // Attempt 2: 4s + jitter
       final delay2 = WebSocketService.computeBackoffDelay(2, random: minRandom);
       expect(delay2.inSeconds, inInclusiveRange(4, 5));
 
-      // Attempt 3: 2^3 = 8 seconds + jitter
+      // Attempt 3: 8s + jitter
       final delay3 = WebSocketService.computeBackoffDelay(3, random: minRandom);
       expect(delay3.inSeconds, inInclusiveRange(8, 9));
 
-      // Attempt 4+: Capped at 15 seconds + jitter
+      // Attempt 4: 16s + jitter
       final delay4 = WebSocketService.computeBackoffDelay(4, random: minRandom);
-      expect(delay4.inSeconds, inInclusiveRange(15, 16));
+      expect(delay4.inSeconds, inInclusiveRange(16, 17));
+
+      // Attempt 5: 32s + jitter
+      final delay5 = WebSocketService.computeBackoffDelay(5, random: minRandom);
+      expect(delay5.inSeconds, inInclusiveRange(32, 33));
+
+      // Attempt 6+: Capped at 60s + jitter
+      final delay6 = WebSocketService.computeBackoffDelay(6, random: minRandom);
+      expect(delay6.inSeconds, inInclusiveRange(60, 61));
 
       final delay10 = WebSocketService.computeBackoffDelay(
         10,
         random: minRandom,
       );
-      expect(delay10.inSeconds, inInclusiveRange(15, 16));
+      expect(delay10.inSeconds, inInclusiveRange(60, 61));
     });
   });
 }

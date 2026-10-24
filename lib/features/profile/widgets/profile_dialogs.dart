@@ -110,7 +110,7 @@ void showFactionSelectionDialog(
 ) {
   final factions = [
     {
-      'name': 'Cyber Vanguard',
+      'name': 'Vanguard',
       'tag': 'Vanguard',
       'color': AppColors.accent,
       'icon': Icons.security_rounded,
@@ -170,10 +170,7 @@ void showFactionSelectionDialog(
                   }
                   onUpdated();
                   if (context.mounted) {
-                    AppToast.show(
-                      context,
-                      'Aligned with ${f['name']} Syndicate',
-                    );
+                    AppToast.show(context, 'Aligned with ${f['name']}');
                   }
                 },
                 child: Container(
@@ -230,7 +227,7 @@ void showFactionSelectionDialog(
                                       borderRadius: AppSpacing.br8,
                                     ),
                                     child: Text(
-                                      'ACTIVE',
+                                      'Active',
                                       style: AppText.labelSmall.copyWith(
                                         color: factionColor,
                                         fontSize: 9,
@@ -456,7 +453,7 @@ void showBadgeDetailModal(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'CRITERIA',
+                  'Criteria',
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 10,
@@ -474,7 +471,7 @@ void showBadgeDetailModal(
                 ),
                 const Divider(color: AppColors.border, height: 20),
                 Text(
-                  'REWARD',
+                  'Reward',
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 10,

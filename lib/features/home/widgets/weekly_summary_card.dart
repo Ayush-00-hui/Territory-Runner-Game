@@ -1,11 +1,15 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../../models/runner_profile.dart';
 import '../../../models/territory.dart';
 import '../../../ui/ui.dart';
 
+/// Athlete Weekly Performance Summary Card
+/// Displays real distance, territory area, and run count from the past 7 days.
+/// Zero synthetic preview data.
 class WeeklySummaryCard extends StatelessWidget {
   final RunnerProfile profile;
   final List<Territory> territories;
@@ -18,83 +22,50 @@ class WeeklySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double totalAreaM2 = territories.fold(
-      0.0,
-      (sum, t) => sum + t.areaSqMeters,
-    );
-    final String territoryDisplay = totalAreaM2 >= 10000
-        ? '${(totalAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
-        : (totalAreaM2 > 0 ? '${totalAreaM2.toStringAsFixed(0)} m²' : '0 m²');
-
-    final double weeklyDistanceKm = profile.totalDistanceKm > 0
-        ? (profile.totalDistanceKm / 4.0).clamp(0.0, profile.totalDistanceKm)
-        : 0.0;
-    final int runsCount = territories.isNotEmpty
-        ? territories.length
-        : (profile.totalDistanceKm > 0
-              ? (profile.totalDistanceKm / 3.2).ceil()
-              : 0);
-
-    // Compute 7-day bar volumes based on captured territories & distance
     final now = DateTime.now();
+    const distance = Distance();
+
+    // 1. Filter territories captured in the last 7 days
+    final List<Territory> weekTerritories = [];
     final List<double> dayVolumes = List.filled(7, 0.0);
     final dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    double weeklyDistanceKm = 0.0;
+    double weeklyAreaM2 = 0.0;
 
     for (final t in territories) {
       final diff = now.difference(t.capturedAt).inDays;
       if (diff >= 0 && diff < 7) {
+        weekTerritories.add(t);
+        weeklyAreaM2 += t.areaSqMeters;
         final dayIndex = (t.capturedAt.weekday - 1) % 7;
         dayVolumes[dayIndex] += t.areaSqMeters;
+
+        if (t.polygon.length >= 2) {
+          double meters = 0.0;
+          for (int i = 0; i < t.polygon.length - 1; i++) {
+            meters += distance(t.polygon[i], t.polygon[i + 1]);
+          }
+          meters += distance(t.polygon.last, t.polygon.first);
+          weeklyDistanceKm += meters / 1000.0;
+        }
       }
     }
 
-    // Ensure non-empty preview if user has lifetime distance
-    if (dayVolumes.every((v) => v == 0) && profile.totalDistanceKm > 0) {
-      final todayIdx = (now.weekday - 1) % 7;
-      dayVolumes[todayIdx] = 4500;
-      if (todayIdx > 1) dayVolumes[todayIdx - 2] = 3200;
-      if (todayIdx > 0) dayVolumes[todayIdx - 1] = 6800;
-    }
+    final int weeklyRunsCount = weekTerritories.length;
+
+    final String territoryDisplay = weeklyAreaM2 >= 10000
+        ? '${(weeklyAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
+        : (weeklyAreaM2 > 0 ? '${weeklyAreaM2.toStringAsFixed(0)} m²' : '0 m²');
 
     final double maxVolume = dayVolumes.fold(1.0, math.max);
+    final bool hasWeeklyData = weeklyRunsCount > 0 || weeklyAreaM2 > 0;
 
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.s20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(
-                child: Text(
-                  'Weekly summary',
-                  style: AppText.labelSmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: AppRadius.br8,
-                  border: Border.all(color: AppColors.borderSubtle, width: 1.0),
-                ),
-                child: Text(
-                  '7 days',
-                  style: AppText.labelSmall.copyWith(
-                    color: AppColors.accent,
-                    fontSize: 9.5,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s16),
-
-          // 3 Big Athletic Numbers
+          // 3 Big Real Athletic Numbers
           Row(
             children: [
               Expanded(
@@ -106,7 +77,7 @@ class WeeklySummaryCard extends StatelessWidget {
                   unit: 'km',
                 ),
               ),
-              Container(width: 1, height: 38, color: AppColors.border),
+              Container(width: 1, height: 38, color: AppColors.borderSubtle),
               Expanded(
                 child: _buildMetricItem(
                   label: 'Territory',
@@ -116,11 +87,11 @@ class WeeklySummaryCard extends StatelessWidget {
                       : 'm²',
                 ),
               ),
-              Container(width: 1, height: 38, color: AppColors.border),
+              Container(width: 1, height: 38, color: AppColors.borderSubtle),
               Expanded(
                 child: _buildMetricItem(
                   label: 'Runs',
-                  value: '$runsCount',
+                  value: '$weeklyRunsCount',
                   unit: 'total',
                 ),
               ),
@@ -129,7 +100,7 @@ class WeeklySummaryCard extends StatelessWidget {
 
           const SizedBox(height: AppSpacing.s20),
 
-          // 7-Day Clean Bar Chart (No blur masks or glows)
+          // 7-Day Clean Bar Chart (Real data only)
           SizedBox(
             height: 90,
             width: double.infinity,
@@ -142,6 +113,16 @@ class WeeklySummaryCard extends StatelessWidget {
               ),
             ),
           ),
+
+          if (!hasWeeklyData) ...[
+            const SizedBox(height: AppSpacing.s12),
+            Center(
+              child: Text(
+                'No runs logged this week. Start a run to begin.',
+                style: AppText.caption.copyWith(color: AppColors.textMuted),
+              ),
+            ),
+          ],
         ],
       ),
     );

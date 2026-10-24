@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:territory_runner/features/routing/route_service.dart';
 import 'package:territory_runner/features/gameplay/polygon_enclosure_engine.dart';
@@ -9,6 +10,14 @@ void main() {
   final RouteService routeService = RouteService();
   const LatLng startPos = LatLng(37.7749, -122.4194);
   const double targetBudgetKm = 3.0; // 3km target run
+
+  setUp(() {
+    if (Hive.isBoxOpen('territories_v3')) {
+      try {
+        Hive.box('territories_v3').clear();
+      } catch (_) {}
+    }
+  });
 
   group('Route Recommendation Engine Benchmarks', () {
     test(
@@ -43,7 +52,8 @@ void main() {
         targetDistanceKm: targetBudgetKm,
       );
 
-      final double aiAreaSqM = aiRoute.estimatedNewTerritoryAreaSqM;
+      final double aiAreaSqM =
+          PolygonEnclosureEngine.computeGeodesicShoelaceArea(aiRoute.polyline);
 
       // Simulate N=20 random walk closed loops of equivalent distance budget
       const int numRandomWalks = 20;
