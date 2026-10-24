@@ -75,11 +75,14 @@ class AppChip extends StatelessWidget {
             Icon(icon, size: 14, color: textColor),
             const SizedBox(width: AppSpacing.s6),
           ],
-          Text(
-            label,
-            style: AppText.labelSmall.copyWith(
-              color: textColor,
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+          Flexible(
+            child: Text(
+              label,
+              style: AppText.labelSmall.copyWith(
+                color: textColor,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (trailing != null) ...[

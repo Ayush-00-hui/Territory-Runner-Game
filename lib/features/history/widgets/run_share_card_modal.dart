@@ -146,9 +146,9 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     final bgPaint = Paint()..color = cardBg;
     canvas.drawRect(const Rect.fromLTWH(0, 0, targetSize, targetSize), bgPaint);
 
-    // 2. Subtle Cyber Grid if theme demands it
+    // 2. Subtle cartographic grid if theme demands it
     if (hasGridOverlay) {
-      final gridPainter = _CyberGridPainter(
+      final gridPainter = _CartographicGridPainter(
         gridColor: accentColor.withValues(alpha: 0.08),
       );
       gridPainter.paint(canvas, const Size(targetSize, targetSize));
@@ -403,7 +403,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       final Uint8List pngBytes = await _renderTrue1080pCard();
       final tempDir = await getTemporaryDirectory();
       final String filePath =
-          '${tempDir.path}/territory_conquest_${DateTime.now().millisecondsSinceEpoch}.png';
+          '${tempDir.path}/territory_run_${DateTime.now().millisecondsSinceEpoch}.png';
       final file = File(filePath);
       await file.writeAsBytes(pngBytes, flush: true);
 
@@ -849,7 +849,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
             if (hasGridOverlay)
               Positioned.fill(
                 child: CustomPaint(
-                  painter: _CyberGridPainter(
+                  painter: _CartographicGridPainter(
                     gridColor: accentColor.withValues(alpha: 0.08),
                   ),
                 ),
@@ -1156,10 +1156,10 @@ class _ShareCardMapPainter extends CustomPainter {
   }
 }
 
-class _CyberGridPainter extends CustomPainter {
+class _CartographicGridPainter extends CustomPainter {
   final Color gridColor;
 
-  _CyberGridPainter({required this.gridColor});
+  _CartographicGridPainter({required this.gridColor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1177,5 +1177,5 @@ class _CyberGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CyberGridPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _CartographicGridPainter oldDelegate) => false;
 }
