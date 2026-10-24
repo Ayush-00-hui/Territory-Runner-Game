@@ -70,8 +70,9 @@ class FriendRequestDetail {
       id: json['id'] as String? ?? '',
       requesterId: json['requester_id'] as String? ?? '',
       requesterName: json['requester_name'] as String? ?? 'Runner',
-      requesterFaction:
-          FactionStanding.canonicalFaction(json['requester_faction'] as String?),
+      requesterFaction: FactionStanding.canonicalFaction(
+        json['requester_faction'] as String?,
+      ),
       addresseeId: json['addressee_id'] as String? ?? '',
       addresseeName: json['addressee_name'] as String? ?? 'Runner',
       status: json['status'] as String? ?? 'pending',

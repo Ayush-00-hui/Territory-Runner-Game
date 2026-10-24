@@ -205,10 +205,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: NeutralChip(
-              label: 'GPS lock',
-              onTap: () => tapped = true,
-            ),
+            body: NeutralChip(label: 'GPS lock', onTap: () => tapped = true),
           ),
         ),
       );
@@ -228,62 +225,61 @@ void main() {
       expect(FactionStanding.canonicalFaction('Neon Nomads'), 'Nomads');
     });
 
-    testWidgets('SectionHeader aligns title and action on exact same baseline', (tester) async {
-      bool actionTapped = false;
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SectionHeader(
-              title: 'Recent runs',
-              actionLabel: 'View all',
-              onAction: () => actionTapped = true,
+    testWidgets(
+      'SectionHeader aligns title and action on exact same baseline',
+      (tester) async {
+        bool actionTapped = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SectionHeader(
+                title: 'Recent runs',
+                actionLabel: 'View all',
+                onAction: () => actionTapped = true,
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.text('Recent runs'), findsOneWidget);
-      expect(find.text('View all'), findsOneWidget);
+        expect(find.text('Recent runs'), findsOneWidget);
+        expect(find.text('View all'), findsOneWidget);
 
-      final rowFinder = find.byType(Row);
-      expect(rowFinder, findsOneWidget);
-      final Row row = tester.widget(rowFinder);
-      expect(row.crossAxisAlignment, CrossAxisAlignment.baseline);
-      expect(row.textBaseline, TextBaseline.alphabetic);
+        final rowFinder = find.byType(Row);
+        expect(rowFinder, findsOneWidget);
+        final Row row = tester.widget(rowFinder);
+        expect(row.crossAxisAlignment, CrossAxisAlignment.baseline);
+        expect(row.textBaseline, TextBaseline.alphabetic);
 
-      await tester.tap(find.text('View all'));
-      await tester.pumpAndSettle();
-      expect(actionTapped, isTrue);
-    });
+        await tester.tap(find.text('View all'));
+        await tester.pumpAndSettle();
+        expect(actionTapped, isTrue);
+      },
+    );
 
-    testWidgets('NeutralChip renders with leading widget and handles attention state', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: NeutralChip(
-              label: 'GPS searching',
-              needsAttention: true,
-              leading: Icon(Icons.gps_fixed, size: 12),
+    testWidgets(
+      'NeutralChip renders with leading widget and handles attention state',
+      (tester) async {
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: Scaffold(
+              body: NeutralChip(
+                label: 'GPS searching',
+                needsAttention: true,
+                leading: Icon(Icons.gps_fixed, size: 12),
+              ),
             ),
           ),
-        ),
-      );
+        );
 
-      expect(find.text('GPS searching'), findsOneWidget);
-      expect(find.byIcon(Icons.gps_fixed), findsOneWidget);
-    });
+        expect(find.text('GPS searching'), findsOneWidget);
+        expect(find.byIcon(Icons.gps_fixed), findsOneWidget);
+      },
+    );
 
     testWidgets('TerritoryArt renders empty canvas gracefully', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
-          home: Scaffold(
-            body: TerritoryArt(
-              polygons: [],
-              height: 200,
-            ),
-          ),
+          home: Scaffold(body: TerritoryArt(polygons: [], height: 200)),
         ),
       );
 
@@ -317,43 +313,44 @@ void main() {
       expect(runStarted, isTrue);
     });
 
-    testWidgets('PremiumBottomNav renders 5 destinations and triggers tab switch', (
-      tester,
-    ) async {
-      int activeIndex = 0;
-      bool runTapped = false;
-      await tester.pumpWidget(
-        StatefulBuilder(
-          builder: (context, setState) {
-            return MaterialApp(
-              home: Scaffold(
-                bottomNavigationBar: PremiumBottomNav(
-                  selectedIndex: activeIndex,
-                  onTabSelected: (idx) {
-                    setState(() => activeIndex = idx);
-                  },
-                  onStartRun: () => runTapped = true,
+    testWidgets(
+      'PremiumBottomNav renders 5 destinations and triggers tab switch',
+      (tester) async {
+        int activeIndex = 0;
+        bool runTapped = false;
+        await tester.pumpWidget(
+          StatefulBuilder(
+            builder: (context, setState) {
+              return MaterialApp(
+                home: Scaffold(
+                  bottomNavigationBar: PremiumBottomNav(
+                    selectedIndex: activeIndex,
+                    onTabSelected: (idx) {
+                      setState(() => activeIndex = idx);
+                    },
+                    onStartRun: () => runTapped = true,
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
-      );
+              );
+            },
+          ),
+        );
 
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Activity'), findsOneWidget);
-      expect(find.text('Compete'), findsOneWidget);
-      expect(find.text('Profile'), findsOneWidget);
-      expect(find.byIcon(Icons.directions_run_rounded), findsOneWidget);
+        expect(find.text('Home'), findsOneWidget);
+        expect(find.text('Activity'), findsOneWidget);
+        expect(find.text('Compete'), findsOneWidget);
+        expect(find.text('Profile'), findsOneWidget);
+        expect(find.byIcon(Icons.directions_run_rounded), findsOneWidget);
 
-      await tester.tap(find.text('Activity'));
-      await tester.pumpAndSettle();
-      expect(activeIndex, 1);
+        await tester.tap(find.text('Activity'));
+        await tester.pumpAndSettle();
+        expect(activeIndex, 1);
 
-      await tester.tap(find.byIcon(Icons.directions_run_rounded));
-      await tester.pumpAndSettle();
-      expect(runTapped, isTrue);
-    });
+        await tester.tap(find.byIcon(Icons.directions_run_rounded));
+        await tester.pumpAndSettle();
+        expect(runTapped, isTrue);
+      },
+    );
 
     testWidgets(
       'QuickLaunchHero renders quiet Set a goal row when goal is null and zero fake 3.4km',
@@ -363,9 +360,7 @@ void main() {
 
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(
-              body: QuickLaunchHero(territories: []),
-            ),
+            home: Scaffold(body: QuickLaunchHero(territories: [])),
           ),
         );
 
@@ -375,26 +370,23 @@ void main() {
       },
     );
 
-    testWidgets(
-      'QuickLaunchHero renders goal ring when dailyGoalKm is set',
-      (tester) async {
-        SharedPreferences.setMockInitialValues({});
-        await AppPreferences().setDailyGoalKm(5.0);
+    testWidgets('QuickLaunchHero renders goal ring when dailyGoalKm is set', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      await AppPreferences().setDailyGoalKm(5.0);
 
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: QuickLaunchHero(territories: []),
-            ),
-          ),
-        );
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(body: QuickLaunchHero(territories: [])),
+        ),
+      );
 
-        expect(find.text('Daily goal'), findsOneWidget);
-        expect(find.text('/ 5.0 km'), findsOneWidget);
-        expect(find.text('0.0'), findsOneWidget);
-        expect(find.text('3.4'), findsNothing);
-      },
-    );
+      expect(find.text('Daily goal'), findsOneWidget);
+      expect(find.text('/ 5.0 km'), findsOneWidget);
+      expect(find.text('0.0'), findsOneWidget);
+      expect(find.text('3.4'), findsNothing);
+    });
 
     testWidgets(
       'HomeHeader renders level ring avatar and CombinedStatusIndicator without faction or streak chip',
@@ -408,9 +400,7 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
-            home: Scaffold(
-              body: HomeHeader(profile: profile),
-            ),
+            home: Scaffold(body: HomeHeader(profile: profile)),
           ),
         );
 
@@ -418,10 +408,7 @@ void main() {
         expect(find.text('Level 4'), findsOneWidget);
         expect(find.byType(CombinedStatusIndicator), findsOneWidget);
         expect(find.text('Cyber Vanguard'), findsNothing);
-        expect(
-          find.byIcon(Icons.local_fire_department_rounded),
-          findsNothing,
-        );
+        expect(find.byIcon(Icons.local_fire_department_rounded), findsNothing);
       },
     );
 
@@ -433,10 +420,7 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
-              body: WeeklySummaryCard(
-                profile: profile,
-                territories: const [],
-              ),
+              body: WeeklySummaryCard(profile: profile, territories: const []),
             ),
           ),
         );
@@ -535,35 +519,34 @@ void main() {
       },
     );
 
-    testWidgets(
-      'R2: HoldToFinishButton active state allows hold to finish',
-      (tester) async {
-        bool finished = false;
+    testWidgets('R2: HoldToFinishButton active state allows hold to finish', (
+      tester,
+    ) async {
+      bool finished = false;
 
-        await tester.pumpWidget(
-          MaterialApp(
-            home: Scaffold(
-              body: Center(
-                child: HoldToFinishButton(
-                  isRunActive: true,
-                  onFinish: () {
-                    finished = true;
-                  },
-                ),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: HoldToFinishButton(
+                isRunActive: true,
+                onFinish: () {
+                  finished = true;
+                },
               ),
             ),
           ),
-        );
+        ),
+      );
 
-        expect(find.text('Hold to finish'), findsOneWidget);
-        expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+      expect(find.text('Hold to finish'), findsOneWidget);
+      expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
 
-        final semantics = tester.getSemantics(find.byType(HoldToFinishButton));
-        expect(semantics.label, contains('Hold to finish'));
-        expect(semantics.label, isNot(contains('Start a run first')));
-        expect(finished, isFalse);
-      },
-    );
+      final semantics = tester.getSemantics(find.byType(HoldToFinishButton));
+      expect(semantics.label, contains('Hold to finish'));
+      expect(semantics.label, isNot(contains('Start a run first')));
+      expect(finished, isFalse);
+    });
 
     testWidgets(
       'R2: RunHud Close loop control uses loop icon and provides clear availability guidance',
@@ -583,7 +566,8 @@ void main() {
                 currentSpeedKmh: 11.5,
                 satelliteAccuracyMeters: 3.5,
                 territoriesClaimed: 1,
-                distanceToClosureMeters: 45.0, // Not within closure threshold (< 20m)
+                distanceToClosureMeters:
+                    45.0, // Not within closure threshold (< 20m)
                 onToggleRun: () {},
                 onSealShape: () {
                   loopSealed = true;
@@ -608,32 +592,31 @@ void main() {
       },
     );
 
-    test(
-      'R3: MapScreenFeature.isRunActiveNotifier coordinates bottom nav visibility',
-      () {
-        expect(MapScreenFeature.isRunActiveNotifier.value, isFalse);
+    test('R3: MapScreenFeature.isRunActiveNotifier coordinates bottom nav visibility', () {
+      expect(MapScreenFeature.isRunActiveNotifier.value, isFalse);
 
-        bool notified = false;
-        void listener() {
-          notified = true;
-        }
+      bool notified = false;
+      void listener() {
+        notified = true;
+      }
 
-        MapScreenFeature.isRunActiveNotifier.addListener(listener);
-        MapScreenFeature.isRunActiveNotifier.value = true;
+      MapScreenFeature.isRunActiveNotifier.addListener(listener);
+      MapScreenFeature.isRunActiveNotifier.value = true;
 
-        expect(MapScreenFeature.isRunActiveNotifier.value, isTrue);
-        expect(notified, isTrue);
+      expect(MapScreenFeature.isRunActiveNotifier.value, isTrue);
+      expect(notified, isTrue);
 
-        // Reset back to idle
-        MapScreenFeature.isRunActiveNotifier.removeListener(listener);
-        MapScreenFeature.isRunActiveNotifier.value = false;
-        expect(MapScreenFeature.isRunActiveNotifier.value, isFalse);
-      },
-    );
+      // Reset back to idle
+      MapScreenFeature.isRunActiveNotifier.removeListener(listener);
+      MapScreenFeature.isRunActiveNotifier.value = false;
+      expect(MapScreenFeature.isRunActiveNotifier.value, isFalse);
+    });
 
     test('R4: Zero legacy jargon in map active run controls and tooltips', () {
       final hudFile = File('lib/features/map/widgets/run_hud.dart');
-      final holdFile = File('lib/features/map/widgets/hold_to_finish_button.dart');
+      final holdFile = File(
+        'lib/features/map/widgets/hold_to_finish_button.dart',
+      );
       final sosFile = File('lib/features/map/widgets/sos_shield_button.dart');
 
       final hudContent = hudFile.readAsStringSync();
@@ -647,5 +630,3 @@ void main() {
     });
   });
 }
-
-

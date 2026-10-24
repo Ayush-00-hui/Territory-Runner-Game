@@ -46,8 +46,8 @@ class AppToast extends StatelessWidget {
     final effectiveDuration = duration.inSeconds > 4
         ? const Duration(seconds: 3)
         : (duration.inSeconds > 3 && onAction == null
-            ? const Duration(seconds: 3)
-            : duration);
+              ? const Duration(seconds: 3)
+              : duration);
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -91,8 +91,8 @@ class AppToast extends StatelessWidget {
     final effectiveDuration = duration.inSeconds > 4
         ? const Duration(seconds: 3)
         : (duration.inSeconds > 3 && onAction == null
-            ? const Duration(seconds: 3)
-            : duration);
+              ? const Duration(seconds: 3)
+              : duration);
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(

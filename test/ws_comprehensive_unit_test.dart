@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:territory_runner/services/websocket_service.dart';
@@ -178,9 +178,8 @@ void main() {
         );
 
         // 1. Simulate a prior failed attempt
-        wsService.channelFactory = (uri, {protocols}) => _FakeWebSocketChannel(
-          readyError: WebSocketException('Fail 1'),
-        );
+        wsService.channelFactory = (uri, {protocols}) =>
+            _FakeWebSocketChannel(readyError: WebSocketException('Fail 1'));
         await wsService.connect();
         expect(wsService.reconnectAttempts, equals(1));
 
@@ -203,35 +202,42 @@ void main() {
         wsService.dispose();
       });
 
-      test('Maintaining stable connection for 30s resets reconnectAttempts to 0', () async {
-        final fakeChannel = _FakeWebSocketChannel();
+      test(
+        'Maintaining stable connection for 30s resets reconnectAttempts to 0',
+        () async {
+          final fakeChannel = _FakeWebSocketChannel();
 
-        final wsService = WebSocketService.custom(
-          registerLifecycleObserver: false,
-          channelFactory: (uri, {protocols}) => fakeChannel,
-        );
-
-        // Simulate 4 prior attempts
-        for (int i = 0; i < 4; i++) {
-          wsService.channelFactory = (uri, {protocols}) => _FakeWebSocketChannel(
-            readyError: WebSocketException('Refused'),
+          final wsService = WebSocketService.custom(
+            registerLifecycleObserver: false,
+            channelFactory: (uri, {protocols}) => fakeChannel,
           );
+
+          // Simulate 4 prior attempts
+          for (int i = 0; i < 4; i++) {
+            wsService.channelFactory = (uri, {protocols}) =>
+                _FakeWebSocketChannel(
+                  readyError: WebSocketException('Refused'),
+                );
+            await wsService.connect();
+          }
+          expect(wsService.reconnectAttempts, equals(4));
+
+          // Connect successfully with fakeChannel
+          wsService.channelFactory = (uri, {protocols}) => fakeChannel;
           await wsService.connect();
-        }
-        expect(wsService.reconnectAttempts, equals(4));
+          expect(wsService.isConnected, isTrue);
+          expect(
+            wsService.reconnectAttempts,
+            equals(4),
+          ); // Still 4 until 30s timer fires
 
-        // Connect successfully with fakeChannel
-        wsService.channelFactory = (uri, {protocols}) => fakeChannel;
-        await wsService.connect();
-        expect(wsService.isConnected, isTrue);
-        expect(wsService.reconnectAttempts, equals(4)); // Still 4 until 30s timer fires
+          // Verify the 30s timer is scheduled and active
+          expect(wsService.stableConnectionTimer, isNotNull);
+          expect(wsService.stableConnectionTimer!.isActive, isTrue);
 
-        // Verify the 30s timer is scheduled and active
-        expect(wsService.stableConnectionTimer, isNotNull);
-        expect(wsService.stableConnectionTimer!.isActive, isTrue);
-
-        wsService.dispose();
-      });
+          wsService.dispose();
+        },
+      );
     });
 
     // -------------------------------------------------------------------------
@@ -293,74 +299,80 @@ void main() {
     // 4. Connectivity Pause & Resume
     // -------------------------------------------------------------------------
     group('Network Connectivity Handling', () {
-      test('Offline state pauses retries and online restores connection', () async {
-        int connects = 0;
-        final ch = _FakeWebSocketChannel();
+      test(
+        'Offline state pauses retries and online restores connection',
+        () async {
+          int connects = 0;
+          final ch = _FakeWebSocketChannel();
 
-        final wsService = WebSocketService.custom(
-          registerLifecycleObserver: false,
-          channelFactory: (uri, {protocols}) {
-            connects++;
-            return ch;
-          },
-        );
+          final wsService = WebSocketService.custom(
+            registerLifecycleObserver: false,
+            channelFactory: (uri, {protocols}) {
+              connects++;
+              return ch;
+            },
+          );
 
-        // 1. Mark device offline
-        wsService.onConnectivityChanged(false);
-        expect(wsService.isOffline, isTrue);
-        expect(wsService.reconnectTimer, isNull);
+          // 1. Mark device offline
+          wsService.onConnectivityChanged(false);
+          expect(wsService.isOffline, isTrue);
+          expect(wsService.reconnectTimer, isNull);
 
-        // connect() while offline does not proceed
-        await wsService.connect();
-        expect(connects, equals(0));
+          // connect() while offline does not proceed
+          await wsService.connect();
+          expect(connects, equals(0));
 
-        // 2. Mark device online
-        wsService.onConnectivityChanged(true);
-        expect(wsService.isOffline, isFalse);
+          // 2. Mark device online
+          wsService.onConnectivityChanged(true);
+          expect(wsService.isOffline, isFalse);
 
-        await Future.delayed(const Duration(milliseconds: 50));
-        expect(connects, equals(1));
-        expect(wsService.isConnected, isTrue);
+          await Future.delayed(const Duration(milliseconds: 50));
+          expect(connects, equals(1));
+          expect(wsService.isConnected, isTrue);
 
-        wsService.dispose();
-      });
+          wsService.dispose();
+        },
+      );
     });
 
     // -------------------------------------------------------------------------
     // 5. App Lifecycle (Foreground & Background)
     // -------------------------------------------------------------------------
     group('App Lifecycle Observers', () {
-      test('Backgrounding pauses retries; foregrounding resumes connection', () async {
-        int connects = 0;
-        final ch = _FakeWebSocketChannel();
+      test(
+        'Backgrounding pauses retries; foregrounding resumes connection',
+        () async {
+          int connects = 0;
+          final ch = _FakeWebSocketChannel();
 
-        final wsService = WebSocketService.custom(
-          registerLifecycleObserver: false,
-          channelFactory: (uri, {protocols}) {
-            connects++;
-            return ch;
-          },
-        );
+          final wsService = WebSocketService.custom(
+            registerLifecycleObserver: false,
+            channelFactory: (uri, {protocols}) {
+              connects++;
+              return ch;
+            },
+          );
 
-        // 1. App paused (background)
-        wsService.onAppLifecycleStateChanged(AppLifecycleState.paused);
-        expect(wsService.isAppBackgrounded, isTrue);
-        expect(wsService.reconnectTimer, isNull);
+          // 1. App paused (background)
+          wsService.onAppLifecycleStateChanged(AppLifecycleState.paused);
+          expect(wsService.isAppBackgrounded, isTrue);
+          expect(wsService.reconnectTimer, isNull);
 
-        // 2. App hidden (background)
-        wsService.onAppLifecycleStateChanged(AppLifecycleState.hidden);
-        expect(wsService.isAppBackgrounded, isTrue);
+          // 2. App hidden (background)
+          wsService.onAppLifecycleStateChanged(AppLifecycleState.hidden);
+          expect(wsService.isAppBackgrounded, isTrue);
 
-        // 3. App resumed (foreground)
-        wsService.onAppLifecycleStateChanged(AppLifecycleState.resumed);
-        expect(wsService.isAppBackgrounded, isFalse);
+          // 3. App resumed (foreground)
+          wsService.onAppLifecycleStateChanged(AppLifecycleState.resumed);
+          expect(wsService.isAppBackgrounded, isFalse);
 
-        await Future.delayed(const Duration(milliseconds: 50));
-        expect(connects, equals(1));
-        expect(wsService.isConnected, isTrue);
+          await Future.delayed(const Duration(milliseconds: 50));
+          expect(connects, equals(1));
+          expect(wsService.isConnected, isTrue);
 
-        wsService.dispose();
-      });
+          wsService.dispose();
+        },
+      );
     });
 
     // -------------------------------------------------------------------------
@@ -370,22 +382,27 @@ void main() {
       test('Handshake failure completes with error but zero unhandled exceptions escape', () async {
         final List<String> zoneErrors = [];
 
-        await runZonedGuarded(() async {
-          final badChannel = _FakeWebSocketChannel(
-            readyError: WebSocketException("Handshake error: 502 Bad Gateway"),
-          );
+        await runZonedGuarded(
+          () async {
+            final badChannel = _FakeWebSocketChannel(
+              readyError: WebSocketException(
+                "Handshake error: 502 Bad Gateway",
+              ),
+            );
 
-          final wsService = WebSocketService.custom(
-            registerLifecycleObserver: false,
-            channelFactory: (uri, {protocols}) => badChannel,
-          );
+            final wsService = WebSocketService.custom(
+              registerLifecycleObserver: false,
+              channelFactory: (uri, {protocols}) => badChannel,
+            );
 
-          await wsService.connect();
-          expect(wsService.isConnected, isFalse);
-          wsService.dispose();
-        }, (error, stack) {
-          zoneErrors.add(error.toString());
-        });
+            await wsService.connect();
+            expect(wsService.isConnected, isFalse);
+            wsService.dispose();
+          },
+          (error, stack) {
+            zoneErrors.add(error.toString());
+          },
+        );
 
         // Zero errors must leak to ZoneGuard
         expect(zoneErrors, isEmpty);
@@ -394,26 +411,31 @@ void main() {
       test('Stream error and abrupt socket termination caught cleanly with zero unhandled exceptions', () async {
         final List<String> zoneErrors = [];
 
-        await runZonedGuarded(() async {
-          final liveChannel = _FakeWebSocketChannel();
+        await runZonedGuarded(
+          () async {
+            final liveChannel = _FakeWebSocketChannel();
 
-          final wsService = WebSocketService.custom(
-            registerLifecycleObserver: false,
-            channelFactory: (uri, {protocols}) => liveChannel,
-          );
+            final wsService = WebSocketService.custom(
+              registerLifecycleObserver: false,
+              channelFactory: (uri, {protocols}) => liveChannel,
+            );
 
-          await wsService.connect();
-          expect(wsService.isConnected, isTrue);
+            await wsService.connect();
+            expect(wsService.isConnected, isTrue);
 
-          // Emit mid-stream socket error
-          liveChannel.emitError(WebSocketException('Connection reset by peer'));
-          await Future.delayed(const Duration(milliseconds: 50));
+            // Emit mid-stream socket error
+            liveChannel.emitError(
+              WebSocketException('Connection reset by peer'),
+            );
+            await Future.delayed(const Duration(milliseconds: 50));
 
-          expect(wsService.isConnected, isFalse);
-          wsService.dispose();
-        }, (error, stack) {
-          zoneErrors.add(error.toString());
-        });
+            expect(wsService.isConnected, isFalse);
+            wsService.dispose();
+          },
+          (error, stack) {
+            zoneErrors.add(error.toString());
+          },
+        );
 
         expect(zoneErrors, isEmpty);
       });
@@ -421,31 +443,34 @@ void main() {
       test('Sink error during message send is caught with zero unhandled exceptions', () async {
         final List<String> zoneErrors = [];
 
-        await runZonedGuarded(() async {
-          final brokenSinkChannel = _FakeWebSocketChannel();
-          brokenSinkChannel._sink.throwOnAdd = true;
+        await runZonedGuarded(
+          () async {
+            final brokenSinkChannel = _FakeWebSocketChannel();
+            brokenSinkChannel._sink.throwOnAdd = true;
 
-          final wsService = WebSocketService.custom(
-            registerLifecycleObserver: false,
-            channelFactory: (uri, {protocols}) => brokenSinkChannel,
-          );
+            final wsService = WebSocketService.custom(
+              registerLifecycleObserver: false,
+              channelFactory: (uri, {protocols}) => brokenSinkChannel,
+            );
 
-          await wsService.connect();
-          expect(wsService.isConnected, isTrue);
+            await wsService.connect();
+            expect(wsService.isConnected, isTrue);
 
-          // Attempt to send viewport and presence
-          wsService.sendViewportSubscription(['u4pru'], force: true);
-          final sent = wsService.sendPresenceUpdate(
-            latitude: 37.7749,
-            longitude: -122.4194,
-            force: true,
-          );
-          expect(sent, isFalse);
+            // Attempt to send viewport and presence
+            wsService.sendViewportSubscription(['u4pru'], force: true);
+            final sent = wsService.sendPresenceUpdate(
+              latitude: 37.7749,
+              longitude: -122.4194,
+              force: true,
+            );
+            expect(sent, isFalse);
 
-          wsService.dispose();
-        }, (error, stack) {
-          zoneErrors.add(error.toString());
-        });
+            wsService.dispose();
+          },
+          (error, stack) {
+            zoneErrors.add(error.toString());
+          },
+        );
 
         expect(zoneErrors, isEmpty);
       });
@@ -468,8 +493,14 @@ void main() {
 
         bool presenceClosed = false;
         bool connectionStateClosed = false;
-        wsService.presenceStream.listen(null, onDone: () => presenceClosed = true);
-        wsService.isConnectedStream.listen(null, onDone: () => connectionStateClosed = true);
+        wsService.presenceStream.listen(
+          null,
+          onDone: () => presenceClosed = true,
+        );
+        wsService.isConnectedStream.listen(
+          null,
+          onDone: () => connectionStateClosed = true,
+        );
 
         // Dispose
         wsService.dispose();
@@ -487,7 +518,11 @@ void main() {
         // Calling connect or send after disposal is safe and does nothing
         await wsService.connect();
         expect(wsService.isConnected, isFalse);
-        final sent = wsService.sendPresenceUpdate(latitude: 0, longitude: 0, force: true);
+        final sent = wsService.sendPresenceUpdate(
+          latitude: 0,
+          longitude: 0,
+          force: true,
+        );
         expect(sent, isFalse);
       });
     });

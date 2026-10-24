@@ -188,18 +188,16 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
     final hasRuns = rawTerritories.isNotEmpty;
     final double longestRunKm = hasRuns
         ? rawTerritories
-            .map((t) => _estimateDistanceKm(t.polygon))
-            .fold<double>(0.0, math.max)
+              .map((t) => _estimateDistanceKm(t.polygon))
+              .fold<double>(0.0, math.max)
         : 0.0;
     final double biggestCaptureSqm = hasRuns
-        ? rawTerritories
-            .map((t) => t.areaSqMeters)
-            .fold<double>(0.0, math.max)
+        ? rawTerritories.map((t) => t.areaSqMeters).fold<double>(0.0, math.max)
         : 0.0;
     final String biggestCaptureFormatted = hasRuns && biggestCaptureSqm > 0
         ? (biggestCaptureSqm >= 10000
-            ? '${(biggestCaptureSqm / 1000000.0).toStringAsFixed(2)} km²'
-            : '${biggestCaptureSqm.toStringAsFixed(0)} m²')
+              ? '${(biggestCaptureSqm / 1000000.0).toStringAsFixed(2)} km²'
+              : '${biggestCaptureSqm.toStringAsFixed(0)} m²')
         : '--';
     final String longestRunFormatted = hasRuns && longestRunKm > 0
         ? '${longestRunKm.toStringAsFixed(2)} km'
@@ -458,8 +456,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                 child: EmptyState(
                   icon: Icons.history_toggle_off_rounded,
                   title: 'No runs in range',
-                  message:
-                      'Try changing your filters or start a new run to claim territory.',
+                  message: 'Try changing your filters or start a new run to claim territory.',
                   actionLabel: _timeFilter != HistoryFilter.all
                       ? 'Reset filters'
                       : 'Start a run',

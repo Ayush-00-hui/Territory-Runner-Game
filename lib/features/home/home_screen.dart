@@ -98,8 +98,8 @@ class HomeScreen extends StatelessWidget {
           return ValueListenableBuilder(
             valueListenable: Hive.box<Territory>('territories_v3').listenable(),
             builder: (context, Box<Territory> territoryBox, _) {
-              final territories =
-                  territoryService.getCapturedTerritoryObjects();
+              final territories = territoryService
+                  .getCapturedTerritoryObjects();
 
               return RefreshIndicator(
                 color: AppColors.accent,

@@ -55,8 +55,9 @@ class MapScreenFeature extends StatefulWidget {
   final bool isActive;
 
   /// Global notifier indicating whether a run is actively in progress
-  static final ValueNotifier<bool> isRunActiveNotifier =
-      ValueNotifier<bool>(false);
+  static final ValueNotifier<bool> isRunActiveNotifier = ValueNotifier<bool>(
+    false,
+  );
 
   const MapScreenFeature({super.key, this.isActive = true});
 
@@ -1469,267 +1470,272 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           backgroundColor: AppColors.bgDeep,
           body: Stack(
             fit: StackFit.expand,
-          children: [
-            // 1. The Interactive Fullscreen Map wrapped in RepaintBoundary
-            _currentLocation == null
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.accent),
-                  )
-                : RepaintBoundary(
-                    child: FlutterMap(
-                      mapController: _mapController,
-                      options: MapOptions(
-                        initialCenter: _currentLocation!,
-                        initialZoom: 17.0,
-                        backgroundColor: AppColors.bgDeep,
-                        onTap: (tapPosition, point) => _inspectSectorAt(point),
-                        interactionOptions: const InteractionOptions(
-                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
-                        ),
-                      ),
-                      children: [
-                        MapLayers.buildTileLayer(),
-                        ValueListenableBuilder<List<Territory>>(
-                          valueListenable: _territoriesNotifier,
-                          builder: (context, territories, _) =>
-                              MapLayers.buildPolygonLayer(
-                                territories,
-                                highlightedTerritoryId: _highlightedTerritoryId,
-                              ),
-                        ),
-                        ValueListenableBuilder<List<Territory>>(
-                          valueListenable: _territoriesNotifier,
-                          builder: (context, territories, _) =>
-                              MapLayers.buildTerritoryBadgesLayer(territories),
-                        ),
-                        ValueListenableBuilder<int>(
-                          valueListenable: _runPathUpdateNotifier,
-                          builder: (context, _, child) =>
-                              MapLayers.buildPolylineLayer(
-                                isRunActive: _isRunActive,
-                                runCoordinates: _runCoordinates,
-                                currentEnclosurePath:
-                                    _polygonEngine.currentPath,
-                                suggestedRouteCoordinates:
-                                    _activeSuggestedRoute?.polyline,
-                                rivalBreadcrumbs: _rivalBreadcrumbs,
-                                activeRivalRunners: _activeRivalRunners,
-                              ),
-                        ),
-                        ValueListenableBuilder<LatLng?>(
-                          valueListenable: _liveLocationNotifier,
-                          builder: (context, loc, child) =>
-                              MapLayers.buildMarkerLayer(
-                                currentLocation: loc ?? _currentLocation,
-                                activeRivalRunners: _activeRivalRunners,
-                              ),
-                        ),
-                        if (AppConstants.tileAttribution.isNotEmpty)
-                          RichAttributionWidget(
-                            attributions: [
-                              TextSourceAttribution(
-                                AppConstants.tileAttribution,
-                                prependCopyright: false,
-                              ),
-                            ],
+            children: [
+              // 1. The Interactive Fullscreen Map wrapped in RepaintBoundary
+              _currentLocation == null
+                  ? const Center(
+                      child: CircularProgressIndicator(color: AppColors.accent),
+                    )
+                  : RepaintBoundary(
+                      child: FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: _currentLocation!,
+                          initialZoom: 17.0,
+                          backgroundColor: AppColors.bgDeep,
+                          onTap: (tapPosition, point) =>
+                              _inspectSectorAt(point),
+                          interactionOptions: const InteractionOptions(
+                            flags:
+                                InteractiveFlag.all & ~InteractiveFlag.rotate,
                           ),
-                      ],
-                    ),
-                  ),
-            // 2. Minimal Athletic Top Bar: Avatar (opens Profile) + Faction chip (left), GpsSyncChip (right)
-            Positioned(
-              top: pad.top + 10,
-              left: 16,
-              right: 16,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Semantics(
-                        button: true,
-                        label:
-                            'Runner profile for $athleteName. Tap to view profile.',
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            AppMotion.selectionTick();
-                            Navigator.push(
-                              context,
-                              AppMotion.pageRoute(
-                                builder: (_) => const ProfilePage(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            constraints: const BoxConstraints(
-                              minWidth: 48,
-                              minHeight: 48,
+                        ),
+                        children: [
+                          MapLayers.buildTileLayer(),
+                          ValueListenableBuilder<List<Territory>>(
+                            valueListenable: _territoriesNotifier,
+                            builder: (context, territories, _) =>
+                                MapLayers.buildPolygonLayer(
+                                  territories,
+                                  highlightedTerritoryId:
+                                      _highlightedTerritoryId,
+                                ),
+                          ),
+                          ValueListenableBuilder<List<Territory>>(
+                            valueListenable: _territoriesNotifier,
+                            builder: (context, territories, _) =>
+                                MapLayers.buildTerritoryBadgesLayer(
+                                  territories,
+                                ),
+                          ),
+                          ValueListenableBuilder<int>(
+                            valueListenable: _runPathUpdateNotifier,
+                            builder: (context, _, child) =>
+                                MapLayers.buildPolylineLayer(
+                                  isRunActive: _isRunActive,
+                                  runCoordinates: _runCoordinates,
+                                  currentEnclosurePath:
+                                      _polygonEngine.currentPath,
+                                  suggestedRouteCoordinates:
+                                      _activeSuggestedRoute?.polyline,
+                                  rivalBreadcrumbs: _rivalBreadcrumbs,
+                                  activeRivalRunners: _activeRivalRunners,
+                                ),
+                          ),
+                          ValueListenableBuilder<LatLng?>(
+                            valueListenable: _liveLocationNotifier,
+                            builder: (context, loc, child) =>
+                                MapLayers.buildMarkerLayer(
+                                  currentLocation: loc ?? _currentLocation,
+                                  activeRivalRunners: _activeRivalRunners,
+                                ),
+                          ),
+                          if (AppConstants.tileAttribution.isNotEmpty)
+                            RichAttributionWidget(
+                              attributions: [
+                                TextSourceAttribution(
+                                  AppConstants.tileAttribution,
+                                  prependCopyright: false,
+                                ),
+                              ],
                             ),
-                            alignment: Alignment.center,
-                            child: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: AppColors.surfaceGlass,
-                              child: Text(
-                                athleteName.isNotEmpty
-                                    ? athleteName[0].toUpperCase()
-                                    : 'R',
-                                style: AppText.headingSmall.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w700,
+                        ],
+                      ),
+                    ),
+              // 2. Minimal Athletic Top Bar: Avatar (opens Profile) + Faction chip (left), GpsSyncChip (right)
+              Positioned(
+                top: pad.top + 10,
+                left: 16,
+                right: 16,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Semantics(
+                          button: true,
+                          label:
+                              'Runner profile for $athleteName. Tap to view profile.',
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () {
+                              AppMotion.selectionTick();
+                              Navigator.push(
+                                context,
+                                AppMotion.pageRoute(
+                                  builder: (_) => const ProfilePage(),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              constraints: const BoxConstraints(
+                                minWidth: 48,
+                                minHeight: 48,
+                              ),
+                              alignment: Alignment.center,
+                              child: CircleAvatar(
+                                radius: 20,
+                                backgroundColor: AppColors.surfaceGlass,
+                                child: Text(
+                                  athleteName.isNotEmpty
+                                      ? athleteName[0].toUpperCase()
+                                      : 'R',
+                                  style: AppText.headingSmall.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  GpsSyncChip(
-                    accuracyMeters: _satelliteAccuracyMeters,
-                    isGpsSearching: _currentLocation == null,
-                  ),
-                ],
-              ),
-            ),
-
-            // 3. Ergonomic Floating Controls (Dynamically anchored above measured HUD height)
-            ValueListenableBuilder<bool>(
-              valueListenable: _appPrefs.leftHandedModeNotifier,
-              builder: (context, isLeftHanded, _) {
-                return ValueListenableBuilder<double>(
-                  valueListenable: _hudHeightNotifier,
-                  builder: (context, hudHeight, _) {
-                    final bottomOffset = pad.bottom + 12 + hudHeight + 12;
-
-                    return Stack(
-                      children: [
-                        // Thumb Controls Rail (Tools, Layers, Recenter)
-                        Positioned(
-                          left: isLeftHanded ? 16 : null,
-                          right: isLeftHanded ? null : 16,
-                          bottom: bottomOffset,
-                          child: MapControlsRail(
-                            isCameraLocked: _isCameraFollowLocked,
-                            onOpenTools: _openToolsSheet,
-                            onOpenLayers: _openLayersSheet,
-                            onRecenter: _onRecenterTapped,
-                          ),
-                        ),
-
-                        // Isolated Safety SOS Shield Button (Mirrored away from thumb rail)
-                        Positioned(
-                          left: isLeftHanded ? null : 16,
-                          right: isLeftHanded ? 16 : null,
-                          bottom: bottomOffset,
-                          child: SosShieldButton(
-                            onTriggerSos: () {
-                              showSosBeaconSheet(context, _currentLocation);
-                            },
-                          ),
-                        ),
                       ],
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                    GpsSyncChip(
+                      accuracyMeters: _satelliteAccuracyMeters,
+                      isGpsSearching: _currentLocation == null,
+                    ),
+                  ],
+                ),
+              ),
 
-            // 4. Strava-Grade Live Telemetry HUD Obsidian Glass Card
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: pad.bottom + 12,
-              child: MeasureSize(
-                onChange: (size) {
-                  if (_hudHeightNotifier.value != size.height) {
-                    _hudHeightNotifier.value = size.height;
-                  }
+              // 3. Ergonomic Floating Controls (Dynamically anchored above measured HUD height)
+              ValueListenableBuilder<bool>(
+                valueListenable: _appPrefs.leftHandedModeNotifier,
+                builder: (context, isLeftHanded, _) {
+                  return ValueListenableBuilder<double>(
+                    valueListenable: _hudHeightNotifier,
+                    builder: (context, hudHeight, _) {
+                      final bottomOffset = pad.bottom + 12 + hudHeight + 12;
+
+                      return Stack(
+                        children: [
+                          // Thumb Controls Rail (Tools, Layers, Recenter)
+                          Positioned(
+                            left: isLeftHanded ? 16 : null,
+                            right: isLeftHanded ? null : 16,
+                            bottom: bottomOffset,
+                            child: MapControlsRail(
+                              isCameraLocked: _isCameraFollowLocked,
+                              onOpenTools: _openToolsSheet,
+                              onOpenLayers: _openLayersSheet,
+                              onRecenter: _onRecenterTapped,
+                            ),
+                          ),
+
+                          // Isolated Safety SOS Shield Button (Mirrored away from thumb rail)
+                          Positioned(
+                            left: isLeftHanded ? null : 16,
+                            right: isLeftHanded ? 16 : null,
+                            bottom: bottomOffset,
+                            child: SosShieldButton(
+                              onTriggerSos: () {
+                                showSosBeaconSheet(context, _currentLocation);
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
                 },
-                child: ValueListenableBuilder<RunTelemetry>(
-                  valueListenable: _telemetryNotifier,
-                  builder: (context, telemetry, _) {
-                    return RunHud(
-                      isRunActive: _isRunActive,
-                      isSearchingGps: _currentLocation == null,
-                      isAutoPaused: telemetry.isAutoPaused,
-                      distanceKm: telemetry.distanceKm,
-                      elapsedSeconds: telemetry.elapsedSeconds,
-                      movingSeconds: telemetry.movingSeconds,
-                      splitPace: telemetry.splitPace,
-                      currentSpeedKmh: telemetry.currentSpeedKmh,
-                      satelliteAccuracyMeters:
-                          telemetry.satelliteAccuracyMeters,
-                      territoriesClaimed: telemetry.territoriesClaimed,
-                      distanceToClosureMeters:
-                          telemetry.distanceToClosureMeters,
-                      proximityToClosure: telemetry.proximityToClosure,
-                      targetPace:
-                          _locationService.pacerMode != VirtualPacerMode.none
-                          ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
-                          : null,
-                      runGoal: telemetry.activeGoal ?? _activeGoal,
-                      currentAreaSqm: telemetry.currentAreaSqm,
-                      onOpenGoalSelector: _openGoalSelector,
-                      isBatterySaverActive:
-                          _batterySaverService.isBatterySaverEnabled,
-                      onToggleAmoledSaver: () {
-                        AppMotion.mediumTick();
-                        _batterySaverService.setAmoledHudActive(true);
-                      },
-                      onToggleRun: _toggleRun,
-                      onSealShape: _sealCurrentShape,
-                      onFinishRun: () {
-                        if (_isRunActive) {
-                          _toggleRun();
-                        }
-                      },
-                    );
-                  },
-                ),
-              ),
-            ),
-
-            // 5. Non-blocking Go Cue (<= 400 ms)
-            if (_showGoCue)
-              Positioned.fill(
-                child: RunGoCue(
-                  onDismissed: () {
-                    if (mounted) setState(() => _showGoCue = false);
-                  },
-                ),
               ),
 
-            // 6. AMOLED Pure Black Low-Power Screen Overlay (when active)
-            ValueListenableBuilder<bool>(
-              valueListenable: _batterySaverService.isAmoledHudActiveNotifier,
-              builder: (context, isAmoledActive, _) {
-                if (!isAmoledActive || !_isRunActive) {
-                  return const SizedBox.shrink();
-                }
-                return ValueListenableBuilder<RunTelemetry>(
-                  valueListenable: _telemetryNotifier,
-                  builder: (context, telemetry, _) {
-                    return AmoledBatterySaverOverlay(
-                      distanceKm: telemetry.distanceKm,
-                      elapsedSeconds: telemetry.elapsedSeconds,
-                      splitPace: telemetry.splitPace,
-                      currentSpeedKmh: telemetry.currentSpeedKmh,
-                      runGoal: telemetry.activeGoal ?? _activeGoal,
-                      onWake: () =>
-                          _batterySaverService.setAmoledHudActive(false),
-                    );
+              // 4. Strava-Grade Live Telemetry HUD Obsidian Glass Card
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: pad.bottom + 12,
+                child: MeasureSize(
+                  onChange: (size) {
+                    if (_hudHeightNotifier.value != size.height) {
+                      _hudHeightNotifier.value = size.height;
+                    }
                   },
-                );
-              },
-            ),
-          ],
+                  child: ValueListenableBuilder<RunTelemetry>(
+                    valueListenable: _telemetryNotifier,
+                    builder: (context, telemetry, _) {
+                      return RunHud(
+                        isRunActive: _isRunActive,
+                        isSearchingGps: _currentLocation == null,
+                        isAutoPaused: telemetry.isAutoPaused,
+                        distanceKm: telemetry.distanceKm,
+                        elapsedSeconds: telemetry.elapsedSeconds,
+                        movingSeconds: telemetry.movingSeconds,
+                        splitPace: telemetry.splitPace,
+                        currentSpeedKmh: telemetry.currentSpeedKmh,
+                        satelliteAccuracyMeters:
+                            telemetry.satelliteAccuracyMeters,
+                        territoriesClaimed: telemetry.territoriesClaimed,
+                        distanceToClosureMeters:
+                            telemetry.distanceToClosureMeters,
+                        proximityToClosure: telemetry.proximityToClosure,
+                        targetPace:
+                            _locationService.pacerMode != VirtualPacerMode.none
+                            ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+                            : null,
+                        runGoal: telemetry.activeGoal ?? _activeGoal,
+                        currentAreaSqm: telemetry.currentAreaSqm,
+                        onOpenGoalSelector: _openGoalSelector,
+                        isBatterySaverActive:
+                            _batterySaverService.isBatterySaverEnabled,
+                        onToggleAmoledSaver: () {
+                          AppMotion.mediumTick();
+                          _batterySaverService.setAmoledHudActive(true);
+                        },
+                        onToggleRun: _toggleRun,
+                        onSealShape: _sealCurrentShape,
+                        onFinishRun: () {
+                          if (_isRunActive) {
+                            _toggleRun();
+                          }
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              // 5. Non-blocking Go Cue (<= 400 ms)
+              if (_showGoCue)
+                Positioned.fill(
+                  child: RunGoCue(
+                    onDismissed: () {
+                      if (mounted) setState(() => _showGoCue = false);
+                    },
+                  ),
+                ),
+
+              // 6. AMOLED Pure Black Low-Power Screen Overlay (when active)
+              ValueListenableBuilder<bool>(
+                valueListenable: _batterySaverService.isAmoledHudActiveNotifier,
+                builder: (context, isAmoledActive, _) {
+                  if (!isAmoledActive || !_isRunActive) {
+                    return const SizedBox.shrink();
+                  }
+                  return ValueListenableBuilder<RunTelemetry>(
+                    valueListenable: _telemetryNotifier,
+                    builder: (context, telemetry, _) {
+                      return AmoledBatterySaverOverlay(
+                        distanceKm: telemetry.distanceKm,
+                        elapsedSeconds: telemetry.elapsedSeconds,
+                        splitPace: telemetry.splitPace,
+                        currentSpeedKmh: telemetry.currentSpeedKmh,
+                        runGoal: telemetry.activeGoal ?? _activeGoal,
+                        onWake: () =>
+                            _batterySaverService.setAmoledHudActive(false),
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> _showExitRunConfirmation() async {
     AppMotion.lightTick();

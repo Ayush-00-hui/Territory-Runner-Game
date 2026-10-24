@@ -41,20 +41,20 @@ class AppChip extends StatelessWidget {
     final textColor = needsAttention
         ? AppColors.warning
         : isSelected
-            ? activeColor
-            : (customTextColor ?? AppColors.textSecondary);
+        ? activeColor
+        : (customTextColor ?? AppColors.textSecondary);
 
     final bgColor = needsAttention
         ? AppColors.warning.withValues(alpha: 0.12)
         : isSelected
-            ? AppColors.accentContainer
-            : AppColors.surface2;
+        ? AppColors.accentContainer
+        : AppColors.surface2;
 
     final borderColor = needsAttention
         ? AppColors.warning.withValues(alpha: 0.5)
         : isSelected
-            ? activeColor
-            : AppColors.borderSubtle;
+        ? activeColor
+        : AppColors.borderSubtle;
 
     final content = AnimatedContainer(
       duration: AppMotion.duration(context, AppMotion.fast),

@@ -117,9 +117,7 @@ class ProfileHeroCard extends StatelessWidget {
                       runSpacing: 4,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        NeutralChip(
-                          label: 'Level ${profile.level}',
-                        ),
+                        NeutralChip(label: 'Level ${profile.level}'),
                         NeutralChip(
                           label: profile.faction.isNotEmpty
                               ? profile.faction

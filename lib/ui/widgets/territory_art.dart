@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
@@ -54,7 +55,8 @@ class TerritoryArt extends StatefulWidget {
   }) {
     final myPolys = territories.map((t) => t.polygon).toList();
     final rivalPolys = rivalTerritories.map((t) => t.polygon).toList();
-    final calculatedArea = totalAreaSqm ??
+    final calculatedArea =
+        totalAreaSqm ??
         territories.fold<double>(0.0, (acc, t) => acc + t.areaSqMeters);
 
     return TerritoryArt(
@@ -120,9 +122,9 @@ class _TerritoryArtState extends State<TerritoryArt>
       return (sqm / 1000000.0).toStringAsFixed(2);
     }
     return sqm.round().toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        );
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
   }
 
   String _formatUnit(double sqm) {
@@ -131,7 +133,8 @@ class _TerritoryArtState extends State<TerritoryArt>
 
   @override
   Widget build(BuildContext context) {
-    final bool isEmpty = widget.polygons.isEmpty &&
+    final bool isEmpty =
+        widget.polygons.isEmpty &&
         widget.rivalPolygons.isEmpty &&
         (widget.routePath == null || widget.routePath!.isEmpty);
 
@@ -142,8 +145,7 @@ class _TerritoryArtState extends State<TerritoryArt>
         width: widget.width ?? double.infinity,
         decoration: BoxDecoration(
           color: widget.isThumbnail ? AppColors.surface2 : AppColors.surface,
-          borderRadius:
-              widget.isThumbnail ? AppRadius.br8 : AppRadius.br16,
+          borderRadius: widget.isThumbnail ? AppRadius.br8 : AppRadius.br16,
           border: Border.all(
             color: widget.isThumbnail
                 ? AppColors.border
@@ -167,7 +169,8 @@ class _TerritoryArtState extends State<TerritoryArt>
             ),
 
             // 2. Telemetry Readout Overlay (for Hero / Summary cards)
-            if (!widget.isThumbnail && (widget.totalAreaSqm != null || widget.subtitle != null))
+            if (!widget.isThumbnail &&
+                (widget.totalAreaSqm != null || widget.subtitle != null))
               Positioned(
                 left: AppSpacing.s16,
                 bottom: AppSpacing.s14,
@@ -304,14 +307,19 @@ class _TerritoryArtPainter extends CustomPainter {
     final cosFactor = math.cos(midLat * math.pi / 180.0).abs();
     final effectiveLngSpan = lngSpan * cosFactor;
 
-    final scaleX = drawWidth / (effectiveLngSpan > 0 ? effectiveLngSpan : 0.001);
+    final scaleX =
+        drawWidth / (effectiveLngSpan > 0 ? effectiveLngSpan : 0.001);
     final scaleY = drawHeight / (latSpan > 0 ? latSpan : 0.001);
     final scale = math.min(scaleX, scaleY);
 
     Offset project(LatLng pt) {
-      final x = pad + (drawWidth - effectiveLngSpan * scale) / 2 +
+      final x =
+          pad +
+          (drawWidth - effectiveLngSpan * scale) / 2 +
           (pt.longitude - minLng) * cosFactor * scale;
-      final y = pad + (drawHeight - latSpan * scale) / 2 +
+      final y =
+          pad +
+          (drawHeight - latSpan * scale) / 2 +
           (maxLat - pt.latitude) * scale;
       return Offset(x, y);
     }

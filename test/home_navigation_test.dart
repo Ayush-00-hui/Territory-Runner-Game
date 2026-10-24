@@ -207,7 +207,9 @@ void main() {
 
         // Verify vertical coordinates: Start run hero is fully above the fold on 360x640 (< 520 dp)
         final greetingY = tester.getTopLeft(greetingFinder).dy;
-        final statusChipY = tester.getTopLeft(find.byType(CombinedStatusIndicator)).dy;
+        final statusChipY = tester
+            .getTopLeft(find.byType(CombinedStatusIndicator))
+            .dy;
         final startRunY = tester.getTopLeft(find.text('Start run')).dy;
         final weeklySummaryY = tester
             .getTopLeft(find.text('Weekly summary'))

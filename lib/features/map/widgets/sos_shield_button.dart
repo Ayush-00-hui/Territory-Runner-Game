@@ -27,32 +27,33 @@ class _SosShieldButtonState extends State<SosShieldButton>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )
-      ..addListener(() {
-        final progress = _controller.value;
-        if (progress >= 0.75 && _lastTickMilestone < 3) {
-          _lastTickMilestone = 3;
-          AppMotion.lightTick();
-        } else if (progress >= 0.50 && _lastTickMilestone < 2) {
-          _lastTickMilestone = 2;
-          AppMotion.lightTick();
-        } else if (progress >= 0.25 && _lastTickMilestone < 1) {
-          _lastTickMilestone = 1;
-          AppMotion.lightTick();
-        }
-      })
-      ..addStatusListener((status) {
-        if (status == AnimationStatus.completed && !_completed) {
-          _completed = true;
-          AppMotion.heavyBurst();
-          widget.onTriggerSos();
-          _controller.reset();
-          _lastTickMilestone = 0;
-        }
-      });
+    _controller =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 1500),
+          )
+          ..addListener(() {
+            final progress = _controller.value;
+            if (progress >= 0.75 && _lastTickMilestone < 3) {
+              _lastTickMilestone = 3;
+              AppMotion.lightTick();
+            } else if (progress >= 0.50 && _lastTickMilestone < 2) {
+              _lastTickMilestone = 2;
+              AppMotion.lightTick();
+            } else if (progress >= 0.25 && _lastTickMilestone < 1) {
+              _lastTickMilestone = 1;
+              AppMotion.lightTick();
+            }
+          })
+          ..addStatusListener((status) {
+            if (status == AnimationStatus.completed && !_completed) {
+              _completed = true;
+              AppMotion.heavyBurst();
+              widget.onTriggerSos();
+              _controller.reset();
+              _lastTickMilestone = 0;
+            }
+          });
   }
 
   @override

@@ -166,11 +166,7 @@ class _SummarySheetState extends State<SummarySheet>
     final avgPace = totalSec / totalKm;
     if (count <= 0) {
       return [
-        _KmSplit(
-          kmIndex: 1,
-          distanceKm: totalKm,
-          paceSeconds: avgPace.round(),
-        ),
+        _KmSplit(kmIndex: 1, distanceKm: totalKm, paceSeconds: avgPace.round()),
       ];
     }
 
@@ -182,11 +178,13 @@ class _SummarySheetState extends State<SummarySheet>
     }
     final remainderKm = totalKm - count;
     if (remainderKm >= 0.1) {
-      splits.add(_KmSplit(
-        kmIndex: count + 1,
-        distanceKm: remainderKm,
-        paceSeconds: avgPace.round(),
-      ));
+      splits.add(
+        _KmSplit(
+          kmIndex: count + 1,
+          distanceKm: remainderKm,
+          paceSeconds: avgPace.round(),
+        ),
+      );
     }
     return splits;
   }
@@ -242,16 +240,18 @@ class _SummarySheetState extends State<SummarySheet>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: (widget.rejectionReason != null
-                                  ? AppColors.error
-                                  : AppColors.accent)
-                              .withValues(alpha: 0.15),
+                          color:
+                              (widget.rejectionReason != null
+                                      ? AppColors.error
+                                      : AppColors.accent)
+                                  .withValues(alpha: 0.15),
                           borderRadius: AppSpacing.br8,
                           border: Border.all(
-                            color: (widget.rejectionReason != null
-                                    ? AppColors.error
-                                    : AppColors.accent)
-                                .withValues(alpha: 0.35),
+                            color:
+                                (widget.rejectionReason != null
+                                        ? AppColors.error
+                                        : AppColors.accent)
+                                    .withValues(alpha: 0.35),
                           ),
                         ),
                         child: Text(
@@ -349,11 +349,13 @@ class _SummarySheetState extends State<SummarySheet>
             AnimatedBuilder(
               animation: _countUpAnimation,
               builder: (context, _) {
-                final progress = isReducedMotion ? 1.0 : _countUpAnimation.value;
+                final progress = isReducedMotion
+                    ? 1.0
+                    : _countUpAnimation.value;
                 final double curKm = widget.distanceKm * progress;
                 final int curSec = (widget.durationSeconds * progress).round();
-                final int curTerr =
-                    (widget.territoriesClaimed * progress).round();
+                final int curTerr = (widget.territoriesClaimed * progress)
+                    .round();
 
                 return Container(
                   padding: const EdgeInsets.symmetric(
@@ -478,7 +480,9 @@ class _SummarySheetState extends State<SummarySheet>
                               color: AppColors.accent,
                               fontSize: 9.5,
                               fontWeight: FontWeight.w700,
-                              fontFeatures: const [FontFeature.tabularFigures()],
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                         ),
@@ -617,8 +621,7 @@ class _SummarySheetState extends State<SummarySheet>
                             ),
                             const SizedBox(height: AppSpacing.s6),
                             Text(
-                              insight?.summary ??
-                                  'Run complete. Every closed loop expands your territory.',
+                              insight?.summary ?? 'Run complete. Every closed loop expands your territory.',
                               style: AppText.body.copyWith(
                                 fontSize: 12,
                                 color: AppColors.textPrimary,
@@ -648,8 +651,7 @@ class _SummarySheetState extends State<SummarySheet>
                                   const SizedBox(width: AppSpacing.s6),
                                   Expanded(
                                     child: Text(
-                                      insight?.tip ??
-                                          'Keep up the rhythm! Regular runs compound your territory.',
+                                      insight?.tip ?? 'Keep up the rhythm! Regular runs compound your territory.',
                                       style: AppText.bodySmall.copyWith(
                                         color: AppColors.textSecondary,
                                         fontSize: 11,
@@ -870,7 +872,10 @@ class _SummarySheetState extends State<SummarySheet>
                   ),
                   const SizedBox(width: AppSpacing.s10),
                   Text(
-                    _formatPace(split.distanceKm, (split.paceSeconds * split.distanceKm).round()),
+                    _formatPace(
+                      split.distanceKm,
+                      (split.paceSeconds * split.distanceKm).round(),
+                    ),
                     style: AppText.labelSmall.copyWith(
                       color: isBest ? AppColors.accent : AppColors.textPrimary,
                       fontWeight: isBest ? FontWeight.w700 : FontWeight.w600,
@@ -945,10 +950,7 @@ class _VictoryMapPainter extends CustomPainter {
   final List<LatLng> points;
   final double routeProgress;
 
-  _VictoryMapPainter({
-    required this.points,
-    this.routeProgress = 1.0,
-  });
+  _VictoryMapPainter({required this.points, this.routeProgress = 1.0});
 
   @override
   void paint(Canvas canvas, Size size) {

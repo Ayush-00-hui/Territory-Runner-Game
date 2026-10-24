@@ -214,10 +214,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                 isSelected: _selectedChipIndex == 2,
                 onTap: () => setState(() => _selectedChipIndex = 2),
               ),
-              NeutralChip(
-                label: 'Neutral chip',
-                onTap: () {},
-              ),
+              NeutralChip(label: 'Neutral chip', onTap: () {}),
               const CombinedStatusIndicator(
                 isGpsSearching: false,
                 accuracyMeters: 4.8,
@@ -417,7 +414,8 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
           const SectionHeader(
             title: 'Territory Art & Hero Card',
             overline: 'OFFLINE VECTOR ART',
-            subtitle: 'Flat polygon silhouettes with contour motifs and count-up',
+            subtitle:
+                'Flat polygon silhouettes with contour motifs and count-up',
           ),
           const SizedBox(height: AppSpacing.s8),
           TerritoryHeroCard(

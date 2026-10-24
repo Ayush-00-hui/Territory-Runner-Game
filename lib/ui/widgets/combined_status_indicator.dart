@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -11,12 +12,7 @@ import '../../services/sync_queue.dart';
 
 import '../../services/websocket_service.dart';
 
-enum SystemStatusSeverity {
-  neutral,
-  active,
-  warning,
-  error,
-}
+enum SystemStatusSeverity { neutral, active, warning, error }
 
 /// Unified, calm, single status indicator.
 /// Combines GPS and Cloud Sync status into a single neutral dot + label.
@@ -91,7 +87,10 @@ class _CombinedStatusIndicatorState extends State<CombinedStatusIndicator> {
     _isSyncing = _syncQueue.statusNotifier.value == SyncStatus.syncing;
     _statusListener = () {
       if (mounted) {
-        setState(() => _isSyncing = _syncQueue.statusNotifier.value == SyncStatus.syncing);
+        setState(
+          () => _isSyncing =
+              _syncQueue.statusNotifier.value == SyncStatus.syncing,
+        );
       }
     };
     _syncQueue.statusNotifier.addListener(_statusListener!);
@@ -118,7 +117,7 @@ class _CombinedStatusIndicatorState extends State<CombinedStatusIndicator> {
   }
 
   ({String label, Color dotColor, SystemStatusSeverity severity})
-      _computeStatus() {
+  _computeStatus() {
     if (!_isLocationServiceEnabled) {
       return (
         label: 'Location off',
@@ -211,10 +210,7 @@ class _CombinedStatusIndicatorState extends State<CombinedStatusIndicator> {
           decoration: BoxDecoration(
             color: AppColors.surface2,
             borderRadius: AppRadius.brFull,
-            border: Border.all(
-              color: AppColors.borderSubtle,
-              width: 1.0,
-            ),
+            border: Border.all(color: AppColors.borderSubtle, width: 1.0),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -275,7 +271,9 @@ class _DiagnosticSheetContentState extends State<_DiagnosticSheetContent> {
     _pendingRuns = widget.syncQueue.unsettledCountNotifier.value;
     _unsettledListener = () {
       if (mounted) {
-        setState(() => _pendingRuns = widget.syncQueue.unsettledCountNotifier.value);
+        setState(
+          () => _pendingRuns = widget.syncQueue.unsettledCountNotifier.value,
+        );
       }
     };
     widget.syncQueue.unsettledCountNotifier.addListener(_unsettledListener!);
@@ -285,7 +283,9 @@ class _DiagnosticSheetContentState extends State<_DiagnosticSheetContent> {
   @override
   void dispose() {
     if (_unsettledListener != null) {
-      widget.syncQueue.unsettledCountNotifier.removeListener(_unsettledListener!);
+      widget.syncQueue.unsettledCountNotifier.removeListener(
+        _unsettledListener!,
+      );
     }
     super.dispose();
   }
@@ -312,18 +312,18 @@ class _DiagnosticSheetContentState extends State<_DiagnosticSheetContent> {
             subtitle: !_isLocationServiceEnabled
                 ? 'Location services are disabled on this device.'
                 : widget.isGpsSearching
-                    ? 'Searching for satellite lock...'
-                    : 'Active lock (±${widget.accuracyMeters?.toStringAsFixed(1) ?? "--"}m precision).',
+                ? 'Searching for satellite lock...'
+                : 'Active lock (±${widget.accuracyMeters?.toStringAsFixed(1) ?? "--"}m precision).',
             statusText: !_isLocationServiceEnabled
                 ? 'Disabled'
                 : widget.isGpsSearching
-                    ? 'Searching'
-                    : 'Locked',
+                ? 'Searching'
+                : 'Locked',
             statusColor: !_isLocationServiceEnabled
                 ? AppColors.error
                 : widget.isGpsSearching
-                    ? AppColors.textMuted
-                    : AppColors.accent,
+                ? AppColors.textMuted
+                : AppColors.accent,
           ),
           const Divider(height: AppSpacing.s24),
 
@@ -334,9 +334,12 @@ class _DiagnosticSheetContentState extends State<_DiagnosticSheetContent> {
             subtitle: _pendingRuns == 0
                 ? 'All runs and territory claims are synchronized.'
                 : '$_pendingRuns run loop(s) waiting for connection.',
-            statusText: _pendingRuns == 0 ? 'Up to date' : '$_pendingRuns pending',
-            statusColor:
-                _pendingRuns == 0 ? AppColors.accent : AppColors.warning,
+            statusText: _pendingRuns == 0
+                ? 'Up to date'
+                : '$_pendingRuns pending',
+            statusColor: _pendingRuns == 0
+                ? AppColors.accent
+                : AppColors.warning,
           ),
 
           // 3. Live updates calm optional status line (inside sheet only)
@@ -378,9 +381,7 @@ class _DiagnosticSheetContentState extends State<_DiagnosticSheetContent> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textPrimary,
                   side: const BorderSide(color: AppColors.border),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.br8,
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.br8),
                 ),
                 onPressed: _isSyncing
                     ? null
@@ -436,9 +437,7 @@ class _DiagnosticSheetContentState extends State<_DiagnosticSheetContent> {
               const SizedBox(height: AppSpacing.s2),
               Text(
                 subtitle,
-                style: AppText.bodySmall.copyWith(
-                  color: AppColors.textMuted,
-                ),
+                style: AppText.bodySmall.copyWith(color: AppColors.textMuted),
               ),
             ],
           ),
@@ -447,4 +446,3 @@ class _DiagnosticSheetContentState extends State<_DiagnosticSheetContent> {
     );
   }
 }
-

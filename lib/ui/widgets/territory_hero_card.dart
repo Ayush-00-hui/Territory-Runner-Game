@@ -31,9 +31,9 @@ class TerritoryHeroCard extends StatelessWidget {
       return (sqm / 1000000.0).toStringAsFixed(2);
     }
     return sqm.round().toString().replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        );
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
   }
 
   String _formatUnit(double sqm) {

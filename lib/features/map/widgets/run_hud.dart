@@ -860,8 +860,8 @@ class _RunHudState extends State<RunHud> {
                       label: isNearClosure
                           ? 'Close loop. Ready to claim territory.'
                           : (isRunActive
-                              ? 'Close loop. Available when near your route start.'
-                              : 'Close loop. Disabled. Start a run first.'),
+                                ? 'Close loop. Available when near your route start.'
+                                : 'Close loop. Disabled. Start a run first.'),
                       child: GestureDetector(
                         onTapDown: (_) => setState(() => _isSealPressed = true),
                         onTapUp: (_) => setState(() => _isSealPressed = false),
@@ -921,8 +921,8 @@ class _RunHudState extends State<RunHud> {
                                   color: isNearClosure
                                       ? AppColors.accent
                                       : (isRunActive
-                                          ? AppColors.textSecondary
-                                          : AppColors.textMuted),
+                                            ? AppColors.textSecondary
+                                            : AppColors.textMuted),
                                   size: 16,
                                 ),
                                 const SizedBox(width: AppSpacing.s4),
@@ -933,8 +933,8 @@ class _RunHudState extends State<RunHud> {
                                       color: isNearClosure
                                           ? AppColors.accent
                                           : (isRunActive
-                                              ? AppColors.textPrimary
-                                              : AppColors.textMuted),
+                                                ? AppColors.textPrimary
+                                                : AppColors.textMuted),
                                       fontWeight: FontWeight.w700,
                                       fontSize: 11,
                                     ),

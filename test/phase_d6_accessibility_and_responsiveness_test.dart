@@ -115,19 +115,30 @@ void main() {
 
       // Bone on Graphite Deep
       final textOnBg = contrastRatio(AppColors.textPrimary, AppColors.bgDeep);
-      expect(textOnBg, greaterThanOrEqualTo(7.0),
-          reason: 'Primary text must exceed WCAG AAA (7.0:1)');
+      expect(
+        textOnBg,
+        greaterThanOrEqualTo(7.0),
+        reason: 'Primary text must exceed WCAG AAA (7.0:1)',
+      );
 
       // Accent (Moss) on Graphite Deep
       final accentOnBg = contrastRatio(AppColors.accent, AppColors.bgDeep);
-      expect(accentOnBg, greaterThanOrEqualTo(4.5),
-          reason: 'Accent token must exceed WCAG AA (4.5:1)');
+      expect(
+        accentOnBg,
+        greaterThanOrEqualTo(4.5),
+        reason: 'Accent token must exceed WCAG AA (4.5:1)',
+      );
 
       // Secondary text on Graphite Deep
-      final secondaryOnBg =
-          contrastRatio(AppColors.textSecondary, AppColors.bgDeep);
-      expect(secondaryOnBg, greaterThanOrEqualTo(4.5),
-          reason: 'Secondary text must exceed WCAG AA (4.5:1)');
+      final secondaryOnBg = contrastRatio(
+        AppColors.textSecondary,
+        AppColors.bgDeep,
+      );
+      expect(
+        secondaryOnBg,
+        greaterThanOrEqualTo(4.5),
+        reason: 'Secondary text must exceed WCAG AA (4.5:1)',
+      );
     });
   });
 
@@ -155,9 +166,7 @@ void main() {
         MaterialApp(
           theme: AppTheme.darkTheme,
           home: Scaffold(
-            body: Center(
-              child: SosShieldButton(onTriggerSos: () {}),
-            ),
+            body: Center(child: SosShieldButton(onTriggerSos: () {})),
           ),
         ),
       );
@@ -169,15 +178,14 @@ void main() {
       expect(size.height, greaterThanOrEqualTo(48.0));
     });
 
-    testWidgets('PermissionPrimerSheet buttons are >= 48dp height', (tester) async {
+    testWidgets('PermissionPrimerSheet buttons are >= 48dp height', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.darkTheme,
           home: Scaffold(
-            body: PermissionPrimerSheet(
-              onAccept: () {},
-              onDecline: () {},
-            ),
+            body: PermissionPrimerSheet(onAccept: () {}, onDecline: () {}),
           ),
         ),
       );
@@ -205,12 +213,13 @@ void main() {
 
           await tester.pumpWidget(
             MediaQuery(
-              data: MediaQueryData(size: res, textScaler: const TextScaler.linear(1.0)),
+              data: MediaQueryData(
+                size: res,
+                textScaler: const TextScaler.linear(1.0),
+              ),
               child: MaterialApp(
                 theme: AppTheme.darkTheme,
-                home: HomeScreen(
-                  onStartRun: () {},
-                ),
+                home: HomeScreen(onStartRun: () {}),
               ),
             ),
           );
@@ -227,7 +236,10 @@ void main() {
 
           await tester.pumpWidget(
             MediaQuery(
-              data: MediaQueryData(size: res, textScaler: const TextScaler.linear(1.3)),
+              data: MediaQueryData(
+                size: res,
+                textScaler: const TextScaler.linear(1.3),
+              ),
               child: MaterialApp(
                 theme: AppTheme.darkTheme,
                 home: RunHistoryScreen(
@@ -250,7 +262,10 @@ void main() {
 
           await tester.pumpWidget(
             MediaQuery(
-              data: MediaQueryData(size: res, textScaler: const TextScaler.linear(1.3)),
+              data: MediaQueryData(
+                size: res,
+                textScaler: const TextScaler.linear(1.3),
+              ),
               child: MaterialApp(
                 theme: AppTheme.darkTheme,
                 home: ProfilePage(
@@ -273,7 +288,10 @@ void main() {
 
           await tester.pumpWidget(
             MediaQuery(
-              data: MediaQueryData(size: res, textScaler: const TextScaler.linear(1.3)),
+              data: MediaQueryData(
+                size: res,
+                textScaler: const TextScaler.linear(1.3),
+              ),
               child: MaterialApp(
                 theme: AppTheme.darkTheme,
                 home: Scaffold(
@@ -309,7 +327,10 @@ void main() {
 
           await tester.pumpWidget(
             MediaQuery(
-              data: MediaQueryData(size: res, textScaler: const TextScaler.linear(1.3)),
+              data: MediaQueryData(
+                size: res,
+                textScaler: const TextScaler.linear(1.3),
+              ),
               child: MaterialApp(
                 theme: AppTheme.darkTheme,
                 home: const Scaffold(
@@ -327,70 +348,78 @@ void main() {
     }
   });
 
-  group('Phase D6: Accessibility Text Scaling 2.0x (Extreme Accessibility)', () {
-    testWidgets('RunHud adapts safely without crash or exception at 2.0x scale', (tester) async {
-      const res = Size(393, 852);
-      await tester.binding.setSurfaceSize(res);
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+  group(
+    'Phase D6: Accessibility Text Scaling 2.0x (Extreme Accessibility)',
+    () {
+      testWidgets(
+        'RunHud adapts safely without crash or exception at 2.0x scale',
+        (tester) async {
+          const res = Size(393, 852);
+          await tester.binding.setSurfaceSize(res);
+          addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(
-            size: res,
-            textScaler: TextScaler.linear(2.0),
-          ),
-          child: MaterialApp(
-            theme: AppTheme.darkTheme,
-            home: Scaffold(
-              body: SingleChildScrollView(
-                child: RunHud(
-                  isRunActive: true,
-                  isSearchingGps: false,
-                  isAutoPaused: false,
-                  distanceKm: 8.4,
-                  elapsedSeconds: 2700,
-                  movingSeconds: 2600,
-                  splitPace: '5:20',
-                  currentSpeedKmh: 11.2,
-                  satelliteAccuracyMeters: 4.0,
-                  territoriesClaimed: 2,
-                  currentAreaSqm: 28000.0,
-                  onToggleRun: () {},
-                  onSealShape: () {},
-                  onFinishRun: () {},
+          await tester.pumpWidget(
+            MediaQuery(
+              data: const MediaQueryData(
+                size: res,
+                textScaler: TextScaler.linear(2.0),
+              ),
+              child: MaterialApp(
+                theme: AppTheme.darkTheme,
+                home: Scaffold(
+                  body: SingleChildScrollView(
+                    child: RunHud(
+                      isRunActive: true,
+                      isSearchingGps: false,
+                      isAutoPaused: false,
+                      distanceKm: 8.4,
+                      elapsedSeconds: 2700,
+                      movingSeconds: 2600,
+                      splitPace: '5:20',
+                      currentSpeedKmh: 11.2,
+                      satelliteAccuracyMeters: 4.0,
+                      territoriesClaimed: 2,
+                      currentAreaSqm: 28000.0,
+                      onToggleRun: () {},
+                      onSealShape: () {},
+                      onFinishRun: () {},
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+        },
+      );
+
+      testWidgets('HoldToFinishButton remains accessible at 2.0x scale', (
+        tester,
+      ) async {
+        const res = Size(393, 852);
+        await tester.binding.setSurfaceSize(res);
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          MediaQuery(
+            data: const MediaQueryData(
+              size: res,
+              textScaler: TextScaler.linear(2.0),
+            ),
+            child: MaterialApp(
+              theme: AppTheme.darkTheme,
+              home: Scaffold(
+                body: Center(
+                  child: HoldToFinishButton(isRunActive: true, onFinish: () {}),
                 ),
               ),
             ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('HoldToFinishButton remains accessible at 2.0x scale', (tester) async {
-      const res = Size(393, 852);
-      await tester.binding.setSurfaceSize(res);
-      addTearDown(() => tester.binding.setSurfaceSize(null));
-
-      await tester.pumpWidget(
-        MediaQuery(
-          data: const MediaQueryData(
-            size: res,
-            textScaler: TextScaler.linear(2.0),
-          ),
-          child: MaterialApp(
-            theme: AppTheme.darkTheme,
-            home: Scaffold(
-              body: Center(
-                child: HoldToFinishButton(isRunActive: true, onFinish: () {}),
-              ),
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-    });
-  });
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      });
+    },
+  );
 }

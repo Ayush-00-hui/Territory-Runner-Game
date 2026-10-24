@@ -26,7 +26,7 @@ class WebSocketService with WidgetsBindingObserver {
   final PrivacyZoneService _privacyZoneService;
   final UserSettingsService _userSettingsService;
   WebSocketChannel Function(Uri uri, {Iterable<String>? protocols})?
-      _channelFactory;
+  _channelFactory;
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
@@ -99,7 +99,7 @@ class WebSocketService with WidgetsBindingObserver {
     PrivacyZoneService? privacyZoneService,
     UserSettingsService? userSettingsService,
     WebSocketChannel Function(Uri uri, {Iterable<String>? protocols})?
-        channelFactory,
+    channelFactory,
     bool registerLifecycleObserver = true,
   }) : _firebaseService = firebaseService ?? FirebaseService(),
        _apiClient = apiClient ?? ApiClient(),
@@ -211,10 +211,7 @@ class WebSocketService with WidgetsBindingObserver {
     try {
       final channel = _channelFactory != null
           ? _channelFactory!(params.uri, protocols: params.protocols)
-          : WebSocketChannel.connect(
-              params.uri,
-              protocols: params.protocols,
-            );
+          : WebSocketChannel.connect(params.uri, protocols: params.protocols);
       _channel = channel;
 
       _subscription = channel.stream.listen(
@@ -521,7 +518,11 @@ class WebSocketService with WidgetsBindingObserver {
       'WebSocket network state: ${isOnline ? "online" : "offline"}',
       tag: 'WebSocketService',
     );
-    if (isOnline && !_isConnected && !_isDisposed && !_isAuthBlocked && !_isAppBackgrounded) {
+    if (isOnline &&
+        !_isConnected &&
+        !_isDisposed &&
+        !_isAuthBlocked &&
+        !_isAppBackgrounded) {
       _reconnectTimer?.cancel();
       _reconnectTimer = null;
       connect();
@@ -554,7 +555,10 @@ class WebSocketService with WidgetsBindingObserver {
         state == AppLifecycleState.paused || state == AppLifecycleState.hidden;
     _isAppBackgrounded = isBackground;
     if (state == AppLifecycleState.resumed) {
-      AppLogger.info('WebSocket app resumed to foreground.', tag: 'WebSocketService');
+      AppLogger.info(
+        'WebSocket app resumed to foreground.',
+        tag: 'WebSocketService',
+      );
       if (!_isConnected && !_isDisposed && !_isAuthBlocked && !_isOffline) {
         _reconnectTimer?.cancel();
         _reconnectTimer = null;

@@ -27,8 +27,9 @@ class AppPreferences {
   bool _isInitialized = false;
 
   final ValueNotifier<bool> leftHandedModeNotifier = ValueNotifier<bool>(false);
-  final ValueNotifier<double?> dailyGoalKmNotifier =
-      ValueNotifier<double?>(null);
+  final ValueNotifier<double?> dailyGoalKmNotifier = ValueNotifier<double?>(
+    null,
+  );
 
   bool get isHapticsEnabled => _isHapticsEnabled;
   DistanceUnit get unit => _unit;

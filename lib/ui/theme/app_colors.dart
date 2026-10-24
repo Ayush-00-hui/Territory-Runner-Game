@@ -23,17 +23,32 @@ class AppColors {
   static const Color textMuted = Color(0xFF85837A);
 
   // Brand & Semantic Accents (Default: MOSS)
-  static const Color accent = Color(0xFFA3C586); // Moss (Primary Action & Claimed Land)
-  static const Color onAccent = Color(0xFF0D0E0C); // Dark text/icons on accent fills
-  static const Color accentContainer = Color(0x1AA3C586); // Accent @ 10% (Selected states only)
+  static const Color accent = Color(
+    0xFFA3C586,
+  ); // Moss (Primary Action & Claimed Land)
+  static const Color onAccent = Color(
+    0xFF0D0E0C,
+  ); // Dark text/icons on accent fills
+  static const Color accentContainer = Color(
+    0x1AA3C586,
+  ); // Accent @ 10% (Selected states only)
   static const Color mine = accent; // My territory (Moss)
-  static const Color rival = Color(0xFF86A5D3); // Rival territory (Steel Blue, dashed)
+  static const Color rival = Color(
+    0xFF86A5D3,
+  ); // Rival territory (Steel Blue, dashed)
 
   // Status & Telemetry Semantics
-  static const Color warning = Color(0xFFD9A441); // Ochre / Amber (Caution / Anomaly)
-  static const Color error = Color(0xFFE0716B); // Terracotta / Rose (Destructive / Failure)
-  static const Color info = Color(0xFF9AA4B2); // Slate (Guidance / Neutral Telemetry)
-  static const Color success = accent; // Success is an alias of accent (no second green)
+  static const Color warning = Color(
+    0xFFD9A441,
+  ); // Ochre / Amber (Caution / Anomaly)
+  static const Color error = Color(
+    0xFFE0716B,
+  ); // Terracotta / Rose (Destructive / Failure)
+  static const Color info = Color(
+    0xFF9AA4B2,
+  ); // Slate (Guidance / Neutral Telemetry)
+  static const Color success =
+      accent; // Success is an alias of accent (no second green)
 
   // Podium Trophy Accents (Muted)
   static const Color gold = Color(0xFFCDAE6A);

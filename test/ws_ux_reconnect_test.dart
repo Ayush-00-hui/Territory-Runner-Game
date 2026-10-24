@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:territory_runner/features/map/widgets/gps_sync_chip.dart';
@@ -179,10 +180,7 @@ void main() {
             theme: AppTheme.darkTheme,
             home: const Scaffold(
               body: Center(
-                child: GpsSyncChip(
-                  accuracyMeters: 8.0,
-                  isGpsSearching: false,
-                ),
+                child: GpsSyncChip(accuracyMeters: 8.0, isGpsSearching: false),
               ),
             ),
           ),
@@ -219,7 +217,10 @@ void main() {
         // Force resend on reconnect
         wsService.sendViewportSubscription(['u4pru'], force: true);
         expect(fakeChannel._sink.sentMessages.length, equals(1));
-        expect(fakeChannel._sink.sentMessages.first, contains('viewport_subscribe'));
+        expect(
+          fakeChannel._sink.sentMessages.first,
+          contains('viewport_subscribe'),
+        );
         expect(fakeChannel._sink.sentMessages.first, contains('u4pru'));
 
         wsService.dispose();

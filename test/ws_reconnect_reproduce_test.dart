@@ -2,6 +2,7 @@
 
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:territory_runner/services/api_client.dart';
@@ -21,16 +22,22 @@ void main() {
       );
 
       Object? unhandledZoneError;
-      await runZonedGuarded(() async {
-        await wsService.connect();
-        // Give event loop time to process
-        await Future.delayed(const Duration(milliseconds: 2500));
-      }, (error, stack) {
-        unhandledZoneError = error;
-      });
+      await runZonedGuarded(
+        () async {
+          await wsService.connect();
+          // Give event loop time to process
+          await Future.delayed(const Duration(milliseconds: 2500));
+        },
+        (error, stack) {
+          unhandledZoneError = error;
+        },
+      );
 
-      expect(unhandledZoneError, isNull,
-          reason: 'channel.ready error must be caught inside connect() with zero unhandled zone exceptions');
+      expect(
+        unhandledZoneError,
+        isNull,
+        reason: 'channel.ready error must be caught inside connect() with zero unhandled zone exceptions',
+      );
       expect(wsService.isConnected, isFalse);
       expect(wsService.reconnectAttempts, greaterThanOrEqualTo(1));
 
@@ -41,7 +48,9 @@ void main() {
     test('Scenario (b) - Backend running in dev mode: connects and processes events', () async {
       final server = await HttpServer.bind('127.0.0.1', 0);
       server.transform(WebSocketTransformer()).listen((WebSocket ws) {
-        ws.add('{"type":"conquest_broadcast","attacker_name":"Runner1","area_claimed_sqm":100}');
+        ws.add(
+          '{"type":"conquest_broadcast","attacker_name":"Runner1","area_claimed_sqm":100}',
+        );
       });
 
       final apiClient = ApiClient(baseUrl: 'http://127.0.0.1:${server.port}');
@@ -56,7 +65,9 @@ void main() {
       });
 
       await wsService.connect();
-      final attacker = await completer.future.timeout(const Duration(seconds: 2));
+      final attacker = await completer.future.timeout(
+        const Duration(seconds: 2),
+      );
 
       expect(wsService.isConnected, isTrue);
       expect(attacker, equals('Runner1'));
@@ -72,7 +83,9 @@ void main() {
       server.listen((HttpRequest req) {
         req.response.statusCode = HttpStatus.unauthorized;
         req.response.headers.contentType = ContentType.json;
-        req.response.write('{"error":"UNAUTHORIZED","message":"Missing or invalid credentials for WebSocket"}');
+        req.response.write(
+          '{"error":"UNAUTHORIZED","message":"Missing or invalid credentials for WebSocket"}',
+        );
         req.response.close();
       });
 
@@ -83,18 +96,27 @@ void main() {
       );
 
       Object? unhandledZoneError;
-      await runZonedGuarded(() async {
-        await wsService.connect();
-        await Future.delayed(const Duration(milliseconds: 500));
-      }, (error, stack) {
-        unhandledZoneError = error;
-      });
+      await runZonedGuarded(
+        () async {
+          await wsService.connect();
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        (error, stack) {
+          unhandledZoneError = error;
+        },
+      );
 
-      expect(unhandledZoneError, isNull,
-          reason: 'Handshake 401 error must be caught inside connect() with zero unhandled zone exceptions');
+      expect(
+        unhandledZoneError,
+        isNull,
+        reason: 'Handshake 401 error must be caught inside connect() with zero unhandled zone exceptions',
+      );
       expect(wsService.isConnected, isFalse);
-      expect(wsService.isAuthBlocked, isTrue,
-          reason: 'Auth rejection must set isAuthBlocked to prevent infinite retry loops');
+      expect(
+        wsService.isAuthBlocked,
+        isTrue,
+        reason: 'Auth rejection must set isAuthBlocked to prevent infinite retry loops',
+      );
 
       // Verify that token refresh unblocks auth retries
       wsService.onTokenRefreshed();

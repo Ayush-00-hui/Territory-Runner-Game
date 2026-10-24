@@ -170,10 +170,7 @@ void showFactionSelectionDialog(
                   }
                   onUpdated();
                   if (context.mounted) {
-                    AppToast.show(
-                      context,
-                      'Aligned with ${f['name']}',
-                    );
+                    AppToast.show(context, 'Aligned with ${f['name']}');
                   }
                 },
                 child: Container(

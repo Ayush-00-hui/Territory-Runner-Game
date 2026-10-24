@@ -66,17 +66,13 @@ class PremiumBottomNav extends StatelessWidget {
                 Icon(
                   icon,
                   size: 20.0,
-                  color: isSelected
-                      ? AppColors.accent
-                      : AppColors.textMuted,
+                  color: isSelected ? AppColors.accent : AppColors.textMuted,
                 ),
                 const SizedBox(height: 3),
                 Text(
                   label,
                   style: AppText.caption.copyWith(
-                    color: isSelected
-                        ? AppColors.accent
-                        : AppColors.textMuted,
+                    color: isSelected ? AppColors.accent : AppColors.textMuted,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     fontSize: 10,
                   ),
@@ -111,11 +107,7 @@ class PremiumBottomNav extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // 1. Home
-              _buildTabItem(
-                index: 0,
-                icon: Icons.home_rounded,
-                label: 'Home',
-              ),
+              _buildTabItem(index: 0, icon: Icons.home_rounded, label: 'Home'),
 
               // 2. Activity (History + Personal Records)
               _buildTabItem(
