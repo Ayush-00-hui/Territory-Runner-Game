@@ -76,7 +76,8 @@ void main() {
 
       for (final entity in libDir.listSync(recursive: true)) {
         if (entity is File && entity.path.endsWith('.dart')) {
-          if (entity.path.endsWith('app_toast.dart') || entity.path.endsWith('app_theme.dart')) {
+          if (entity.path.endsWith('app_toast.dart') ||
+              entity.path.endsWith('app_theme.dart')) {
             continue;
           }
           final lines = entity.readAsLinesSync();

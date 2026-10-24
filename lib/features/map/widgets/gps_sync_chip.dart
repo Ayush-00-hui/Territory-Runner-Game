@@ -77,7 +77,11 @@ class GpsSyncChip extends StatelessWidget {
               final detail = accuracyMeters != null
                   ? 'GPS accuracy: ${accuracyMeters!.toStringAsFixed(1)} m • $syncDescription'
                   : 'GPS acquiring fix • $syncDescription';
-              AppToast.show(context, detail, duration: const Duration(seconds: 2));
+              AppToast.show(
+                context,
+                detail,
+                duration: const Duration(seconds: 2),
+              );
               if (syncStatus == SyncStatus.offline ||
                   syncStatus == SyncStatus.pending) {
                 queue.syncPendingRuns();

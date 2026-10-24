@@ -1507,7 +1507,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     children: [
                       Semantics(
                         button: true,
-                        label: 'Runner profile for $athleteName. Tap to view profile.',
+                        label:
+                            'Runner profile for $athleteName. Tap to view profile.',
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
                           onTap: () {
@@ -1652,8 +1653,8 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                       proximityToClosure: telemetry.proximityToClosure,
                       targetPace:
                           _locationService.pacerMode != VirtualPacerMode.none
-                              ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
-                              : null,
+                          ? '${_locationService.pacerMode.name.replaceAll('sub', '')}:00'
+                          : null,
                       runGoal: telemetry.activeGoal ?? _activeGoal,
                       currentAreaSqm: telemetry.currentAreaSqm,
                       onOpenGoalSelector: _openGoalSelector,

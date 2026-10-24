@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../ui/ui.dart';
@@ -9,10 +10,7 @@ import '../../../ui/ui.dart';
 class SosShieldButton extends StatefulWidget {
   final VoidCallback onTriggerSos;
 
-  const SosShieldButton({
-    super.key,
-    required this.onTriggerSos,
-  });
+  const SosShieldButton({super.key, required this.onTriggerSos});
 
   @override
   State<SosShieldButton> createState() => _SosShieldButtonState();
@@ -27,17 +25,18 @@ class _SosShieldButtonState extends State<SosShieldButton>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..addStatusListener((status) {
-        if (status == AnimationStatus.completed && !_completed) {
-          _completed = true;
-          AppMotion.heavyBurst();
-          widget.onTriggerSos();
-          _controller.reset();
-        }
-      });
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1500),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed && !_completed) {
+            _completed = true;
+            AppMotion.heavyBurst();
+            widget.onTriggerSos();
+            _controller.reset();
+          }
+        });
   }
 
   @override

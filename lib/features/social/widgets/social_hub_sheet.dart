@@ -1134,11 +1134,7 @@ class _SocialHubViewState extends State<SocialHubView> {
       }
     } catch (e) {
       if (mounted) {
-        AppToast.show(
-          context,
-          'Error: $e',
-          type: AppToastType.error,
-        );
+        AppToast.show(context, 'Error: $e', type: AppToastType.error);
       }
     }
   }
@@ -1147,20 +1143,12 @@ class _SocialHubViewState extends State<SocialHubView> {
     try {
       final ok = await _apiClient.acceptDuel(duelId);
       if (ok && mounted) {
-        AppToast.show(
-          context,
-          'Duel accepted',
-          type: AppToastType.success,
-        );
+        AppToast.show(context, 'Duel accepted', type: AppToastType.success);
         _refreshData();
       }
     } catch (e) {
       if (mounted) {
-        AppToast.show(
-          context,
-          'Error: $e',
-          type: AppToastType.error,
-        );
+        AppToast.show(context, 'Error: $e', type: AppToastType.error);
       }
     }
   }
@@ -1169,20 +1157,12 @@ class _SocialHubViewState extends State<SocialHubView> {
     try {
       final ok = await _apiClient.declineDuel(duelId);
       if (ok && mounted) {
-        AppToast.show(
-          context,
-          'Duel declined',
-          type: AppToastType.info,
-        );
+        AppToast.show(context, 'Duel declined', type: AppToastType.info);
         _refreshData();
       }
     } catch (e) {
       if (mounted) {
-        AppToast.show(
-          context,
-          'Error: $e',
-          type: AppToastType.error,
-        );
+        AppToast.show(context, 'Error: $e', type: AppToastType.error);
       }
     }
   }

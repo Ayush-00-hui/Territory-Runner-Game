@@ -71,9 +71,11 @@ class _AppIconButtonState extends State<AppIconButton> {
     final isReducedMotion = AppMotion.shouldReduceMotion(context);
     final isEnabled = widget.onTap != null;
 
-    final bgColor = widget.backgroundColor ??
+    final bgColor =
+        widget.backgroundColor ??
         (widget.isGlass ? AppColors.surfaceGlass : AppColors.surface);
-    final iconColor = widget.iconColor ??
+    final iconColor =
+        widget.iconColor ??
         (isEnabled ? AppColors.textPrimary : AppColors.disabled);
     final borderColor = widget.borderColor ?? AppColors.borderSubtle;
 
@@ -96,11 +98,7 @@ class _AppIconButtonState extends State<AppIconButton> {
           boxShadow: AppElevation.floating,
         ),
         child: Center(
-          child: Icon(
-            widget.icon,
-            size: widget.iconSize,
-            color: iconColor,
-          ),
+          child: Icon(widget.icon, size: widget.iconSize, color: iconColor),
         ),
       ),
     );
@@ -122,10 +120,7 @@ class _AppIconButtonState extends State<AppIconButton> {
     );
 
     if (widget.tooltip != null && widget.tooltip!.isNotEmpty) {
-      hitTarget = Tooltip(
-        message: widget.tooltip!,
-        child: hitTarget,
-      );
+      hitTarget = Tooltip(message: widget.tooltip!, child: hitTarget);
     }
 
     final semanticText = widget.semanticLabel ?? widget.tooltip;

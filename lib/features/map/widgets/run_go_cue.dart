@@ -28,9 +28,10 @@ class _RunGoCueState extends State<RunGoCue>
       duration: const Duration(milliseconds: 350),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.05).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.05,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _opacityAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.0), weight: 30),
@@ -82,10 +83,7 @@ class _RunGoCueState extends State<RunGoCue>
                   decoration: BoxDecoration(
                     color: AppColors.surfaceGlass,
                     borderRadius: AppRadius.brFull,
-                    border: Border.all(
-                      color: AppColors.accent,
-                      width: 1.5,
-                    ),
+                    border: Border.all(color: AppColors.accent, width: 1.5),
                   ),
                   child: Text(
                     'GO',

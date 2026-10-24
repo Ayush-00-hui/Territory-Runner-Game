@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -35,7 +36,9 @@ class MapRunController extends ChangeNotifier {
 
   // Real-time Notifiers
   final RunTelemetryNotifier telemetryNotifier = RunTelemetryNotifier();
-  final ValueNotifier<LatLng?> liveLocationNotifier = ValueNotifier<LatLng?>(null);
+  final ValueNotifier<LatLng?> liveLocationNotifier = ValueNotifier<LatLng?>(
+    null,
+  );
   final ValueNotifier<int> runPathUpdateNotifier = ValueNotifier<int>(0);
 
   // Run State
@@ -51,7 +54,10 @@ class MapRunController extends ChangeNotifier {
   double? _satelliteAccuracyMeters;
   double? _distanceToClosureMeters;
   double? _proximityToClosure;
-  RunGoal _activeGoal = const RunGoal(type: GoalType.distance, targetValue: 5.0);
+  RunGoal _activeGoal = const RunGoal(
+    type: GoalType.distance,
+    targetValue: 5.0,
+  );
   bool _goalCompletedAnnounced = false;
 
   final List<LatLng> _runCoordinates = [];
@@ -73,12 +79,12 @@ class MapRunController extends ChangeNotifier {
     RunRecoveryService? runRecoveryService,
     AppPreferences? appPrefs,
     TerritoryService? territoryService,
-  })  : _locationService = locationService ?? LocationService(),
-        _polygonEngine = polygonEngine ?? PolygonEnclosureEngine(),
-        _autoPauseEngine = autoPauseEngine ?? AutoPauseEngine(),
-        _runRecoveryService = runRecoveryService ?? RunRecoveryService(),
-        _appPrefs = appPrefs ?? AppPreferences(),
-        _territoryService = territoryService ?? TerritoryService();
+  }) : _locationService = locationService ?? LocationService(),
+       _polygonEngine = polygonEngine ?? PolygonEnclosureEngine(),
+       _autoPauseEngine = autoPauseEngine ?? AutoPauseEngine(),
+       _runRecoveryService = runRecoveryService ?? RunRecoveryService(),
+       _appPrefs = appPrefs ?? AppPreferences(),
+       _territoryService = territoryService ?? TerritoryService();
 
   // Getters
   bool get isRunActive => _isRunActive;

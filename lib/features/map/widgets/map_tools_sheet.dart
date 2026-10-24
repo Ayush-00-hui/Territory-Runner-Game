@@ -211,9 +211,7 @@ class _ToolTile extends StatelessWidget {
                       : accentColor.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Center(
-                  child: Icon(icon, color: accentColor, size: 20),
-                ),
+                child: Center(child: Icon(icon, color: accentColor, size: 20)),
               ),
               const SizedBox(width: AppSpacing.s12),
               Expanded(
