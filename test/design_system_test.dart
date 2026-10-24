@@ -6,19 +6,19 @@ import 'package:territory_runner/ui/ui.dart';
 
 void main() {
   group('Territory Runner Design System Tokens', () {
-    test('AppColors token palette definitions (Ink + Pacer Blue)', () {
-      expect(AppColors.bgDeep, const Color(0xFF090B0F));
-      expect(AppColors.surface, const Color(0xFF12151B));
-      expect(AppColors.accent, const Color(0xFF4C8DFF));
-      expect(AppColors.mine, const Color(0xFF4C8DFF));
-      expect(AppColors.rival, const Color(0xFFFF7A59));
-      expect(AppColors.warning, const Color(0xFFF5B544));
-      expect(AppColors.info, const Color(0xFF94A3B8));
-      expect(AppColors.error, const Color(0xFFF2677A));
-      expect(AppColors.success, const Color(0xFF4FD1A5));
-      expect(AppColors.gold, const Color(0xFFD9B45B));
-      expect(AppColors.silver, const Color(0xFFB8BCC4));
-      expect(AppColors.bronze, const Color(0xFFB98558));
+    test('AppColors token palette definitions (Graphite + Bone + Moss)', () {
+      expect(AppColors.bgDeep, const Color(0xFF0D0E0C));
+      expect(AppColors.surface, const Color(0xFF141512));
+      expect(AppColors.accent, const Color(0xFFA3C586));
+      expect(AppColors.mine, const Color(0xFFA3C586));
+      expect(AppColors.rival, const Color(0xFF86A5D3));
+      expect(AppColors.warning, const Color(0xFFD9A441));
+      expect(AppColors.info, const Color(0xFF9AA4B2));
+      expect(AppColors.error, const Color(0xFFE0716B));
+      expect(AppColors.success, const Color(0xFFA3C586));
+      expect(AppColors.gold, const Color(0xFFCDAE6A));
+      expect(AppColors.silver, const Color(0xFFB5B6B0));
+      expect(AppColors.bronze, const Color(0xFFB0825A));
     });
 
     test('AppSpacing scale and radii consistency', () {
@@ -188,5 +188,116 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets('NeutralChip renders label and triggers tap', (tester) async {
+      bool tapped = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: NeutralChip(
+              label: 'GPS lock',
+              onTap: () => tapped = true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('GPS lock'), findsOneWidget);
+      await tester.tap(find.text('GPS lock'));
+      await tester.pumpAndSettle();
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('TerritoryArt renders empty canvas gracefully', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: TerritoryArt(
+              polygons: [],
+              height: 200,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(TerritoryArt), findsOneWidget);
+    });
+
+    testWidgets('TerritoryHeroCard renders area and triggers primary action', (
+      tester,
+    ) async {
+      bool runStarted = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: TerritoryHeroCard(
+                territories: const [],
+                totalAreaSqm: 125000,
+                weeklyGainedAreaSqm: 4500,
+                onStartRun: () => runStarted = true,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.text('Start run'), findsOneWidget);
+      expect(find.text('125,000'), findsAtLeastNWidgets(1));
+      await tester.tap(find.text('Start run'));
+      await tester.pumpAndSettle();
+      expect(runStarted, isTrue);
+    });
+
+    testWidgets('PremiumBottomNav renders 5 destinations and triggers tab switch', (
+      tester,
+    ) async {
+      int activeIndex = 0;
+      bool runTapped = false;
+      await tester.pumpWidget(
+        StatefulBuilder(
+          builder: (context, setState) {
+            return MaterialApp(
+              home: Scaffold(
+                bottomNavigationBar: PremiumBottomNav(
+                  selectedIndex: activeIndex,
+                  onTabSelected: (idx) {
+                    setState(() => activeIndex = idx);
+                  },
+                  onStartRun: () => runTapped = true,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Activity'), findsOneWidget);
+      expect(find.text('Compete'), findsOneWidget);
+      expect(find.text('Profile'), findsOneWidget);
+      expect(find.byIcon(Icons.directions_run_rounded), findsOneWidget);
+
+      await tester.tap(find.text('Activity'));
+      await tester.pumpAndSettle();
+      expect(activeIndex, 1);
+
+      await tester.tap(find.byIcon(Icons.directions_run_rounded));
+      await tester.pumpAndSettle();
+      expect(runTapped, isTrue);
+    });
+  });
+
+  group('Motion and Toast Performance Budgets', () {
+    test('AppMotion durations follow responsive athletic design budgets', () {
+      expect(AppMotion.fast.inMilliseconds, lessThanOrEqualTo(150));
+      expect(AppMotion.standard.inMilliseconds, lessThanOrEqualTo(250));
+      expect(AppMotion.sheet.inMilliseconds, lessThanOrEqualTo(250));
+      expect(AppMotion.countUp.inMilliseconds, lessThanOrEqualTo(500));
+      expect(AppMotion.capture.inMilliseconds, lessThanOrEqualTo(600));
+    });
   });
 }
+
+

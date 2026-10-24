@@ -89,3 +89,32 @@ class AppChip extends StatelessWidget {
     return content;
   }
 }
+
+/// A purely neutral badge for non-interactive labels, tier indicators, and secondary tags.
+/// Enforces surface2 + hairline border + textSecondary styling without multi-color clutter.
+class NeutralChip extends StatelessWidget {
+  final String label;
+  final IconData? icon;
+  final Widget? leading;
+  final VoidCallback? onTap;
+
+  const NeutralChip({
+    super.key,
+    required this.label,
+    this.icon,
+    this.leading,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppChip(
+      label: label,
+      icon: icon,
+      isSelected: false,
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      customTextColor: AppColors.textSecondary,
+    );
+  }
+}
