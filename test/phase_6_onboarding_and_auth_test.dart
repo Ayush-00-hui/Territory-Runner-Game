@@ -259,7 +259,7 @@ void main() {
 
   group('Phase 6: AuthScreen Redesign Tests', () {
     testWidgets(
-      'AuthScreen renders brand header, tabs, and switches between One-Tap, Email, Phone',
+      'AuthScreen renders brand header, tabs, and switches between Google, Phone, Create Account',
       (WidgetTester tester) async {
         tester.view.physicalSize = const Size(800, 1400);
         tester.view.devicePixelRatio = 1.0;
@@ -278,38 +278,39 @@ void main() {
         // Verify brand header & title
         expect(find.text('TERRITORY RUNNER'), findsOneWidget);
         expect(find.text('Athlete Access'), findsOneWidget);
-        expect(find.text('One-Tap'), findsOneWidget);
-        expect(find.text('Email'), findsOneWidget);
-        expect(find.text('Phone OTP'), findsOneWidget);
+        expect(find.text('Google'), findsOneWidget);
+        expect(find.text('Phone'), findsOneWidget);
+        expect(find.text('Create Account'), findsOneWidget);
 
-        // Initial tab is One-Tap
+        // Initial tab is Google
         expect(find.text('Instant Google Sign-In'), findsOneWidget);
         expect(find.text('Continue with Google'), findsOneWidget);
 
-        // Switch to Email Tab
-        await tester.tap(find.text('Email'));
+        // Switch to Create Account / Email Tab
+        await tester.tap(find.text('Create Account'));
         await tester.pumpAndSettle();
 
+        expect(find.text('Athlete Callsign / Name'), findsOneWidget);
         expect(find.text('Email Address'), findsOneWidget);
         expect(find.text('Password (min 6 characters)'), findsOneWidget);
+        expect(find.text('Create Athlete Account'), findsOneWidget);
+        expect(find.text('Already registered? Log In'), findsOneWidget);
+
+        // Switch to Log In mode
+        await tester.tap(find.text('Already registered? Log In'));
+        await tester.pumpAndSettle();
+
         expect(find.text('Log In with Email'), findsOneWidget);
         expect(
           find.text('New to Territory Runner? Create Account'),
           findsOneWidget,
         );
 
-        // Switch to Sign Up mode
-        await tester.tap(find.text('New to Territory Runner? Create Account'));
+        // Switch to Phone Tab
+        await tester.tap(find.text('Phone'));
         await tester.pumpAndSettle();
 
-        expect(find.text('Athlete Callsign / Name'), findsOneWidget);
-        expect(find.text('Create Athlete Account'), findsOneWidget);
-
-        // Switch to Phone OTP Tab
-        await tester.tap(find.text('Phone OTP'));
-        await tester.pumpAndSettle();
-
-        expect(find.text('Phone Number'), findsOneWidget);
+        expect(find.text('Mobile Number (with country code)'), findsOneWidget);
         expect(find.text('Send SMS OTP Code'), findsOneWidget);
       },
     );
@@ -331,12 +332,12 @@ void main() {
           ),
         );
 
-        // Switch to Email tab
-        await tester.tap(find.text('Email'));
+        // Switch to Create Account tab
+        await tester.tap(find.text('Create Account'));
         await tester.pumpAndSettle();
 
-        // Tap Log In with empty fields
-        await tester.tap(find.text('Log In with Email'));
+        // Tap Create Athlete Account with empty fields
+        await tester.tap(find.text('Create Athlete Account'));
         await tester.pumpAndSettle();
 
         expect(
