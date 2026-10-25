@@ -333,7 +333,11 @@ class _AuthScreenState extends State<AuthScreen> {
                   children: [
                     _buildTabPill(0, Icons.account_circle_rounded, 'Google'),
                     _buildTabPill(1, Icons.phone_android_rounded, 'Phone'),
-                    _buildTabPill(2, Icons.person_add_alt_1_rounded, 'Create Account'),
+                    _buildTabPill(
+                      2,
+                      Icons.person_add_alt_1_rounded,
+                      'Create Account',
+                    ),
                   ],
                 ),
               ),
