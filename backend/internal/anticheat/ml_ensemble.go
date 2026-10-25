@@ -1,6 +1,7 @@
 package anticheat
 
 import (
+	"bytes"
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
@@ -68,7 +69,9 @@ func NewDefaultMLEnsemble() (*MLEnsemble, error) {
 		return nil, fmt.Errorf("anticheat: failed to parse embedded metadata: %w", err)
 	}
 
-	h := sha256.Sum256(embeddedTreesJSON)
+	// Normalize line endings to LF for platform-independent cryptographic verification
+	normalized := bytes.ReplaceAll(embeddedTreesJSON, []byte("\r\n"), []byte("\n"))
+	h := sha256.Sum256(normalized)
 	actualSHA := hex.EncodeToString(h[:])
 
 	if meta.SHA256Trees != "" && actualSHA != meta.SHA256Trees {

@@ -167,7 +167,9 @@ class AnomalyService {
     try {
       final Map<String, dynamic> meta =
           jsonDecode(metaJson) as Map<String, dynamic>;
-      final bytes = utf8.encode(treeJson);
+      // Normalize line endings to LF for platform-independent cryptographic verification
+      final normalizedTree = treeJson.replaceAll('\r\n', '\n');
+      final bytes = utf8.encode(normalizedTree);
       final String actualSha = sha256.convert(bytes).toString();
 
       final String expectedSha = (meta['sha256_trees'] as String?) ?? '';

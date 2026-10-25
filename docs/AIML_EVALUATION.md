@@ -143,5 +143,5 @@ Both runtime targets enforce cryptographic asset authentication prior to parsing
 
 | Model | Asset File | Expected SHA256 Checksum | Invalidation Fallback |
 | :--- | :--- | :--- | :--- |
-| **Anti-Cheat Trees** | `assets/models/anomaly_detector_trees.json` | `05b5bb1e56fb60a6bbe3b457677e5b014419f6919307572d1dfe54707ca92a88` | Fallback to Tier 1 physical rules and 5-dimensional normalized Z-score engine. |
+| **Anti-Cheat Trees** | `assets/models/anomaly_detector_trees.json` | `46c87109b1e730a4da6c84b76f6b15261774be826e3f9d96bc1e07f650d9b265` | Fallback to Tier 1 physical rules and 5-dimensional normalized Z-score engine. |
 | **Pace/Distance Trees** | `assets/models/pace_distance_trees.json` | `a15a9b98ff37803e49e2908f515e02422716a504eb2ec59ea79dfa9ca46ce7ea` | Fallback to deterministic level-based athletic baseline tables. |

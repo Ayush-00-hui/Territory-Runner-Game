@@ -3,7 +3,6 @@ package api_test
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -14,8 +13,6 @@ import (
 )
 
 func TestClientIP_UntrustedByDefault(t *testing.T) {
-	os.Unsetenv("TRUSTED_PROXIES")
-
 	req := httptest.NewRequest(http.MethodPost, "/v1/runs", nil)
 	req.RemoteAddr = "192.0.2.1:12345"
 	req.Header.Set("X-Forwarded-For", "203.0.113.195")

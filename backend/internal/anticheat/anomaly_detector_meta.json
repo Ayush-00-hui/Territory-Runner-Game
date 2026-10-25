@@ -3,7 +3,7 @@
   "model_version": "3.0.0",
   "model_type": "LightGBM_Tree_Ensemble",
   "sha256_onnx": "67343f47fe47b19e8cd1c67d2cff99c6955a23e0149f307e8096b586397d45c3",
-  "sha256_trees": "05b5bb1e56fb60a6bbe3b457677e5b014419f6919307572d1dfe54707ca92a88",
+  "sha256_trees": "46c87109b1e730a4da6c84b76f6b15261774be826e3f9d96bc1e07f650d9b265",
   "threshold": 0.5,
   "num_trees": 60,
   "num_features": 25,
