@@ -211,10 +211,51 @@ void main() {
         find.text('Export GPS tracks and claimed territory as GeoJSON or GPX'),
         findsOneWidget,
       );
+      expect(find.text('Delete account & data'), findsOneWidget);
 
       // Clean up
       await tester.pumpWidget(const SizedBox());
     });
+
+    testWidgets(
+      'ProfileSettingsList tapping Delete Account opens confirmation dialog',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ProfileSettingsList(
+                  firebaseService: FirebaseService(),
+                  territoryService: TerritoryService(),
+                  onOpenAuth: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final deleteTile = find.text('Delete account & data');
+        expect(deleteTile, findsOneWidget);
+
+        await tester.ensureVisible(deleteTile);
+        await tester.tap(deleteTile);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Delete account?'), findsOneWidget);
+        expect(find.text('Delete permanently'), findsOneWidget);
+        expect(find.text('Keep account'), findsOneWidget);
+
+        // Tap keep account to dismiss
+        await tester.tap(find.text('Keep account'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Delete account?'), findsNothing);
+
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
   });
 
   group('U5: Responsiveness across 360x640, 393x852, 412x915 at text scale 1.3', () {

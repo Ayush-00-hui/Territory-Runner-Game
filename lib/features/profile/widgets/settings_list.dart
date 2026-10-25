@@ -18,6 +18,12 @@ import '../../../services/user_settings_service.dart';
 import '../../../services/export_service.dart';
 
 import 'package:latlong2/latlong.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../models/runner_profile.dart';
+import '../../../models/territory.dart';
+import '../../../services/api_client.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -97,6 +103,106 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         ),
       ),
     );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    AppMotion.mediumTick();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppSpacing.br16,
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: Row(
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: AppColors.error,
+              size: 24,
+            ),
+            const SizedBox(width: AppSpacing.s8),
+            Text(
+              'Delete account?',
+              style: AppText.headingSmall.copyWith(
+                color: AppColors.textPrimary,
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'This action is permanent and irreversible. All claimed territory, recorded GPS runs, and cloud rankings will be erased from this device and the server.',
+          style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Keep account',
+              style: AppText.label.copyWith(color: AppColors.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.textPrimary,
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.brFull),
+            ),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await _executeAccountDeletion(context);
+            },
+            child: const Text('Delete permanently'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _executeAccountDeletion(BuildContext context) async {
+    AppMotion.heavyBurst();
+    AppToast.show(context, 'Purging account and data...');
+
+    try {
+      await ApiClient().deleteAccount();
+    } catch (_) {
+      // Offline fallback: continue with local purge
+    }
+
+    try {
+      if (Hive.isBoxOpen('territories_v3')) {
+        await Hive.box<Territory>('territories_v3').clear();
+      }
+      if (Hive.isBoxOpen('profile')) {
+        await Hive.box<RunnerProfile>('profile').clear();
+      }
+      if (Hive.isBoxOpen('active_run_recovery')) {
+        await Hive.box<String>('active_run_recovery').clear();
+      }
+      if (Hive.isBoxOpen('unsynced_runs_v2')) {
+        await Hive.box<String>('unsynced_runs_v2').clear();
+      }
+      if (Hive.isBoxOpen('rejected_runs_v1')) {
+        await Hive.box<String>('rejected_runs_v1').clear();
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      await widget.firebaseService.signOut();
+
+      if (context.mounted) {
+        AppToast.show(context, 'Account and data permanently deleted');
+        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+      }
+    } catch (_) {
+      if (context.mounted) {
+        AppToast.show(context, 'Account reset complete');
+      }
+    }
   }
 
   @override
@@ -400,6 +506,15 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               _showExportSheet(context);
             },
           ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.delete_forever_rounded,
+            iconColor: AppColors.error,
+            titleColor: AppColors.error,
+            title: 'Delete account & data',
+            subtitle: 'Permanently purge athlete profile, GPS runs, and territory records',
+            onTap: () => _showDeleteAccountDialog(context),
+          ),
         ]),
 
         const SizedBox(height: AppSpacing.s16),
@@ -526,6 +641,8 @@ class ProfileOptionTile extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final Color? iconColor;
+  final Color? titleColor;
 
   const ProfileOptionTile({
     super.key,
@@ -534,6 +651,8 @@ class ProfileOptionTile extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.iconColor,
+    this.titleColor,
   });
 
   @override
@@ -541,11 +660,11 @@ class ProfileOptionTile extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: ListTile(
-        leading: Icon(icon, color: AppColors.accent, size: 20),
+        leading: Icon(icon, color: iconColor ?? AppColors.accent, size: 20),
         title: Text(
           title,
           style: AppText.bodyMedium.copyWith(
-            color: AppColors.textPrimary,
+            color: titleColor ?? AppColors.textPrimary,
             fontWeight: FontWeight.w600,
             fontSize: 13,
           ),

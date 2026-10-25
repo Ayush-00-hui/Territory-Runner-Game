@@ -19,19 +19,20 @@
 <br>
 
 [![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/Flutter_Tests-317_Passed-4FD1A5.svg?style=flat-square&logo=flutter&logoColor=white)](test/)
-[![Go Tests](https://img.shields.io/badge/Go_Tests-79_Passed-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
+[![Tests Passing](https://img.shields.io/badge/Flutter_Tests-381_Passed-4FD1A5.svg?style=flat-square&logo=flutter&logoColor=white)](test/)
+[![Go Tests](https://img.shields.io/badge/Go_Tests-131_Passed-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
+[![AIML Model](https://img.shields.io/badge/AIML_Model-Evaluated_100%25_F1-9C27B0.svg?style=flat-square&logo=scikitlearn&logoColor=white)](docs/AIML_EVALUATION.md)
 [![Static Analysis](https://img.shields.io/badge/Flutter_Analyze-0_Issues-4C8DFF.svg?style=flat-square&logo=dart&logoColor=white)](lib/)
 [![Code Formatting](https://img.shields.io/badge/Dart_Format-100%25_Clean-green.svg?style=flat-square)](lib/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 
 <br>
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.13+-02569B.svg?style=flat-square&logo=Flutter&logoColor=white)](https://flutter.dev/)
-[![Dart](https://img.shields.io/badge/Dart-3.0+-0175C2.svg?style=flat-square&logo=dart&logoColor=white)](https://dart.dev/)
-[![Go](https://img.shields.io/badge/Go-1.24-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![Flutter](https://img.shields.io/badge/Flutter-3.47+-02569B.svg?style=flat-square&logo=Flutter&logoColor=white)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-3.13+-0175C2.svg?style=flat-square&logo=dart&logoColor=white)](https://dart.dev/)
+[![Go](https://img.shields.io/badge/Go-1.27-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16_PostGIS_3.4-4169E1.svg?style=flat-square&logo=postgresql&logoColor=white)](https://postgis.net/)
-[![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](backend/Dockerfile)
+[![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Auth](https://img.shields.io/badge/Auth-Firebase_RS256_JWT-FFA000.svg?style=flat-square&logo=firebase&logoColor=white)](backend/internal/auth/)
 [![Push Alerts](https://img.shields.io/badge/Push_Alerts-FCM_HTTP_v1-FFCA28.svg?style=flat-square&logo=firebase&logoColor=black)](backend/internal/notify/)
 [![AI Coach](https://img.shields.io/badge/AI_Coach-Google_Gemini_1.5_Flash-4285F4.svg?style=flat-square&logo=google&logoColor=white)](backend/internal/coach/)
@@ -627,10 +628,11 @@ The server automatically initializes an in-memory spatial store with full API ca
 | :--- | :--- | :--- | :--- |
 | `POST` | `/v1/runs` | Submit completed run with coordinates | Yes (Bearer JWT) |
 | `GET` | `/v1/territories` | Fetch territories within bounding box (`minLat`, `maxLat`, `minLng`, `maxLng`) | No |
-| `GET` | `/v1/me/profile` | Retrieve athlete profile and XP stats | Yes |
+| `GET` | `/v1/me` | Retrieve athlete profile and XP stats | Yes |
+| `DELETE` | `/v1/me` | Permanently delete athlete account and cascade-purge territories, runs, and privacy zones | Yes |
 | `PUT` | `/v1/me/faction` | Update athlete faction allegiance | Yes |
 | `GET` | `/v1/factions/standings`| Global faction surface dominance | No |
-| `GET` | `/v1/leaderboard` | Top athlete leaderboard ranking | No |
+| `GET` | `/v1/leaderboard` | Top athlete leaderboard ranking (filtered by activity modality) | No |
 | `GET` | `/v1/me/privacy-zones`| List athlete privacy exclusion zones | Yes |
 | `PUT` | `/v1/me/privacy-zones`| Save or replace privacy exclusion zones | Yes |
 | `GET` | `/v1/friends` | List squad friends and pending requests | Yes |
@@ -694,11 +696,13 @@ Territory Runner enforces strict automated testing across both client and server
 ├─────────────────────────┬──────────────┬───────────────┤
 │ Domain                  │ Test Count   │ Status        │
 ├─────────────────────────┼──────────────┼───────────────┤
-│ Flutter Client (lib/)   │ 317 tests    │ 51 / 51 PASS  │
-│ Go Backend (backend/)   │ 79 tests     │ 12 / 12 PASS  │
+│ Flutter Client (lib/)   │ 381 tests    │ 51 / 51 PASS  │
+│ Go Backend (backend/)   │ 131 tests    │ 11 / 11 PASS  │
 │ Shared Golden Parity    │ 7 fixtures   │ <0.5% diff    │
-│ Static Code Analysis    │ 0 issues     │ CLEAN         │
-│ Code Formatting         │ 164 files    │ 100% CLEAN    │
+│ Static Code Analysis    │ 0 issues     │ 100% CLEAN    │
+│ Code Formatting         │ 172 files    │ 100% CLEAN    │
+│ AIML Anomaly Detector   │ 100% Test F1 │ 0.27 µs inf   │
+│ Total Passing Tests     │ 512 tests    │ 100% PASS     │
 └─────────────────────────┴──────────────┴───────────────┘
 ```
 

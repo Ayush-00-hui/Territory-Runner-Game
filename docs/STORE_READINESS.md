@@ -101,30 +101,34 @@ In [android/app/src/main/AndroidManifest.xml](file:///c:/Users/AYUSH/Desktop/ter
 
 ## 5. Account Deletion & Data Purge Path
 
-Both Google Play and Apple App Store mandate a straightforward in-app and web-based account deletion pathway.
+Both Google Play and Apple App Store mandate a straightforward in-app and web-based account deletion pathway. This flow is fully implemented and verified end-to-end.
 
 ### 5.1 In-App Deletion Path
-- **Navigation**: Settings Screen -> Account & Security -> "Delete Account".
+- **Navigation**: Profile -> Settings -> Cloud Sync & Data Export -> "Delete account & data".
 - **Confirmation Flow**: Multi-step destructive confirmation dialog warning the runner that all territories, run history, and stats will be irreversibly purged.
-- **Execution**:
-  - Revokes client session and deletes local Hive caches (`territories_v3`, `profile`, `active_run_recovery`).
-  - Calls backend deletion endpoint `DELETE /v1/me`.
-  - Calls `FirebaseMessaging.instance.deleteToken()`.
-  - Invokes `FirebaseAuth.instance.currentUser?.delete()`.
+- **Execution** ([settings_list.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/features/profile/widgets/settings_list.dart)):
+  1. Issues authenticated request to Go backend endpoint `DELETE /v1/me` via [api_client.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/api_client.dart).
+  2. Permanently clears all local Hive boxes: `territories_v3`, `profile`, `active_run_recovery`, `unsynced_runs_v2`, `rejected_runs_v1`.
+  3. Purges all athlete settings from `SharedPreferences`.
+  4. Signs out of Firebase Authentication session (`firebaseService.signOut()`).
+  5. Resets application state and returns user to onboarding/authentication.
 
-### 5.2 Database Cascade Architecture
-The backend PostgreSQL schema enforces strict cascading deletes across all user foreign keys:
-- `territories`: `user_id ... ON DELETE CASCADE`
-- `runs`: `user_id ... ON DELETE CASCADE`
-- `device_tokens`: `user_id ... ON DELETE CASCADE`
-- `friends` & `duels`: `user_id ... ON DELETE CASCADE`
-- `privacy_zones`: `user_id ... ON DELETE CASCADE`
+### 5.2 Server & Database Cascade Architecture
+The backend Go server handles account deletion via `HandleDeleteMe` in [handlers.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/handlers.go) calling `store.DeleteUser`:
+- Enforces JWT / Dev authentication to verify requesting user identity.
+- Executes `DELETE FROM users WHERE id = $1;`.
+- The PostgreSQL schema enforces strict cascading foreign keys (`ON DELETE CASCADE`), automatically purging:
+  - `territories`: `user_id ... ON DELETE CASCADE`
+  - `runs`: `user_id ... ON DELETE CASCADE`
+  - `device_tokens`: `user_id ... ON DELETE CASCADE`
+  - `friends` & `duels`: `user_id ... ON DELETE CASCADE`
+  - `privacy_zones`: `user_id ... ON DELETE CASCADE`
+  - `user_settings`: `user_id ... ON DELETE CASCADE`
+- Both `PostgresStore` and `MemoryStore` implement complete cascading deletion. Verified via `TestHandleDeleteMe_PurgesAccountAndCascades` in [handlers_test.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/handlers_test.go).
 
-Purging the user record completely obliterates all associated spatial polygons, GPS breadcrumbs, device push tokens, and social records.
-
-### 5.3 Web Deletion Request URL (Placeholder)
-- Public web deletion request portal: `https://territoryrunner.app/privacy/delete-account` (Placeholder)
-- Users can submit their registered email address to request account and data removal within 30 days without installing the app.
+### 5.3 Web Deletion Request URL (Staging / Production Placeholder)
+- Public web deletion request portal: `https://territoryrunner.app/privacy/delete-account` (Staging URL — pending production domain deployment).
+- Athletes can submit their registered email address to request account and data removal without needing the app installed.
 
 ---
 

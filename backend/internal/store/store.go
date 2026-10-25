@@ -15,6 +15,9 @@ type Store interface {
 	// UpsertUser creates or updates a user profile.
 	UpsertUser(ctx context.Context, u *User) error
 
+	// DeleteUser permanently purges a user record and cascades to all associated territories, runs, duels, and privacy zones.
+	DeleteUser(ctx context.Context, userID string) error
+
 	// GetRunsByUser retrieves recent runs recorded by a runner.
 	GetRunsByUser(ctx context.Context, userID string, limit int) ([]Run, error)
 

@@ -283,5 +283,46 @@ void main() {
       );
       await client.registerDeviceToken('fcm_mock_device_token_abc123');
     });
+
+    test(
+      'deleteAccount issues DELETE /v1/me and returns true on 200/204',
+      () async {
+        int requestCount = 0;
+        final mockClient = MockClient((request) async {
+          requestCount++;
+          expect(request.url.path, '/v1/me');
+          expect(request.method, 'DELETE');
+          return http.Response(
+            jsonEncode({
+              'status': 'deleted',
+              'message': 'Account permanently purged',
+            }),
+            200,
+          );
+        });
+
+        final client = ApiClient(
+          httpClient: mockClient,
+          baseUrl: 'http://mockbackend',
+        );
+        final result = await client.deleteAccount();
+        expect(requestCount, equals(1));
+        expect(result, isTrue);
+      },
+    );
+
+    test('deleteAccount returns false on server error', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('Internal Server Error', 500);
+      });
+
+      final client = ApiClient(
+        httpClient: mockClient,
+        baseUrl: 'http://mockbackend',
+        maxRetries: 0,
+      );
+      final result = await client.deleteAccount();
+      expect(result, isFalse);
+    });
   });
 }

@@ -710,4 +710,16 @@ class ApiClient {
     }
     return null;
   }
+
+  /// Permanently purges runner account and all server-persisted data (DELETE /v1/me)
+  Future<bool> deleteAccount() async {
+    final uri = Uri.parse('$baseUrl/v1/me');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.delete(uri, headers: headers),
+    );
+
+    return response.statusCode == 200 || response.statusCode == 204;
+  }
 }

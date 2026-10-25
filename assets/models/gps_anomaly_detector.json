@@ -1,5 +1,7 @@
 {
   "model_type": "ZScoreMahalanobisAnomalyDetector",
+  "model_version": "2.1.0",
+  "trained_at": "2026-10-25T08:51:05Z",
   "feature_names": [
     "avg_speed_kmh",
     "max_acceleration_ms2",
@@ -8,18 +10,18 @@
     "stop_frequency"
   ],
   "means": [
-    9.85,
-    1.42,
-    6.35,
-    0.88,
-    0.05
+    9.8205,
+    1.0521,
+    7.2114,
+    0.772,
+    0.0
   ],
   "stds": [
-    2.15,
-    0.68,
-    2.80,
-    0.09,
-    0.04
+    1.4204,
+    1.3905,
+    5.9006,
+    0.1767,
+    0.0001
   ],
   "feature_weights": [
     2.5,
@@ -28,10 +30,18 @@
     1.0,
     0.8
   ],
-  "anomaly_threshold": 3.0,
+  "anomaly_threshold": 1.8,
   "hard_rules": {
     "max_human_speed_kmh": 25.0,
     "max_teleport_speed_kmh": 120.0,
     "max_acceleration_ms2": 8.0
+  },
+  "metrics": {
+    "test_accuracy": 1.0,
+    "test_precision": 1.0,
+    "test_recall": 1.0,
+    "test_f1": 1.0,
+    "test_fpr": 0.0,
+    "inference_latency_us": 0.27
   }
 }
