@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../core/logging/app_logger.dart';
+import 'hive_encryption_service.dart';
 
 /// Represents a persisted snapshot of an in-progress athletic run session.
 class ActiveRunSnapshot {
@@ -118,14 +119,49 @@ class RunRecoveryService {
   static const String activeKey = 'current_active_run';
 
   static final RunRecoveryService _instance = RunRecoveryService._internal();
-  factory RunRecoveryService() => _instance;
-  RunRecoveryService._internal();
-
+  final HiveEncryptionService _encryptionService;
   Box<String>? _box;
 
+  factory RunRecoveryService({
+    HiveEncryptionService? encryptionService,
+    Box<String>? overrideBox,
+  }) {
+    if (encryptionService != null || overrideBox != null) {
+      return RunRecoveryService.custom(
+        encryptionService: encryptionService,
+        overrideBox: overrideBox,
+      );
+    }
+    return _instance;
+  }
+
+  RunRecoveryService.custom({
+    HiveEncryptionService? encryptionService,
+    Box<String>? overrideBox,
+  }) : _encryptionService = encryptionService ?? HiveEncryptionService(),
+       _box = overrideBox;
+
+  RunRecoveryService._internal({HiveEncryptionService? encryptionService})
+    : _encryptionService = encryptionService ?? HiveEncryptionService();
+
   Future<void> init() async {
-    if (_box == null || !Hive.isBoxOpen(boxName)) {
-      _box = await Hive.openBox<String>(boxName);
+    if (_box == null || !_box!.isOpen) {
+      if (Hive.isBoxOpen(boxName)) {
+        _box = Hive.box<String>(boxName);
+      } else {
+        try {
+          final cipher = await _encryptionService.getCipherForBox(boxName);
+          _box = await Hive.openBox<String>(boxName, encryptionCipher: cipher);
+        } catch (e) {
+          try {
+            await Hive.deleteBoxFromDisk(boxName);
+            final cipher = await _encryptionService.getCipherForBox(boxName);
+            _box = await Hive.openBox<String>(boxName, encryptionCipher: cipher);
+          } catch (_) {
+            _box = await Hive.openBox<String>(boxName);
+          }
+        }
+      }
     }
   }
 

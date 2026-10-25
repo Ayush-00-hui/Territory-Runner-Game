@@ -21,14 +21,44 @@ type CoachInsight struct {
 
 // RunContext holds the run metrics and runner profile statistics required for coaching.
 type RunContext struct {
-	RunID           string  `json:"run_id"`
-	DistanceKm      float64 `json:"distance_km"`
-	DurationSeconds int     `json:"duration_seconds"`
-	HexesClaimed    int     `json:"hexes_claimed"`
-	CurrentPace     string  `json:"current_pace,omitempty"`
-	Level           int     `json:"level,omitempty"`
-	StreakDays      int     `json:"streak_days,omitempty"`
-	TotalDistanceKm float64 `json:"total_distance_km,omitempty"`
+	RunID              string  `json:"run_id"`
+	DistanceKm         float64 `json:"distance_km"`
+	DurationSeconds    int     `json:"duration_seconds"`
+	TerritoriesClaimed int     `json:"territories_claimed"`
+	HexesClaimed       int     `json:"hexes_claimed,omitempty"` // Deprecated JSON alias for backward compatibility
+	ZonesClaimed       int     `json:"zones_claimed,omitempty"` // Alias for TerritoriesClaimed
+	CurrentPace        string  `json:"current_pace,omitempty"`
+	Level              int     `json:"level,omitempty"`
+	StreakDays         int     `json:"streak_days,omitempty"`
+	TotalDistanceKm    float64 `json:"total_distance_km,omitempty"`
+}
+
+// Normalize ensures canonical territories and backward-compatibility aliases stay synchronized.
+func (r *RunContext) Normalize() {
+	if r.TerritoriesClaimed == 0 {
+		if r.ZonesClaimed != 0 {
+			r.TerritoriesClaimed = r.ZonesClaimed
+		} else if r.HexesClaimed != 0 {
+			r.TerritoriesClaimed = r.HexesClaimed
+		}
+	}
+	r.HexesClaimed = r.TerritoriesClaimed
+	r.ZonesClaimed = r.TerritoriesClaimed
+}
+
+// UnmarshalJSON unmarshals RunContext supporting territories_claimed, zones_claimed, and legacy hexes_claimed.
+func (r *RunContext) UnmarshalJSON(data []byte) error {
+	type Alias RunContext
+	aux := &struct {
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	r.Normalize()
+	return nil
 }
 
 // Service manages post-run coaching insights via Gemini LLM or resilient heuristic fallback.
@@ -121,18 +151,19 @@ func (s *Service) GenerateFallback(run RunContext) CoachInsight {
 		}
 	}
 
+	run.Normalize()
 	durationMin := float64(run.DurationSeconds) / 60.0
 	mood := "encouraging"
-	if run.HexesClaimed > 5 {
+	if run.TerritoriesClaimed > 5 {
 		mood = "celebratory"
 	} else if run.DistanceKm > 5.0 {
 		mood = "analytical"
 	}
 
 	return CoachInsight{
-		Summary: fmt.Sprintf("Strong run. You logged %.2f km in %.1f min and claimed %d new territories.",
-			run.DistanceKm, durationMin, run.HexesClaimed),
-		Tip: fmt.Sprintf("Pace recorded at %s. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-hex loops.",
+		Summary: fmt.Sprintf("Strong run. You logged %.2f km in %.1f min and claimed %d new territories/zones.",
+			run.DistanceKm, durationMin, run.TerritoriesClaimed),
+		Tip: fmt.Sprintf("Pace recorded at %s. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-zone loops.",
 			paceStr),
 		MoodTag: mood,
 	}
@@ -179,7 +210,7 @@ Analyze this completed run session data:
   "durationSeconds": %d,
   "durationFormatted": "%.1f min",
   "averagePace": "%s",
-  "hexesClaimedThisRun": %d,
+  "territoriesClaimedThisRun": %d,
   "runnerLevel": %d,
   "currentStreakDays": %d,
   "totalDistanceLifetimeKm": %.2f
@@ -196,7 +227,7 @@ Do NOT include markdown wrapping or extra text. Output raw JSON only.`,
 		run.DurationSeconds,
 		float64(run.DurationSeconds)/60.0,
 		run.CurrentPace,
-		run.HexesClaimed,
+		run.TerritoriesClaimed,
 		run.Level,
 		run.StreakDays,
 		run.TotalDistanceKm,

@@ -18,12 +18,13 @@
 
 <br>
 
-[![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
-[![Tests Passing](https://img.shields.io/badge/Flutter_Tests-381_Passed-4FD1A5.svg?style=flat-square&logo=flutter&logoColor=white)](test/)
-[![Go Tests](https://img.shields.io/badge/Go_Tests-131_Passed-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
-[![AIML Model](https://img.shields.io/badge/AIML_Model-Evaluated_100%25_F1-9C27B0.svg?style=flat-square&logo=scikitlearn&logoColor=white)](docs/AIML_EVALUATION.md)
+[![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game)
+[![Tests Passing](https://img.shields.io/badge/Test_Suite-Passing-4FD1A5.svg?style=flat-square&logo=flutter&logoColor=white)](test/)
+[![Go Tests](https://img.shields.io/badge/Go_Tests-Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
+[![AIML Anti-Cheat](https://img.shields.io/badge/AIML_AntiCheat-LightGBM_Ensemble-9C27B0.svg?style=flat-square&logo=scikitlearn&logoColor=white)](docs/AIML_EVALUATION.md)
 [![Static Analysis](https://img.shields.io/badge/Flutter_Analyze-0_Issues-4C8DFF.svg?style=flat-square&logo=dart&logoColor=white)](lib/)
-[![Code Formatting](https://img.shields.io/badge/Dart_Format-100%25_Clean-green.svg?style=flat-square)](lib/)
+[![Code Formatting](https://img.shields.io/badge/Dart_Format-Clean-green.svg?style=flat-square)](lib/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 
 <br>
@@ -35,7 +36,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Auth](https://img.shields.io/badge/Auth-Firebase_RS256_JWT-FFA000.svg?style=flat-square&logo=firebase&logoColor=white)](backend/internal/auth/)
 [![Push Alerts](https://img.shields.io/badge/Push_Alerts-FCM_HTTP_v1-FFCA28.svg?style=flat-square&logo=firebase&logoColor=black)](backend/internal/notify/)
-[![AI Coach](https://img.shields.io/badge/AI_Coach-Google_Gemini_1.5_Flash-4285F4.svg?style=flat-square&logo=google&logoColor=white)](backend/internal/coach/)
+[![AI Coach](https://img.shields.io/badge/AI_Coach-Google_Gemini_2.5_Flash-4285F4.svg?style=flat-square&logo=google&logoColor=white)](backend/internal/coach/)
 
 <br>
 
@@ -187,7 +188,7 @@ graph TD
 
     subgraph External ["External Services"]
         OSRM[OSRM Pedestrian Graph Routing]
-        Gemini[Google Gemini 1.5 Flash API]
+        Gemini[Google Gemini 2.5 Flash API]
         FCMService[Firebase Cloud Messaging HTTP v1 API]
         GoogleOAuth[Google OAuth2 Token Service]
         TileServer[ArcGIS World Dark Basemap]
@@ -414,6 +415,8 @@ Every run submission is analyzed by the kinematic validation pipeline before hit
 - **Score $\ge 55$:** Run is rejected with `422 Unprocessable Entity` (`ANOMALY_REJECTED`). Submitting cycling speeds under running is rejected immediately.
 - **Score $30 - 54$:** Run is marked `flagged` for administrative review.
 - **Score $< 30$:** Run is approved (`accepted`).
+
+> For an in-depth security analysis detailing attacker capabilities, server-side validation mechanics, and residual risks, see the **[Threat Model & Security Architecture Specification](docs/THREAT_MODEL.md)** and **[AIML Technical Evaluation](docs/AIML_EVALUATION.md)**.
 
 ---
 
@@ -694,15 +697,16 @@ Territory Runner enforces strict automated testing across both client and server
 ┌────────────────────────────────────────────────────────┐
 │                 TEST VERIFICATION SUITE                │
 ├─────────────────────────┬──────────────┬───────────────┤
-│ Domain                  │ Test Count   │ Status        │
+│ Domain                  │ Test Suites  │ Status        │
 ├─────────────────────────┼──────────────┼───────────────┤
-│ Flutter Client (lib/)   │ 381 tests    │ 51 / 51 PASS  │
-│ Go Backend (backend/)   │ 131 tests    │ 11 / 11 PASS  │
+│ Flutter Client (lib/)   │ 52 suites    │ ALL PASS      │
+│ Go Backend (backend/)   │ 11 suites    │ ALL PASS      │
+│ Integration Test Flow   │ E2E Run Sync │ ALL PASS      │
 │ Shared Golden Parity    │ 7 fixtures   │ <0.5% diff    │
 │ Static Code Analysis    │ 0 issues     │ 100% CLEAN    │
-│ Code Formatting         │ 172 files    │ 100% CLEAN    │
-│ AIML Anomaly Detector   │ 100% Test F1 │ 0.27 µs inf   │
-│ Total Passing Tests     │ 512 tests    │ 100% PASS     │
+│ Code Formatting         │ 180+ files   │ 100% CLEAN    │
+│ AIML Anomaly Detector   │ Tier 1 + 2   │ 0.27 µs inf   │
+│ Total Test Coverage     │ Client+Serv  │ 100% PASS     │
 └─────────────────────────┴──────────────┴───────────────┘
 ```
 

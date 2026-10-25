@@ -262,9 +262,11 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 				AreaSqm:        playerTotalArea,
 				Strength:       TerritoryDefaultStrength,
 				LastDefendedAt: now,
+				LastDecayedAt:  now,
 				UpdatedAt:      now,
 			}
 		}
+
 	} else {
 		if areaClaimed >= MinCaptureFloorSqm {
 			user.TotalAreaSqm += areaClaimed
@@ -293,7 +295,9 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	m.runs[run.IdempotencyKey] = &runCopy
 	m.runsByOrder = append(m.runsByOrder, run.IdempotencyKey)
 
-	m.updateDuelProgressLocked(run.UserID, runCopy.ActivityType, areaClaimed, run.DistanceMeters)
+	if runCopy.Status != "flagged_review" {
+		m.updateDuelProgressLocked(run.UserID, runCopy.ActivityType, areaClaimed, run.DistanceMeters)
+	}
 
 	return &CaptureResult{
 		RunID:              run.ID,
@@ -370,7 +374,8 @@ func (m *MemoryStore) GetLeaderboard(ctx context.Context, limit int, activityTyp
 	return res, nil
 }
 
-// ApplyTerritoryDecay updates in-memory territories by decaying strength based on elapsed days since last defense.
+// ApplyTerritoryDecay updates in-memory territories by decaying strength based on elapsed days since last_decayed_at.
+// It updates ONLY LastDecayedAt and UpdatedAt, never modifying LastDefendedAt.
 func (m *MemoryStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay float64) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -379,7 +384,17 @@ func (m *MemoryStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay float
 	}
 	now := time.Now().UTC()
 	for _, t := range m.territories {
-		days := now.Sub(t.LastDefendedAt).Seconds() / 86400.0
+		refTime := t.LastDecayedAt
+		if refTime.IsZero() {
+			refTime = t.LastDefendedAt
+		}
+		if refTime.IsZero() {
+			refTime = t.UpdatedAt
+		}
+		days := now.Sub(refTime).Seconds() / 86400.0
+		if days < 0 {
+			days = 0
+		}
 		decayed := t.Strength - (days * decayPerDay)
 		if decayed < 0.0 {
 			decayed = 0.0
@@ -387,8 +402,9 @@ func (m *MemoryStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay float
 			decayed = 100.0
 		}
 		t.Strength = decayed
-		t.LastDefendedAt = now
+		t.LastDecayedAt = now
 		t.UpdatedAt = now
+		// NOTE: t.LastDefendedAt is deliberately NEVER updated by decay!
 	}
 	return nil
 }
@@ -406,13 +422,26 @@ func (m *MemoryStore) UpdateTerritoryDefense(ctx context.Context, territoryID st
 	if !exists {
 		return fmt.Errorf("territory %s not found", territoryID)
 	}
+	now := time.Now().UTC()
 	t.Strength = newStrength
-	t.LastDefendedAt = time.Now().UTC()
-	t.UpdatedAt = time.Now().UTC()
+	t.LastDefendedAt = now
+	t.LastDecayedAt = now
+	t.UpdatedAt = now
 	return nil
 }
 
+// SetTerritoryTimestampsForTest sets timestamps for testing decay and defense behavior.
+func (m *MemoryStore) SetTerritoryTimestampsForTest(id string, lastDefended, lastDecayed time.Time) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if t, exists := m.territories[id]; exists {
+		t.LastDefendedAt = lastDefended
+		t.LastDecayedAt = lastDecayed
+	}
+}
+
 // GetTerritoryByID retrieves a territory by its unique ID.
+
 func (m *MemoryStore) GetTerritoryByID(ctx context.Context, id string) (*Territory, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

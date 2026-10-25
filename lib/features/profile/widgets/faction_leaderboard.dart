@@ -472,7 +472,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
           faction: widget.profile.faction,
           totalAreaSqm: userAreaSqm,
           level: widget.profile.level,
-          totalRuns: widget.profile.totalHexesClaimed,
+          totalRuns: widget.profile.totalTerritoriesClaimed,
         ),
       );
     }

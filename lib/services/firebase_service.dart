@@ -288,13 +288,21 @@ class FirebaseService {
   Future<List<Map<String, dynamic>>> getLeaderboard({int limit = 20}) async {
     if (!_isInitialized || _firestore == null) return [];
     try {
-      final snapshot = await _firestore!
-          .collection('users')
-          .orderBy('totalHexesClaimed', descending: true)
-          .limit(limit)
-          .get();
-
-      return snapshot.docs.map((doc) => doc.data()).toList();
+      try {
+        final snapshot = await _firestore!
+            .collection('users')
+            .orderBy('totalTerritoriesClaimed', descending: true)
+            .limit(limit)
+            .get();
+        return snapshot.docs.map((doc) => doc.data()).toList();
+      } catch (_) {
+        final fallbackSnapshot = await _firestore!
+            .collection('users')
+            .orderBy('totalHexesClaimed', descending: true)
+            .limit(limit)
+            .get();
+        return fallbackSnapshot.docs.map((doc) => doc.data()).toList();
+      }
     } catch (e) {
       AppLogger.error(
         'Leaderboard fetch error: $e',

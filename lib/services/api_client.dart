@@ -17,6 +17,7 @@ import '../models/runner_profile.dart';
 import '../models/territory.dart';
 import '../ui/theme/app_colors.dart';
 import 'firebase_service.dart';
+import 'motion_sensor_service.dart';
 
 /// Exception thrown when API calls encounter unrecoverable network or server errors.
 class ApiException implements Exception {
@@ -199,12 +200,13 @@ class ApiClient {
     String activityType = 'running',
     double? clientPreviewArea,
     int? clientPreviewXp,
+    List<MotionWindow>? motionWindows,
   }) async {
     final uri = Uri.parse('$baseUrl/v1/runs');
     final headers = await _buildHeaders();
 
     final now = DateTime.now();
-    final body = jsonEncode({
+    final Map<String, dynamic> payload = {
       'idempotency_key': idempotencyKey,
       'activity_type': activityType,
       'duration_seconds': durationSeconds,
@@ -225,7 +227,13 @@ class ApiClient {
           'is_mocked': false,
         };
       }).toList(),
-    });
+    };
+
+    if (motionWindows != null && motionWindows.isNotEmpty) {
+      payload['motion_windows'] = motionWindows.map((w) => w.toJson()).toList();
+    }
+
+    final body = jsonEncode(payload);
 
     final response = await _executeWithRetry(
       () => _httpClient.post(uri, headers: headers, body: body),
@@ -260,7 +268,7 @@ class ApiClient {
         faction: FactionStanding.canonicalFaction(data['faction'] as String?),
         xp: (data['xp'] as num?)?.toInt() ?? 0,
         level: (data['level'] as num?)?.toInt() ?? 1,
-        totalHexesClaimed: (data['total_runs'] as num?)?.toInt() ?? 0,
+        totalTerritoriesClaimed: (data['total_runs'] as num?)?.toInt() ?? 0,
         totalDistanceKm: 0.0,
       );
     }
@@ -440,18 +448,22 @@ class ApiClient {
     required String runId,
     required double distanceKm,
     required int durationSeconds,
-    required int hexesClaimed,
+    int? territoriesClaimed,
+    int? hexesClaimed,
     String? currentPace,
     int? level,
     int? streakDays,
     double? totalDistanceKm,
   }) async {
+    final int effectiveTerritories = territoriesClaimed ?? hexesClaimed ?? 0;
     final uri = Uri.parse('$baseUrl/v1/runs/$runId/coach');
     final headers = await _buildHeaders();
     final body = jsonEncode({
       'distance_km': distanceKm,
       'duration_seconds': durationSeconds,
-      'hexes_claimed': hexesClaimed,
+      'territories_claimed': effectiveTerritories,
+      'zones_claimed': effectiveTerritories,
+      'hexes_claimed': effectiveTerritories,
       'current_pace': currentPace ?? '',
       'level': level ?? 1,
       'streak_days': streakDays ?? 0,

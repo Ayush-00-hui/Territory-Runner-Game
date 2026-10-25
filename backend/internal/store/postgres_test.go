@@ -280,7 +280,56 @@ func TestMigration_000002_OnExistingRows(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// 2b. Migration 000011: territories.last_decayed_at column up and down
+func TestMigration_000011_AddLastDecayedAt(t *testing.T) {
+	connStr := getTestConnStr()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, connStr)
+	if err != nil {
+		t.Skipf("Skipping: cannot connect: %v", err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(ctx); err != nil {
+		t.Skipf("Skipping: ping failed: %v", err)
+	}
+
+	up11, err := readMigration("000011_add_territory_last_decayed_at.up.sql")
+	require.NoError(t, err)
+	down11, err := readMigration("000011_add_territory_last_decayed_at.down.sql")
+	require.NoError(t, err)
+
+	// Apply migration 000011 up
+	_, err = pool.Exec(ctx, up11)
+	require.NoError(t, err, "000011 up should apply cleanly")
+
+	var colCount int
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'territories' AND column_name = 'last_decayed_at';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, colCount, "last_decayed_at column must exist in territories")
+
+	// Revert 000011 down
+	_, err = pool.Exec(ctx, down11)
+	require.NoError(t, err, "000011 down should apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'territories' AND column_name = 'last_decayed_at';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, colCount, "last_decayed_at column must be removed after down")
+
+	// Re-apply 000011 up so subsequent tests have the column
+	_, err = pool.Exec(ctx, up11)
+	require.NoError(t, err)
+}
+
 // 3. Loop capture with PostGIS ST_PolygonFromText / ST_MakeValid
+
 func TestPostgres_LoopCapture_ST_PolygonFromText_MakeValid(t *testing.T) {
 	st, pool := setupTestStore(t)
 	ctx := context.Background()
@@ -694,10 +743,12 @@ func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
 	require.NotNil(t, tInitial)
 	assert.InDelta(t, 100.0, tInitial.Strength, 0.01, "initial strength must be 100.0")
 
-	// Artificially simulate 2 days of inactivity
+	// Artificially simulate 5 days since defense, and 2 days since decay
+	fiveDaysAgo := time.Now().UTC().Add(-5 * 24 * time.Hour)
 	_, err = pool.Exec(ctx, `
 		UPDATE territories
-		SET last_defended_at = NOW() - INTERVAL '2 days'
+		SET last_defended_at = NOW() - INTERVAL '5 days',
+		    last_decayed_at = NOW() - INTERVAL '2 days'
 		WHERE id = $1;
 	`, territoryID)
 	require.NoError(t, err)
@@ -709,7 +760,9 @@ func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
 	tDecayed, err := st.GetTerritoryByID(ctx, territoryID)
 	require.NoError(t, err)
 	require.NotNil(t, tDecayed)
-	assert.InDelta(t, 70.0, tDecayed.Strength, 0.5, "after 2 days of inactivity at 15 pts/day, strength should decay to ~70.0")
+	assert.InDelta(t, 70.0, tDecayed.Strength, 0.5, "after 2 days since last_decayed_at at 15 pts/day, strength should decay to ~70.0")
+	assert.WithinDuration(t, time.Now().UTC(), tDecayed.LastDecayedAt, 5*time.Second, "last_decayed_at must be refreshed to now")
+	assert.WithinDuration(t, fiveDaysAgo, tDecayed.LastDefendedAt, 1*time.Minute, "last_defended_at must NEVER be updated by decay")
 
 	// Perform defense update (restore fortifications)
 	err = st.UpdateTerritoryDefense(ctx, territoryID, 100.0)
@@ -720,7 +773,9 @@ func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
 	require.NotNil(t, tDefended)
 	assert.InDelta(t, 100.0, tDefended.Strength, 0.01, "strength must be restored to 100.0")
 	assert.WithinDuration(t, time.Now().UTC(), tDefended.LastDefendedAt, 5*time.Second, "last_defended_at must be refreshed to now")
+	assert.WithinDuration(t, time.Now().UTC(), tDefended.LastDecayedAt, 5*time.Second, "last_decayed_at must be refreshed to now")
 }
+
 
 // 9. Leaderboard ordering on Postgres
 func TestPostgres_LeaderboardOrdering(t *testing.T) {

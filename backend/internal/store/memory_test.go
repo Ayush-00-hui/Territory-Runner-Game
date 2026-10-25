@@ -815,3 +815,75 @@ func TestWeakTerritoryCaptureBonusAndDefenseReset(t *testing.T) {
 	require.NoError(t, err)
 	assert.InDelta(t, 100.0, attackerT.Strength, 0.01, "Freshly captured/defended territory must reset to 100.0 strength")
 }
+
+func TestMemory_ApplyTerritoryDecay_UpdatesOnlyLastDecayedAt(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	// 1. Create user and capture territory
+	err := memStore.UpsertUser(ctx, &store.User{
+		ID:       "usr_decay_test",
+		Username: "DecayTester",
+		Faction:  "Cyber Vanguard",
+	})
+	require.NoError(t, err)
+
+
+	loop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       1000.0,
+		LoopDistanceMeters: 500.0,
+		ClosedAt:           now,
+	}
+
+	_, err = memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_decay_init",
+		UserID:         "usr_decay_test",
+		IdempotencyKey: "idem_decay_001",
+		CreatedAt:      now,
+	}, []geo.EnclosedLoop{loop}, nil)
+	require.NoError(t, err)
+
+	tID := "poly_usr_decay_test_territory"
+	initialT, err := memStore.GetTerritoryByID(ctx, tID)
+	require.NoError(t, err)
+	require.NotNil(t, initialT)
+	assert.InDelta(t, 100.0, initialT.Strength, 0.01)
+
+	// 2. Artificially simulate last defended 5 days ago, last decayed 2 days ago
+	fiveDaysAgo := now.Add(-5 * 24 * time.Hour)
+	twoDaysAgo := now.Add(-2 * 24 * time.Hour)
+	memStore.SetTerritoryTimestampsForTest(tID, fiveDaysAgo, twoDaysAgo)
+
+	// 3. Apply territory decay at 15.0 pts/day
+	// Elapsed time since last_decayed_at is 2 days -> decay = 30.0 pts -> strength becomes ~70.0
+	err = memStore.ApplyTerritoryDecay(ctx, 15.0)
+
+	require.NoError(t, err)
+
+	decayedT, err := memStore.GetTerritoryByID(ctx, tID)
+	require.NoError(t, err)
+	require.NotNil(t, decayedT)
+
+	assert.InDelta(t, 70.0, decayedT.Strength, 0.5, "Strength must decay based on elapsed time since last_decayed_at (2 days * 15 pts = 30)")
+	assert.WithinDuration(t, time.Now().UTC(), decayedT.LastDecayedAt, 5*time.Second, "last_decayed_at must be updated to current time")
+	assert.WithinDuration(t, fiveDaysAgo, decayedT.LastDefendedAt, 5*time.Second, "last_defended_at must NEVER be updated by ApplyTerritoryDecay")
+
+	// 4. Update defense restores strength to 100 and refreshes both last_defended_at and last_decayed_at
+	err = memStore.UpdateTerritoryDefense(ctx, tID, 100.0)
+	require.NoError(t, err)
+
+	defendedT, err := memStore.GetTerritoryByID(ctx, tID)
+	require.NoError(t, err)
+	assert.InDelta(t, 100.0, defendedT.Strength, 0.01)
+	assert.WithinDuration(t, time.Now().UTC(), defendedT.LastDefendedAt, 5*time.Second, "last_defended_at must be refreshed on defense")
+	assert.WithinDuration(t, time.Now().UTC(), defendedT.LastDecayedAt, 5*time.Second, "last_decayed_at must be refreshed on defense")
+}
+

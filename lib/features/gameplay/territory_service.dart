@@ -91,7 +91,7 @@ class TerritoryService {
           xp: 0,
           level: 1,
           badges: ['Rookie Runner', 'Cyber Rookie'],
-          totalHexesClaimed: 0,
+          totalTerritoriesClaimed: 0,
           currentStreak: 1,
         ),
       );
@@ -129,7 +129,7 @@ class TerritoryService {
           xp: 0,
           level: 1,
           badges: ['Rookie Runner', 'Cyber Rookie'],
-          totalHexesClaimed: 0,
+          totalTerritoriesClaimed: 0,
           currentStreak: 1,
         );
   }

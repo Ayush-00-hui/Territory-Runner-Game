@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api"
-	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -57,18 +56,20 @@ func TestE2EFullRunLifecycle(t *testing.T) {
 	now := time.Now().UTC()
 
 	// 2. Rival submits initial territory run (~30,000 m² box)
+	rivalCorners := [][2]float64{
+		{51.5000, -0.1200},
+		{51.5020, -0.1200},
+		{51.5020, -0.1220},
+		{51.5000, -0.1220},
+		{51.50005, -0.12005},
+	}
+	rivalPts, rivalDur, rivalDist := buildPathFromCorners(rivalCorners, now, 20, 3*time.Second, 3.0)
 	rivalPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_rival_initial_001",
 		ActivityType:    "running",
-		DurationSeconds: 300,
-		DistanceMeters:  800.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(0 * time.Second), Speed: 2.7},
-			{Latitude: 51.5020, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second), Speed: 2.8},
-			{Latitude: 51.5020, Longitude: -0.1220, Timestamp: now.Add(20 * time.Second), Speed: 2.7},
-			{Latitude: 51.5000, Longitude: -0.1220, Timestamp: now.Add(30 * time.Second), Speed: 2.8},
-			{Latitude: 51.50005, Longitude: -0.12005, Timestamp: now.Add(40 * time.Second), Speed: 2.6},
-		},
+		DurationSeconds: rivalDur,
+		DistanceMeters:  rivalDist,
+		Points:          rivalPts,
 	}
 	body, _ := json.Marshal(rivalPayload)
 	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
@@ -85,18 +86,20 @@ func TestE2EFullRunLifecycle(t *testing.T) {
 	rivalInitialArea := rivalResult.AreaClaimedSqm
 
 	// 3. Runner submits overlapping loop run (carving top-right portion of Rival's sector)
+	runnerCorners := [][2]float64{
+		{51.5010, -0.1210},
+		{51.5030, -0.1210},
+		{51.5030, -0.1230},
+		{51.5010, -0.1230},
+		{51.50105, -0.12105},
+	}
+	runnerPts, runnerDur, runnerDist := buildPathFromCorners(runnerCorners, now.Add(time.Duration(rivalDur+10)*time.Second), 20, 3*time.Second, 3.0)
 	runnerPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_runner_conquest_002",
 		ActivityType:    "running",
-		DurationSeconds: 320,
-		DistanceMeters:  850.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.5010, Longitude: -0.1210, Timestamp: now.Add(50 * time.Second), Speed: 2.8},
-			{Latitude: 51.5030, Longitude: -0.1210, Timestamp: now.Add(60 * time.Second), Speed: 2.9},
-			{Latitude: 51.5030, Longitude: -0.1230, Timestamp: now.Add(70 * time.Second), Speed: 2.7},
-			{Latitude: 51.5010, Longitude: -0.1230, Timestamp: now.Add(80 * time.Second), Speed: 2.8},
-			{Latitude: 51.50105, Longitude: -0.12105, Timestamp: now.Add(90 * time.Second), Speed: 2.6},
-		},
+		DurationSeconds: runnerDur,
+		DistanceMeters:  runnerDist,
+		Points:          runnerPts,
 	}
 	body, _ = json.Marshal(runnerPayload)
 	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))

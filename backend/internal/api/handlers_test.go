@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -58,21 +59,63 @@ func TestHealthzEndpoint(t *testing.T) {
 	assert.Contains(t, resp["database"], "connected")
 }
 
+func buildPathFromCorners(corners [][2]float64, startTime time.Time, stepsPerSide int, stepDuration time.Duration, speed float64) ([]geo.TrackPoint, int, float64) {
+	pts := make([]geo.TrackPoint, 0, (len(corners)-1)*stepsPerSide+1)
+	currentTs := startTime
+
+	for c := 0; c < len(corners)-1; c++ {
+		startLat, startLng := corners[c][0], corners[c][1]
+		endLat, endLng := corners[c+1][0], corners[c+1][1]
+		for s := 0; s < stepsPerSide; s++ {
+			frac := float64(s) / float64(stepsPerSide)
+			lat := startLat + frac*(endLat-startLat)
+			lng := startLng + frac*(endLng-startLng)
+			pts = append(pts, geo.TrackPoint{
+				Latitude:  lat,
+				Longitude: lng,
+				Timestamp: currentTs,
+				Speed:     speed,
+			})
+			currentTs = currentTs.Add(stepDuration)
+		}
+	}
+	lastCorner := corners[len(corners)-1]
+	pts = append(pts, geo.TrackPoint{
+		Latitude:  lastCorner[0],
+		Longitude: lastCorner[1],
+		Timestamp: currentTs,
+		Speed:     speed,
+	})
+
+	var dist float64
+	for i := 1; i < len(pts); i++ {
+		dist += geo.HaversineDistanceMeters(pts[i-1].ToLatLng(), pts[i].ToLatLng())
+	}
+	dur := int(pts[len(pts)-1].Timestamp.Sub(pts[0].Timestamp).Seconds())
+	return pts, dur, dist
+}
+
+func buildRealisticLoop(startTime time.Time) ([]geo.TrackPoint, int, float64) {
+	corners := [][2]float64{
+		{51.5000, -0.1200},
+		{51.5009, -0.1200},
+		{51.5009, -0.1214},
+		{51.5000, -0.1214},
+		{51.5001, -0.1201},
+	}
+	return buildPathFromCorners(corners, startTime, 8, 3*time.Second, 3.0)
+}
+
 func TestSubmitRunValidLoop(t *testing.T) {
 	router, _ := setupTestServer()
 
 	now := time.Now().UTC()
+	pts, dur, dist := buildRealisticLoop(now)
 	runPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_run_valid_001",
-		DurationSeconds: 400,
-		DistanceMeters:  450.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second)},
-			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(20 * time.Second)},
-			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(30 * time.Second)},
-			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(40 * time.Second)},
-		},
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+		Points:          pts,
 	}
 
 	body, _ := json.Marshal(runPayload)
@@ -98,17 +141,12 @@ func TestDuplicateIdempotencyKeyDoesNotDoubleCount(t *testing.T) {
 	router, _ := setupTestServer()
 
 	now := time.Now().UTC()
+	pts, dur, dist := buildRealisticLoop(now)
 	runPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_run_duplicate_test",
-		DurationSeconds: 300,
-		DistanceMeters:  400.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second)},
-			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(20 * time.Second)},
-			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(30 * time.Second)},
-			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(40 * time.Second)},
-		},
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+		Points:          pts,
 	}
 
 	body, _ := json.Marshal(runPayload)
@@ -144,18 +182,19 @@ func TestSubmitRunLassoCrossingKeepsValidLoop(t *testing.T) {
 	router, _ := setupTestServer()
 
 	now := time.Now().UTC()
-	// Run containing 1 valid lasso loop plus a path crossing: must keep the valid loop!
+	lassoCorners := [][2]float64{
+		{51.5000, -0.1200},
+		{51.5010, -0.1210},
+		{51.5010, -0.1200},
+		{51.5000, -0.1210},
+		{51.5000, -0.1200},
+	}
+	pts, dur, dist := buildPathFromCorners(lassoCorners, now, 8, 3*time.Second, 3.0)
 	runPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_lasso_cross_001",
-		DurationSeconds: 300,
-		DistanceMeters:  400.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5010, Longitude: -0.1210, Timestamp: now.Add(10 * time.Second)},
-			{Latitude: 51.5010, Longitude: -0.1200, Timestamp: now.Add(20 * time.Second)},
-			{Latitude: 51.5000, Longitude: -0.1210, Timestamp: now.Add(30 * time.Second)},
-			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(40 * time.Second)},
-		},
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+		Points:          pts,
 	}
 
 	body, _ := json.Marshal(runPayload)
@@ -178,18 +217,23 @@ func TestSubmitRunPureFigure8Rejected(t *testing.T) {
 	router, _ := setupTestServer()
 
 	now := time.Now().UTC()
-	// Pure figure-8 that self-intersects and forms NO valid loop (perimeters < 40m)
+	pts := []geo.TrackPoint{
+		{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now, Speed: 5.2},
+		{Latitude: 51.50016, Longitude: -0.12016, Timestamp: now.Add(4 * time.Second), Speed: 5.2},
+		{Latitude: 51.50016, Longitude: -0.12000, Timestamp: now.Add(8 * time.Second), Speed: 5.2},
+		{Latitude: 51.50000, Longitude: -0.12016, Timestamp: now.Add(12 * time.Second), Speed: 5.2},
+		{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now.Add(16 * time.Second), Speed: 5.2},
+	}
+	var dist float64
+	for i := 1; i < len(pts); i++ {
+		dist += geo.HaversineDistanceMeters(pts[i-1].ToLatLng(), pts[i].ToLatLng())
+	}
+	dur := int(pts[len(pts)-1].Timestamp.Sub(pts[0].Timestamp).Seconds())
 	runPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_fig8_pure_001",
-		DurationSeconds: 120,
-		DistanceMeters:  64.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now},
-			{Latitude: 51.50016, Longitude: -0.12016, Timestamp: now.Add(10 * time.Second)},
-			{Latitude: 51.50016, Longitude: -0.12000, Timestamp: now.Add(20 * time.Second)},
-			{Latitude: 51.50000, Longitude: -0.12016, Timestamp: now.Add(30 * time.Second)},
-			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now.Add(40 * time.Second)},
-		},
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+		Points:          pts,
 	}
 
 	body, _ := json.Marshal(runPayload)
@@ -211,23 +255,24 @@ func TestSubmitRunTwoLoopsAwardXPForBoth(t *testing.T) {
 	router, _ := setupTestServer()
 
 	now := time.Now().UTC()
-	// Single run sequence with 2 valid enclosed loops: awards XP for BOTH and unions BOTH
+	twoLoopCorners := [][2]float64{
+		{51.50000, -0.12000},
+		{51.50080, -0.12000},
+		{51.50080, -0.12120},
+		{51.50000, -0.12120},
+		{51.50001, -0.12001},
+		{51.50000, -0.11900},
+		{51.50080, -0.11900},
+		{51.50080, -0.11780},
+		{51.50000, -0.11780},
+		{51.50001, -0.11899},
+	}
+	pts, dur, dist := buildPathFromCorners(twoLoopCorners, now, 8, 3*time.Second, 3.0)
 	runPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_twoloops_001",
-		DurationSeconds: 600,
-		DistanceMeters:  700.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.50000, Longitude: -0.12000, Timestamp: now},
-			{Latitude: 51.50080, Longitude: -0.12000, Timestamp: now.Add(10 * time.Second)},
-			{Latitude: 51.50080, Longitude: -0.12120, Timestamp: now.Add(20 * time.Second)},
-			{Latitude: 51.50000, Longitude: -0.12120, Timestamp: now.Add(30 * time.Second)},
-			{Latitude: 51.50001, Longitude: -0.12001, Timestamp: now.Add(40 * time.Second)},
-			{Latitude: 51.50000, Longitude: -0.11900, Timestamp: now.Add(50 * time.Second)},
-			{Latitude: 51.50080, Longitude: -0.11900, Timestamp: now.Add(60 * time.Second)},
-			{Latitude: 51.50080, Longitude: -0.11780, Timestamp: now.Add(70 * time.Second)},
-			{Latitude: 51.50000, Longitude: -0.11780, Timestamp: now.Add(80 * time.Second)},
-			{Latitude: 51.50001, Longitude: -0.11899, Timestamp: now.Add(90 * time.Second)},
-		},
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+		Points:          pts,
 	}
 
 	body, _ := json.Marshal(runPayload)
@@ -243,8 +288,9 @@ func TestSubmitRunTwoLoopsAwardXPForBoth(t *testing.T) {
 	_ = json.Unmarshal(rec.Body.Bytes(), &res)
 	assert.True(t, res.LoopDetected)
 	assert.InDelta(t, 14718.6, res.AreaClaimedSqm, 100.0)
-	// XP for both loops: max(100, round(14718.6/20.0)) = 736
-	assert.Equal(t, 736, res.XpAwarded)
+	// XP for both loops: max(100, round(res.AreaClaimedSqm/20.0))
+	expectedXP := int(math.Round(res.AreaClaimedSqm / 20.0))
+	assert.Equal(t, expectedXP, res.XpAwarded)
 	assert.Equal(t, res.AreaClaimedSqm, res.PlayerTotalAreaSqm)
 }
 
@@ -539,17 +585,12 @@ func TestRunsEndpoint_RateLimiting(t *testing.T) {
 	router := api.SetupRouter(apiHandler, authenticator)
 
 	now := time.Now().UTC()
+	pts, dur, dist := buildRealisticLoop(now)
 	runPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_ratelimit_1",
-		DurationSeconds: 300,
-		DistanceMeters:  400.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
-			{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute)},
-			{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute)},
-			{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute)},
-			{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute)},
-		},
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+		Points:          pts,
 	}
 	body, _ := json.Marshal(runPayload)
 
@@ -761,17 +802,12 @@ func TestConquestTriggersFCMAlert(t *testing.T) {
 
 	// Submitting a conquest run overlapping victim's territory
 	now := time.Now().UTC()
+	pts, dur, dist := buildRealisticLoop(now)
 	runPayload := api.SubmitRunRequest{
 		IdempotencyKey:  "idem_attacker_conquest",
-		DurationSeconds: 400,
-		DistanceMeters:  2000.0,
-		Points: []geo.TrackPoint{
-			{Latitude: 51.498, Longitude: -0.122, Timestamp: now.Add(-40 * time.Second)},
-			{Latitude: 51.507, Longitude: -0.122, Timestamp: now.Add(-30 * time.Second)},
-			{Latitude: 51.507, Longitude: -0.113, Timestamp: now.Add(-20 * time.Second)},
-			{Latitude: 51.498, Longitude: -0.113, Timestamp: now.Add(-10 * time.Second)},
-			{Latitude: 51.498, Longitude: -0.122, Timestamp: now},
-		},
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+		Points:          pts,
 	}
 	body, _ := json.Marshal(runPayload)
 
@@ -1251,21 +1287,14 @@ func TestSubmitRunActivityTypeValidationAndSpeedCeiling(t *testing.T) {
 	router, _ := setupTestServer()
 	now := time.Now().UTC()
 
-	// Loop points in London
-	loopPoints := []geo.TrackPoint{
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now, Speed: 2.5},
-		{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(1 * time.Minute), Speed: 2.5},
-		{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(2 * time.Minute), Speed: 2.5},
-		{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(3 * time.Minute), Speed: 2.5},
-		{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(4 * time.Minute), Speed: 2.5},
-	}
+	loopPoints, loopDur, loopDist := buildRealisticLoop(now)
 
 	// 1. Reject invalid activity type
 	invalidReq := api.SubmitRunRequest{
 		IdempotencyKey:  "run_invalid_act",
 		ActivityType:    "hovercraft",
-		DurationSeconds: 240,
-		DistanceMeters:  400.0,
+		DurationSeconds: loopDur,
+		DistanceMeters:  loopDist,
 		Points:          loopPoints,
 	}
 	body, _ := json.Marshal(invalidReq)
@@ -1278,18 +1307,19 @@ func TestSubmitRunActivityTypeValidationAndSpeedCeiling(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), "INVALID_ACTIVITY_TYPE")
 
 	// 2. Reject cycling speed (>25 km/h, e.g. 8.3 m/s = 30 km/h) when declared as running
-	cyclingPoints := []geo.TrackPoint{
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now, Speed: 8.3},
-		{Latitude: 51.5009, Longitude: -0.1200, Timestamp: now.Add(10 * time.Second), Speed: 8.3},
-		{Latitude: 51.5009, Longitude: -0.1214, Timestamp: now.Add(20 * time.Second), Speed: 8.3},
-		{Latitude: 51.5000, Longitude: -0.1214, Timestamp: now.Add(30 * time.Second), Speed: 8.3},
-		{Latitude: 51.5001, Longitude: -0.1201, Timestamp: now.Add(40 * time.Second), Speed: 8.3},
+	cyclingCorners := [][2]float64{
+		{51.5000, -0.1200},
+		{51.5009, -0.1200},
+		{51.5009, -0.1214},
+		{51.5000, -0.1214},
+		{51.5001, -0.1201},
 	}
+	cyclingPoints, cyclingDur, cyclingDist := buildPathFromCorners(cyclingCorners, now, 12, 1*time.Second, 8.33)
 	runningCyclingReq := api.SubmitRunRequest{
 		IdempotencyKey:  "run_cycling_as_running",
 		ActivityType:    "running",
-		DurationSeconds: 40,
-		DistanceMeters:  400.0,
+		DurationSeconds: cyclingDur,
+		DistanceMeters:  cyclingDist,
 		Points:          cyclingPoints,
 	}
 	body, _ = json.Marshal(runningCyclingReq)
@@ -1306,8 +1336,8 @@ func TestSubmitRunActivityTypeValidationAndSpeedCeiling(t *testing.T) {
 	cyclingLegitReq := api.SubmitRunRequest{
 		IdempotencyKey:  "run_cycling_legit",
 		ActivityType:    "cycling",
-		DurationSeconds: 40,
-		DistanceMeters:  400.0,
+		DurationSeconds: cyclingDur,
+		DistanceMeters:  cyclingDist,
 		Points:          cyclingPoints,
 	}
 	body, _ = json.Marshal(cyclingLegitReq)
@@ -1327,8 +1357,8 @@ func TestSubmitRunActivityTypeValidationAndSpeedCeiling(t *testing.T) {
 	normalRunReq := api.SubmitRunRequest{
 		IdempotencyKey:  "run_normal_running",
 		ActivityType:    "running",
-		DurationSeconds: 240,
-		DistanceMeters:  400.0,
+		DurationSeconds: loopDur,
+		DistanceMeters:  loopDist,
 		Points:          loopPoints,
 	}
 	body, _ = json.Marshal(normalRunReq)
@@ -1348,17 +1378,20 @@ func TestServerTimestampHygiene(t *testing.T) {
 	router, st := setupTestServer()
 	_ = st
 
+	now := time.Now().UTC()
 	validPoints := []geo.TrackPoint{
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-60 * time.Second)},
-		{Latitude: 51.5005, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-30 * time.Second)},
-		{Latitude: 51.5005, Longitude: -0.1205, Timestamp: time.Now().UTC()},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(-6 * time.Second), Speed: 3.0},
+		{Latitude: 51.50008, Longitude: -0.1200, Timestamp: now.Add(-3 * time.Second), Speed: 3.0},
+		{Latitude: 51.50016, Longitude: -0.1200, Timestamp: now, Speed: 3.0},
 	}
+	validDist := geo.HaversineDistanceMeters(validPoints[0].ToLatLng(), validPoints[1].ToLatLng()) + geo.HaversineDistanceMeters(validPoints[1].ToLatLng(), validPoints[2].ToLatLng())
+	validDur := 6
 
 	// 1. Reject future timestamps (> 10m in the future)
 	futurePoints := []geo.TrackPoint{
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-60 * time.Second)},
-		{Latitude: 51.5005, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(30 * time.Minute)}, // +30 mins
-		{Latitude: 51.5005, Longitude: -0.1205, Timestamp: time.Now().UTC().Add(31 * time.Minute)},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(-6 * time.Second)},
+		{Latitude: 51.50008, Longitude: -0.1200, Timestamp: now.Add(30 * time.Minute)}, // +30 mins
+		{Latitude: 51.50016, Longitude: -0.1200, Timestamp: now.Add(31 * time.Minute)},
 	}
 	body, _ := json.Marshal(api.SubmitRunRequest{
 		IdempotencyKey:  "hygiene_future_run",
@@ -1376,9 +1409,9 @@ func TestServerTimestampHygiene(t *testing.T) {
 
 	// 2. Reject expired timestamps (> 14 days in the past)
 	expiredPoints := []geo.TrackPoint{
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-15 * 24 * time.Hour)}, // 15 days ago
-		{Latitude: 51.5005, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-15 * 24 * time.Hour).Add(30 * time.Second)},
-		{Latitude: 51.5005, Longitude: -0.1205, Timestamp: time.Now().UTC().Add(-15 * 24 * time.Hour).Add(60 * time.Second)},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(-15 * 24 * time.Hour)}, // 15 days ago
+		{Latitude: 51.50008, Longitude: -0.1200, Timestamp: now.Add(-15 * 24 * time.Hour).Add(3 * time.Second)},
+		{Latitude: 51.50016, Longitude: -0.1200, Timestamp: now.Add(-15 * 24 * time.Hour).Add(6 * time.Second)},
 	}
 	body, _ = json.Marshal(api.SubmitRunRequest{
 		IdempotencyKey:  "hygiene_expired_run",
@@ -1396,9 +1429,9 @@ func TestServerTimestampHygiene(t *testing.T) {
 
 	// 3. Reject non-monotonic timestamps
 	nonMonoPoints := []geo.TrackPoint{
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-30 * time.Second)},
-		{Latitude: 51.5005, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-60 * time.Second)}, // time traveled backwards!
-		{Latitude: 51.5005, Longitude: -0.1205, Timestamp: time.Now().UTC()},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(-3 * time.Second)},
+		{Latitude: 51.50008, Longitude: -0.1200, Timestamp: now.Add(-6 * time.Second)}, // time traveled backwards!
+		{Latitude: 51.50016, Longitude: -0.1200, Timestamp: now},
 	}
 	body, _ = json.Marshal(api.SubmitRunRequest{
 		IdempotencyKey:  "hygiene_non_mono_run",
@@ -1416,9 +1449,9 @@ func TestServerTimestampHygiene(t *testing.T) {
 
 	// 4. Reject zero-displacement duplicate coordinate track
 	duplicatePoints := []geo.TrackPoint{
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-60 * time.Second)},
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC().Add(-30 * time.Second)},
-		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: time.Now().UTC()},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(-6 * time.Second)},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now.Add(-3 * time.Second)},
+		{Latitude: 51.5000, Longitude: -0.1200, Timestamp: now},
 	}
 	body, _ = json.Marshal(api.SubmitRunRequest{
 		IdempotencyKey:  "hygiene_duplicate_points_run",
@@ -1437,8 +1470,8 @@ func TestServerTimestampHygiene(t *testing.T) {
 	// 5. Accept valid track and verify idempotency
 	body, _ = json.Marshal(api.SubmitRunRequest{
 		IdempotencyKey:  "hygiene_valid_run_idempotent",
-		DurationSeconds: 60,
-		DistanceMeters:  200.0,
+		DurationSeconds: validDur,
+		DistanceMeters:  validDist,
 		Points:          validPoints,
 	})
 	req = httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
@@ -1817,4 +1850,141 @@ func TestHandleDeleteMe_PurgesAccountAndCascades(t *testing.T) {
 	tokens, err := memStore.GetDeviceTokens(ctx, userID)
 	require.NoError(t, err)
 	assert.Empty(t, tokens)
+}
+
+func TestSubmitRunTableDrivenAntiCheat(t *testing.T) {
+	router, st := setupTestServer()
+	now := time.Now().UTC()
+
+	loopPts, loopDur, loopDist := buildRealisticLoop(now)
+
+	tests := []struct {
+		name                 string
+		userID               string
+		payload              api.SubmitRunRequest
+		expectedStatusCode   int
+		expectedStatusString string
+		checkTerritoryZero   bool
+	}{
+		{
+			name:   "car sampled every 5s with speed=2 rejected with 422",
+			userID: "user_car_cheat",
+			payload: api.SubmitRunRequest{
+				IdempotencyKey:  "idem_car_5s_spd2",
+				ActivityType:    "running",
+				DurationSeconds: 20,
+				DistanceMeters:  320.0,
+				Points: []geo.TrackPoint{
+					{Latitude: 37.77490, Longitude: -122.41940, Timestamp: now, Speed: 2.0},
+					{Latitude: 37.77562, Longitude: -122.41940, Timestamp: now.Add(5 * time.Second), Speed: 2.0}, // 80m / 5s = 57.6 km/h
+					{Latitude: 37.77634, Longitude: -122.41940, Timestamp: now.Add(10 * time.Second), Speed: 2.0},
+					{Latitude: 37.77706, Longitude: -122.41940, Timestamp: now.Add(15 * time.Second), Speed: 2.0},
+					{Latitude: 37.77778, Longitude: -122.41940, Timestamp: now.Add(20 * time.Second), Speed: 2.0},
+				},
+			},
+			expectedStatusCode:   http.StatusUnprocessableEntity,
+			expectedStatusString: "ANOMALY_REJECTED",
+		},
+		{
+			name:   "zero timestamps for run > 30s rejected with 400",
+			userID: "user_zero_ts",
+			payload: api.SubmitRunRequest{
+				IdempotencyKey:  "idem_zero_ts_rejected",
+				ActivityType:    "running",
+				DurationSeconds: 45, // > 30s
+				DistanceMeters:  100.0,
+				Points: []geo.TrackPoint{
+					{Latitude: 51.5000, Longitude: -0.1200, Speed: 2.5},
+					{Latitude: 51.5005, Longitude: -0.1200, Speed: 2.5},
+					{Latitude: 51.5010, Longitude: -0.1200, Speed: 2.5},
+				},
+			},
+			expectedStatusCode:   http.StatusBadRequest,
+			expectedStatusString: "MISSING_TIMESTAMPS",
+		},
+		{
+			name:   "duration mismatch returns 202 flagged_review and does NOT capture territory",
+			userID: "user_dur_mismatch",
+			payload: api.SubmitRunRequest{
+				IdempotencyKey:  "idem_dur_mismatch_flagged",
+				ActivityType:    "running",
+				DurationSeconds: 600, // declared 600s vs loop GPS time of ~96s (>10% mismatch)
+				DistanceMeters:  loopDist,
+				Points:          loopPts,
+			},
+			expectedStatusCode:   http.StatusAccepted, // 202
+			expectedStatusString: "flagged_review",
+			checkTerritoryZero:   true,
+		},
+		{
+			name:   "distance mismatch returns 202 flagged_review and does NOT capture territory",
+			userID: "user_dist_mismatch",
+			payload: api.SubmitRunRequest{
+				IdempotencyKey:  "idem_dist_mismatch_flagged",
+				ActivityType:    "running",
+				DurationSeconds: loopDur,
+				DistanceMeters:  1500.0, // declared 1500m vs actual loop distance ~388m (>10% mismatch)
+				Points:          loopPts,
+			},
+			expectedStatusCode:   http.StatusAccepted, // 202
+			expectedStatusString: "flagged_review",
+			checkTerritoryZero:   true,
+		},
+		{
+			name:   "flagged run persists in store but does NOT mutate territories",
+			userID: "user_flagged_nomutate",
+			payload: api.SubmitRunRequest{
+				IdempotencyKey:  "idem_flagged_nomutate_test",
+				ActivityType:    "running",
+				DurationSeconds: 500, // mismatch
+				DistanceMeters:  loopDist,
+				Points:          loopPts,
+			},
+			expectedStatusCode:   http.StatusAccepted, // 202
+			expectedStatusString: "flagged_review",
+			checkTerritoryZero:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, _ := json.Marshal(tt.payload)
+			req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("X-Dev-User", tt.userID)
+			rec := httptest.NewRecorder()
+
+			router.ServeHTTP(rec, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rec.Code)
+			respStr := rec.Body.String()
+			assert.Contains(t, respStr, tt.expectedStatusString)
+
+			if tt.checkTerritoryZero {
+				// Verify response shows loop not captured and 0 area claimed
+				var res store.CaptureResult
+				err := json.Unmarshal(rec.Body.Bytes(), &res)
+				require.NoError(t, err)
+				assert.Equal(t, "flagged_review", res.Status)
+				assert.False(t, res.LoopDetected)
+				assert.Equal(t, 0.0, res.AreaClaimedSqm)
+				assert.Equal(t, 0, res.XpAwarded)
+
+				// Verify run IS persisted in store
+				runInDb, err := st.GetRunByIdempotencyKey(context.Background(), tt.payload.IdempotencyKey)
+				require.NoError(t, err)
+				require.NotNil(t, runInDb)
+				assert.Equal(t, "flagged_review", runInDb.Status)
+
+				// Verify NO territory was created or mutated for this user
+				u, err := st.GetUser(context.Background(), tt.userID)
+				if err == nil && u != nil {
+					assert.Equal(t, 0.0, u.TotalAreaSqm)
+				}
+				tID := fmt.Sprintf("poly_%s_territory", tt.userID)
+				terr, err := st.GetTerritoryByID(context.Background(), tID)
+				assert.True(t, err != nil || terr == nil, "Territory must not be created for flagged run")
+			}
+		})
+	}
 }

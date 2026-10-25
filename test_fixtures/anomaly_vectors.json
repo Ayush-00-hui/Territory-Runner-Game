@@ -1,0 +1,114 @@
+{
+  "model_type": "WeightedZScoreDetector",
+  "means": [
+    9.8205,
+    1.0521,
+    7.2114,
+    0.772,
+    0.0
+  ],
+  "stds": [
+    1.4204,
+    1.3905,
+    5.9006,
+    0.1767,
+    0.05
+  ],
+  "weights": [
+    2.5,
+    2.0,
+    1.2,
+    1.0,
+    0.8
+  ],
+  "test_cases": [
+    {
+      "name": "exact_means",
+      "features": [
+        9.8205,
+        1.0521,
+        7.2114,
+        0.772,
+        0.0
+      ],
+      "expected_score": 0.0
+    },
+    {
+      "name": "typical_jogging",
+      "features": [
+        10.0,
+        1.2,
+        7.0,
+        0.8,
+        0.0
+      ],
+      "expected_score": 0.09734857
+    },
+    {
+      "name": "genuine_run_with_two_stops",
+      "features": [
+        9.8205,
+        1.0521,
+        7.2114,
+        0.772,
+        0.08
+      ],
+      "expected_score": 0.17066667
+    },
+    {
+      "name": "single_feature_extreme_speed_capped_z",
+      "features": [
+        30.0,
+        1.0521,
+        7.2114,
+        0.772,
+        0.0
+      ],
+      "expected_score": 2.0
+    },
+    {
+      "name": "single_feature_extreme_stop_capped_z",
+      "features": [
+        9.8205,
+        1.0521,
+        7.2114,
+        0.772,
+        1.0
+      ],
+      "expected_score": 0.64
+    },
+    {
+      "name": "all_features_extreme_capped_z",
+      "features": [
+        50.0,
+        20.0,
+        100.0,
+        3.0,
+        1.0
+      ],
+      "expected_score": 6.0
+    },
+    {
+      "name": "mixed_moderate_deviation",
+      "features": [
+        12.0,
+        2.5,
+        12.0,
+        0.5,
+        0.04
+      ],
+      "expected_score": 1.2095751
+    },
+    {
+      "name": "subtle_irregular",
+      "features": [
+        8.0,
+        0.5,
+        4.0,
+        0.9,
+        0.02
+      ],
+      "expected_score": 0.75943963
+    }
+  ]
+}

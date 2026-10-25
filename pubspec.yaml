@@ -61,9 +61,14 @@ dependencies:
   firebase_crashlytics: ^5.4.0
   flutter_tts: ^4.2.2
   gal: ^2.3.1
+  sensors_plus: ^7.1.1
+  crypto: ^3.0.7
+  flutter_secure_storage: ^11.2.0
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to

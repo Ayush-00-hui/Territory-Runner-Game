@@ -17,9 +17,11 @@ class CoachInsight {
 
   factory CoachInsight.fallback({
     required double distanceKm,
-    required int hexesClaimed,
+    int? territoriesClaimed,
+    int? hexesClaimed,
     required int durationSeconds,
   }) {
+    final int effectiveTerritories = territoriesClaimed ?? hexesClaimed ?? 0;
     final double pace = (distanceKm > 0)
         ? (durationSeconds / 60.0) / distanceKm
         : 0.0;
@@ -28,10 +30,10 @@ class CoachInsight {
 
     return CoachInsight(
       summary:
-          "Strong run. You logged ${distanceKm.toStringAsFixed(2)} km in ${(durationSeconds / 60).toStringAsFixed(1)} min and claimed $hexesClaimed new territories.",
+          "Strong run. You logged ${distanceKm.toStringAsFixed(2)} km in ${(durationSeconds / 60).toStringAsFixed(1)} min and claimed $effectiveTerritories new territories/zones.",
       tip:
-          "Pace recorded at $paceMin'${paceSec.toString().padLeft(2, '0')}\"/km. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-hex loops.",
-      moodTag: hexesClaimed > 5 ? CoachMood.celebratory : CoachMood.encouraging,
+          "Pace recorded at $paceMin'${paceSec.toString().padLeft(2, '0')}\"/km. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-zone loops.",
+      moodTag: effectiveTerritories > 5 ? CoachMood.celebratory : CoachMood.encouraging,
     );
   }
 }
@@ -61,18 +63,21 @@ class LLMCoachService {
     String? runId,
     required double distanceKm,
     required int durationSeconds,
-    required int hexesClaimed,
+    int? territoriesClaimed,
+    int? hexesClaimed,
     required RunnerProfile profile,
     String? currentPaceFormatted,
   }) async {
     final targetRunId = runId ?? 'run_${DateTime.now().millisecondsSinceEpoch}';
+    final int effectiveTerritories = territoriesClaimed ?? hexesClaimed ?? 0;
 
     try {
       final res = await _apiClient.getRunCoachInsight(
         runId: targetRunId,
         distanceKm: distanceKm,
         durationSeconds: durationSeconds,
-        hexesClaimed: hexesClaimed,
+        territoriesClaimed: effectiveTerritories,
+        hexesClaimed: effectiveTerritories,
         currentPace: currentPaceFormatted,
         level: profile.level,
         streakDays: profile.currentStreak,
@@ -103,7 +108,8 @@ class LLMCoachService {
 
     return CoachInsight.fallback(
       distanceKm: distanceKm,
-      hexesClaimed: hexesClaimed,
+      territoriesClaimed: effectiveTerritories,
+      hexesClaimed: effectiveTerritories,
       durationSeconds: durationSeconds,
     );
   }

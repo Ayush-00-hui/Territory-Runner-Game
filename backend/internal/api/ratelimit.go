@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -12,14 +14,118 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth"
 )
 
+// TrustedProxyChecker validates whether an IP address belongs to configured trusted proxies.
+type TrustedProxyChecker struct {
+	cidrs []*net.IPNet
+	ips   []net.IP
+}
+
+// ParseTrustedProxies parses a comma-separated list of IP addresses and CIDR subnets.
+func ParseTrustedProxies(s string) *TrustedProxyChecker {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	checker := &TrustedProxyChecker{}
+	parts := strings.Split(s, ",")
+	for _, part := range parts {
+		p := strings.TrimSpace(part)
+		if p == "" {
+			continue
+		}
+		if _, ipNet, err := net.ParseCIDR(p); err == nil {
+			checker.cidrs = append(checker.cidrs, ipNet)
+			continue
+		}
+		if ip := net.ParseIP(p); ip != nil {
+			checker.ips = append(checker.ips, ip)
+		}
+	}
+	if len(checker.cidrs) == 0 && len(checker.ips) == 0 {
+		return nil
+	}
+	return checker
+}
+
+// IsTrusted returns true if the specified IP is within the trusted proxies list.
+func (c *TrustedProxyChecker) IsTrusted(ip net.IP) bool {
+	if c == nil || ip == nil {
+		return false
+	}
+	for _, trustedIP := range c.ips {
+		if trustedIP.Equal(ip) {
+			return true
+		}
+	}
+	for _, cidr := range c.cidrs {
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+	return false
+}
+
+// GetClientIP extracts the client IP address. X-Forwarded-For and X-Real-IP are ONLY
+// trusted if the immediate peer (RemoteAddr) is in the configured TRUSTED_PROXIES list.
+func GetClientIP(r *http.Request, checker *TrustedProxyChecker) string {
+	remoteHost := r.RemoteAddr
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		remoteHost = host
+	}
+	remoteIP := net.ParseIP(remoteHost)
+
+	// If no trusted proxy checker or remote peer IP is not trusted,
+	// do NOT trust X-Forwarded-For or X-Real-IP headers. Return peer IP.
+	if checker == nil || remoteIP == nil || !checker.IsTrusted(remoteIP) {
+		return remoteHost
+	}
+
+	// Remote peer is a trusted proxy. Inspect forwarding headers.
+	// 1. Inspect X-Forwarded-For from right to left
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		var ips []string
+		for _, p := range parts {
+			trimmed := strings.TrimSpace(p)
+			if trimmed != "" {
+				ips = append(ips, trimmed)
+			}
+		}
+		// Walk backwards to find the first untrusted upstream IP
+		for i := len(ips) - 1; i >= 0; i-- {
+			candidateIP := net.ParseIP(ips[i])
+			if candidateIP == nil {
+				continue
+			}
+			if !checker.IsTrusted(candidateIP) {
+				return ips[i]
+			}
+		}
+		// If all IPs in XFF were trusted, return the leftmost valid one
+		if len(ips) > 0 {
+			return ips[0]
+		}
+	}
+
+	// 2. Inspect X-Real-IP
+	if xri := strings.TrimSpace(r.Header.Get("X-Real-IP")); xri != "" {
+		if parsed := net.ParseIP(xri); parsed != nil {
+			return xri
+		}
+	}
+
+	return remoteHost
+}
+
 // RateLimiter implements an in-memory token bucket rate limiter per key.
 type RateLimiter struct {
-	mu          sync.Mutex
-	buckets     map[string]*bucket
-	rate        float64 // tokens added per second
-	capacity    float64 // maximum tokens held
-	cleanTicker *time.Ticker
-	stopCleanup chan struct{}
+	mu             sync.Mutex
+	buckets        map[string]*bucket
+	rate           float64 // tokens added per second
+	capacity       float64 // maximum tokens held
+	cleanTicker    *time.Ticker
+	stopCleanup    chan struct{}
+	trustedProxies *TrustedProxyChecker
 }
 
 type bucket struct {
@@ -38,6 +144,13 @@ func NewRateLimiter(rate float64, capacity float64) *RateLimiter {
 	}
 	go rl.cleanupLoop()
 	return rl
+}
+
+// SetTrustedProxies configures trusted reverse proxy CIDRs/IPs for client IP extraction.
+func (rl *RateLimiter) SetTrustedProxies(proxies string) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	rl.trustedProxies = ParseTrustedProxies(proxies)
 }
 
 func (rl *RateLimiter) cleanupLoop() {
@@ -102,29 +215,41 @@ func (rl *RateLimiter) Allow(key string) (bool, int) {
 }
 
 // KeyForRequest returns the rate limit identifier: authenticated User ID, or client IP.
+func (rl *RateLimiter) KeyForRequest(r *http.Request) string {
+	uid := auth.GetUserID(r.Context())
+	if uid != "" {
+		return "usr:" + uid
+	}
+
+	rl.mu.Lock()
+	checker := rl.trustedProxies
+	rl.mu.Unlock()
+
+	if checker == nil {
+		checker = ParseTrustedProxies(os.Getenv("TRUSTED_PROXIES"))
+	}
+
+	clientIP := GetClientIP(r, checker)
+	return "ip:" + clientIP
+}
+
+// KeyForRequest returns the rate limit identifier: authenticated User ID, or client IP.
+// Uses TRUSTED_PROXIES environment variable if configured.
 func KeyForRequest(r *http.Request) string {
 	uid := auth.GetUserID(r.Context())
 	if uid != "" {
 		return "usr:" + uid
 	}
-	// Fall back to client IP (handles X-Forwarded-For, X-Real-IP, RemoteAddr)
-	ip := r.Header.Get("X-Forwarded-For")
-	if ip != "" {
-		parts := strings.Split(ip, ",")
-		return "ip:" + strings.TrimSpace(parts[0])
-	}
-	ip = r.Header.Get("X-Real-IP")
-	if ip != "" {
-		return "ip:" + strings.TrimSpace(ip)
-	}
-	return "ip:" + r.RemoteAddr
+	checker := ParseTrustedProxies(os.Getenv("TRUSTED_PROXIES"))
+	clientIP := GetClientIP(r, checker)
+	return "ip:" + clientIP
 }
 
 // RateLimitMiddleware creates HTTP middleware enforcing rate limits.
 func RateLimitMiddleware(limiter *RateLimiter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			key := KeyForRequest(r)
+			key := limiter.KeyForRequest(r)
 			allowed, retryAfter := limiter.Allow(key)
 			if !allowed {
 				w.Header().Set("Retry-After", fmt.Sprintf("%d", retryAfter))
@@ -141,3 +266,4 @@ func RateLimitMiddleware(limiter *RateLimiter) func(http.Handler) http.Handler {
 		})
 	}
 }
+

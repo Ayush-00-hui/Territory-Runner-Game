@@ -1,18 +1,29 @@
 import 'package:flutter/material.dart';
 
 import '../../../../models/run_goal.dart';
+import '../../../../models/runner_profile.dart';
 import '../../../../ui/ui.dart';
+import '../../coach/pace_prediction_service.dart';
 
 /// Modal bottom sheet allowing runners to configure conquest objectives
 /// (Distance, Duration, or Area domain goals) before or during an active run.
 class RunGoalSheet extends StatefulWidget {
   final RunGoal currentGoal;
+  final RunnerProfile? profile;
+  final List<PastRun>? recentRuns;
 
-  const RunGoalSheet({super.key, required this.currentGoal});
+  const RunGoalSheet({
+    super.key,
+    required this.currentGoal,
+    this.profile,
+    this.recentRuns,
+  });
 
   static Future<RunGoal?> show(
     BuildContext context, {
     RunGoal currentGoal = RunGoal.none,
+    RunnerProfile? profile,
+    List<PastRun>? recentRuns,
   }) {
     return showModalBottomSheet<RunGoal>(
       context: context,
@@ -21,7 +32,11 @@ class RunGoalSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (ctx) => RunGoalSheet(currentGoal: currentGoal),
+      builder: (ctx) => RunGoalSheet(
+        currentGoal: currentGoal,
+        profile: profile,
+        recentRuns: recentRuns,
+      ),
     );
   }
 
@@ -240,8 +255,110 @@ class _RunGoalSheetState extends State<RunGoalSheet>
   }
 
   Widget _buildDistanceGrid() {
+    final prediction = PacePredictionService().predictTarget(
+      widget.profile ?? RunnerProfile(id: 'local', username: 'Runner'),
+      recentRuns: widget.recentRuns,
+    );
+
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Adaptive Daily Goal Card (Quantile p50 Target / p90 Stretch)
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.s12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: AppSpacing.br14,
+            border: Border.all(
+              color: prediction.isColdStart
+                  ? AppColors.border
+                  : AppColors.accent.withValues(alpha: 0.35),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    prediction.isColdStart ? Icons.fitness_center_outlined : Icons.auto_awesome,
+                    color: prediction.isColdStart ? AppColors.textMuted : AppColors.accent,
+                    size: 16,
+                  ),
+                  const SizedBox(width: AppSpacing.s6),
+                  Text(
+                    'ADAPTIVE DAILY GOALS',
+                    style: AppText.caption.copyWith(
+                      color: prediction.isColdStart ? AppColors.textMuted : AppColors.accent,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: prediction.isColdStart
+                          ? AppColors.textMuted.withValues(alpha: 0.15)
+                          : AppColors.accent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      prediction.isColdStart ? 'Level Baseline (<5 runs)' : 'Personalized AI',
+                      style: AppText.caption.copyWith(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w700,
+                        color: prediction.isColdStart ? AppColors.textMuted : AppColors.accent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.s4),
+              Text(
+                prediction.sourceLabel,
+                style: AppText.caption.copyWith(
+                  fontSize: 10,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPresetCard(
+                      '${prediction.targetDistanceKm} km',
+                      'Target (p50)',
+                      prediction.targetDistanceKm,
+                      _selectedValue == prediction.targetDistanceKm,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildPresetCard(
+                      '${prediction.stretchDistanceKm} km',
+                      'Stretch (p90)',
+                      prediction.stretchDistanceKm,
+                      _selectedValue == prediction.stretchDistanceKm,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s14),
+        Text(
+          'STANDARD PRESETS',
+          style: AppText.caption.copyWith(
+            color: AppColors.textMuted,
+            fontWeight: FontWeight.w700,
+            fontSize: 10,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s8),
         Row(
           children: [
             Expanded(

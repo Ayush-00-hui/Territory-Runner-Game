@@ -15,7 +15,8 @@ class FakeCoachService implements LLMCoachService {
     String? runId,
     required double distanceKm,
     required int durationSeconds,
-    required int hexesClaimed,
+    int? territoriesClaimed,
+    int? hexesClaimed,
     required RunnerProfile profile,
     String? currentPaceFormatted,
   }) async {

@@ -85,3 +85,15 @@ backend/*.test
 backend/coverage.out
 backend/coverage.html
 backend/server
+
+# Presentation Dossiers & Generated PDFs
+*.pdf
+docs/presentation/*.pdf
+docs/presentation/*.html
+docs/presentation/__pycache__/
+__pycache__/
+
+# ML Generated Artifacts
+ml/reports/figures/
+ml/data/*.parquet
+ml/data/*.npy

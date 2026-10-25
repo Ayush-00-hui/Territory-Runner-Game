@@ -11,12 +11,29 @@ import 'profile_page.dart';
 import 'features/map/map_screen.dart';
 import 'models/territory.dart';
 import 'models/runner_profile.dart';
-import 'services/firebase_service.dart';
-import 'services/notification_service.dart';
-
 import 'package:flutter/foundation.dart';
+import 'package:provider/provider.dart';
 
+import 'features/coach/llm_coach_service.dart';
+import 'features/coach/pace_prediction_service.dart';
+import 'features/gameplay/territory_service.dart';
 import 'features/home/home_screen.dart';
+import 'features/routing/route_service.dart';
+import 'services/api_client.dart';
+import 'services/app_preferences.dart';
+import 'services/battery_saver_service.dart';
+import 'services/export_service.dart';
+import 'services/firebase_service.dart';
+import 'services/gallery_saver_service.dart';
+import 'services/location_service.dart';
+import 'services/notification_service.dart';
+import 'services/privacy_zone_service.dart';
+import 'services/run_recovery_service.dart';
+import 'services/safety_service.dart';
+import 'services/sync_queue.dart';
+import 'services/tile_cache_service.dart';
+import 'services/user_settings_service.dart';
+import 'services/websocket_service.dart';
 import 'ui/ui.dart';
 export 'ui/ui.dart';
 
@@ -75,13 +92,39 @@ void main() {
       }
       await Hive.openBox<Territory>('territories_v3');
       await Hive.openBox<RunnerProfile>('profile');
-      await Hive.openBox<String>('active_run_recovery');
+      await RunRecoveryService().init();
 
       // Load package metadata
       unawaited(AppVersion.init());
 
       // Immediately render UI — zero splash screen blocking!
-      runApp(const TerritoryApp());
+      runApp(
+        MultiProvider(
+          providers: [
+            Provider<LocationService>(create: (_) => LocationService()),
+            Provider<TerritoryService>(create: (_) => TerritoryService()),
+            Provider<ApiClient>(create: (_) => ApiClient()),
+            Provider<RunRecoveryService>(create: (_) => RunRecoveryService()),
+            Provider<SyncQueueService>(create: (_) => SyncQueueService()),
+            Provider<WebSocketService>(create: (_) => WebSocketService()),
+            Provider<RouteService>(create: (_) => RouteService()),
+            Provider<LLMCoachService>(create: (_) => LLMCoachService()),
+            Provider<PacePredictionService>(create: (_) => PacePredictionService()),
+            Provider<AppPreferences>(create: (_) => AppPreferences()),
+            Provider<FirebaseService>(create: (_) => FirebaseService()),
+            Provider<NotificationService>(create: (_) => NotificationService()),
+            Provider<UserSettingsService>(create: (_) => UserSettingsService()),
+            Provider<TileCacheService>(create: (_) => TileCacheService()),
+            Provider<SafetyService>(create: (_) => SafetyService()),
+            Provider<PrivacyZoneService>(create: (_) => PrivacyZoneService()),
+            Provider<GallerySaverService>(create: (_) => GallerySaverService()),
+            Provider<ExportService>(create: (_) => ExportService()),
+            Provider<BatterySaverService>(create: (_) => BatterySaverService()),
+            ChangeNotifierProvider<MapRunController>(create: (_) => MapRunController()),
+          ],
+          child: const TerritoryApp(),
+        ),
+      );
 
       // Initialize Firebase and push notifications asynchronously in background
       _initServicesAsync();

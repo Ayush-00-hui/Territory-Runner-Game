@@ -13,8 +13,8 @@ func TestEmbeddedMigrationsCompleteness(t *testing.T) {
 	files, err := GetEmbeddedMigrationFiles()
 	require.NoError(t, err)
 
-	// Ensure all 10 pairs (20 files total) are embedded
-	assert.GreaterOrEqual(t, len(files), 20, "expected at least 20 migration files (10 up/down pairs)")
+	// Ensure all 11 pairs (22 files total) are embedded
+	assert.GreaterOrEqual(t, len(files), 22, "expected at least 22 migration files (11 up/down pairs)")
 
 	upFiles := make(map[int]string)
 	downFiles := make(map[int]string)
@@ -41,14 +41,15 @@ func TestEmbeddedMigrationsCompleteness(t *testing.T) {
 		assert.NotEmpty(t, content, "migration file must not be empty: %s", file)
 	}
 
-	assert.Equal(t, 10, len(upFiles), "expected exactly 10 up migration files")
-	assert.Equal(t, 10, len(downFiles), "expected exactly 10 down migration files")
+	assert.Equal(t, 11, len(upFiles), "expected exactly 11 up migration files")
+	assert.Equal(t, 11, len(downFiles), "expected exactly 11 down migration files")
 
-	// Ensure sequential continuity 1..10
-	for i := 1; i <= 10; i++ {
+	// Ensure sequential continuity 1..11
+	for i := 1; i <= 11; i++ {
 		assert.Contains(t, upFiles, i, "missing up migration for sequence %d", i)
 		assert.Contains(t, downFiles, i, "missing down migration for sequence %d", i)
 	}
+
 }
 
 func TestLegacyDatabaseDetectedError(t *testing.T) {

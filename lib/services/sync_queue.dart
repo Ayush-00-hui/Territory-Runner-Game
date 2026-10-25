@@ -10,6 +10,8 @@ import '../core/logging/app_logger.dart';
 import '../models/territory.dart';
 import '../features/gameplay/territory_service.dart';
 import 'api_client.dart';
+import 'hive_encryption_service.dart';
+import 'motion_sensor_service.dart';
 
 /// Connection and synchronization state with the Go backend
 enum SyncStatus { synced, pending, syncing, offline }
@@ -25,6 +27,7 @@ class QueuedRun {
   final int clientPreviewXp;
   final DateTime createdAt;
   final int retryCount;
+  final List<MotionWindow>? motionWindows;
 
   QueuedRun({
     required this.idempotencyKey,
@@ -36,6 +39,7 @@ class QueuedRun {
     required this.clientPreviewXp,
     required this.createdAt,
     this.retryCount = 0,
+    this.motionWindows,
   });
 
   Map<String, dynamic> toJson() => {
@@ -50,6 +54,8 @@ class QueuedRun {
     'clientPreviewXp': clientPreviewXp,
     'createdAt': createdAt.toIso8601String(),
     'retryCount': retryCount,
+    if (motionWindows != null && motionWindows!.isNotEmpty)
+      'motionWindows': motionWindows!.map((w) => w.toJson()).toList(),
   };
 
   factory QueuedRun.fromJson(Map<String, dynamic> json) {
@@ -58,6 +64,11 @@ class QueuedRun {
       final m = pt as Map<String, dynamic>;
       return LatLng((m['lat'] as num).toDouble(), (m['lng'] as num).toDouble());
     }).toList();
+
+    final rawWindows = json['motionWindows'] as List<dynamic>?;
+    final motionWindows = rawWindows
+        ?.map((w) => MotionWindow.fromJson(w as Map<String, dynamic>))
+        .toList();
 
     return QueuedRun(
       idempotencyKey: json['idempotencyKey'] as String? ?? const Uuid().v4(),
@@ -71,10 +82,11 @@ class QueuedRun {
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
       retryCount: (json['retryCount'] as num?)?.toInt() ?? 0,
+      motionWindows: motionWindows,
     );
   }
 
-  QueuedRun copyWith({int? retryCount, String? activityType}) {
+  QueuedRun copyWith({int? retryCount, String? activityType, List<MotionWindow>? motionWindows}) {
     return QueuedRun(
       idempotencyKey: idempotencyKey,
       activityType: activityType ?? this.activityType,
@@ -85,6 +97,7 @@ class QueuedRun {
       clientPreviewXp: clientPreviewXp,
       createdAt: createdAt,
       retryCount: retryCount ?? this.retryCount,
+      motionWindows: motionWindows ?? this.motionWindows,
     );
   }
 }
@@ -161,6 +174,7 @@ class SyncQueueService {
 
   final ApiClient _apiClient;
   final TerritoryService _territoryService;
+  final HiveEncryptionService _encryptionService;
   final Uuid _uuid = const Uuid();
 
   final ValueNotifier<SyncStatus> statusNotifier = ValueNotifier<SyncStatus>(
@@ -195,16 +209,19 @@ class SyncQueueService {
   factory SyncQueueService({
     ApiClient? apiClient,
     TerritoryService? territoryService,
+    HiveEncryptionService? encryptionService,
     Box<String>? overrideBox,
     Box<String>? overrideRejectedBox,
   }) {
     if (apiClient != null ||
         territoryService != null ||
+        encryptionService != null ||
         overrideBox != null ||
         overrideRejectedBox != null) {
       return SyncQueueService.custom(
         apiClient: apiClient,
         territoryService: territoryService,
+        encryptionService: encryptionService,
         overrideBox: overrideBox,
         overrideRejectedBox: overrideRejectedBox,
       );
@@ -215,18 +232,21 @@ class SyncQueueService {
   SyncQueueService.custom({
     ApiClient? apiClient,
     TerritoryService? territoryService,
+    HiveEncryptionService? encryptionService,
     Box<String>? overrideBox,
     Box<String>? overrideRejectedBox,
   }) : _apiClient = apiClient ?? ApiClient(),
        _territoryService = territoryService ?? TerritoryService(),
+       _encryptionService = encryptionService ?? HiveEncryptionService(),
        _box = overrideBox,
        _rejectedBox = overrideRejectedBox {
     _initBox();
   }
 
-  SyncQueueService._internal()
+  SyncQueueService._internal({HiveEncryptionService? encryptionService})
     : _apiClient = ApiClient(),
-      _territoryService = TerritoryService() {
+      _territoryService = TerritoryService(),
+      _encryptionService = encryptionService ?? HiveEncryptionService() {
     _initBox();
   }
 
@@ -243,7 +263,18 @@ class SyncQueueService {
       _box = Hive.box<String>(_boxName);
       return _box!;
     }
-    _box = await Hive.openBox<String>(_boxName);
+    try {
+      final cipher = await _encryptionService.getCipherForBox(_boxName);
+      _box = await Hive.openBox<String>(_boxName, encryptionCipher: cipher);
+    } catch (e) {
+      try {
+        await Hive.deleteBoxFromDisk(_boxName);
+        final cipher = await _encryptionService.getCipherForBox(_boxName);
+        _box = await Hive.openBox<String>(_boxName, encryptionCipher: cipher);
+      } catch (_) {
+        _box = await Hive.openBox<String>(_boxName);
+      }
+    }
     return _box!;
   }
 
@@ -268,6 +299,7 @@ class SyncQueueService {
     required int clientPreviewXp,
     String activityType = 'running',
     String? idempotencyKey,
+    List<MotionWindow>? motionWindows,
     bool autoSync = true,
   }) async {
     final box = await _getBox();
@@ -282,6 +314,7 @@ class SyncQueueService {
       clientPreviewArea: clientPreviewArea,
       clientPreviewXp: clientPreviewXp,
       createdAt: DateTime.now(),
+      motionWindows: motionWindows,
     );
 
     await box.put(key, jsonEncode(item.toJson()));
@@ -333,6 +366,7 @@ class SyncQueueService {
           distanceMeters: run.distanceMeters,
           clientPreviewArea: run.clientPreviewArea,
           clientPreviewXp: run.clientPreviewXp,
+          motionWindows: run.motionWindows,
         );
 
         AppLogger.info(
@@ -513,7 +547,26 @@ class SyncQueueService {
       _rejectedBox = Hive.box<String>(_rejectedBoxName);
       return _rejectedBox!;
     }
-    _rejectedBox = await Hive.openBox<String>(_rejectedBoxName);
+    try {
+      final cipher = await _encryptionService.getCipherForBox(_rejectedBoxName);
+      _rejectedBox = await Hive.openBox<String>(
+        _rejectedBoxName,
+        encryptionCipher: cipher,
+      );
+    } catch (e) {
+      try {
+        await Hive.deleteBoxFromDisk(_rejectedBoxName);
+        final cipher = await _encryptionService.getCipherForBox(
+          _rejectedBoxName,
+        );
+        _rejectedBox = await Hive.openBox<String>(
+          _rejectedBoxName,
+          encryptionCipher: cipher,
+        );
+      } catch (_) {
+        _rejectedBox = await Hive.openBox<String>(_rejectedBoxName);
+      }
+    }
     return _rejectedBox!;
   }
 

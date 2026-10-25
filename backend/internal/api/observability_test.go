@@ -118,3 +118,82 @@ func TestPrometheusMetricsEndpoint(t *testing.T) {
 	assert.Contains(t, body, "# TYPE ws_active_connections gauge")
 	assert.Contains(t, body, "ws_active_connections 0")
 }
+
+func TestMetricsEndpoint_ProtectedWithBearerToken(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "dev", Env: "development"}
+	authenticator := auth.NewAuthenticator(cfg)
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithAuthenticator(authenticator),
+		api.WithMetricsToken("secret-metrics-token"),
+	)
+	router := api.SetupRouter(apiHandler, authenticator)
+
+	// 1. Missing Authorization header -> 401 Unauthorized
+	reqNoAuth := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	recNoAuth := httptest.NewRecorder()
+	router.ServeHTTP(recNoAuth, reqNoAuth)
+	assert.Equal(t, http.StatusUnauthorized, recNoAuth.Code)
+	assert.Contains(t, recNoAuth.Header().Get("WWW-Authenticate"), `Bearer realm="metrics"`)
+
+	// 2. Invalid bearer token -> 401 Unauthorized
+	reqBadAuth := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	reqBadAuth.Header.Set("Authorization", "Bearer invalid-token")
+	recBadAuth := httptest.NewRecorder()
+	router.ServeHTTP(recBadAuth, reqBadAuth)
+	assert.Equal(t, http.StatusUnauthorized, recBadAuth.Code)
+
+	// 3. Valid bearer token -> 200 OK
+	reqGoodAuth := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	reqGoodAuth.Header.Set("Authorization", "Bearer secret-metrics-token")
+	recGoodAuth := httptest.NewRecorder()
+	router.ServeHTTP(recGoodAuth, reqGoodAuth)
+	assert.Equal(t, http.StatusOK, recGoodAuth.Code)
+	assert.Contains(t, recGoodAuth.Body.String(), "# HELP http_requests_total")
+}
+
+func TestHandleWebSocket_RequiresAuthenticationBeforeUpgrade(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	cfg := &config.Config{AuthMode: "firebase", Env: "production", FirebaseProjectID: "test-proj"}
+	authenticator := auth.NewAuthenticator(cfg)
+	wsHub := ws.NewHub(nil)
+	apiHandler := api.NewAPI(memStore, nil,
+		api.WithWebSocketHub(wsHub),
+		api.WithAuthenticator(authenticator),
+	)
+	router := api.SetupRouter(apiHandler, authenticator)
+
+	// 1. Unauthenticated WebSocket upgrade attempt
+	req := httptest.NewRequest(http.MethodGet, "/v1/ws", nil)
+	req.Header.Set("Upgrade", "websocket")
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+	req.Header.Set("Sec-WebSocket-Version", "13")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	// Connection MUST NOT be upgraded to 101 Switching Protocols.
+	// Must return HTTP 401 Unauthorized.
+	assert.NotEqual(t, http.StatusSwitchingProtocols, rec.Code)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+
+	var errResp map[string]string
+	err := json.Unmarshal(rec.Body.Bytes(), &errResp)
+	require.NoError(t, err)
+	assert.Equal(t, "UNAUTHORIZED", errResp["error"])
+
+	// 2. Invalid Bearer token attempt
+	reqWithBadToken := httptest.NewRequest(http.MethodGet, "/v1/ws", nil)
+	reqWithBadToken.Header.Set("Upgrade", "websocket")
+	reqWithBadToken.Header.Set("Connection", "Upgrade")
+	reqWithBadToken.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+	reqWithBadToken.Header.Set("Sec-WebSocket-Version", "13")
+	reqWithBadToken.Header.Set("Authorization", "Bearer invalid-jwt-token")
+	recWithBadToken := httptest.NewRecorder()
+
+	router.ServeHTTP(recWithBadToken, reqWithBadToken)
+	assert.NotEqual(t, http.StatusSwitchingProtocols, recWithBadToken.Code)
+	assert.Equal(t, http.StatusUnauthorized, recWithBadToken.Code)
+}
+

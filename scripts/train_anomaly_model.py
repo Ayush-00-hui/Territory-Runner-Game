@@ -548,7 +548,7 @@ def run_experiment():
     # Export Calibrated Model JSON
     # ---------------------------------------------------------------------------
     export_config = {
-        "model_type": "ZScoreMahalanobisAnomalyDetector",
+        "model_type": "WeightedZScoreDetector",
         "model_version": "2.1.0",
         "trained_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "feature_names": FEATURE_NAMES,

@@ -10,7 +10,9 @@ class RunnerProfile {
   int xp;
   int level;
   List<String> badges;
-  int totalHexesClaimed;
+  int totalTerritoriesClaimed;
+  int get totalHexesClaimed => totalTerritoriesClaimed;
+  set totalHexesClaimed(int value) => totalTerritoriesClaimed = value;
   int currentStreak;
 
   static const Map<String, String> badgeAliases = {
@@ -49,9 +51,10 @@ class RunnerProfile {
     this.xp = 0,
     this.level = 1,
     this.badges = const ['Rookie Runner', 'Cyber Rookie'],
-    this.totalHexesClaimed = 0,
+    int totalTerritoriesClaimed = 0,
+    int? totalHexesClaimed,
     this.currentStreak = 1,
-  });
+  }) : totalTerritoriesClaimed = totalHexesClaimed ?? totalTerritoriesClaimed;
 
   /// Adds XP and computes dynamic leveling logic
   bool addXp(int amount) {
@@ -74,17 +77,20 @@ class RunnerProfile {
     _evaluateBadges();
   }
 
-  /// Increments claimed hexes/territories and awards XP with optional flight multiplier
-  bool claimHex({double multiplier = 1.0}) {
-    totalHexesClaimed++;
+  /// Increments claimed territories/zones and awards XP with optional flight multiplier
+  bool claimTerritory({double multiplier = 1.0}) {
+    totalTerritoriesClaimed++;
     _evaluateBadges();
     final int awardedXp = (10 * multiplier).round();
     return addXp(awardedXp);
   }
 
+  /// Deprecated alias for claimTerritory
+  bool claimHex({double multiplier = 1.0}) => claimTerritory(multiplier: multiplier);
+
   /// Claims an arbitrary enclosed polygon territory and awards dynamic XP scaled to area: max(100, round(Area / 20)) * multiplier
   int claimPolygonArea(double areaSqMeters, {double multiplier = 1.0}) {
-    totalHexesClaimed++;
+    totalTerritoriesClaimed++;
     _evaluateBadges();
     final int baseAward = (areaSqMeters / 20.0).round();
     final int effectiveBase = baseAward < 100 ? 100 : baseAward;
@@ -95,7 +101,7 @@ class RunnerProfile {
 
   void _evaluateBadges() {
     final List<String> current = List.from(badges);
-    if (totalHexesClaimed >= 1) {
+    if (totalTerritoriesClaimed >= 1) {
       if (!current.contains('First Claim')) {
         current.add('First Claim');
       }
@@ -109,7 +115,7 @@ class RunnerProfile {
         current.add('Territory Sovereign');
       }
     }
-    if (totalHexesClaimed >= 25) {
+    if (totalTerritoriesClaimed >= 25) {
       if (!current.contains('Area Leader')) {
         current.add('Area Leader');
       }
@@ -117,7 +123,7 @@ class RunnerProfile {
         current.add('Sector Commander');
       }
     }
-    if (totalHexesClaimed >= 100) {
+    if (totalTerritoriesClaimed >= 100) {
       if (!current.contains('Grid Leader')) {
         current.add('Grid Leader');
       }
@@ -142,7 +148,8 @@ class RunnerProfile {
     'xp': xp,
     'level': level,
     'badges': badges,
-    'totalHexesClaimed': totalHexesClaimed,
+    'totalTerritoriesClaimed': totalTerritoriesClaimed,
+    'totalHexesClaimed': totalTerritoriesClaimed, // Backward compatibility alias
     'currentStreak': currentStreak,
   };
 
@@ -157,6 +164,11 @@ class RunnerProfile {
         migratedBadges.add(canon);
       }
     }
+    final int territories = (json['totalTerritoriesClaimed'] ??
+            json['totalHexesClaimed'] ??
+            json['total_territories_claimed'] ??
+            json['total_hexes_claimed']) as int? ??
+        0;
     return RunnerProfile(
       id: json['id'] as String? ?? 'local_user',
       username: json['username'] as String? ?? 'Runner',
@@ -165,7 +177,7 @@ class RunnerProfile {
       xp: json['xp'] as int? ?? 0,
       level: json['level'] as int? ?? 1,
       badges: migratedBadges,
-      totalHexesClaimed: json['totalHexesClaimed'] as int? ?? 0,
+      totalTerritoriesClaimed: territories,
       currentStreak: json['currentStreak'] as int? ?? 1,
     );
   }
@@ -192,6 +204,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
       }
     }
 
+    final int territories = (fields[6] as int?) ?? 0;
     return RunnerProfile(
       id: fields[0] as String,
       username: fields[1] as String,
@@ -200,7 +213,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
       xp: fields[3] as int,
       level: fields[4] as int,
       badges: migratedBadges,
-      totalHexesClaimed: (fields[6] as int?) ?? 0,
+      totalTerritoriesClaimed: territories,
       currentStreak: (fields[7] as int?) ?? 1,
     );
   }
@@ -222,7 +235,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
       ..writeByte(5)
       ..write(obj.badges)
       ..writeByte(6)
-      ..write(obj.totalHexesClaimed)
+      ..write(obj.totalTerritoriesClaimed)
       ..writeByte(7)
       ..write(obj.currentStreak)
       ..writeByte(8)

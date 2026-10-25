@@ -352,6 +352,11 @@ func (a *Authenticator) Middleware(next http.Handler) http.Handler {
 	})
 }
 
+// WithUserID injects the authenticated user ID into context.
+func WithUserID(ctx context.Context, uid string) context.Context {
+	return context.WithValue(ctx, userIDKey, uid)
+}
+
 // GetUserID extracts the authenticated user ID from context.
 func GetUserID(ctx context.Context) string {
 	if val, ok := ctx.Value(userIDKey).(string); ok {
@@ -359,3 +364,4 @@ func GetUserID(ctx context.Context) string {
 	}
 	return ""
 }
+

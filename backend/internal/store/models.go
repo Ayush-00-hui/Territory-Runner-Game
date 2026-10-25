@@ -39,19 +39,20 @@ type Territory struct {
 	AreaSqm        float64   `json:"area_sqm"`
 	Strength       float64   `json:"strength"`
 	LastDefendedAt time.Time `json:"last_defended_at"`
+	LastDecayedAt  time.Time `json:"last_decayed_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
-// CalculateEffectiveStrength computes real-time dynamic strength factoring in elapsed days since last defense.
-// Formula: max(0.0, stored_strength - 15.0 * days_since_last_defended).
-func CalculateEffectiveStrength(storedStrength float64, lastDefendedAt time.Time, now time.Time) float64 {
-	if lastDefendedAt.IsZero() {
+// CalculateEffectiveStrength computes real-time dynamic strength factoring in elapsed days since last defense or decay.
+// Formula: max(0.0, stored_strength - 15.0 * days_since_last_reference).
+func CalculateEffectiveStrength(storedStrength float64, referenceTime time.Time, now time.Time) float64 {
+	if referenceTime.IsZero() {
 		return math.Max(0.0, math.Min(100.0, storedStrength))
 	}
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
-	diff := now.Sub(lastDefendedAt)
+	diff := now.Sub(referenceTime)
 	if diff < 0 {
 		return math.Max(0.0, math.Min(100.0, storedStrength))
 	}
@@ -67,9 +68,15 @@ func CalculateEffectiveStrength(storedStrength float64, lastDefendedAt time.Time
 }
 
 // EffectiveStrength returns the real-time decayed strength of the territory at the specified timestamp.
+// Computes decay elapsed since last_decayed_at (falling back to last_defended_at).
 func (t *Territory) EffectiveStrength(now time.Time) float64 {
-	return CalculateEffectiveStrength(t.Strength, t.LastDefendedAt, now)
+	refTime := t.LastDecayedAt
+	if refTime.IsZero() {
+		refTime = t.LastDefendedAt
+	}
+	return CalculateEffectiveStrength(t.Strength, refTime, now)
 }
+
 
 // IsWeak returns true if dynamic strength has fallen below the weak fortification threshold (30.0).
 func (t *Territory) IsWeak(now time.Time) bool {

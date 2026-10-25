@@ -1,9 +1,11 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"sync"
@@ -153,6 +155,26 @@ func (a *API) MetricsMiddleware(next http.Handler) http.Handler {
 
 // HandleMetrics handles GET /metrics Prometheus scraping requests.
 func (a *API) HandleMetrics(w http.ResponseWriter, r *http.Request) {
+	token := a.metricsToken
+	if token == "" {
+		token = os.Getenv("METRICS_TOKEN")
+	}
+
+	if token != "" {
+		authHeader := r.Header.Get("Authorization")
+		expected := "Bearer " + token
+		if authHeader != expected {
+			w.Header().Set("WWW-Authenticate", `Bearer realm="metrics"`)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"error":  "UNAUTHORIZED",
+				"detail": "Missing or invalid bearer token for metrics scraping",
+			})
+			return
+		}
+	}
+
 	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 
@@ -168,3 +190,4 @@ func (a *API) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 		_ = collector.WritePrometheus(w, activeWs)
 	}
 }
+

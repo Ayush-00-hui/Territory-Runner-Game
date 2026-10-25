@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
@@ -12,355 +10,19 @@ import '../../../models/territory.dart';
 import '../../../services/export_service.dart';
 import '../../../services/gallery_saver_service.dart';
 import '../../../ui/ui.dart';
+import 'run_share_card_actions.dart';
+import 'run_share_card_export_dialog.dart';
+import 'run_share_card_preview.dart';
+import 'run_share_card_renderer.dart';
+import 'run_share_card_theme_selector.dart';
 
-enum ShareCardTheme { athleticDark, cyberVanguard, stealth }
+export 'run_share_card_actions.dart';
+export 'run_share_card_export_dialog.dart';
+export 'run_share_card_painters.dart';
+export 'run_share_card_preview.dart';
+export 'run_share_card_renderer.dart';
+export 'run_share_card_theme_selector.dart';
 
-/// Public standalone 1080x1080 card renderer for social export and auto-save.
-class RunShareCardRenderer {
-  final double distanceKm;
-  final int durationSeconds;
-  final double areaSqMeters;
-  final dynamic points;
-  final String callsign;
-  final DateTime capturedAt;
-  final ShareCardTheme theme;
-
-  const RunShareCardRenderer({
-    required this.distanceKm,
-    required this.durationSeconds,
-    required this.areaSqMeters,
-    required this.points,
-    required this.callsign,
-    required this.capturedAt,
-    this.theme = ShareCardTheme.athleticDark,
-  });
-
-  List<LatLng> get _resolvedPoints {
-    if (points is List<LatLng>) {
-      return points as List<LatLng>;
-    }
-    return const [];
-  }
-
-  String _formatPace() {
-    if (distanceKm <= 0) return "--'--\"";
-    final double pace = (durationSeconds / 60.0) / distanceKm;
-    final int paceMin = pace.floor();
-    final int paceSec = ((pace - paceMin) * 60).round();
-    return "$paceMin'${paceSec.toString().padLeft(2, '0')}\"";
-  }
-
-  String _formatArea() {
-    if (areaSqMeters >= 10000) {
-      return '${(areaSqMeters / 1000000.0).toStringAsFixed(2)} KM²';
-    }
-    return '${areaSqMeters.toStringAsFixed(0)} M²';
-  }
-
-  String _formatDate() {
-    const months = [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
-    ];
-    final dt = capturedAt;
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    return '${dt.day} ${months[dt.month - 1]} ${dt.year} • $hour:$minute';
-  }
-
-  static void _drawText(
-    Canvas canvas,
-    String text,
-    Offset offset,
-    TextStyle style,
-  ) {
-    final span = TextSpan(text: text, style: style);
-    final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
-    tp.layout();
-    tp.paint(canvas, offset);
-  }
-
-  Future<Uint8List> render() async {
-    const double targetSize = 1080.0;
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(
-      recorder,
-      const Rect.fromLTWH(0, 0, targetSize, targetSize),
-    );
-
-    Color cardBg;
-    Color accentColor;
-    bool hasGridOverlay;
-
-    switch (theme) {
-      case ShareCardTheme.athleticDark:
-        cardBg = AppColors.bgDeep;
-        accentColor = AppColors.accent;
-        hasGridOverlay = false;
-        break;
-      case ShareCardTheme.cyberVanguard:
-        cardBg = AppColors.bgElevated;
-        accentColor = AppColors.rival;
-        hasGridOverlay = true;
-        break;
-      case ShareCardTheme.stealth:
-        cardBg = AppColors.surface;
-        accentColor = AppColors.textPrimary;
-        hasGridOverlay = false;
-        break;
-    }
-
-    // 1. Background fill
-    final bgPaint = Paint()..color = cardBg;
-    canvas.drawRect(const Rect.fromLTWH(0, 0, targetSize, targetSize), bgPaint);
-
-    // 2. Subtle cartographic grid if theme demands it
-    if (hasGridOverlay) {
-      final gridPainter = _CartographicGridPainter(
-        gridColor: accentColor.withValues(alpha: 0.08),
-      );
-      gridPainter.paint(canvas, const Size(targetSize, targetSize));
-    }
-
-    // 3. Draw outer card border
-    final borderPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTWH(24, 24, targetSize - 48, targetSize - 48),
-        const Radius.circular(48),
-      ),
-      borderPaint,
-    );
-
-    // 4. Header Bar: Logo, App Title, and Run Pill
-    _drawText(
-      canvas,
-      'TERRITORY RUNNER',
-      const Offset(64, 64),
-      TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 2.0,
-        fontFamily: 'Inter',
-      ),
-    );
-
-    final pillRect = const Rect.fromLTWH(targetSize - 280, 56, 216, 44);
-    final pillPaint = Paint()..color = accentColor.withValues(alpha: 0.18);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(pillRect, const Radius.circular(22)),
-      pillPaint,
-    );
-    final pillBorder = Paint()
-      ..color = accentColor.withValues(alpha: 0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(pillRect, const Radius.circular(22)),
-      pillBorder,
-    );
-
-    _drawText(
-      canvas,
-      'Closed loop',
-      const Offset(targetSize - 230, 68),
-      TextStyle(
-        color: accentColor,
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
-      ),
-    );
-
-    // 5. Territory Map / Route Canvas (Center area: 900 x 520)
-    canvas.save();
-    canvas.translate(80, 150);
-    final mapPainter = _ShareCardMapPainter(
-      points: _resolvedPoints,
-      accentColor: accentColor,
-    );
-    mapPainter.paint(canvas, const Size(920, 500));
-    canvas.restore();
-
-    // 6. Callsign & Date Section
-    _drawText(
-      canvas,
-      callsign.toUpperCase(),
-      const Offset(64, 680),
-      TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 44,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.5,
-        fontFamily: 'Inter',
-      ),
-    );
-
-    _drawText(
-      canvas,
-      _formatDate(),
-      const Offset(64, 735),
-      TextStyle(
-        color: AppColors.textMuted,
-        fontSize: 20,
-        fontWeight: FontWeight.w600,
-        fontFamily: 'Inter',
-      ),
-    );
-
-    // 7. Stats Panel (Bottom Container: 952 x 180)
-    final statsRect = const Rect.fromLTWH(64, 780, targetSize - 128, 170);
-    final statsBg = Paint()..color = AppColors.bgDeep.withValues(alpha: 0.85);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(statsRect, const Radius.circular(28)),
-      statsBg,
-    );
-    final statsBorder = Paint()
-      ..color = AppColors.borderSubtle
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(statsRect, const Radius.circular(28)),
-      statsBorder,
-    );
-
-    // Three Stat Columns
-    final double colWidth = (targetSize - 128) / 3.0;
-
-    // Col 1: Distance
-    _drawText(
-      canvas,
-      'DISTANCE',
-      Offset(64 + colWidth * 0.5 - 45, 808),
-      TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
-      ),
-    );
-    _drawText(
-      canvas,
-      '${distanceKm.toStringAsFixed(2)} KM',
-      Offset(64 + colWidth * 0.5 - 65, 846),
-      TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 32,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-    );
-
-    // Divider 1
-    canvas.drawLine(
-      Offset(64 + colWidth, 805),
-      Offset(64 + colWidth, 925),
-      Paint()
-        ..color = AppColors.divider
-        ..strokeWidth = 2.0,
-    );
-
-    // Col 2: Pace
-    _drawText(
-      canvas,
-      'PACE',
-      Offset(64 + colWidth * 1.5 - 28, 808),
-      TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
-      ),
-    );
-    _drawText(
-      canvas,
-      '${_formatPace()} /KM',
-      Offset(64 + colWidth * 1.5 - 60, 846),
-      TextStyle(
-        color: AppColors.textPrimary,
-        fontSize: 32,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-    );
-
-    // Divider 2
-    canvas.drawLine(
-      Offset(64 + colWidth * 2, 805),
-      Offset(64 + colWidth * 2, 925),
-      Paint()
-        ..color = AppColors.divider
-        ..strokeWidth = 2.0,
-    );
-
-    // Col 3: Claimed Area
-    _drawText(
-      canvas,
-      'CLAIMED',
-      Offset(64 + colWidth * 2.5 - 42, 808),
-      TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
-      ),
-    );
-    _drawText(
-      canvas,
-      _formatArea(),
-      Offset(64 + colWidth * 2.5 - 65, 846),
-      TextStyle(
-        color: accentColor,
-        fontSize: 32,
-        fontWeight: FontWeight.w700,
-        fontFamily: 'Inter',
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
-    );
-
-    // 8. Watermark Footer
-    _drawText(
-      canvas,
-      'Server-verified territory • GPS spatial parity',
-      const Offset(240, 990),
-      TextStyle(
-        color: AppColors.textMuted.withValues(alpha: 0.6),
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.0,
-        fontFamily: 'Inter',
-      ),
-    );
-
-    final picture = recorder.endRecording();
-    final image = await picture.toImage(1080, 1080);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    image.dispose();
-
-    if (byteData == null) {
-      throw Exception('Failed to encode image to PNG byte data');
-    }
-    return byteData.buffer.asUint8List();
-  }
-}
-
-/// Strava / Nike Run Club style story/square card generator for social sharing.
 class RunShareCardModal extends StatefulWidget {
   final double distanceKm;
   final int durationSeconds;
@@ -421,42 +83,6 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
   String? _exportSuccessMessage;
   String? _exportErrorMessage;
 
-  String _formatPace() {
-    if (widget.distanceKm <= 0) return "--'--\"";
-    final double pace = (widget.durationSeconds / 60.0) / widget.distanceKm;
-    final int paceMin = pace.floor();
-    final int paceSec = ((pace - paceMin) * 60).round();
-    return "$paceMin'${paceSec.toString().padLeft(2, '0')}\"";
-  }
-
-  String _formatArea() {
-    if (widget.areaSqMeters >= 10000) {
-      return '${(widget.areaSqMeters / 1000000.0).toStringAsFixed(2)} KM²';
-    }
-    return '${widget.areaSqMeters.toStringAsFixed(0)} M²';
-  }
-
-  String _formatDate() {
-    final months = [
-      'JAN',
-      'FEB',
-      'MAR',
-      'APR',
-      'MAY',
-      'JUN',
-      'JUL',
-      'AUG',
-      'SEP',
-      'OCT',
-      'NOV',
-      'DEC',
-    ];
-    final dt = widget.capturedAt;
-    final hour = dt.hour.toString().padLeft(2, '0');
-    final minute = dt.minute.toString().padLeft(2, '0');
-    return '${dt.day} ${months[dt.month - 1]} ${dt.year} • $hour:$minute';
-  }
-
   /// Renders a true 1080x1080 PNG image of the share card
   Future<Uint8List> _renderTrue1080pCard() {
     return RunShareCardRenderer(
@@ -486,12 +112,10 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       final file = File(filePath);
       await file.writeAsBytes(pngBytes, flush: true);
 
-      // Verify file was genuinely created on disk
       if (!await file.exists() || await file.length() == 0) {
         throw Exception('File was not written to storage');
       }
 
-      // Open system share sheet
       final xFile = XFile(filePath, mimeType: 'image/png');
       await SharePlus.instance.share(
         ShareParams(
@@ -563,7 +187,6 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Handle bar
           Center(
             child: Container(
               width: 36,
@@ -607,36 +230,33 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
               ),
             ],
           ),
-
           const SizedBox(height: AppSpacing.s16),
 
           // Theme selector pills
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildThemePill(ShareCardTheme.athleticDark, 'Athletic Dark'),
-                const SizedBox(width: AppSpacing.s8),
-                _buildThemePill(ShareCardTheme.cyberVanguard, 'Vanguard'),
-                const SizedBox(width: AppSpacing.s8),
-                _buildThemePill(ShareCardTheme.stealth, 'Stealth'),
-              ],
-            ),
+          RunShareCardThemeSelector(
+            selectedTheme: _selectedTheme,
+            onThemeChanged: (theme) => setState(() => _selectedTheme = theme),
           ),
-
           const SizedBox(height: AppSpacing.s16),
 
-          // The Captured Share Card Container Preview
+          // Preview
           Center(
             child: RepaintBoundary(
               key: _cardKey,
-              child: _buildShareCardWidget(),
+              child: RunShareCardPreview(
+                distanceKm: widget.distanceKm,
+                durationSeconds: widget.durationSeconds,
+                areaSqMeters: widget.areaSqMeters,
+                points: widget.points,
+                callsign: widget.callsign,
+                capturedAt: widget.capturedAt,
+                theme: _selectedTheme,
+              ),
             ),
           ),
-
           const SizedBox(height: AppSpacing.s16),
 
-          // Success notification banner if exported
+          // Notification Banners
           if (_exportSuccessMessage != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -669,8 +289,6 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
             ),
             const SizedBox(height: AppSpacing.s12),
           ],
-
-          // Error notification banner if failure occurs
           if (_exportErrorMessage != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -704,550 +322,42 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
             const SizedBox(height: AppSpacing.s12),
           ],
 
-          // Export and Save Action Buttons
-          Row(
-            children: [
-              Expanded(
-                flex: 3,
-                child: PrimaryButton(
-                  label: _isExporting ? 'Generating 1080p...' : 'Share card',
-                  icon: Icons.share_rounded,
-                  onPressed: _isExporting ? null : _exportCard,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: SizedBox(
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(color: AppColors.borderSubtle),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSpacing.br12,
-                      ),
-                    ),
-                    icon: const Icon(
-                      Icons.photo_library_outlined,
-                      size: 18,
-                      color: AppColors.accent,
-                    ),
-                    label: Text(
-                      'Save to gallery',
-                      style: AppText.label.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                    ),
-                    onPressed: _isExporting ? null : _saveCardToGallery,
+          // Actions
+          RunShareCardActions(
+            isExporting: _isExporting,
+            onShareCard: _exportCard,
+            onSaveToGallery: _saveCardToGallery,
+            onExportGpx: () async {
+              await ExportService().exportAndShareGpx(
+                runTitle: 'Territory Run - ${widget.callsign}',
+                coordinates: widget.points,
+              );
+            },
+            onExportGeoJson: () async {
+              await ExportService().exportAndShareGeoJson(
+                territories: [
+                  Territory(
+                    id: 'run_share_${DateTime.now().millisecondsSinceEpoch}',
+                    ownerId: widget.callsign,
+                    polygon: widget.points,
+                    capturedAt: widget.capturedAt,
+                    color: AppColors.accent,
+                    areaSqMeters: widget.areaSqMeters,
                   ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.s10),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: const BorderSide(color: AppColors.borderSubtle),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSpacing.br12,
-                      ),
-                    ),
-                    icon: const Icon(
-                      Icons.file_download_outlined,
-                      size: 16,
-                      color: AppColors.accent,
-                    ),
-                    label: const Text(
-                      'Export GPX',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                    ),
-                    onPressed: () async {
-                      await ExportService().exportAndShareGpx(
-                        runTitle: 'Territory Run - ${widget.callsign}',
-                        coordinates: widget.points,
-                      );
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.s10),
-              Expanded(
-                child: SizedBox(
-                  height: 42,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: const BorderSide(color: AppColors.borderSubtle),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSpacing.br12,
-                      ),
-                    ),
-                    icon: const Icon(
-                      Icons.polyline_rounded,
-                      size: 16,
-                      color: AppColors.info,
-                    ),
-                    label: const Text(
-                      'Export GeoJSON',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                    ),
-                    onPressed: () async {
-                      await ExportService().exportAndShareGeoJson(
-                        territories: [
-                          Territory(
-                            id: 'run_share_${DateTime.now().millisecondsSinceEpoch}',
-                            ownerId: widget.callsign,
-                            polygon: widget.points,
-                            capturedAt: widget.capturedAt,
-                            color: AppColors.accent,
-                            areaSqMeters: widget.areaSqMeters,
-                          ),
-                        ],
-                        runTrack: widget.points,
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
+                ],
+                runTrack: widget.points,
+              );
+            },
+            onExportMlTrace: () => showMlDebugExportDialog(
+              context,
+              callsign: widget.callsign,
+              points: widget.points,
+              distanceKm: widget.distanceKm,
+              durationSeconds: widget.durationSeconds,
+            ),
           ),
         ],
       ),
     );
   }
-
-  Widget _buildThemePill(ShareCardTheme theme, String label) {
-    final isSelected = _selectedTheme == theme;
-    return Semantics(
-      button: true,
-      selected: isSelected,
-      label: 'Theme: $label',
-      excludeSemantics: true,
-      child: GestureDetector(
-        onTap: () {
-          AppMotion.selectionTick();
-          setState(() {
-            _selectedTheme = theme;
-          });
-        },
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: AppMotion.duration(context, AppMotion.fast),
-          curve: AppMotion.easeOut,
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.accent.withValues(alpha: 0.18)
-                : AppColors.surface,
-            borderRadius: AppSpacing.brFull,
-            border: Border.all(
-              color: isSelected ? AppColors.accent : AppColors.borderSubtle,
-              width: isSelected ? 1.5 : 1.0,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: AppText.label.copyWith(
-                color: isSelected ? AppColors.accent : AppColors.textSecondary,
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildShareCardWidget() {
-    Color cardBg;
-    Color accentColor;
-    Color borderColor;
-    bool hasGridOverlay;
-
-    switch (_selectedTheme) {
-      case ShareCardTheme.athleticDark:
-        cardBg = AppColors.bgDeep;
-        accentColor = AppColors.accent;
-        borderColor = AppColors.border;
-        hasGridOverlay = false;
-        break;
-      case ShareCardTheme.cyberVanguard:
-        cardBg = AppColors.bgElevated;
-        accentColor = AppColors.rival;
-        borderColor = AppColors.rival.withValues(alpha: 0.4);
-        hasGridOverlay = true;
-        break;
-      case ShareCardTheme.stealth:
-        cardBg = AppColors.surface;
-        accentColor = AppColors.textPrimary;
-        borderColor = AppColors.borderSubtle;
-        hasGridOverlay = false;
-        break;
-    }
-
-    return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(maxWidth: 340, minHeight: 350),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: AppSpacing.br24,
-        border: Border.all(color: borderColor, width: 1.5),
-        boxShadow: AppElevation.floating,
-      ),
-      child: ClipRRect(
-        borderRadius: AppSpacing.br24,
-        child: Stack(
-          children: [
-            // Background subtle grid if cyber theme
-            if (hasGridOverlay)
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: _CartographicGridPainter(
-                    gridColor: accentColor.withValues(alpha: 0.08),
-                  ),
-                ),
-              ),
-
-            // Territory route path painter in center
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 60, 20, 140),
-                child: CustomPaint(
-                  painter: _ShareCardMapPainter(
-                    points: widget.points,
-                    accentColor: accentColor,
-                  ),
-                ),
-              ),
-            ),
-
-            // Content Overlay
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.s16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Top branding bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: BoxDecoration(
-                                color: accentColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(
-                                'TERRITORY RUNNER',
-                                style: AppText.label.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 9.5,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.0,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 7,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: accentColor.withValues(alpha: 0.15),
-                          borderRadius: AppSpacing.br8,
-                          border: Border.all(
-                            color: accentColor.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Text(
-                          'Closed loop',
-                          style: AppText.label.copyWith(
-                            color: accentColor,
-                            fontSize: 8.5,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Bottom athlete and run stats section
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Runner Callout
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              widget.callsign.toUpperCase(),
-                              style: AppText.headingMedium.copyWith(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _formatDate(),
-                            style: AppText.bodySmall.copyWith(
-                              color: AppColors.textMuted,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: AppSpacing.s12),
-
-                      // High impact athletic 3-stat strip
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.bgDeep.withValues(alpha: 0.75),
-                          borderRadius: AppSpacing.br16,
-                          border: Border.all(color: AppColors.borderSubtle),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatItem(
-                                'DISTANCE',
-                                '${widget.distanceKm.toStringAsFixed(2)} KM',
-                                accentColor,
-                              ),
-                            ),
-                            Container(
-                              width: 1,
-                              height: 26,
-                              color: AppColors.divider,
-                            ),
-                            Expanded(
-                              child: _buildStatItem(
-                                'PACE',
-                                '${_formatPace()} /KM',
-                                accentColor,
-                              ),
-                            ),
-                            Container(
-                              width: 1,
-                              height: 26,
-                              color: AppColors.divider,
-                            ),
-                            Expanded(
-                              child: _buildStatItem(
-                                'CLAIMED',
-                                _formatArea(),
-                                accentColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String label, String value, Color accent) {
-    return Column(
-      children: [
-        Text(
-          label,
-          style: AppText.label.copyWith(
-            color: AppColors.textSecondary,
-            fontSize: 8.5,
-            fontWeight: FontWeight.w700,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          style: AppText.statSmall.copyWith(
-            fontSize: 12.5,
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
-            fontFeatures: const [FontFeature.tabularFigures()],
-          ),
-          textAlign: TextAlign.center,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
-    );
-  }
-}
-
-class _ShareCardMapPainter extends CustomPainter {
-  final List<LatLng> points;
-  final Color accentColor;
-
-  _ShareCardMapPainter({required this.points, required this.accentColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (points.isEmpty) {
-      _drawDemoLoop(canvas, size);
-      return;
-    }
-
-    double minLat = points.first.latitude;
-    double maxLat = points.first.latitude;
-    double minLng = points.first.longitude;
-    double maxLng = points.first.longitude;
-
-    for (final p in points) {
-      minLat = math.min(minLat, p.latitude);
-      maxLat = math.max(maxLat, p.latitude);
-      minLng = math.min(minLng, p.longitude);
-      maxLng = math.max(maxLng, p.longitude);
-    }
-
-    final double latSpan = math.max(maxLat - minLat, 0.0001);
-    final double lngSpan = math.max(maxLng - minLng, 0.0001);
-
-    const double padding = 12.0;
-    final double usableW = size.width - 2 * padding;
-    final double usableH = size.height - 2 * padding;
-
-    final path = Path();
-    for (int i = 0; i < points.length; i++) {
-      final p = points[i];
-      final double x = padding + ((p.longitude - minLng) / lngSpan) * usableW;
-      final double y =
-          padding + (1.0 - ((p.latitude - minLat) / latSpan)) * usableH;
-
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-
-    // Fill territory
-    final fillPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.18)
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(path, fillPaint);
-
-    // Sharp solid stroke, NO glow
-    final strokePaint = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, strokePaint);
-
-    // Origin node with clean dark border, NO glow
-    if (points.isNotEmpty) {
-      final p0 = points.first;
-      final double x0 = padding + ((p0.longitude - minLng) / lngSpan) * usableW;
-      final double y0 =
-          padding + (1.0 - ((p0.latitude - minLat) / latSpan)) * usableH;
-
-      canvas.drawCircle(Offset(x0, y0), 4.5, Paint()..color = AppColors.bgDeep);
-      canvas.drawCircle(Offset(x0, y0), 3.0, Paint()..color = accentColor);
-    }
-  }
-
-  void _drawDemoLoop(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final r = math.min(size.width, size.height) * 0.38;
-
-    final path = Path();
-    path.addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r));
-
-    final fillPaint = Paint()
-      ..color = accentColor.withValues(alpha: 0.2)
-      ..style = PaintingStyle.fill;
-    final strokePaint = Paint()
-      ..color = accentColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5;
-
-    canvas.drawPath(path, fillPaint);
-    canvas.drawPath(path, strokePaint);
-    canvas.drawCircle(
-      Offset(cx + r, cy),
-      4,
-      Paint()..color = AppColors.textPrimary,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _ShareCardMapPainter oldDelegate) {
-    return oldDelegate.points != points ||
-        oldDelegate.accentColor != accentColor;
-  }
-}
-
-class _CartographicGridPainter extends CustomPainter {
-  final Color gridColor;
-
-  _CartographicGridPainter({required this.gridColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = gridColor
-      ..strokeWidth = 0.8;
-
-    const double step = 24.0;
-    for (double x = 0; x < size.width; x += step) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += step) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _CartographicGridPainter oldDelegate) => false;
 }

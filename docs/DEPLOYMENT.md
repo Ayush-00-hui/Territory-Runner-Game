@@ -13,17 +13,20 @@ All configuration is loaded from environment variables (or `.env` in containeriz
 
 | Environment Variable | Production Value | Required? | Purpose |
 | :--- | :--- | :---: | :--- |
-| `ENV` | `production` | **Yes** | Enforces production security invariants. Forbids `AUTH_MODE=dev` and query parameter credentials. |
-| `PORT` | `8080` | **Yes** | Listening HTTP and WebSocket port (default: `8080`). |
-| `AUTH_MODE` | `firebase` | **Yes** | Enforces cryptographically verified RS256 Firebase ID tokens via `Sec-WebSocket-Protocol` or `Authorization: Bearer`. |
-| `FIREBASE_PROJECT_ID` | `<your-project-id>` | **Yes** | Matches `aud` and `iss` in Firebase JWT verification. |
+| `ENV` | `production` | Default | Server environment. Defaults to `production`. Dev auth strictly requires explicit `ENV=development` AND `AUTH_MODE=dev`. |
+| `PORT` | `8080` | Optional | Listening HTTP and WebSocket port (default: `8080`). |
+| `AUTH_MODE` | `firebase` | Default | Authentication mode. Defaults to `firebase`. Enforces cryptographically verified RS256 Firebase ID tokens. |
+| `FIREBASE_PROJECT_ID` | `<your-project-id>` | **Yes** | Matches `aud` and `iss` in Firebase JWT verification (mandatory when `AUTH_MODE=firebase`). |
 | `DATABASE_URL` | `postgres://user:pass@host:5432/db?sslmode=require` | **Yes** | Connection string to PostgreSQL 15+ with PostGIS 3.4+. Must be a direct or session-mode endpoint. |
 | `RUN_MIGRATIONS` | `true` | Optional | When `true`, automatically applies embedded migrations on startup guarded by PostgreSQL advisory locks. |
-| `ALLOWED_ORIGINS` | `https://your-domain.com` | Recommended | Comma-separated CORS and WebSocket origin whitelist. |
+| `ALLOWED_ORIGINS` | `https://your-domain.com` | **Yes** | Comma-separated CORS and WebSocket origin whitelist (mandatory in production unless `ALLOW_ANY_ORIGIN=true`). |
+| `METRICS_TOKEN` | `<secret-token>` | Optional | When set, `/metrics` requires `Authorization: Bearer <METRICS_TOKEN>`. Protects Prometheus metrics from unauthorized scraping. |
+| `TRUSTED_PROXIES` | `127.0.0.1,10.0.0.0/8` | Optional | Comma-separated list of trusted upstream proxy CIDRs/IPs. `X-Forwarded-For` and `X-Real-IP` are only accepted when connecting peer is in this set. |
 | `GEMINI_API_KEY` | `AIzaSy...` | Optional | Google AI Studio API key for AI tactical commentary. If empty, coach degrades gracefully. |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Optional | Low-latency Gemini model name. |
 | `MAX_POINTS_PER_RUN` | `20000` | Optional | Maximum GPS breadcrumbs accepted per run upload (default: `20000`). |
 | `MAX_RUN_DURATION_SECONDS` | `86400` | Optional | Maximum allowed duration for a single run session in seconds (default: 24 hours). |
+
 
 ---
 

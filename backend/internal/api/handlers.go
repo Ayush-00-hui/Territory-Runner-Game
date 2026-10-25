@@ -38,6 +38,8 @@ type API struct {
 	runsLimiter       *RateLimiter
 	coachLimiter      *RateLimiter
 	metrics           *MetricsCollector
+	metricsToken      string
+	trustedProxies    *TrustedProxyChecker
 }
 
 // Option configures API dependencies.
@@ -106,8 +108,29 @@ func WithMetrics(m *MetricsCollector) Option {
 	}
 }
 
+// WithMetricsToken configures a secret bearer token required for GET /metrics scraping.
+func WithMetricsToken(token string) Option {
+	return func(a *API) {
+		a.metricsToken = token
+	}
+}
+
+// WithTrustedProxies configures trusted upstream proxy CIDRs/IPs for rate limiting and IP validation.
+func WithTrustedProxies(proxies string) Option {
+	return func(a *API) {
+		a.trustedProxies = ParseTrustedProxies(proxies)
+		if a.runsLimiter != nil {
+			a.runsLimiter.SetTrustedProxies(proxies)
+		}
+		if a.coachLimiter != nil {
+			a.coachLimiter.SetTrustedProxies(proxies)
+		}
+	}
+}
+
 // RunsLimiter returns the runs endpoint rate limiter.
 func (a *API) RunsLimiter() *RateLimiter {
+
 	return a.runsLimiter
 }
 
@@ -343,12 +366,13 @@ func (a *API) HandleUpdatePrivacyZones(w http.ResponseWriter, r *http.Request) {
 
 // SubmitRunRequest defines the payload for POST /v1/runs.
 type SubmitRunRequest struct {
-	IdempotencyKey  string           `json:"idempotency_key"`
-	ActivityType    string           `json:"activity_type,omitempty"`
-	Points          []geo.TrackPoint `json:"points"`
-	DurationSeconds int              `json:"duration_seconds"`
-	DistanceMeters  float64          `json:"distance_meters"`
-	ClientPreview   *ClientPreview   `json:"client_preview,omitempty"`
+	IdempotencyKey  string                   `json:"idempotency_key"`
+	ActivityType    string                   `json:"activity_type,omitempty"`
+	Points          []geo.TrackPoint         `json:"points"`
+	DurationSeconds int                      `json:"duration_seconds"`
+	DistanceMeters  float64                  `json:"distance_meters"`
+	ClientPreview   *ClientPreview           `json:"client_preview,omitempty"`
+	MotionWindows   []anticheat.MotionWindow `json:"motion_windows,omitempty"`
 }
 
 type ClientPreview struct {
@@ -418,6 +442,14 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 
 	// 4. Server timestamp hygiene & track integrity validation
 	now := time.Now().UTC()
+	if req.DurationSeconds > 30 {
+		for _, pt := range req.Points {
+			if pt.Timestamp.IsZero() {
+				writeError(w, http.StatusBadRequest, "MISSING_TIMESTAMPS", "Track points with zero or missing timestamps are not permitted for runs > 30s")
+				return
+			}
+		}
+	}
 	for i := 0; i < len(req.Points); i++ {
 		ts := req.Points[i].Timestamp
 		if !ts.IsZero() {
@@ -455,12 +487,16 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 	if existing, err := a.store.GetRunByIdempotencyKey(r.Context(), req.IdempotencyKey); err == nil && existing != nil {
 		a.logger.Info("idempotent replay served", "key", req.IdempotencyKey, "run_id", existing.ID)
 		res, _ := a.store.CaptureRunAndMutateTerritories(r.Context(), existing, nil, nil)
+		if existing.Status == "flagged_review" {
+			writeJSON(w, http.StatusAccepted, res)
+			return
+		}
 		writeJSON(w, http.StatusOK, res)
 		return
 	}
 
-	// 6. Anti-cheat / GPS Anomaly Detection & Spoofing Mitigation (activity-aware)
-	anomalyRes := a.detector.EvaluateTrackWithActivity(req.Points, activityType)
+	// 6. Anti-cheat / GPS Anomaly Detection & Spoofing Mitigation (activity-aware & motion-aware)
+	anomalyRes := a.detector.EvaluateTrackWithMotion(req.Points, activityType, req.DurationSeconds, req.DistanceMeters, req.MotionWindows)
 	if anomalyRes.IsAnomaly && anomalyRes.Score >= 50.0 {
 		a.logger.Warn("run rejected due to critical anomaly", "score", anomalyRes.Score, "reasons", anomalyRes.Reasons, "activity_type", activityType)
 		writeError(w, http.StatusUnprocessableEntity, "ANOMALY_REJECTED", strings.Join(anomalyRes.Reasons, "; "))
@@ -495,12 +531,18 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 	}
 	if anomalyRes.IsAnomaly {
 		runRecord.Status = "flagged_review"
+		loops = nil
 	}
 
 	result, err := a.store.CaptureRunAndMutateTerritories(r.Context(), runRecord, loops, req.Points)
 	if err != nil {
 		a.logger.Error("failed to capture run and mutate territories", "error", err)
 		writeError(w, http.StatusInternalServerError, "TRANSACTION_FAILED", "Failed to persist territory capture")
+		return
+	}
+
+	if runRecord.Status == "flagged_review" {
+		writeJSON(w, http.StatusAccepted, result)
 		return
 	}
 

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -46,6 +47,8 @@ func main() {
 		Level: slog.LevelInfo,
 	}))
 	slog.SetDefault(logger)
+
+	loadLocalEnv()
 
 	logger.Info("starting Territory Runner Go backend server")
 
@@ -124,8 +127,11 @@ func main() {
 		api.WithNotifier(fcmNotifier),
 		api.WithAuthenticator(authenticator),
 		api.WithLimits(cfg.MaxPointsPerRun, cfg.MaxRunDurationSec),
+		api.WithMetricsToken(cfg.MetricsToken),
+		api.WithTrustedProxies(cfg.TrustedProxies),
 	)
 	router := api.SetupRouter(apiHandler, authenticator, cfg.AllowedOrigins...)
+
 
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -163,5 +169,29 @@ func main() {
 			_ = server.Close()
 		}
 		logger.Info("server stopped cleanly")
+	}
+}
+
+func loadLocalEnv() {
+	paths := []string{".env", "../.env"}
+	for _, p := range paths {
+		data, err := os.ReadFile(p)
+		if err == nil {
+			for _, line := range strings.Split(string(data), "\n") {
+				line = strings.TrimSpace(line)
+				if line == "" || strings.HasPrefix(line, "#") {
+					continue
+				}
+				parts := strings.SplitN(line, "=", 2)
+				if len(parts) == 2 {
+					key := strings.TrimSpace(parts[0])
+					val := strings.TrimSpace(parts[1])
+					if _, exists := os.LookupEnv(key); !exists {
+						os.Setenv(key, val)
+					}
+				}
+			}
+			return
+		}
 	}
 }

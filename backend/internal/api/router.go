@@ -15,10 +15,19 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 
 	// Standard production middlewares
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	// Apply proxy-validated client IP only when trusted proxies are configured
+	if api != nil && api.trustedProxies != nil {
+		r.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				r.RemoteAddr = GetClientIP(r, api.trustedProxies)
+				next.ServeHTTP(w, r)
+			})
+		})
+	}
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(api.MetricsMiddleware)
+
 
 	origins := allowedOrigins
 	if len(origins) == 0 {

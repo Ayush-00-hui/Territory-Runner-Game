@@ -153,3 +153,27 @@ func TestCoachCustomModel(t *testing.T) {
 	assert.Equal(t, "Great job!", insight.Summary)
 	assert.Equal(t, "analytical", insight.MoodTag)
 }
+
+func TestRunContext_JSONAliases(t *testing.T) {
+	// 1. Unmarshal legacy hexes_claimed
+	var r1 coach.RunContext
+	err := json.Unmarshal([]byte(`{"run_id":"r1","distance_km":3.0,"duration_seconds":900,"hexes_claimed":7}`), &r1)
+	require.NoError(t, err)
+	assert.Equal(t, 7, r1.TerritoriesClaimed)
+	assert.Equal(t, 7, r1.HexesClaimed)
+	assert.Equal(t, 7, r1.ZonesClaimed)
+
+	// 2. Unmarshal modern territories_claimed
+	var r2 coach.RunContext
+	err = json.Unmarshal([]byte(`{"run_id":"r2","distance_km":4.0,"duration_seconds":1200,"territories_claimed":9}`), &r2)
+	require.NoError(t, err)
+	assert.Equal(t, 9, r2.TerritoriesClaimed)
+	assert.Equal(t, 9, r2.HexesClaimed)
+
+	// 3. Unmarshal zones_claimed
+	var r3 coach.RunContext
+	err = json.Unmarshal([]byte(`{"run_id":"r3","distance_km":5.0,"duration_seconds":1500,"zones_claimed":11}`), &r3)
+	require.NoError(t, err)
+	assert.Equal(t, 11, r3.TerritoriesClaimed)
+	assert.Equal(t, 11, r3.HexesClaimed)
+}

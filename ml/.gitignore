@@ -1,0 +1,12 @@
+# Raw and cached ML datasets
+raw/
+*.zip
+*.tar.gz
+*.parquet
+*.npy
+*.npz
+*.csv
+*.csv.gz
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/

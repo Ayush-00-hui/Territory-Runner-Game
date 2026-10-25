@@ -29,4 +29,7 @@ smoke-test:
 clean:
 	rm -rf bin/
 
+sync-model:
+	cp ../assets/models/gps_anomaly_detector.json internal/anticheat/model.json
+
 

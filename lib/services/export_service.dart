@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/territory.dart';
+import 'motion_sensor_service.dart';
 import 'privacy_zone_service.dart';
 
 /// Service responsible for generating industry-standard GPX 1.1 and GeoJSON files
@@ -211,6 +212,71 @@ class ExportService {
     return file;
   }
 
+  /// Exports and shares a raw labeled telemetry JSON file for ML anti-cheat dataset collection.
+  Future<File> exportAndShareDebugTrace({
+    required String sessionId,
+    required String userTag,
+    required String transportMode,
+    required List<LatLng> coordinates,
+    List<DateTime>? timestamps,
+    List<double>? speeds,
+    List<double>? altitudes,
+    List<double>? accuracies,
+    double? totalDistanceMeters,
+    int? durationSeconds,
+    List<MotionWindow>? motionWindows,
+  }) async {
+    final pointsList = <Map<String, dynamic>>[];
+    for (int i = 0; i < coordinates.length; i++) {
+      final pt = coordinates[i];
+      pointsList.add({
+        'latitude': pt.latitude,
+        'longitude': pt.longitude,
+        'timestamp_ms': (timestamps != null && i < timestamps.length)
+            ? timestamps[i].millisecondsSinceEpoch
+            : DateTime.now().millisecondsSinceEpoch,
+        'speed_mps': (speeds != null && i < speeds.length) ? speeds[i] : 0.0,
+        'altitude':
+            (altitudes != null && i < altitudes.length) ? altitudes[i] : 0.0,
+        'accuracy':
+            (accuracies != null && i < accuracies.length) ? accuracies[i] : 4.0,
+      });
+    }
+
+    final payload = <String, dynamic>{
+      'version': '1.0',
+      'session_id': sessionId,
+      'user_id': userTag,
+      'transport_mode': transportMode,
+      'recorded_at': DateTime.now().toUtc().toIso8601String(),
+      'duration_seconds': durationSeconds ?? (coordinates.length),
+      'distance_meters': totalDistanceMeters ?? 0.0,
+      'points_count': coordinates.length,
+      'points': pointsList,
+    };
+
+    if (motionWindows != null && motionWindows.isNotEmpty) {
+      payload['motion_windows'] = motionWindows.map((w) => w.toJson()).toList();
+    }
+
+    final tempDir = await getTemporaryDirectory();
+    final cleanSession = sessionId.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '_');
+    final fileName =
+        'ml_trace_${cleanSession}_${DateTime.now().millisecondsSinceEpoch}.json';
+    final file = File('${tempDir.path}/$fileName');
+    await file.writeAsString(jsonEncode(payload), flush: true);
+
+    final xFile = XFile(file.path, mimeType: 'application/json');
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [xFile],
+        text: 'Territory Runner ML Field Trace: $cleanSession ($transportMode)',
+      ),
+    );
+
+    return file;
+  }
+
   String _escapeXml(String input) {
     return input
         .replaceAll('&', '&amp;')
@@ -220,3 +286,4 @@ class ExportService {
         .replaceAll("'", '&apos;');
   }
 }
+

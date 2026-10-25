@@ -149,7 +149,7 @@ func (s *PostgresStore) GetRunByIdempotencyKey(ctx context.Context, key string) 
 // GetTerritoriesInBBox returns GeoJSON representations of territories intersecting the bounding box.
 func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat, maxLng, maxLat float64) ([]Territory, error) {
 	query := `
-		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), t.updated_at
+		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at), t.updated_at
 		FROM territories t
 		JOIN users u ON t.owner_id = u.id
 		WHERE ST_Intersects(t.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326));
@@ -164,7 +164,7 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 	var list []Territory
 	for rows.Next() {
 		var t Territory
-		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.UpdatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.LastDecayedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
 		t.Strength = t.EffectiveStrength(now)
@@ -237,6 +237,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	var rivalsAffected []string
 	var weakBonusArea float64
 
+	if len(loops) == 0 {
+		_ = tx.QueryRow(ctx, "SELECT total_area_sqm FROM users WHERE id = $1;", run.UserID).Scan(&playerTotalArea)
+	}
+
 	// 3. Process spatial loop capture for all closed loops
 	for _, loop := range loops {
 		if len(loop.Polygon) < 3 {
@@ -248,13 +252,14 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		// A. Union into player's territory:
 		// ST_Union operates on geometry, cast to ::geography for geodesic area
 		unionQuery := `
-			INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, updated_at)
-			VALUES ($1, $2, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_PolygonFromText($3, 4326)), 3)), ST_Area(ST_MakeValid(ST_PolygonFromText($3, 4326))::geography), 100.0, NOW(), NOW())
+			INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, last_decayed_at, updated_at)
+			VALUES ($1, $2, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_PolygonFromText($3, 4326)), 3)), ST_Area(ST_MakeValid(ST_PolygonFromText($3, 4326))::geography), 100.0, NOW(), NOW(), NOW())
 			ON CONFLICT (id) DO UPDATE SET
 				geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_PolygonFromText($3, 4326)))), 3)),
 				area_sqm = ST_Area(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_PolygonFromText($3, 4326))))::geography),
 				strength = 100.0,
 				last_defended_at = NOW(),
+				last_decayed_at = NOW(),
 				updated_at = NOW()
 			RETURNING ST_AsGeoJSON(geom), area_sqm;
 		`
@@ -387,7 +392,9 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		return nil, fmt.Errorf("failed to commit capture transaction: %w", err)
 	}
 
-	_ = s.UpdateDuelProgress(ctx, run.UserID, activityType, areaClaimed, run.DistanceMeters)
+	if run.Status != "flagged_review" {
+		_ = s.UpdateDuelProgress(ctx, run.UserID, activityType, areaClaimed, run.DistanceMeters)
+	}
 
 	return &CaptureResult{
 		RunID:              run.ID,
@@ -454,7 +461,8 @@ func (s *PostgresStore) GetLeaderboard(ctx context.Context, limit int, activityT
 	return entries, nil
 }
 
-// ApplyTerritoryDecay updates all territories by decaying strength based on elapsed days since last_defended_at.
+// ApplyTerritoryDecay updates all territories by decaying strength based on elapsed days since last_decayed_at.
+// It updates ONLY last_decayed_at and updated_at, never modifying last_defended_at.
 func (s *PostgresStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay float64) error {
 	if decayPerDay <= 0 {
 		decayPerDay = 15.0
@@ -462,8 +470,8 @@ func (s *PostgresStore) ApplyTerritoryDecay(ctx context.Context, decayPerDay flo
 	query := `
 		UPDATE territories
 		SET
-			strength = GREATEST(0.0, LEAST(100.0, strength - (EXTRACT(EPOCH FROM (NOW() - last_defended_at)) / 86400.0 * $1))),
-			last_defended_at = NOW(),
+			strength = GREATEST(0.0, LEAST(100.0, strength - (EXTRACT(EPOCH FROM (NOW() - COALESCE(last_decayed_at, last_defended_at, updated_at))) / 86400.0 * $1))),
+			last_decayed_at = NOW(),
 			updated_at = NOW();
 	`
 	_, err := s.pool.Exec(ctx, query, decayPerDay)
@@ -485,6 +493,7 @@ func (s *PostgresStore) UpdateTerritoryDefense(ctx context.Context, territoryID 
 		SET
 			strength = $1,
 			last_defended_at = NOW(),
+			last_decayed_at = NOW(),
 			updated_at = NOW()
 		WHERE id = $2;
 	`
@@ -501,14 +510,14 @@ func (s *PostgresStore) UpdateTerritoryDefense(ctx context.Context, territoryID 
 // GetTerritoryByID retrieves a territory by its unique ID.
 func (s *PostgresStore) GetTerritoryByID(ctx context.Context, id string) (*Territory, error) {
 	query := `
-		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), t.updated_at
+		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at), t.updated_at
 		FROM territories t
 		JOIN users u ON t.owner_id = u.id
 		WHERE t.id = $1;
 	`
 	var t Territory
 	err := s.pool.QueryRow(ctx, query, id).Scan(
-		&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.UpdatedAt,
+		&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.LastDecayedAt, &t.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
