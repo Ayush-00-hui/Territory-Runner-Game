@@ -19,7 +19,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final FirebaseService _firebaseService = FirebaseService();
   final TerritoryService _territoryService = TerritoryService();
 
-  int _selectedTab = 0; // 0 = Google / One-Tap, 1 = Email, 2 = Phone OTP
+  int _selectedTab = 0; // 0 = Google, 1 = Phone OTP, 2 = Create Account / Email
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -27,7 +27,7 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
-  bool _isSignUp = false;
+  bool _isSignUp = true;
   bool _obscurePassword = true;
 
   // Phone controllers
@@ -331,9 +331,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
                 child: Row(
                   children: [
-                    _buildTabPill(0, Icons.bolt_rounded, 'One-Tap'),
-                    _buildTabPill(1, Icons.mail_outline_rounded, 'Email'),
-                    _buildTabPill(2, Icons.phone_android_rounded, 'Phone OTP'),
+                    _buildTabPill(0, Icons.account_circle_rounded, 'Google'),
+                    _buildTabPill(1, Icons.phone_android_rounded, 'Phone'),
+                    _buildTabPill(2, Icons.person_add_alt_1_rounded, 'Create Account'),
                   ],
                 ),
               ),
@@ -430,94 +430,6 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
                 ),
               ] else if (_selectedTab == 1) ...[
-                // --- EMAIL & PASSWORD TAB ---
-                AppCard(
-                  padding: const EdgeInsets.all(AppSpacing.s20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_isSignUp) ...[
-                        _buildInputField(
-                          controller: _nameController,
-                          label: 'Athlete Callsign / Name',
-                          hintText: 'e.g. ApexStrider',
-                          icon: Icons.person_outline_rounded,
-                        ),
-                        const SizedBox(height: AppSpacing.s14),
-                      ],
-                      _buildInputField(
-                        controller: _emailController,
-                        label: 'Email Address',
-                        hintText: 'runner@domain.com',
-                        icon: Icons.alternate_email_rounded,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: AppSpacing.s14),
-                      _buildInputField(
-                        controller: _passwordController,
-                        label: 'Password (min 6 characters)',
-                        hintText: '••••••••',
-                        icon: Icons.lock_outline_rounded,
-                        obscureText: _obscurePassword,
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off_outlined
-                                : Icons.visibility_outlined,
-                            size: 18,
-                            color: AppColors.textMuted,
-                          ),
-                          onPressed: () {
-                            setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.s20),
-                      PrimaryButton(
-                        label: _isSignUp
-                            ? 'Create Athlete Account'
-                            : 'Log In with Email',
-                        icon: _isSignUp
-                            ? Icons.person_add_alt_1_rounded
-                            : Icons.login_rounded,
-                        isLoading: _isLoading,
-                        onPressed: _handleEmailAuth,
-                      ),
-                      const SizedBox(height: AppSpacing.s12),
-                      Center(
-                        child: GestureDetector(
-                          onTap: () {
-                            AppMotion.selectionTick();
-                            setState(() {
-                              _isSignUp = !_isSignUp;
-                              _errorMessage = null;
-                            });
-                          },
-                          behavior: HitTestBehavior.opaque,
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.s12,
-                              vertical: AppSpacing.s6,
-                            ),
-                            child: Text(
-                              _isSignUp
-                                  ? 'Already registered? Log In'
-                                  : 'New to Territory Runner? Create Account',
-                              style: AppText.label.copyWith(
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ] else ...[
                 // --- PHONE OTP TAB ---
                 AppCard(
                   padding: const EdgeInsets.all(AppSpacing.s20),
@@ -526,7 +438,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     children: [
                       if (!_codeSent) ...[
                         Text(
-                          'Enter mobile number with country code (e.g. +91 98765 43210):',
+                          'Sign in with your mobile number to receive an SMS verification code:',
                           style: AppText.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                             fontSize: 12.5,
@@ -535,7 +447,7 @@ class _AuthScreenState extends State<AuthScreen> {
                         const SizedBox(height: AppSpacing.s14),
                         _buildInputField(
                           controller: _phoneController,
-                          label: 'Phone Number',
+                          label: 'Mobile Number (with country code)',
                           hintText: '+91 98765 43210',
                           icon: Icons.phone_iphone_rounded,
                           keyboardType: TextInputType.phone,
@@ -632,6 +544,94 @@ class _AuthScreenState extends State<AuthScreen> {
                           ),
                         ),
                       ],
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // --- CREATE ACCOUNT / EMAIL TAB ---
+                AppCard(
+                  padding: const EdgeInsets.all(AppSpacing.s20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (_isSignUp) ...[
+                        _buildInputField(
+                          controller: _nameController,
+                          label: 'Athlete Callsign / Name',
+                          hintText: 'e.g. ApexStrider',
+                          icon: Icons.person_outline_rounded,
+                        ),
+                        const SizedBox(height: AppSpacing.s14),
+                      ],
+                      _buildInputField(
+                        controller: _emailController,
+                        label: 'Email Address',
+                        hintText: 'runner@domain.com',
+                        icon: Icons.alternate_email_rounded,
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: AppSpacing.s14),
+                      _buildInputField(
+                        controller: _passwordController,
+                        label: 'Password (min 6 characters)',
+                        hintText: '••••••••',
+                        icon: Icons.lock_outline_rounded,
+                        obscureText: _obscurePassword,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
+                            size: 18,
+                            color: AppColors.textMuted,
+                          ),
+                          onPressed: () {
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.s20),
+                      PrimaryButton(
+                        label: _isSignUp
+                            ? 'Create Athlete Account'
+                            : 'Log In with Email',
+                        icon: _isSignUp
+                            ? Icons.person_add_alt_1_rounded
+                            : Icons.login_rounded,
+                        isLoading: _isLoading,
+                        onPressed: _handleEmailAuth,
+                      ),
+                      const SizedBox(height: AppSpacing.s12),
+                      Center(
+                        child: GestureDetector(
+                          onTap: () {
+                            AppMotion.selectionTick();
+                            setState(() {
+                              _isSignUp = !_isSignUp;
+                              _errorMessage = null;
+                            });
+                          },
+                          behavior: HitTestBehavior.opaque,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.s12,
+                              vertical: AppSpacing.s6,
+                            ),
+                            child: Text(
+                              _isSignUp
+                                  ? 'Already registered? Log In'
+                                  : 'New to Territory Runner? Create Account',
+                              style: AppText.label.copyWith(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),

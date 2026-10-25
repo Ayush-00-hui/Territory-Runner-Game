@@ -144,18 +144,8 @@ class _TerritoryAppState extends State<TerritoryApp> {
   void initState() {
     super.initState();
     final firebaseService = FirebaseService();
-    if (firebaseService.isSignedIn) {
-      _isAuthenticated = true;
-    } else {
-      final profileBox = Hive.box<RunnerProfile>('profile');
-      final currentUser = profileBox.get('current_user');
-      if (currentUser != null &&
-          currentUser.username.isNotEmpty &&
-          currentUser.username != 'CyberRunner' &&
-          currentUser.username != 'local_runner') {
-        _isAuthenticated = true;
-      }
-    }
+    // Only bypass to MainScreen if genuinely signed in with Firebase/Google
+    _isAuthenticated = firebaseService.isSignedIn;
 
     // Check onboarding completion for unauthenticated runners
     SharedPreferences.getInstance().then((prefs) {
