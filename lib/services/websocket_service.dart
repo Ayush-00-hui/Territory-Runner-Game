@@ -207,6 +207,9 @@ class WebSocketService with WidgetsBindingObserver {
 
     final forceRefresh = _reconnectAttempts > 0 && !_isAuthBlocked;
     final params = await buildConnectionParams(forceRefresh: forceRefresh);
+    if (_isDisposed || !_isConnecting) {
+      return;
+    }
 
     try {
       final channel = _channelFactory != null
@@ -229,9 +232,16 @@ class WebSocketService with WidgetsBindingObserver {
       // and prevent channel.ready errors from escaping as unhandled Zone exceptions.
       await channel.ready;
 
+      if (_isDisposed || !_isConnecting) {
+        disconnect();
+        return;
+      }
+
       _onConnected(params.uri);
     } catch (e) {
-      _handleDisconnect(error: e);
+      if (!_isDisposed) {
+        _handleDisconnect(error: e);
+      }
     } finally {
       _isConnecting = false;
     }
@@ -405,8 +415,26 @@ class WebSocketService with WidgetsBindingObserver {
   }
 
   void _handleDisconnect({Object? error}) {
+    if (_isDisposed) {
+      _reconnectTimer?.cancel();
+      _reconnectTimer = null;
+      _stableConnectionTimer?.cancel();
+      _stableConnectionTimer = null;
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = null;
+      _subscription?.cancel();
+      _subscription = null;
+      try {
+        _channel?.sink.close();
+      } catch (_) {}
+      _channel = null;
+      return;
+    }
+
     _isConnected = false;
-    _connectionStateController.add(false);
+    if (!_connectionStateController.isClosed) {
+      _connectionStateController.add(false);
+    }
 
     _stableConnectionTimer?.cancel();
     _stableConnectionTimer = null;
@@ -419,8 +447,6 @@ class WebSocketService with WidgetsBindingObserver {
       _channel?.sink.close();
     } catch (_) {}
     _channel = null;
-
-    if (_isDisposed) return;
 
     final formattedError = _cleanErrorString(error);
 
@@ -469,7 +495,9 @@ class WebSocketService with WidgetsBindingObserver {
     );
 
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(delay, connect);
+    if (!_isDisposed) {
+      _reconnectTimer = Timer(delay, connect);
+    }
   }
 
   /// Calculates exponential backoff duration with random jitter.
@@ -611,11 +639,20 @@ class WebSocketService with WidgetsBindingObserver {
     _channel = null;
     _isConnected = false;
     _isConnecting = false;
-    _connectionStateController.add(false);
+    if (!_connectionStateController.isClosed) {
+      _connectionStateController.add(false);
+    }
   }
 
   void dispose() {
     _isDisposed = true;
+    _isConnecting = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _stableConnectionTimer?.cancel();
+    _stableConnectionTimer = null;
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
     try {
       WidgetsBinding.instance.removeObserver(this);
     } catch (_) {}
@@ -625,6 +662,8 @@ class WebSocketService with WidgetsBindingObserver {
     _runnerLeftController.close();
     _alertController.close();
     _broadcastController.close();
-    _connectionStateController.close();
+    if (!_connectionStateController.isClosed) {
+      _connectionStateController.close();
+    }
   }
 }

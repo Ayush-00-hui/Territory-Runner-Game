@@ -119,8 +119,18 @@ void main() {
       );
 
       // Verify that token refresh unblocks auth retries
-      wsService.onTokenRefreshed();
-      expect(wsService.isAuthBlocked, isFalse);
+      await runZonedGuarded(
+        () async {
+          wsService.onTokenRefreshed();
+          expect(wsService.isAuthBlocked, isFalse);
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        (error, stack) {
+          unhandledZoneError = error;
+        },
+      );
+
+      expect(unhandledZoneError, isNull);
 
       wsService.disconnect();
       wsService.dispose();
