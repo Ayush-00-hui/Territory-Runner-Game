@@ -45,6 +45,8 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000011_add_territory_last_decayed_at.down.sql",
+		"000010_add_user_settings.down.sql",
 		"000009_add_duel_activity_type.down.sql",
 		"000008_add_friends_duels_constraints.down.sql",
 		"000007_add_activity_type.down.sql",
@@ -73,6 +75,8 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000007_add_activity_type.up.sql",
 		"000008_add_friends_duels_constraints.up.sql",
 		"000009_add_duel_activity_type.up.sql",
+		"000010_add_user_settings.up.sql",
+		"000011_add_territory_last_decayed_at.up.sql",
 	}
 
 	for _, uf := range upFiles {
