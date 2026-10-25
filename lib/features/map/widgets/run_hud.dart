@@ -148,7 +148,11 @@ class _RunHudState extends State<RunHud> {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.pause_circle_filled_rounded, color: AppColors.warning, size: 14),
+                        Icon(
+                          Icons.pause_circle_filled_rounded,
+                          color: AppColors.warning,
+                          size: 14,
+                        ),
                         SizedBox(width: AppSpacing.s6),
                         Text(
                           'Auto-paused • Speed < 1.8 km/h',
@@ -168,7 +172,8 @@ class _RunHudState extends State<RunHud> {
               // Finding GPS Inline Status
               if (widget.isRunActive &&
                   !widget.isAutoPaused &&
-                  (widget.satelliteAccuracyMeters > 30.0 || widget.isSearchingGps)) ...[
+                  (widget.satelliteAccuracyMeters > 30.0 ||
+                      widget.isSearchingGps)) ...[
                 Semantics(
                   liveRegion: true,
                   label: 'Finding GPS satellite signal',
@@ -181,7 +186,10 @@ class _RunHudState extends State<RunHud> {
                     decoration: BoxDecoration(
                       color: AppColors.surface2,
                       borderRadius: AppSpacing.brFull,
-                      border: Border.all(color: AppColors.borderSubtle, width: 1),
+                      border: Border.all(
+                        color: AppColors.borderSubtle,
+                        width: 1,
+                      ),
                     ),
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
@@ -189,7 +197,10 @@ class _RunHudState extends State<RunHud> {
                         SizedBox(
                           width: 10,
                           height: 10,
-                          child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.accent),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            color: AppColors.accent,
+                          ),
                         ),
                         SizedBox(width: AppSpacing.s6),
                         Text(

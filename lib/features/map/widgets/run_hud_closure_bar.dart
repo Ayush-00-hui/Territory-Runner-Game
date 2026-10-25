@@ -72,7 +72,11 @@ class RunHudClosureBar extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.flag_rounded, color: AppColors.gold, size: 13),
+                                const Icon(
+                                  Icons.flag_rounded,
+                                  color: AppColors.gold,
+                                  size: 13,
+                                ),
                                 const SizedBox(width: 5),
                                 Text(
                                   runGoal!.title,
@@ -95,8 +99,9 @@ class RunHudClosureBar extends StatelessWidget {
                             child: Text(
                               runGoal!.formatRemaining(
                                 currentDistanceKm: distanceKm,
-                                currentDurationSeconds:
-                                    movingSeconds > 0 ? movingSeconds : elapsedSeconds,
+                                currentDurationSeconds: movingSeconds > 0
+                                    ? movingSeconds
+                                    : elapsedSeconds,
                                 currentAreaSqm: currentAreaSqm,
                               ),
                               style: const TextStyle(
@@ -117,14 +122,17 @@ class RunHudClosureBar extends StatelessWidget {
                         value: runGoal!
                             .computeProgress(
                               currentDistanceKm: distanceKm,
-                              currentDurationSeconds:
-                                  movingSeconds > 0 ? movingSeconds : elapsedSeconds,
+                              currentDurationSeconds: movingSeconds > 0
+                                  ? movingSeconds
+                                  : elapsedSeconds,
                               currentAreaSqm: currentAreaSqm,
                             )
                             .clamp(0.0, 1.0),
                         minHeight: 4,
                         backgroundColor: AppColors.surface2,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.gold),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.gold,
+                        ),
                       ),
                     ),
                   ],
@@ -143,7 +151,8 @@ class RunHudClosureBar extends StatelessWidget {
               vertical: AppSpacing.s6,
             ),
             decoration: BoxDecoration(
-              color: (isNearClosure ? AppColors.accent : AppColors.surface2).withValues(alpha: 0.18),
+              color: (isNearClosure ? AppColors.accent : AppColors.surface2)
+                  .withValues(alpha: 0.18),
               borderRadius: AppSpacing.br12,
               border: Border.all(
                 color: isNearClosure ? AppColors.accent : AppColors.border,
@@ -170,9 +179,13 @@ class RunHudClosureBar extends StatelessWidget {
                               fit: BoxFit.scaleDown,
                               alignment: Alignment.centerLeft,
                               child: Text(
-                                isNearClosure ? 'Ready to close loop' : 'Loop proximity',
+                                isNearClosure
+                                    ? 'Ready to close loop'
+                                    : 'Loop proximity',
                                 style: AppText.labelSmall.copyWith(
-                                  color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
+                                  color: isNearClosure
+                                      ? AppColors.accent
+                                      : AppColors.textSecondary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -187,10 +200,14 @@ class RunHudClosureBar extends StatelessWidget {
                               child: Text(
                                 '${closureDist.round()} m to start',
                                 style: AppText.labelSmall.copyWith(
-                                  color: isNearClosure ? AppColors.accent : AppColors.textSecondary,
+                                  color: isNearClosure
+                                      ? AppColors.accent
+                                      : AppColors.textSecondary,
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
-                                  fontFeatures: const [FontFeature.tabularFigures()],
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
                                 ),
                               ),
                             ),

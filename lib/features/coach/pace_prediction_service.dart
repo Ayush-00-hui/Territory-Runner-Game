@@ -52,17 +52,18 @@ class PredictionInterval {
   double get width => p90 - p10;
 
   @override
-  String toString() => '[p10: ${p10.toStringAsFixed(2)}, p50: ${p50.toStringAsFixed(2)}, p90: ${p90.toStringAsFixed(2)}]';
+  String toString() =>
+      '[p10: ${p10.toStringAsFixed(2)}, p50: ${p50.toStringAsFixed(2)}, p90: ${p90.toStringAsFixed(2)}]';
 }
 
 /// Result of pace and distance quantile prediction
 class PaceDistancePrediction {
   final PredictionInterval distanceInterval;
   final PredictionInterval paceInterval;
-  final double targetDistanceKm;       // p50 target
-  final double stretchDistanceKm;      // p90 stretch goal
+  final double targetDistanceKm; // p50 target
+  final double stretchDistanceKm; // p90 stretch goal
   final double conservativeDistanceKm; // p10 conservative baseline
-  final double targetPaceMinKm;        // p50 pace
+  final double targetPaceMinKm; // p50 pace
   final String paceFormatted;
   final String fitnessTier;
   final bool isColdStart;
@@ -184,8 +185,9 @@ class PacePredictionService {
       for (final q in ['p10', 'p50', 'p90']) {
         if (distMap.containsKey(q)) {
           final raw = distMap[q]['trees'] as List;
-          _distanceTrees[q] =
-              raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _distanceTrees[q] = raw
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
         }
       }
 
@@ -193,8 +195,9 @@ class PacePredictionService {
       for (final q in ['p10', 'p50', 'p90']) {
         if (paceMap.containsKey(q)) {
           final raw = paceMap[q]['trees'] as List;
-          _paceTrees[q] =
-              raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          _paceTrees[q] = raw
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
         }
       }
 
@@ -264,7 +267,9 @@ class PacePredictionService {
     final double paceMean = paces.reduce((a, b) => a + b) / paces.length;
     double paceStd = 0.0;
     if (paces.length > 1) {
-      final sq = paces.map((p) => (p - paceMean) * (p - paceMean)).reduce((a, b) => a + b);
+      final sq = paces
+          .map((p) => (p - paceMean) * (p - paceMean))
+          .reduce((a, b) => a + b);
       paceStd = math.sqrt(sq / paces.length);
     }
     final double paceMin = paces.reduce(math.min);
@@ -273,7 +278,9 @@ class PacePredictionService {
     final double distMean = dists.reduce((a, b) => a + b) / dists.length;
     double distStd = 0.0;
     if (dists.length > 1) {
-      final sq = dists.map((d) => (d - distMean) * (d - distMean)).reduce((a, b) => a + b);
+      final sq = dists
+          .map((d) => (d - distMean) * (d - distMean))
+          .reduce((a, b) => a + b);
       distStd = math.sqrt(sq / dists.length);
     }
     final double distMax = dists.reduce(math.max);
@@ -326,7 +333,9 @@ class PacePredictionService {
     DateTime? upcomingRunTime,
   }) {
     final bool isColdStart =
-        recentRuns == null || recentRuns.length < minRunsForPersonalization || !_isModelVerified;
+        recentRuns == null ||
+        recentRuns.length < minRunsForPersonalization ||
+        !_isModelVerified;
 
     if (isColdStart) {
       return _predictColdStart(profile);
@@ -365,7 +374,11 @@ class PacePredictionService {
     final fitnessTier = _computeFitnessTier(profile, targetDist, targetPace);
 
     return PaceDistancePrediction(
-      distanceInterval: PredictionInterval(p10: conservativeDist, p50: targetDist, p90: stretchDist),
+      distanceInterval: PredictionInterval(
+        p10: conservativeDist,
+        p50: targetDist,
+        p90: stretchDist,
+      ),
       paceInterval: PredictionInterval(
         p10: double.parse(p10.toStringAsFixed(2)),
         p50: targetPace,
@@ -393,15 +406,23 @@ class PacePredictionService {
     double targetDist = 2.5 + levelFactor + historyFactor + streakBonus;
     targetDist = double.parse(targetDist.clamp(1.5, 15.0).toStringAsFixed(1));
 
-    final double stretchDist = double.parse(math.min(25.0, targetDist * 1.30).toStringAsFixed(1));
-    final double conservativeDist = double.parse(math.max(1.0, targetDist * 0.80).toStringAsFixed(1));
+    final double stretchDist = double.parse(
+      math.min(25.0, targetDist * 1.30).toStringAsFixed(1),
+    );
+    final double conservativeDist = double.parse(
+      math.max(1.0, targetDist * 0.80).toStringAsFixed(1),
+    );
 
     double basePace =
         6.8 - (profile.level * 0.15) - (profile.totalDistanceKm * 0.01);
     basePace = double.parse(basePace.clamp(4.2, 7.5).toStringAsFixed(2));
 
-    final double paceP10 = double.parse(math.max(3.8, basePace * 0.90).toStringAsFixed(2));
-    final double paceP90 = double.parse(math.min(8.5, basePace * 1.15).toStringAsFixed(2));
+    final double paceP10 = double.parse(
+      math.max(3.8, basePace * 0.90).toStringAsFixed(2),
+    );
+    final double paceP90 = double.parse(
+      math.min(8.5, basePace * 1.15).toStringAsFixed(2),
+    );
 
     final formattedPace = _formatPace(basePace);
     final fitnessTier = _computeFitnessTier(profile, targetDist, basePace);
@@ -439,9 +460,13 @@ class PacePredictionService {
     double targetDist,
     double targetPace,
   ) {
-    if (profile.level >= 10 || profile.totalDistanceKm >= 100 || targetPace < 4.8) {
+    if (profile.level >= 10 ||
+        profile.totalDistanceKm >= 100 ||
+        targetPace < 4.8) {
       return 'Elite Marathoner';
-    } else if (profile.level >= 5 || profile.totalDistanceKm >= 30 || targetDist >= 5.0) {
+    } else if (profile.level >= 5 ||
+        profile.totalDistanceKm >= 30 ||
+        targetDist >= 5.0) {
       return 'Intermediate Pacer';
     } else if (profile.level >= 2 || targetDist >= 3.0) {
       return 'Developing Runner';

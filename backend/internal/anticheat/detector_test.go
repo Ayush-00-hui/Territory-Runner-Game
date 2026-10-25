@@ -820,5 +820,3 @@ func TestFeatureFlag_FallbackToRulesOnly(t *testing.T) {
 	assert.False(t, res.IsAnomaly)
 	assert.NotContains(t, res.Features, "ml_anomaly_prob", "ML Tier 2 feature should not be populated when feature-flagged off")
 }
-
-

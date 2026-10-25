@@ -28,7 +28,6 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 	r.Use(middleware.Recoverer)
 	r.Use(api.MetricsMiddleware)
 
-
 	origins := allowedOrigins
 	if len(origins) == 0 {
 		origins = []string{"*"}

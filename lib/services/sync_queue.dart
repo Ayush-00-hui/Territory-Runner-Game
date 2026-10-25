@@ -86,7 +86,11 @@ class QueuedRun {
     );
   }
 
-  QueuedRun copyWith({int? retryCount, String? activityType, List<MotionWindow>? motionWindows}) {
+  QueuedRun copyWith({
+    int? retryCount,
+    String? activityType,
+    List<MotionWindow>? motionWindows,
+  }) {
     return QueuedRun(
       idempotencyKey: idempotencyKey,
       activityType: activityType ?? this.activityType,

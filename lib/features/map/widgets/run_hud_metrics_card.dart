@@ -116,7 +116,11 @@ class RunHudMetricsCard extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     child: Text(
                       isRunActive
-                          ? _formatDuration(movingSeconds > 0 ? movingSeconds : elapsedSeconds)
+                          ? _formatDuration(
+                              movingSeconds > 0
+                                  ? movingSeconds
+                                  : elapsedSeconds,
+                            )
                           : '00:00',
                       style: AppText.timer.copyWith(
                         fontFeatures: const [FontFeature.tabularFigures()],
@@ -139,14 +143,20 @@ class RunHudMetricsCard extends StatelessWidget {
                       if (targetPace != null) ...[
                         const SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.surface2,
                             borderRadius: AppSpacing.br8,
                           ),
                           child: Text(
                             'P: $targetPace',
-                            style: AppText.labelSmall.copyWith(color: AppColors.info, fontSize: 8.5),
+                            style: AppText.labelSmall.copyWith(
+                              color: AppColors.info,
+                              fontSize: 8.5,
+                            ),
                           ),
                         ),
                       ],
@@ -195,7 +205,11 @@ class RunHudMetricsCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.speed_rounded, color: AppColors.info, size: 14),
+                        const Icon(
+                          Icons.speed_rounded,
+                          color: AppColors.info,
+                          size: 14,
+                        ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           '${currentSpeedKmh.toStringAsFixed(1)} km/h',
@@ -216,7 +230,11 @@ class RunHudMetricsCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.local_fire_department_rounded, color: AppColors.rival, size: 14),
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          color: AppColors.rival,
+                          size: 14,
+                        ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           '+${(distanceKm * 65.0).round()} kcal',
@@ -241,7 +259,9 @@ class RunHudMetricsCard extends StatelessWidget {
                           Icons.satellite_alt_rounded,
                           color: satelliteAccuracyMeters <= 10.0
                               ? AppColors.accent
-                              : (satelliteAccuracyMeters <= 30.0 ? AppColors.warning : AppColors.rival),
+                              : (satelliteAccuracyMeters <= 30.0
+                                    ? AppColors.warning
+                                    : AppColors.rival),
                           size: 14,
                         ),
                         const SizedBox(width: AppSpacing.s4),
@@ -253,7 +273,9 @@ class RunHudMetricsCard extends StatelessWidget {
                             fontSize: 11,
                             color: satelliteAccuracyMeters <= 10.0
                                 ? AppColors.textSecondary
-                                : (satelliteAccuracyMeters <= 30.0 ? AppColors.warning : AppColors.rival),
+                                : (satelliteAccuracyMeters <= 30.0
+                                      ? AppColors.warning
+                                      : AppColors.rival),
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -271,13 +293,19 @@ class RunHudMetricsCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.directions_walk_rounded, color: AppColors.accent, size: 14),
+                          const Icon(
+                            Icons.directions_walk_rounded,
+                            color: AppColors.accent,
+                            size: 14,
+                          ),
                           const SizedBox(width: AppSpacing.s4),
                           Text(
                             '${_formatSteps(stepCount)} steps',
                             style: AppText.bodyBold.copyWith(
                               fontSize: 11,
-                              fontFeatures: const [FontFeature.tabularFigures()],
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                         ],
@@ -293,7 +321,11 @@ class RunHudMetricsCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.shield_outlined, color: AppColors.accent, size: 14),
+                        const Icon(
+                          Icons.shield_outlined,
+                          color: AppColors.accent,
+                          size: 14,
+                        ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           '$territoriesClaimed claimed',

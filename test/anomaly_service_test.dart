@@ -366,7 +366,11 @@ void main() {
 
     test('Cross-language parity: anomaly vectors match Go backend within 1e-6', () {
       final file = File('test_fixtures/anomaly_vectors.json');
-      expect(file.existsSync(), isTrue, reason: 'test_fixtures/anomaly_vectors.json must exist');
+      expect(
+        file.existsSync(),
+        isTrue,
+        reason: 'test_fixtures/anomaly_vectors.json must exist',
+      );
       final Map<String, dynamic> jsonMap = jsonDecode(file.readAsStringSync());
       expect(jsonMap['model_type'], equals('WeightedZScoreDetector'));
 
@@ -382,7 +386,8 @@ void main() {
         expect(
           (actualScore - expectedScore).abs(),
           lessThan(1e-6),
-          reason: 'Parity mismatch on vector "$name": expected $expectedScore, got $actualScore',
+          reason:
+              'Parity mismatch on vector "$name": expected $expectedScore, got $actualScore',
         );
       }
     });
@@ -391,7 +396,8 @@ void main() {
       final now = DateTime.now();
       double lat = 37.77490;
       const double lng = -122.41940;
-      const double latStep = 0.000024; // ~2.7m per second (typical 9.7 km/h jogging pace)
+      const double latStep =
+          0.000024; // ~2.7m per second (typical 9.7 km/h jogging pace)
 
       final positions = List.generate(25, (i) {
         final isStop = (i == 10 || i == 11);
@@ -417,7 +423,11 @@ void main() {
         positions,
         ExerciseActivityType.running,
       );
-      expect(result.isAnomaly, isFalse, reason: 'A genuine 25-point run window containing 2 stopped samples must NOT be flagged');
+      expect(
+        result.isAnomaly,
+        isFalse,
+        reason: 'A genuine 25-point run window containing 2 stopped samples must NOT be flagged',
+      );
       expect(result.anomalyScore, lessThan(anomalyService.anomalyThreshold));
       expect(result.reason.contains('Genuine'), isTrue);
     });
@@ -442,7 +452,10 @@ void main() {
       expect(anomalyService.modelSha256.isNotEmpty, isTrue);
 
       // Tampered tree payload check: corrupted character must fail verification
-      final tamperedTrees = treeStr.replaceFirst('split_feature', 'corrupted_field');
+      final tamperedTrees = treeStr.replaceFirst(
+        'split_feature',
+        'corrupted_field',
+      );
       final tamperedLoaded = anomalyService.loadModelFromStrings(
         treeJson: tamperedTrees,
         metaJson: metaStr,
@@ -451,10 +464,7 @@ void main() {
       expect(anomalyService.isModelVerified, isFalse);
 
       // Restore valid model for subsequent tests
-      anomalyService.loadModelFromStrings(
-        treeJson: treeStr,
-        metaJson: metaStr,
-      );
+      anomalyService.loadModelFromStrings(treeJson: treeStr, metaJson: metaStr);
       expect(anomalyService.isModelVerified, isTrue);
     });
 
@@ -469,9 +479,15 @@ void main() {
       expect(anomalyService.isModelVerified, isTrue);
 
       final parityFile = File('test_fixtures/parity_200_windows.json');
-      expect(parityFile.existsSync(), isTrue, reason: 'test_fixtures/parity_200_windows.json must exist');
+      expect(
+        parityFile.existsSync(),
+        isTrue,
+        reason: 'test_fixtures/parity_200_windows.json must exist',
+      );
 
-      final Map<String, dynamic> data = jsonDecode(parityFile.readAsStringSync());
+      final Map<String, dynamic> data = jsonDecode(
+        parityFile.readAsStringSync(),
+      );
       expect(data['model_version'], equals('3.0.0'));
       expect(data['total_windows'], equals(200));
 
@@ -484,7 +500,9 @@ void main() {
 
       for (final tc in testCases) {
         final id = tc['id'] as String;
-        final features = (tc['features'] as List).map((e) => (e as num).toDouble()).toList();
+        final features = (tc['features'] as List)
+            .map((e) => (e as num).toDouble())
+            .toList();
         final expectedProb = (tc['expected_probability'] as num).toDouble();
         final expectedAnomaly = tc['expected_is_anomaly'] as bool;
 
@@ -497,7 +515,8 @@ void main() {
         expect(
           diff,
           lessThan(1e-4),
-          reason: 'Parity mismatch on window $id: expected $expectedProb, got $actualProb (diff: $diff)',
+          reason:
+              'Parity mismatch on window $id: expected $expectedProb, got $actualProb (diff: $diff)',
         );
 
         final actualAnomaly = actualProb >= 0.50;
@@ -507,11 +526,20 @@ void main() {
       }
 
       stopwatch.stop();
-      final double avgLatencyUs = (stopwatch.elapsedMicroseconds) / testCases.length;
+      final double avgLatencyUs =
+          (stopwatch.elapsedMicroseconds) / testCases.length;
 
       // Assert zero decision mismatches across all 200 windows
-      expect(mismatchDecisions, equals(0), reason: 'Zero decision mismatches across all 200 parity windows');
-      expect(maxDiff, lessThan(1e-4), reason: 'Max floating point diff must be < 1e-4');
+      expect(
+        mismatchDecisions,
+        equals(0),
+        reason: 'Zero decision mismatches across all 200 parity windows',
+      );
+      expect(
+        maxDiff,
+        lessThan(1e-4),
+        reason: 'Max floating point diff must be < 1e-4',
+      );
       // Latency verification: pure Dart evaluation is fast (< 100 µs per window)
       expect(avgLatencyUs, lessThan(100.0));
     });
@@ -606,4 +634,3 @@ void main() {
     });
   });
 }
-

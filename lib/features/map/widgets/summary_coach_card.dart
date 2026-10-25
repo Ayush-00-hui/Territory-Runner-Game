@@ -84,7 +84,11 @@ class SummaryCoachCard extends StatelessWidget {
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.auto_awesome, color: AppColors.accent, size: 15),
+                            const Icon(
+                              Icons.auto_awesome,
+                              color: AppColors.accent,
+                              size: 15,
+                            ),
                             const SizedBox(width: AppSpacing.s6),
                             Expanded(
                               child: Text(
@@ -109,7 +113,10 @@ class SummaryCoachCard extends StatelessWidget {
                         ),
                         const SizedBox(height: AppSpacing.s6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.surface2,
                             borderRadius: AppSpacing.br8,
@@ -118,7 +125,11 @@ class SummaryCoachCard extends StatelessWidget {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.tips_and_updates_outlined, size: 13, color: AppColors.accent),
+                              const Icon(
+                                Icons.tips_and_updates_outlined,
+                                size: 13,
+                                color: AppColors.accent,
+                              ),
                               const SizedBox(width: AppSpacing.s6),
                               Expanded(
                                 child: Text(
@@ -164,8 +175,12 @@ class SummaryCoachCard extends StatelessWidget {
                     durationSeconds: durationSeconds,
                     areaSqMeters: effectiveArea,
                     points: routePoints,
-                    callsign: profile.username.isNotEmpty ? profile.username : 'RUNNER',
-                    faction: profile.faction.isNotEmpty ? profile.faction : 'SOLO',
+                    callsign: profile.username.isNotEmpty
+                        ? profile.username
+                        : 'RUNNER',
+                    faction: profile.faction.isNotEmpty
+                        ? profile.faction
+                        : 'SOLO',
                   );
                 },
               ),
@@ -207,10 +222,7 @@ class SummaryCoachCard extends StatelessWidget {
         const SizedBox(height: AppSpacing.s10),
 
         // Primary "Done" Button
-        PrimaryButton(
-          label: 'Done',
-          onPressed: onDone,
-        ),
+        PrimaryButton(label: 'Done', onPressed: onDone),
       ],
     );
   }

@@ -95,11 +95,7 @@ void showAddFriendDialog(
               }
             } catch (e) {
               if (context.mounted) {
-                AppToast.show(
-                  context,
-                  'Failed: $e',
-                  type: AppToastType.error,
-                );
+                AppToast.show(context, 'Failed: $e', type: AppToastType.error);
               }
             }
           },

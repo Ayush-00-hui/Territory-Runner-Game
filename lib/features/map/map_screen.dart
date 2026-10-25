@@ -137,8 +137,8 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _refreshTerritoryCache() {
-    _territoriesNotifier.value =
-        TerritoryService().getCapturedTerritoryObjects();
+    _territoriesNotifier.value = TerritoryService()
+        .getCapturedTerritoryObjects();
   }
 
   @override
@@ -159,10 +159,7 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
-  void _openToolsSheet(
-    MapRunController controller,
-    MapDemoRunner demoRunner,
-  ) {
+  void _openToolsSheet(MapRunController controller, MapDemoRunner demoRunner) {
     MapToolsSheet.show(
       context: context,
       onOpenPacer: () => VirtualPacerSheet.show(
@@ -209,10 +206,8 @@ class _MapScreenState extends State<MapScreen> {
         BatterySaverService().setAmoledHudActive(true);
       },
       onOpenOfflineMaps: () => showOfflineMapsSheet(context),
-      onTriggerSos: () => showSosBeaconSheet(
-        context,
-        controller.currentLocation,
-      ),
+      onTriggerSos: () =>
+          showSosBeaconSheet(context, controller.currentLocation),
     );
   }
 
@@ -227,8 +222,9 @@ class _MapScreenState extends State<MapScreen> {
 
     final pad = MediaQuery.paddingOf(context);
     final profile = TerritoryService().getProfile();
-    final athleteName =
-        profile.username.isNotEmpty ? profile.username : 'Runner';
+    final athleteName = profile.username.isNotEmpty
+        ? profile.username
+        : 'Runner';
     final demoRunner = MapDemoRunner(
       context: context,
       mapController: _mapController,
@@ -300,11 +296,16 @@ class _MapScreenState extends State<MapScreen> {
                         isLeftHanded: isLeftHanded,
                         bottomOffset: bottomOffset,
                         isCameraLocked: controller.isCameraFollowLocked,
-                        onOpenTools: () => _openToolsSheet(controller, demoRunner),
-                        onOpenLayers: () => MapLayersSheet.show(context: context),
+                        onOpenTools: () =>
+                            _openToolsSheet(controller, demoRunner),
+                        onOpenLayers: () =>
+                            MapLayersSheet.show(context: context),
                         onRecenter: () {
                           if (controller.currentLocation != null) {
-                            _mapController.move(controller.currentLocation!, 17.0);
+                            _mapController.move(
+                              controller.currentLocation!,
+                              17.0,
+                            );
                             controller.setCameraFollow(true);
                           }
                         },
@@ -317,8 +318,6 @@ class _MapScreenState extends State<MapScreen> {
                   );
                 },
               ),
-
-
 
               // 4. Strava-Grade Live Telemetry HUD
               Positioned(

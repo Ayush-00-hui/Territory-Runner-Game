@@ -66,11 +66,15 @@ class RunHudExpandedDrawer extends StatelessWidget {
                             child: Text(
                               _calculateAvgPace(
                                 distanceKm,
-                                movingSeconds > 0 ? movingSeconds : elapsedSeconds,
+                                movingSeconds > 0
+                                    ? movingSeconds
+                                    : elapsedSeconds,
                               ),
                               style: AppText.bodyBold.copyWith(
                                 fontSize: 12,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ),
@@ -90,7 +94,9 @@ class RunHudExpandedDrawer extends StatelessWidget {
                               _formatDuration(movingSeconds),
                               style: AppText.bodyBold.copyWith(
                                 fontSize: 12,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ),
@@ -114,7 +120,9 @@ class RunHudExpandedDrawer extends StatelessWidget {
                               style: AppText.bodyBold.copyWith(
                                 fontSize: 12,
                                 color: AppColors.accent,
-                                fontFeatures: const [FontFeature.tabularFigures()],
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                               ),
                             ),
                           ),
@@ -126,7 +134,9 @@ class RunHudExpandedDrawer extends StatelessWidget {
               ),
             )
           : const SizedBox.shrink(),
-      crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+      crossFadeState: isExpanded
+          ? CrossFadeState.showSecond
+          : CrossFadeState.showFirst,
       duration: AppMotion.duration(context, AppMotion.standard),
     );
   }

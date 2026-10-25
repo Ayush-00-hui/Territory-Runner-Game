@@ -47,12 +47,17 @@ class SummaryVictoryHeader extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: (isRejected ? AppColors.error : AppColors.accent).withValues(alpha: 0.15),
+                      color: (isRejected ? AppColors.error : AppColors.accent)
+                          .withValues(alpha: 0.15),
                       borderRadius: AppSpacing.br8,
                       border: Border.all(
-                        color: (isRejected ? AppColors.error : AppColors.accent).withValues(alpha: 0.5),
+                        color: (isRejected ? AppColors.error : AppColors.accent)
+                            .withValues(alpha: 0.5),
                         width: 1.0,
                       ),
                     ),
@@ -60,15 +65,21 @@ class SummaryVictoryHeader extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isRejected ? Icons.warning_rounded : Icons.check_circle_rounded,
+                          isRejected
+                              ? Icons.warning_rounded
+                              : Icons.check_circle_rounded,
                           size: 13,
-                          color: isRejected ? AppColors.error : AppColors.accent,
+                          color: isRejected
+                              ? AppColors.error
+                              : AppColors.accent,
                         ),
                         const SizedBox(width: 5),
                         Text(
                           isRejected ? 'Run rejected' : 'Run complete',
                           style: TextStyle(
-                            color: isRejected ? AppColors.error : AppColors.accent,
+                            color: isRejected
+                                ? AppColors.error
+                                : AppColors.accent,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.8,
@@ -112,7 +123,11 @@ class SummaryVictoryHeader extends StatelessWidget {
                     color: AppColors.surface,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close_rounded, size: 18, color: AppColors.textSecondary),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
             ),
@@ -136,7 +151,10 @@ class SummaryVictoryHeader extends StatelessWidget {
         if (isRejected) ...[
           const SizedBox(height: AppSpacing.s8),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12, vertical: AppSpacing.s8),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s12,
+              vertical: AppSpacing.s8,
+            ),
             decoration: BoxDecoration(
               color: AppColors.error.withValues(alpha: 0.1),
               borderRadius: AppSpacing.br12,
@@ -145,7 +163,11 @@ class SummaryVictoryHeader extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline_rounded, color: AppColors.error, size: 16),
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: AppColors.error,
+                  size: 16,
+                ),
                 const SizedBox(width: AppSpacing.s8),
                 Expanded(
                   child: Text(

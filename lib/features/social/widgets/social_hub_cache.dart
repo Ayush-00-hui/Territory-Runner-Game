@@ -13,11 +13,14 @@ class SocialHubCache {
       'territory_runner_cached_friend_requests';
   static const String _cachedDuelsKey = 'territory_runner_cached_duels';
 
-  static Future<({
-    List<FriendUser> friends,
-    List<FriendRequestDetail> requests,
-    List<Duel> duels,
-  })> loadCachedData() async {
+  static Future<
+    ({
+      List<FriendUser> friends,
+      List<FriendRequestDetail> requests,
+      List<Duel> duels,
+    })
+  >
+  loadCachedData() async {
     final cachedFriends = <FriendUser>[];
     final cachedRequests = <FriendRequestDetail>[];
     final cachedDuels = <Duel>[];

@@ -196,4 +196,3 @@ func TestHandleWebSocket_RequiresAuthenticationBeforeUpgrade(t *testing.T) {
 	assert.NotEqual(t, http.StatusSwitchingProtocols, recWithBadToken.Code)
 	assert.Equal(t, http.StatusUnauthorized, recWithBadToken.Code)
 }
-

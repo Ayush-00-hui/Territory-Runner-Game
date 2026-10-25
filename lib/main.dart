@@ -11,6 +11,7 @@ import 'profile_page.dart';
 import 'features/map/map_screen.dart';
 import 'models/territory.dart';
 import 'models/runner_profile.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
@@ -109,7 +110,9 @@ void main() {
             Provider<WebSocketService>(create: (_) => WebSocketService()),
             Provider<RouteService>(create: (_) => RouteService()),
             Provider<LLMCoachService>(create: (_) => LLMCoachService()),
-            Provider<PacePredictionService>(create: (_) => PacePredictionService()),
+            Provider<PacePredictionService>(
+              create: (_) => PacePredictionService(),
+            ),
             Provider<AppPreferences>(create: (_) => AppPreferences()),
             Provider<FirebaseService>(create: (_) => FirebaseService()),
             Provider<NotificationService>(create: (_) => NotificationService()),
@@ -120,7 +123,9 @@ void main() {
             Provider<GallerySaverService>(create: (_) => GallerySaverService()),
             Provider<ExportService>(create: (_) => ExportService()),
             Provider<BatterySaverService>(create: (_) => BatterySaverService()),
-            ChangeNotifierProvider<MapRunController>(create: (_) => MapRunController()),
+            ChangeNotifierProvider<MapRunController>(
+              create: (_) => MapRunController(),
+            ),
           ],
           child: const TerritoryApp(),
         ),

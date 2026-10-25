@@ -57,12 +57,27 @@ void showMlDebugExportDialog(
                 ),
               ),
               items: const [
-                DropdownMenuItem(value: 'run', child: Text('Running (Athletic)')),
-                DropdownMenuItem(value: 'walk', child: Text('Walking (Athletic)')),
-                DropdownMenuItem(value: 'cycle', child: Text('Cycling (Athletic)')),
+                DropdownMenuItem(
+                  value: 'run',
+                  child: Text('Running (Athletic)'),
+                ),
+                DropdownMenuItem(
+                  value: 'walk',
+                  child: Text('Walking (Athletic)'),
+                ),
+                DropdownMenuItem(
+                  value: 'cycle',
+                  child: Text('Cycling (Athletic)'),
+                ),
                 DropdownMenuItem(value: 'bus', child: Text('Bus (Vehicle)')),
-                DropdownMenuItem(value: 'auto', child: Text('Auto-Rickshaw (Vehicle)')),
-                DropdownMenuItem(value: 'car', child: Text('Car / Taxi (Vehicle)')),
+                DropdownMenuItem(
+                  value: 'auto',
+                  child: Text('Auto-Rickshaw (Vehicle)'),
+                ),
+                DropdownMenuItem(
+                  value: 'car',
+                  child: Text('Car / Taxi (Vehicle)'),
+                ),
               ],
               onChanged: (val) {
                 if (val != null) {

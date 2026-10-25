@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../ui/ui.dart';
@@ -56,7 +57,9 @@ class SummaryStatsGrid extends StatelessWidget {
     final count = totalKm.floor();
     final avgPace = totalSec / totalKm;
     if (count <= 0) {
-      return [KmSplit(kmIndex: 1, distanceKm: totalKm, paceSeconds: avgPace.round())];
+      return [
+        KmSplit(kmIndex: 1, distanceKm: totalKm, paceSeconds: avgPace.round()),
+      ];
     }
 
     final splits = <KmSplit>[];
@@ -67,7 +70,13 @@ class SummaryStatsGrid extends StatelessWidget {
     }
     final remainderKm = totalKm - count;
     if (remainderKm >= 0.1) {
-      splits.add(KmSplit(kmIndex: count + 1, distanceKm: remainderKm, paceSeconds: avgPace.round()));
+      splits.add(
+        KmSplit(
+          kmIndex: count + 1,
+          distanceKm: remainderKm,
+          paceSeconds: avgPace.round(),
+        ),
+      );
     }
     return splits;
   }
@@ -80,7 +89,10 @@ class SummaryStatsGrid extends StatelessWidget {
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: AppText.label.copyWith(color: AppColors.textMuted, fontSize: 9.5),
+          style: AppText.label.copyWith(
+            color: AppColors.textMuted,
+            fontSize: 9.5,
+          ),
         ),
         const SizedBox(height: 3),
         FittedBox(
@@ -103,8 +115,12 @@ class SummaryStatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final splits = _computeSplits(distanceKm, durationSeconds);
-    final fastestPace = splits.isNotEmpty ? splits.map((s) => s.paceSeconds).reduce(math.min) : 0;
-    final slowestPace = splits.isNotEmpty ? splits.map((s) => s.paceSeconds).reduce(math.max) : 0;
+    final fastestPace = splits.isNotEmpty
+        ? splits.map((s) => s.paceSeconds).reduce(math.min)
+        : 0;
+    final slowestPace = splits.isNotEmpty
+        ? splits.map((s) => s.paceSeconds).reduce(math.max)
+        : 0;
     final paceSpan = math.max(1, slowestPace - fastestPace);
 
     return Column(
@@ -121,10 +137,7 @@ class SummaryStatsGrid extends StatelessWidget {
             final currentTerr = (territoriesClaimed * t).round();
 
             return Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: AppSpacing.br20,
@@ -223,7 +236,10 @@ class SummaryStatsGrid extends StatelessWidget {
                 const SizedBox(height: AppSpacing.s8),
                 ...splits.map((split) {
                   final paceFraction = paceSpan > 0
-                      ? 1.0 - ((split.paceSeconds - fastestPace) / paceSpan * 0.45)
+                      ? 1.0 -
+                            ((split.paceSeconds - fastestPace) /
+                                paceSpan *
+                                0.45)
                       : 0.85;
                   final isBest = split.paceSeconds == fastestPace;
 
@@ -260,10 +276,17 @@ class SummaryStatsGrid extends StatelessWidget {
                         ),
                         const SizedBox(width: AppSpacing.s10),
                         Text(
-                          _formatPace(split.distanceKm, (split.paceSeconds * split.distanceKm).round()),
+                          _formatPace(
+                            split.distanceKm,
+                            (split.paceSeconds * split.distanceKm).round(),
+                          ),
                           style: AppText.labelSmall.copyWith(
-                            color: isBest ? AppColors.accent : AppColors.textPrimary,
-                            fontWeight: isBest ? FontWeight.w700 : FontWeight.w600,
+                            color: isBest
+                                ? AppColors.accent
+                                : AppColors.textPrimary,
+                            fontWeight: isBest
+                                ? FontWeight.w700
+                                : FontWeight.w600,
                             fontSize: 11,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
@@ -288,7 +311,11 @@ class SummaryStatsGrid extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.cloud_done_rounded, color: AppColors.accent, size: 14),
+              const Icon(
+                Icons.cloud_done_rounded,
+                color: AppColors.accent,
+                size: 14,
+              ),
               const SizedBox(width: AppSpacing.s8),
               Expanded(
                 child: Text(

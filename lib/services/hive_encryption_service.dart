@@ -42,10 +42,7 @@ class HiveEncryptionService {
         }
       } else {
         keyBytes = Hive.generateSecureKey();
-        await _secureStorage.write(
-          key: keyName,
-          value: base64Encode(keyBytes),
-        );
+        await _secureStorage.write(key: keyName, value: base64Encode(keyBytes));
       }
 
       return HiveAesCipher(keyBytes);

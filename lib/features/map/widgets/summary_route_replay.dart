@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
@@ -57,7 +58,9 @@ class SummaryRouteReplay extends StatelessWidget {
                 child: AnimatedBuilder(
                   animation: replayController,
                   builder: (context, _) {
-                    final replayProgress = isReducedMotion ? 1.0 : replayController.value;
+                    final replayProgress = isReducedMotion
+                        ? 1.0
+                        : replayController.value;
                     return CustomPaint(
                       painter: VictoryMapPainter(
                         points: routePoints,
@@ -72,7 +75,10 @@ class SummaryRouteReplay extends StatelessWidget {
                 bottom: 8,
                 left: 10,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.bgDeep.withValues(alpha: 0.85),
                     borderRadius: AppSpacing.br8,
@@ -98,7 +104,10 @@ class SummaryRouteReplay extends StatelessWidget {
                   builder: (context, _) {
                     final isDone = replayController.value >= 1.0;
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.bgDeep.withValues(alpha: 0.8),
                         borderRadius: AppSpacing.br8,
@@ -108,7 +117,9 @@ class SummaryRouteReplay extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isDone ? Icons.replay_rounded : Icons.fast_forward_rounded,
+                            isDone
+                                ? Icons.replay_rounded
+                                : Icons.fast_forward_rounded,
                             size: 11,
                             color: AppColors.textSecondary,
                           ),
@@ -169,12 +180,16 @@ class VictoryMapPainter extends CustomPainter {
     final canvasPoints = <Offset>[];
     for (final p in points) {
       final double x = padding + ((p.longitude - minLng) / lngSpan) * usableW;
-      final double y = padding + (1.0 - ((p.latitude - minLat) / latSpan)) * usableH;
+      final double y =
+          padding + (1.0 - ((p.latitude - minLat) / latSpan)) * usableH;
       canvasPoints.add(Offset(x, y));
     }
 
     final clampedProgress = routeProgress.clamp(0.0, 1.0);
-    final visibleCount = math.max(1, (canvasPoints.length * clampedProgress).ceil());
+    final visibleCount = math.max(
+      1,
+      (canvasPoints.length * clampedProgress).ceil(),
+    );
 
     if (clampedProgress >= 1.0 && canvasPoints.length >= 3) {
       final fillPath = Path();
@@ -217,7 +232,8 @@ class VictoryMapPainter extends CustomPainter {
     final cy = size.height / 2;
     final r = math.min(size.width, size.height) * 0.32;
 
-    final path = Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r));
+    final path = Path()
+      ..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r));
     final fillPaint = Paint()
       ..color = AppColors.territoryMineFill
       ..style = PaintingStyle.fill;
@@ -232,6 +248,7 @@ class VictoryMapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant VictoryMapPainter oldDelegate) {
-    return oldDelegate.points != points || oldDelegate.routeProgress != routeProgress;
+    return oldDelegate.points != points ||
+        oldDelegate.routeProgress != routeProgress;
   }
 }

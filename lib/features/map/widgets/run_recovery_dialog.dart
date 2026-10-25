@@ -49,7 +49,11 @@ class RunRecoveryDialog extends StatelessWidget {
       ),
       title: const Row(
         children: [
-          Icon(Icons.history_toggle_off_rounded, color: AppColors.accent, size: 22),
+          Icon(
+            Icons.history_toggle_off_rounded,
+            color: AppColors.accent,
+            size: 22,
+          ),
           SizedBox(width: 8),
           Text(
             'RESUME RUN?',
@@ -121,7 +125,9 @@ class RunRecoveryDialog extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.accent,
             foregroundColor: AppColors.bgDeep,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           ),
           onPressed: onResume,

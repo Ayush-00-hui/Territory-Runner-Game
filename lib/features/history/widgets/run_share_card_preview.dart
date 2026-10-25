@@ -257,10 +257,7 @@ class RunShareCardPreview extends StatelessWidget {
                               color: AppColors.divider,
                             ),
                             Expanded(
-                              child: _buildStatItem(
-                                'CLAIMED',
-                                _formatArea(),
-                              ),
+                              child: _buildStatItem('CLAIMED', _formatArea()),
                             ),
                           ],
                         ),

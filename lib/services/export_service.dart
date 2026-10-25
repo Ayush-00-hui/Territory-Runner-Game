@@ -236,10 +236,12 @@ class ExportService {
             ? timestamps[i].millisecondsSinceEpoch
             : DateTime.now().millisecondsSinceEpoch,
         'speed_mps': (speeds != null && i < speeds.length) ? speeds[i] : 0.0,
-        'altitude':
-            (altitudes != null && i < altitudes.length) ? altitudes[i] : 0.0,
-        'accuracy':
-            (accuracies != null && i < accuracies.length) ? accuracies[i] : 4.0,
+        'altitude': (altitudes != null && i < altitudes.length)
+            ? altitudes[i]
+            : 0.0,
+        'accuracy': (accuracies != null && i < accuracies.length)
+            ? accuracies[i]
+            : 4.0,
       });
     }
 
@@ -286,4 +288,3 @@ class ExportService {
         .replaceAll("'", '&apos;');
   }
 }
-

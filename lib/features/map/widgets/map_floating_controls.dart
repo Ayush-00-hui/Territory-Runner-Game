@@ -46,9 +46,7 @@ class MapFloatingControls extends StatelessWidget {
           left: isLeftHanded ? null : 16,
           right: isLeftHanded ? 16 : null,
           bottom: bottomOffset,
-          child: SosShieldButton(
-            onTriggerSos: onTriggerSos,
-          ),
+          child: SosShieldButton(onTriggerSos: onTriggerSos),
         ),
       ],
     );

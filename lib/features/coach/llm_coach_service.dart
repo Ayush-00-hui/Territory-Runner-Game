@@ -33,7 +33,9 @@ class CoachInsight {
           "Strong run. You logged ${distanceKm.toStringAsFixed(2)} km in ${(durationSeconds / 60).toStringAsFixed(1)} min and claimed $effectiveTerritories new territories/zones.",
       tip:
           "Pace recorded at $paceMin'${paceSec.toString().padLeft(2, '0')}\"/km. Keep your cadence consistent around 170 SPM for optimal energy conservation during multi-zone loops.",
-      moodTag: effectiveTerritories > 5 ? CoachMood.celebratory : CoachMood.encouraging,
+      moodTag: effectiveTerritories > 5
+          ? CoachMood.celebratory
+          : CoachMood.encouraging,
     );
   }
 }

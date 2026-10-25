@@ -15,27 +15,30 @@ void main() {
   group('PacePredictionService Tests', () {
     final paceService = PacePredictionService();
 
-    test(
-      'Beginner profile gets appropriate initial target distance and pace (cold-start)',
-      () {
-        final beginner = RunnerProfile(
-          id: 'p1',
-          username: 'Newbie',
-          totalDistanceKm: 0.0,
-          level: 1,
-          totalTerritoriesClaimed: 0,
-        );
+    test('Beginner profile gets appropriate initial target distance and pace (cold-start)', () {
+      final beginner = RunnerProfile(
+        id: 'p1',
+        username: 'Newbie',
+        totalDistanceKm: 0.0,
+        level: 1,
+        totalTerritoriesClaimed: 0,
+      );
 
-        final pred = paceService.predictTarget(beginner);
-        expect(pred.predictedDistanceKm, equals(2.5));
-        expect(pred.fitnessTier, equals('Beginner Strider'));
-        expect(pred.paceFormatted, contains("/km"));
-        expect(pred.isColdStart, isTrue);
-        expect(pred.sourceLabel, contains('Default baseline'));
-        expect(pred.distanceInterval.p10, lessThanOrEqualTo(pred.distanceInterval.p50));
-        expect(pred.distanceInterval.p50, lessThanOrEqualTo(pred.distanceInterval.p90));
-      },
-    );
+      final pred = paceService.predictTarget(beginner);
+      expect(pred.predictedDistanceKm, equals(2.5));
+      expect(pred.fitnessTier, equals('Beginner Strider'));
+      expect(pred.paceFormatted, contains("/km"));
+      expect(pred.isColdStart, isTrue);
+      expect(pred.sourceLabel, contains('Default baseline'));
+      expect(
+        pred.distanceInterval.p10,
+        lessThanOrEqualTo(pred.distanceInterval.p50),
+      );
+      expect(
+        pred.distanceInterval.p50,
+        lessThanOrEqualTo(pred.distanceInterval.p90),
+      );
+    });
 
     test('Higher level profile scales up target distance and pace', () {
       final veteran = RunnerProfile(
@@ -73,7 +76,10 @@ void main() {
       expect(paceService.modelSha256.isNotEmpty, isTrue);
 
       // Tampered payload check
-      final tamperedTreeStr = treeStr.replaceFirst('split_feature', 'corrupted_key');
+      final tamperedTreeStr = treeStr.replaceFirst(
+        'split_feature',
+        'corrupted_key',
+      );
       final tamperedLoaded = paceService.loadModelFromStrings(
         treeJson: tamperedTreeStr,
         metaJson: metaStr,
@@ -119,7 +125,10 @@ void main() {
       expect(pred.sourceLabel, contains('AI Adaptive'));
 
       // Non-crossing quantile interval verification
-      expect(pred.distanceInterval.p10, lessThanOrEqualTo(pred.targetDistanceKm));
+      expect(
+        pred.distanceInterval.p10,
+        lessThanOrEqualTo(pred.targetDistanceKm),
+      );
       expect(pred.targetDistanceKm, lessThanOrEqualTo(pred.stretchDistanceKm));
       expect(pred.distanceInterval.width, greaterThan(0.0));
 
@@ -145,21 +154,27 @@ void main() {
       );
 
       final now = DateTime.now();
-      final runs4 = List.generate(4, (i) => PastRun(
-        distanceKm: 3.0,
-        paceMinKm: 6.0,
-        timestamp: now.subtract(Duration(days: 4 - i)),
-      ));
+      final runs4 = List.generate(
+        4,
+        (i) => PastRun(
+          distanceKm: 3.0,
+          paceMinKm: 6.0,
+          timestamp: now.subtract(Duration(days: 4 - i)),
+        ),
+      );
 
       final pred4 = paceService.predictTarget(profile, recentRuns: runs4);
       expect(pred4.isColdStart, isTrue);
       expect(pred4.sourceLabel, contains('Default baseline'));
 
-      final runs5 = List.generate(5, (i) => PastRun(
-        distanceKm: 3.5,
-        paceMinKm: 5.8,
-        timestamp: now.subtract(Duration(days: 5 - i)),
-      ));
+      final runs5 = List.generate(
+        5,
+        (i) => PastRun(
+          distanceKm: 3.5,
+          paceMinKm: 5.8,
+          timestamp: now.subtract(Duration(days: 5 - i)),
+        ),
+      );
 
       final pred5 = paceService.predictTarget(profile, recentRuns: runs5);
       expect(pred5.isColdStart, isFalse);

@@ -81,9 +81,7 @@ Future<void> showCreateDuelSheet(
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: AppColors.surface2,
-                      border: OutlineInputBorder(
-                        borderRadius: AppSpacing.br12,
-                      ),
+                      border: OutlineInputBorder(borderRadius: AppSpacing.br12),
                     ),
                     style: const TextStyle(
                       color: AppColors.textPrimary,
@@ -113,9 +111,7 @@ Future<void> showCreateDuelSheet(
                       labelStyle: const TextStyle(color: AppColors.textMuted),
                       filled: true,
                       fillColor: AppColors.surface2,
-                      border: OutlineInputBorder(
-                        borderRadius: AppSpacing.br12,
-                      ),
+                      border: OutlineInputBorder(borderRadius: AppSpacing.br12),
                     ),
                     onChanged: (val) => opponentId = val.trim(),
                   ),

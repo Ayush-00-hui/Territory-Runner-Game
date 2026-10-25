@@ -30,7 +30,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
   // Real-time Notifiers
   final RunTelemetryNotifier telemetryNotifier = RunTelemetryNotifier();
-  final ValueNotifier<LatLng?> liveLocationNotifier = ValueNotifier<LatLng?>(null);
+  final ValueNotifier<LatLng?> liveLocationNotifier = ValueNotifier<LatLng?>(
+    null,
+  );
   final ValueNotifier<int> runPathUpdateNotifier = ValueNotifier<int>(0);
 
   // Run & Telemetry State
@@ -52,7 +54,10 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   LatLng? _currentLocation;
   String? _highlightedTerritoryId;
   SuggestedRoute? _activeSuggestedRoute;
-  RunGoal _activeGoal = const RunGoal(type: GoalType.distance, targetValue: 5.0);
+  RunGoal _activeGoal = const RunGoal(
+    type: GoalType.distance,
+    targetValue: 5.0,
+  );
   bool _goalCompletedAnnounced = false;
 
   final List<LatLng> _runCoordinates = [];
@@ -108,7 +113,10 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   int get stepCount {
     if (_selectedActivity == ExerciseActivityType.cycling) return 0;
     final meters = _runDistanceKm * 1000.0;
-    return (_selectedActivity == ExerciseActivityType.walking ? meters / 0.75 : meters / 1.05).round();
+    return (_selectedActivity == ExerciseActivityType.walking
+            ? meters / 0.75
+            : meters / 1.05)
+        .round();
   }
 
   void setGoal(RunGoal goal) {
@@ -124,13 +132,40 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     notifyListeners();
   }
 
-  void setCameraFollow(bool val) { _isCameraFollowLocked = val; notifyListeners(); }
-  void toggleBatterySaver() { _isBatterySaverActive = !_isBatterySaverActive; notifyListeners(); }
-  void setSuggestedRoute(SuggestedRoute? route) { _activeSuggestedRoute = route; notifyListeners(); }
-  void setHighlightedTerritory(String? id) { _highlightedTerritoryId = id; notifyListeners(); }
-  void startCountdown() { _isCountingDown = true; notifyListeners(); }
-  void cancelCountdown() { _isCountingDown = false; notifyListeners(); }
-  void completeCountdown() { _isCountingDown = false; startRun(); }
+  void setCameraFollow(bool val) {
+    _isCameraFollowLocked = val;
+    notifyListeners();
+  }
+
+  void toggleBatterySaver() {
+    _isBatterySaverActive = !_isBatterySaverActive;
+    notifyListeners();
+  }
+
+  void setSuggestedRoute(SuggestedRoute? route) {
+    _activeSuggestedRoute = route;
+    notifyListeners();
+  }
+
+  void setHighlightedTerritory(String? id) {
+    _highlightedTerritoryId = id;
+    notifyListeners();
+  }
+
+  void startCountdown() {
+    _isCountingDown = true;
+    notifyListeners();
+  }
+
+  void cancelCountdown() {
+    _isCountingDown = false;
+    notifyListeners();
+  }
+
+  void completeCountdown() {
+    _isCountingDown = false;
+    startRun();
+  }
 
   void startRun() {
     if (_isRunActive) return;
@@ -175,7 +210,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _locationService.setTrackingMode(GpsTrackingMode.idle);
     telemetryNotifier.setRunActive(false);
 
-    final finalSeconds = _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds;
+    final finalSeconds = _movingDurationSeconds > 0
+        ? _movingDurationSeconds
+        : _elapsedDurationSeconds;
     final finalDistance = _runDistanceKm;
     final finalTerritories = _territoriesClaimedThisRun;
     final finalArea = _accumulatedRunPreviewArea;
@@ -210,11 +247,13 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _satelliteAccuracyMeters = pos.accuracy;
     _currentSpeedKmh = pos.speed * 3.6;
 
-    if (_lastGpsFixTime != null && GpsQualityService.isSignalGap(_lastGpsFixTime!, now)) {
+    if (_lastGpsFixTime != null &&
+        GpsQualityService.isSignalGap(_lastGpsFixTime!, now)) {
       if (_runCoordinates.isNotEmpty) {
         final lastCoord = _runCoordinates.last;
         final newCoord = LatLng(pos.latitude, pos.longitude);
-        final gapSec = (now.difference(_lastGpsFixTime!).inMilliseconds / 1000.0).abs();
+        final gapSec =
+            (now.difference(_lastGpsFixTime!).inMilliseconds / 1000.0).abs();
         if (GpsQualityService.isUnrealisticJump(lastCoord, newCoord, gapSec)) {
           _lastGpsFixTime = now;
           return;
@@ -240,10 +279,14 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
           if (_polygonEngine.currentPath.length >= 3) {
             final start = _polygonEngine.currentPath.first;
             final distToStart = Geolocator.distanceBetween(
-              latLng.latitude, latLng.longitude, start.latitude, start.longitude,
+              latLng.latitude,
+              latLng.longitude,
+              start.latitude,
+              start.longitude,
             );
             _distanceToClosureMeters = distToStart;
-            _proximityToClosure = (1.0 - ((distToStart - 35.0) / (120.0 - 35.0))).clamp(0.0, 1.0);
+            _proximityToClosure =
+                (1.0 - ((distToStart - 35.0) / (120.0 - 35.0))).clamp(0.0, 1.0);
           } else {
             _distanceToClosureMeters = null;
             _proximityToClosure = null;
@@ -276,7 +319,10 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _accumulatedRunPreviewArea += area;
     _accumulatedRunPreviewXp += xp;
 
-    _territoryService.capturePolygonTerritory(polygon: loopEvent.polygon, areaSqMeters: area);
+    _territoryService.capturePolygonTerritory(
+      polygon: loopEvent.polygon,
+      areaSqMeters: area,
+    );
     _appPrefs.triggerLoopClosedHaptic();
   }
 
@@ -308,7 +354,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
         _runRecoveryService.saveActiveRun(
           positions: List<Position>.from(_recentPositions),
           coordinates: List<LatLng>.from(_runCoordinates),
-          startTime: DateTime.now().subtract(Duration(seconds: _elapsedDurationSeconds)),
+          startTime: DateTime.now().subtract(
+            Duration(seconds: _elapsedDurationSeconds),
+          ),
           elapsedDurationSeconds: _elapsedDurationSeconds,
           movingDurationSeconds: _movingDurationSeconds,
           distanceKm: _runDistanceKm,
@@ -324,7 +372,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     if (!_goalCompletedAnnounced && _activeGoal.isActive) {
       final progress = _activeGoal.computeProgress(
         currentDistanceKm: _runDistanceKm,
-        currentDurationSeconds: _movingDurationSeconds > 0 ? _movingDurationSeconds : _elapsedDurationSeconds,
+        currentDurationSeconds: _movingDurationSeconds > 0
+            ? _movingDurationSeconds
+            : _elapsedDurationSeconds,
         currentAreaSqm: _accumulatedRunPreviewArea,
       );
       if (progress >= 1.0) {
@@ -357,7 +407,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
   // Crash Recovery
   bool hasRecoverableRun() => _runRecoveryService.hasRecoverableRun();
-  ActiveRunSnapshot? getRecoverableRun() => _runRecoveryService.getRecoverableRun();
+  ActiveRunSnapshot? getRecoverableRun() =>
+      _runRecoveryService.getRecoverableRun();
   void clearRecovery() => _runRecoveryService.clearRecovery();
 
   void resumeRecoveredRun(ActiveRunSnapshot snapshot) {

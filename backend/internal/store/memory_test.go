@@ -829,7 +829,6 @@ func TestMemory_ApplyTerritoryDecay_UpdatesOnlyLastDecayedAt(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-
 	loop := geo.EnclosedLoop{
 		Polygon: []geo.LatLng{
 			{Latitude: 51.500, Longitude: -0.120},
@@ -886,4 +885,3 @@ func TestMemory_ApplyTerritoryDecay_UpdatesOnlyLastDecayedAt(t *testing.T) {
 	assert.WithinDuration(t, time.Now().UTC(), defendedT.LastDefendedAt, 5*time.Second, "last_defended_at must be refreshed on defense")
 	assert.WithinDuration(t, time.Now().UTC(), defendedT.LastDecayedAt, 5*time.Second, "last_decayed_at must be refreshed on defense")
 }
-

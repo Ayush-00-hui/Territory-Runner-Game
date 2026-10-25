@@ -776,7 +776,6 @@ func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
 	assert.WithinDuration(t, time.Now().UTC(), tDefended.LastDecayedAt, 5*time.Second, "last_decayed_at must be refreshed to now")
 }
 
-
 // 9. Leaderboard ordering on Postgres
 func TestPostgres_LeaderboardOrdering(t *testing.T) {
 	st, _ := setupTestStore(t)

@@ -86,7 +86,8 @@ class RunnerProfile {
   }
 
   /// Deprecated alias for claimTerritory
-  bool claimHex({double multiplier = 1.0}) => claimTerritory(multiplier: multiplier);
+  bool claimHex({double multiplier = 1.0}) =>
+      claimTerritory(multiplier: multiplier);
 
   /// Claims an arbitrary enclosed polygon territory and awards dynamic XP scaled to area: max(100, round(Area / 20)) * multiplier
   int claimPolygonArea(double areaSqMeters, {double multiplier = 1.0}) {
@@ -149,7 +150,8 @@ class RunnerProfile {
     'level': level,
     'badges': badges,
     'totalTerritoriesClaimed': totalTerritoriesClaimed,
-    'totalHexesClaimed': totalTerritoriesClaimed, // Backward compatibility alias
+    'totalHexesClaimed':
+        totalTerritoriesClaimed, // Backward compatibility alias
     'currentStreak': currentStreak,
   };
 
@@ -164,10 +166,12 @@ class RunnerProfile {
         migratedBadges.add(canon);
       }
     }
-    final int territories = (json['totalTerritoriesClaimed'] ??
-            json['totalHexesClaimed'] ??
-            json['total_territories_claimed'] ??
-            json['total_hexes_claimed']) as int? ??
+    final int territories =
+        (json['totalTerritoriesClaimed'] ??
+                json['totalHexesClaimed'] ??
+                json['total_territories_claimed'] ??
+                json['total_hexes_claimed'])
+            as int? ??
         0;
     return RunnerProfile(
       id: json['id'] as String? ?? 'local_user',

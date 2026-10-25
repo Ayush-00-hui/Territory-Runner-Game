@@ -190,4 +190,3 @@ func (a *API) HandleMetrics(w http.ResponseWriter, r *http.Request) {
 		_ = collector.WritePrometheus(w, activeWs)
 	}
 }
-

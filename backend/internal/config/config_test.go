@@ -140,4 +140,3 @@ func TestConfig_DevelopmentDefaults(t *testing.T) {
 	require.NotNil(t, cfg)
 	assert.Equal(t, []string{"*"}, cfg.AllowedOrigins)
 }
-

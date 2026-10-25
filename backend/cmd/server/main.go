@@ -132,7 +132,6 @@ func main() {
 	)
 	router := api.SetupRouter(apiHandler, authenticator, cfg.AllowedOrigins...)
 
-
 	server := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      router,

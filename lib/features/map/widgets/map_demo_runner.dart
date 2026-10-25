@@ -229,7 +229,8 @@ class MapDemoRunner {
     RunnerPresenceEvent? nearest;
     double minDistance = double.infinity;
     const distanceCalc = Distance();
-    final myLoc = runController.currentLocation ?? const LatLng(51.5074, -0.1278);
+    final myLoc =
+        runController.currentLocation ?? const LatLng(51.5074, -0.1278);
 
     for (final rival in rivals.values) {
       final dist = distanceCalc.as(LengthUnit.Meter, myLoc, rival.position);

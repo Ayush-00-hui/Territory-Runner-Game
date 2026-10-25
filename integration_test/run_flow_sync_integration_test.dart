@@ -51,9 +51,15 @@ void main() {
 
     territoryBox = await Hive.openBox<Territory>('test_territories');
     profileBox = await Hive.openBox<RunnerProfile>('test_profile');
-    syncBox = await Hive.openBox<String>('sync_box', encryptionCipher: syncCipher);
+    syncBox = await Hive.openBox<String>(
+      'sync_box',
+      encryptionCipher: syncCipher,
+    );
     rejectedBox = await Hive.openBox<String>('test_rejected');
-    recoveryBox = await Hive.openBox<String>('rec_box', encryptionCipher: recoveryCipher);
+    recoveryBox = await Hive.openBox<String>(
+      'rec_box',
+      encryptionCipher: recoveryCipher,
+    );
 
     await profileBox.put(
       'profile',
@@ -142,13 +148,11 @@ void main() {
             Provider<BatterySaverService>.value(value: BatterySaverService()),
             Provider<AppPreferences>.value(value: AppPreferences()),
             Provider<FirebaseService>.value(value: FirebaseService()),
-            ChangeNotifierProvider<MapRunController>.value(value: runController),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(
-              body: MapScreen(),
+            ChangeNotifierProvider<MapRunController>.value(
+              value: runController,
             ),
-          ),
+          ],
+          child: const MaterialApp(home: Scaffold(body: MapScreen())),
         ),
       );
 
@@ -188,7 +192,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(runController.runCoordinates.length, equals(waypoints.length));
-      expect(runController.telemetryNotifier.value.distanceKm, greaterThan(0.0));
+      expect(
+        runController.telemetryNotifier.value.distanceKm,
+        greaterThan(0.0),
+      );
       expect(runController.stepCount, greaterThan(0));
 
       // =======================================================================
@@ -196,7 +203,9 @@ void main() {
       // =======================================================================
       isNetworkOnline = false; // Runner goes into tunnel / airplane mode
 
-      final recordedCoordinates = List<LatLng>.from(runController.runCoordinates);
+      final recordedCoordinates = List<LatLng>.from(
+        runController.runCoordinates,
+      );
       final recordedDistance = runController.telemetryNotifier.value.distanceKm;
       expect(recordedCoordinates.length, equals(waypoints.length));
       expect(recordedDistance, greaterThan(0.0));

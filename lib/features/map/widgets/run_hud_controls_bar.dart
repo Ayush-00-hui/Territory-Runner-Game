@@ -48,8 +48,8 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
             label: isNearClosure
                 ? 'Close loop. Ready to claim territory.'
                 : (isRunActive
-                    ? 'Close loop. Available when near your route start.'
-                    : 'Close loop. Disabled. Start a run first.'),
+                      ? 'Close loop. Available when near your route start.'
+                      : 'Close loop. Disabled. Start a run first.'),
             child: GestureDetector(
               onTapDown: (_) => setState(() => _isSealPressed = true),
               onTapUp: (_) => setState(() => _isSealPressed = false),
@@ -62,8 +62,13 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                 }
                 if (!isNearClosure) {
                   AppMotion.lightTick();
-                  final distText = closureDist != null ? ' (${closureDist.round()}m away)' : '';
-                  AppToast.show(context, 'Run back near your start point$distText to close the loop');
+                  final distText = closureDist != null
+                      ? ' (${closureDist.round()}m away)'
+                      : '';
+                  AppToast.show(
+                    context,
+                    'Run back near your start point$distText to close the loop',
+                  );
                   return;
                 }
                 AppMotion.mediumTick();
@@ -76,12 +81,19 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                 curve: AppMotion.easeOut,
                 child: Container(
                   constraints: const BoxConstraints(minHeight: 48),
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10, vertical: AppSpacing.s12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s10,
+                    vertical: AppSpacing.s12,
+                  ),
                   decoration: BoxDecoration(
-                    color: isNearClosure ? AppColors.accent.withValues(alpha: 0.15) : AppColors.surface2,
+                    color: isNearClosure
+                        ? AppColors.accent.withValues(alpha: 0.15)
+                        : AppColors.surface2,
                     borderRadius: AppSpacing.br16,
                     border: Border.all(
-                      color: isNearClosure ? AppColors.accent : AppColors.borderSubtle,
+                      color: isNearClosure
+                          ? AppColors.accent
+                          : AppColors.borderSubtle,
                       width: isNearClosure ? 1.5 : 1.0,
                     ),
                   ),
@@ -93,7 +105,9 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                         Icons.sync_rounded,
                         color: isNearClosure
                             ? AppColors.accent
-                            : (isRunActive ? AppColors.textSecondary : AppColors.textMuted),
+                            : (isRunActive
+                                  ? AppColors.textSecondary
+                                  : AppColors.textMuted),
                         size: 16,
                       ),
                       const SizedBox(width: AppSpacing.s4),
@@ -103,7 +117,9 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                           style: TextStyle(
                             color: isNearClosure
                                 ? AppColors.accent
-                                : (isRunActive ? AppColors.textPrimary : AppColors.textMuted),
+                                : (isRunActive
+                                      ? AppColors.textPrimary
+                                      : AppColors.textMuted),
                             fontWeight: FontWeight.w700,
                             fontSize: 11,
                           ),
@@ -143,7 +159,9 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                 ),
                 child: Center(
                   child: Icon(
-                    isRunActive ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    isRunActive
+                        ? Icons.pause_rounded
+                        : Icons.play_arrow_rounded,
                     color: AppColors.onAccent,
                     size: 34,
                   ),

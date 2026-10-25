@@ -226,10 +226,9 @@ class AnomalyService {
     }
     final int splitFeature = (node['split_feature'] as num).toInt();
     final double threshold = (node['threshold'] as num).toDouble();
-    final double val =
-        (splitFeature >= 0 && splitFeature < features.length)
-            ? features[splitFeature]
-            : 0.0;
+    final double val = (splitFeature >= 0 && splitFeature < features.length)
+        ? features[splitFeature]
+        : 0.0;
     if (val <= threshold) {
       if (node.containsKey('left') && node['left'] != null) {
         return _evaluateNode(node['left'] as Map<String, dynamic>, features);
@@ -355,8 +354,7 @@ class AnomalyService {
       final pCurr = window[i];
 
       double dt =
-          (pCurr.timestamp.difference(pPrev.timestamp).inMilliseconds /
-                  1000.0)
+          (pCurr.timestamp.difference(pPrev.timestamp).inMilliseconds / 1000.0)
               .abs();
       if (dt <= 0) dt = 0.001;
       dts.add(dt);
@@ -488,14 +486,12 @@ class AnomalyService {
     if (positions.isEmpty) return AnomalyResult.genuine;
 
     final activity = activityType ?? ExerciseActivityType.running;
-    final double maxInstantSpeedKmh =
-        activity == ExerciseActivityType.running
-            ? _maxHumanSpeedKmh
-            : activity.maxSpeedKmh;
-    final double maxTeleportSpeedKmh =
-        activity == ExerciseActivityType.cycling
-            ? 65.0
-            : (activity == ExerciseActivityType.walking ? 15.0 : 35.0);
+    final double maxInstantSpeedKmh = activity == ExerciseActivityType.running
+        ? _maxHumanSpeedKmh
+        : activity.maxSpeedKmh;
+    final double maxTeleportSpeedKmh = activity == ExerciseActivityType.cycling
+        ? 65.0
+        : (activity == ExerciseActivityType.walking ? 15.0 : 35.0);
 
     // --- Tier 1: Fast Rule-Based Hard Checks ---
     final Position latest = positions.last;
@@ -534,8 +530,7 @@ class AnomalyService {
     if (positions.length >= 2) {
       final Position prev = positions[positions.length - 2];
       final double dtSeconds =
-          (latest.timestamp.difference(prev.timestamp).inMilliseconds /
-                  1000.0)
+          (latest.timestamp.difference(prev.timestamp).inMilliseconds / 1000.0)
               .abs();
       if (dtSeconds > 0 && dtSeconds <= 3.0) {
         final double distMeters = Geolocator.distanceBetween(
@@ -556,10 +551,7 @@ class AnomalyService {
             anomalyScore: 15.0,
             reason:
                 'Position teleportation detected ($distMeters m jump in ${dtSeconds}s)',
-            features: {
-              'stepSpeedKmh': stepSpeedKmh,
-              'distMeters': distMeters,
-            },
+            features: {'stepSpeedKmh': stepSpeedKmh, 'distMeters': distMeters},
           );
         }
 
@@ -567,8 +559,9 @@ class AnomalyService {
         if (dtSeconds > 0.2 && dtSeconds <= 3.0) {
           final double dv = (latest.speed - prev.speed).abs();
           final double accel = dv / dtSeconds;
-          final double maxAccelLimit =
-              activity == ExerciseActivityType.cycling ? 12.0 : 8.0;
+          final double maxAccelLimit = activity == ExerciseActivityType.cycling
+              ? 12.0
+              : 8.0;
           if (accel > maxAccelLimit) {
             AppLogger.warning(
               'CHEAT DETECTED: Acceleration ${accel.toStringAsFixed(2)} m/s² exceeds ${activity.displayName.toLowerCase()} limit (${maxAccelLimit.toStringAsFixed(1)} m/s²)',
@@ -604,8 +597,7 @@ class AnomalyService {
             positions[i + 1].longitude,
           );
         }
-        final double windowAvgSpeedKmh =
-            (totalDist / totalTimeSeconds) * 3.6;
+        final double windowAvgSpeedKmh = (totalDist / totalTimeSeconds) * 3.6;
         if (windowAvgSpeedKmh > activity.maxAverageSpeedKmh) {
           AppLogger.warning(
             'CHEAT DETECTED: Average speed ${windowAvgSpeedKmh.toStringAsFixed(1)} km/h exceeds ${activity.displayName.toLowerCase()} endurance ceiling (${activity.maxAverageSpeedKmh} km/h)',
@@ -641,8 +633,7 @@ class AnomalyService {
         return const AnomalyResult(
           isAnomaly: true,
           anomalyScore: 8.0,
-          reason:
-              'Excessive frozen/replay identical GPS breadcrumbs detected',
+          reason: 'Excessive frozen/replay identical GPS breadcrumbs detected',
           features: {'frozenRatio': 1.0},
         );
       }
@@ -739,10 +730,9 @@ class AnomalyService {
     final double normalizedScore = scoreFeatureVector(fVector);
 
     final bool isAnomaly = normalizedScore > _anomalyThreshold;
-    final String reason =
-        isAnomaly
-            ? 'Unnatural movement pattern (Score: ${normalizedScore.toStringAsFixed(2)})'
-            : 'Genuine running gait';
+    final String reason = isAnomaly
+        ? 'Unnatural movement pattern (Score: ${normalizedScore.toStringAsFixed(2)})'
+        : 'Genuine running gait';
 
     if (isAnomaly) {
       AppLogger.warning(
@@ -774,10 +764,8 @@ class AnomalyService {
   }
 
   Map<String, double> _extractFeatures(List<Position> window) {
-    final List<double> speeds =
-        window.map((p) => p.speed * 3.6).toList();
-    final double avgSpeed =
-        speeds.reduce((a, b) => a + b) / speeds.length;
+    final List<double> speeds = window.map((p) => p.speed * 3.6).toList();
+    final double avgSpeed = speeds.reduce((a, b) => a + b) / speeds.length;
 
     // Max acceleration
     double maxAccel = 0.0;
@@ -802,8 +790,7 @@ class AnomalyService {
       if (diff > 180) diff = 360 - diff;
       totalHeadingDelta += diff;
     }
-    final double headingRate =
-        totalHeadingDelta / (window.length - 1);
+    final double headingRate = totalHeadingDelta / (window.length - 1);
 
     // Sinuosity (direct distance / total path)
     double totalPath = 0.0;
@@ -822,8 +809,7 @@ class AnomalyService {
       window.last.longitude,
     );
     final double sinuosity = directDist / (totalPath + 0.01);
-    final double stopFreq =
-        speeds.where((s) => s < 1.0).length / speeds.length;
+    final double stopFreq = speeds.where((s) => s < 1.0).length / speeds.length;
 
     return {
       'avg_speed': avgSpeed,

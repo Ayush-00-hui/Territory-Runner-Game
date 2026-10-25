@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-
 func TestClientIP_UntrustedByDefault(t *testing.T) {
 	os.Unsetenv("TRUSTED_PROXIES")
 
@@ -82,7 +81,6 @@ func TestKeyForRequest_AuthenticatedUserPrecedence(t *testing.T) {
 	key := api.KeyForRequest(req)
 	assert.Equal(t, "usr:usr_athlete_42", key, "Authenticated user ID must take precedence over IP")
 }
-
 
 func TestRateLimiter_TokenBucket(t *testing.T) {
 	rl := api.NewRateLimiter(2.0, 3.0) // 3 tokens max, 2 tokens/sec

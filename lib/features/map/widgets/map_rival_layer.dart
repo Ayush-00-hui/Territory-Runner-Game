@@ -51,7 +51,10 @@ class MapRivalLayer extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceGlass,
                     borderRadius: BorderRadius.circular(4),
@@ -75,7 +78,10 @@ class MapRivalLayer extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: AppColors.rival,
-                    border: Border.all(color: AppColors.textPrimary, width: 2.0),
+                    border: Border.all(
+                      color: AppColors.textPrimary,
+                      width: 2.0,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: AppColors.rival.withValues(alpha: 0.5),
@@ -85,7 +91,11 @@ class MapRivalLayer extends StatelessWidget {
                     ],
                   ),
                   child: const Center(
-                    child: Icon(Icons.flash_on_rounded, size: 12, color: AppColors.textPrimary),
+                    child: Icon(
+                      Icons.flash_on_rounded,
+                      size: 12,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ],

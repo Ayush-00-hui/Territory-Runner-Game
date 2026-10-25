@@ -77,7 +77,6 @@ func (t *Territory) EffectiveStrength(now time.Time) float64 {
 	return CalculateEffectiveStrength(t.Strength, refTime, now)
 }
 
-
 // IsWeak returns true if dynamic strength has fallen below the weak fortification threshold (30.0).
 func (t *Territory) IsWeak(now time.Time) bool {
 	return t.EffectiveStrength(now) < TerritoryWeakThreshold

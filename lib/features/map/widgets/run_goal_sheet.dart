@@ -281,15 +281,21 @@ class _RunGoalSheetState extends State<RunGoalSheet>
               Row(
                 children: [
                   Icon(
-                    prediction.isColdStart ? Icons.fitness_center_outlined : Icons.auto_awesome,
-                    color: prediction.isColdStart ? AppColors.textMuted : AppColors.accent,
+                    prediction.isColdStart
+                        ? Icons.fitness_center_outlined
+                        : Icons.auto_awesome,
+                    color: prediction.isColdStart
+                        ? AppColors.textMuted
+                        : AppColors.accent,
                     size: 16,
                   ),
                   const SizedBox(width: AppSpacing.s6),
                   Text(
                     'ADAPTIVE DAILY GOALS',
                     style: AppText.caption.copyWith(
-                      color: prediction.isColdStart ? AppColors.textMuted : AppColors.accent,
+                      color: prediction.isColdStart
+                          ? AppColors.textMuted
+                          : AppColors.accent,
                       fontWeight: FontWeight.w700,
                       fontSize: 10,
                       letterSpacing: 0.8,
@@ -297,7 +303,10 @@ class _RunGoalSheetState extends State<RunGoalSheet>
                   ),
                   const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: prediction.isColdStart
                           ? AppColors.textMuted.withValues(alpha: 0.15)
@@ -305,11 +314,15 @@ class _RunGoalSheetState extends State<RunGoalSheet>
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      prediction.isColdStart ? 'Level Baseline (<5 runs)' : 'Personalized AI',
+                      prediction.isColdStart
+                          ? 'Level Baseline (<5 runs)'
+                          : 'Personalized AI',
                       style: AppText.caption.copyWith(
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
-                        color: prediction.isColdStart ? AppColors.textMuted : AppColors.accent,
+                        color: prediction.isColdStart
+                            ? AppColors.textMuted
+                            : AppColors.accent,
                       ),
                     ),
                   ),

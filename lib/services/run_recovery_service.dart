@@ -156,7 +156,10 @@ class RunRecoveryService {
           try {
             await Hive.deleteBoxFromDisk(boxName);
             final cipher = await _encryptionService.getCipherForBox(boxName);
-            _box = await Hive.openBox<String>(boxName, encryptionCipher: cipher);
+            _box = await Hive.openBox<String>(
+              boxName,
+              encryptionCipher: cipher,
+            );
           } catch (_) {
             _box = await Hive.openBox<String>(boxName);
           }

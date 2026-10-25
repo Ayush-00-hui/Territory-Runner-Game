@@ -89,10 +89,7 @@ class RunShareCardActions extends StatelessWidget {
                   ),
                   label: const Text(
                     'Export GPX',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
                   ),
                   onPressed: onExportGpx,
                 ),
@@ -117,10 +114,7 @@ class RunShareCardActions extends StatelessWidget {
                   ),
                   label: const Text(
                     'Export GeoJSON',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
                   ),
                   onPressed: onExportGeoJson,
                 ),
@@ -136,9 +130,7 @@ class RunShareCardActions extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.accent,
               side: const BorderSide(color: AppColors.accent),
-              shape: RoundedRectangleBorder(
-                borderRadius: AppSpacing.br12,
-              ),
+              shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
             ),
             icon: const Icon(
               Icons.analytics_outlined,
@@ -147,10 +139,7 @@ class RunShareCardActions extends StatelessWidget {
             ),
             label: const Text(
               'Export ML Debug Trace (JSON)',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 11,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
             ),
             onPressed: onExportMlTrace,
           ),

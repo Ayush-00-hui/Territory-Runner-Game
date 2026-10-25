@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:territory_runner/core/logging/app_logger.dart';
 
@@ -43,7 +44,8 @@ class MotionWindow {
 /// Internal sample point used during the active 10s accumulation window.
 class _AccelSample {
   final double timestampSec;
-  final double magnitude; // Linear acceleration magnitude: sqrt(x^2 + y^2 + z^2)
+  final double
+  magnitude; // Linear acceleration magnitude: sqrt(x^2 + y^2 + z^2)
 
   const _AccelSample(this.timestampSec, this.magnitude);
 }
@@ -86,21 +88,30 @@ class MotionSensorService {
   /// Average cadence in steps per minute across all completed windows.
   double get averageCadenceSpm {
     if (_completedWindows.isEmpty) return 0.0;
-    final sum = _completedWindows.fold<double>(0.0, (acc, w) => acc + w.cadenceSpm);
+    final sum = _completedWindows.fold<double>(
+      0.0,
+      (acc, w) => acc + w.cadenceSpm,
+    );
     return sum / _completedWindows.length;
   }
 
   /// Average motion energy across all completed windows.
   double get averageMotionEnergy {
     if (_completedWindows.isEmpty) return 0.0;
-    final sum = _completedWindows.fold<double>(0.0, (acc, w) => acc + w.motionEnergy);
+    final sum = _completedWindows.fold<double>(
+      0.0,
+      (acc, w) => acc + w.motionEnergy,
+    );
     return sum / _completedWindows.length;
   }
 
   /// Average cadence confidence across all completed windows.
   double get averageCadenceConfidence {
     if (_completedWindows.isEmpty) return 0.0;
-    final sum = _completedWindows.fold<double>(0.0, (acc, w) => acc + w.cadenceConfidence);
+    final sum = _completedWindows.fold<double>(
+      0.0,
+      (acc, w) => acc + w.cadenceConfidence,
+    );
     return sum / _completedWindows.length;
   }
 
@@ -116,7 +127,8 @@ class MotionSensorService {
     _lastSampleTimeSec = 0.0;
 
     try {
-      final stream = customStream ??
+      final stream =
+          customStream ??
           userAccelerometerEventStream(
             samplingPeriod: const Duration(milliseconds: 40),
           );
@@ -128,9 +140,15 @@ class MotionSensorService {
         },
         cancelOnError: false,
       );
-      AppLogger.info('Motion sensor cadence service started at ~25 Hz', tag: _tag);
+      AppLogger.info(
+        'Motion sensor cadence service started at ~25 Hz',
+        tag: _tag,
+      );
     } catch (e) {
-      AppLogger.warning('Failed to initialize accelerometer stream: $e', tag: _tag);
+      AppLogger.warning(
+        'Failed to initialize accelerometer stream: $e',
+        tag: _tag,
+      );
     }
   }
 
@@ -142,10 +160,13 @@ class MotionSensorService {
     _windowStartTime ??= now;
 
     // Magnitude of linear acceleration (gravity removed by sensor fusion)
-    final mag = math.sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
+    final mag = math.sqrt(
+      event.x * event.x + event.y * event.y + event.z * event.z,
+    );
 
     // Compute relative timestamp in seconds
-    final elapsedSec = now.difference(_windowStartTime!).inMilliseconds / 1000.0;
+    final elapsedSec =
+        now.difference(_windowStartTime!).inMilliseconds / 1000.0;
     _currentSamples.add(_AccelSample(elapsedSec, mag));
     _lastSampleTimeSec = elapsedSec;
 
@@ -202,8 +223,12 @@ class MotionSensorService {
   void _flushCurrentWindow(DateTime windowEndTime) {
     if (_currentSamples.isEmpty) return;
 
-    final windowStart = _windowStartTime ?? windowEndTime.subtract(const Duration(seconds: 10));
-    final duration = math.max(1.0, _lastSampleTimeSec > 0 ? _lastSampleTimeSec : 10.0);
+    final windowStart =
+        _windowStartTime ?? windowEndTime.subtract(const Duration(seconds: 10));
+    final duration = math.max(
+      1.0,
+      _lastSampleTimeSec > 0 ? _lastSampleTimeSec : 10.0,
+    );
 
     final n = _currentSamples.length;
 
@@ -221,9 +246,13 @@ class MotionSensorService {
     // 2. 3-point smoothing filter on demeaned magnitude
     final smoothed = List<double>.filled(n, 0.0);
     for (int i = 0; i < n; i++) {
-      final prev = i > 0 ? _currentSamples[i - 1].magnitude - meanMag : _currentSamples[i].magnitude - meanMag;
+      final prev = i > 0
+          ? _currentSamples[i - 1].magnitude - meanMag
+          : _currentSamples[i].magnitude - meanMag;
       final curr = _currentSamples[i].magnitude - meanMag;
-      final next = i + 1 < n ? _currentSamples[i + 1].magnitude - meanMag : _currentSamples[i].magnitude - meanMag;
+      final next = i + 1 < n
+          ? _currentSamples[i + 1].magnitude - meanMag
+          : _currentSamples[i].magnitude - meanMag;
       smoothed[i] = (prev + 2.0 * curr + next) / 4.0;
     }
 
@@ -293,19 +322,26 @@ class MotionSensorService {
         // Regular athletic running has CV < 0.15. Random vibrations have CV > 0.40.
         final regularityScore = (1.0 - (cv / 0.35)).clamp(0.0, 1.0);
         final energyScore = (motionEnergy / 1.5).clamp(0.0, 1.0);
-        final validStepRatio = (intervals.length / peakTimes.length).clamp(0.0, 1.0);
+        final validStepRatio = (intervals.length / peakTimes.length).clamp(
+          0.0,
+          1.0,
+        );
 
-        cadenceConfidence = (regularityScore * 0.6 + energyScore * 0.2 + validStepRatio * 0.2).clamp(0.0, 1.0);
+        cadenceConfidence =
+            (regularityScore * 0.6 + energyScore * 0.2 + validStepRatio * 0.2)
+                .clamp(0.0, 1.0);
       }
     }
 
-    _completedWindows.add(MotionWindow(
-      startTime: windowStart,
-      durationSeconds: duration,
-      cadenceSpm: cadenceSpm,
-      motionEnergy: motionEnergy,
-      cadenceConfidence: cadenceConfidence,
-    ));
+    _completedWindows.add(
+      MotionWindow(
+        startTime: windowStart,
+        durationSeconds: duration,
+        cadenceSpm: cadenceSpm,
+        motionEnergy: motionEnergy,
+        cadenceConfidence: cadenceConfidence,
+      ),
+    );
 
     // CRITICAL: Immediately clear raw samples to guarantee privacy
     _currentSamples.clear();

@@ -34,9 +34,7 @@ class MapTopBar extends StatelessWidget {
                   AppMotion.selectionTick();
                   Navigator.push(
                     context,
-                    AppMotion.pageRoute(
-                      builder: (_) => const ProfilePage(),
-                    ),
+                    AppMotion.pageRoute(builder: (_) => const ProfilePage()),
                   );
                 },
                 child: Container(

@@ -24,8 +24,9 @@ class SocialSquadTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final incomingRequests =
-        requests.where((r) => r.isIncoming && r.status == 'pending').toList();
+    final incomingRequests = requests
+        .where((r) => r.isIncoming && r.status == 'pending')
+        .toList();
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(
