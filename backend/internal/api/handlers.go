@@ -209,6 +209,28 @@ func (a *API) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, u)
 }
 
+// HandleDeleteMe handles DELETE /v1/me runner account deletion and data purge.
+func (a *API) HandleDeleteMe(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	a.logger.Info("purging user account and cascading data", "uid", uid)
+	if err := a.store.DeleteUser(r.Context(), uid); err != nil {
+		a.logger.Error("failed to delete user account", "error", err, "uid", uid)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete user account")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "deleted",
+		"message": "User account and all associated data have been permanently purged",
+		"user_id": uid,
+	})
+}
+
 // PrivacyZonesPayload encapsulates privacy zones GET/PUT payload.
 type PrivacyZonesPayload struct {
 	PrivacyZones []store.PrivacyZone `json:"privacy_zones"`

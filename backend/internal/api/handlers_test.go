@@ -1744,3 +1744,77 @@ func buildTestJWT(privKey *rsa.PrivateKey, kid, projectID, subject string, exp t
 	}
 	return signed + "." + base64.RawURLEncoding.EncodeToString(sig), nil
 }
+
+func TestHandleDeleteMe_PurgesAccountAndCascades(t *testing.T) {
+	// 1. Production mode unauthorized test: missing auth returns 401
+	prodCfg := &config.Config{AuthMode: "production", FirebaseProjectID: "test-firebase-proj"}
+	keyProvider := auth.NewStaticKeyProvider(map[string]*rsa.PublicKey{})
+	prodAuth := auth.NewAuthenticator(prodCfg, auth.WithKeyProvider(keyProvider))
+	prodMemStore := store.NewMemoryStore()
+	prodAPI := api.NewAPI(prodMemStore, nil, api.WithAuthenticator(prodAuth))
+	prodRouter := api.SetupRouter(prodAPI, prodAuth)
+
+	unauthReq := httptest.NewRequest(http.MethodDelete, "/v1/me", nil)
+	unauthRec := httptest.NewRecorder()
+	prodRouter.ServeHTTP(unauthRec, unauthReq)
+	assert.Equal(t, http.StatusUnauthorized, unauthRec.Code)
+
+	// 2. Dev mode deletion test with cascading data
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+	userID := "runner_delete_me"
+	err := memStore.UpsertUser(ctx, &store.User{
+		ID:           userID,
+		Username:     "DeleteTarget",
+		Faction:      "Cyber Vanguard",
+		TotalAreaSqm: 5000.0,
+		XP:           1200,
+		Level:        3,
+	})
+	require.NoError(t, err)
+
+	// Add privacy zone
+	err = memStore.SetPrivacyZones(ctx, userID, []store.PrivacyZone{
+		{ID: "pz1", UserID: userID, Name: "Home", Latitude: 37.77, Longitude: -122.41, RadiusMeters: 200, IsEnabled: true},
+	})
+	require.NoError(t, err)
+
+	// Save device token
+	err = memStore.SaveDeviceToken(ctx, userID, "token_12345")
+	require.NoError(t, err)
+
+	// Verify user exists
+	u, err := memStore.GetUser(ctx, userID)
+	require.NoError(t, err)
+	require.NotNil(t, u)
+
+	// 3. Issue DELETE /v1/me
+	req := httptest.NewRequest(http.MethodDelete, "/v1/me", nil)
+	req.Header.Set("X-Dev-User", userID)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var resp map[string]interface{}
+	err = json.Unmarshal(rec.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, "deleted", resp["status"])
+	assert.Equal(t, userID, resp["user_id"])
+
+	// 4. Verify user and cascading data are completely purged
+	purgedUser, err := memStore.GetUser(ctx, userID)
+	require.NoError(t, err)
+	assert.Nil(t, purgedUser)
+
+	runs, err := memStore.GetRunsByUser(ctx, userID, 10)
+	require.NoError(t, err)
+	assert.Empty(t, runs)
+
+	zones, err := memStore.GetPrivacyZones(ctx, userID)
+	require.NoError(t, err)
+	assert.Empty(t, zones)
+
+	tokens, err := memStore.GetDeviceTokens(ctx, userID)
+	require.NoError(t, err)
+	assert.Empty(t, tokens)
+}

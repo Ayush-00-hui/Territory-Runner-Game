@@ -83,6 +83,16 @@ func (s *PostgresStore) UpsertUser(ctx context.Context, u *User) error {
 	return err
 }
 
+// DeleteUser permanently purges a user record and cascades to all associated territories, runs, duels, and privacy zones.
+func (s *PostgresStore) DeleteUser(ctx context.Context, userID string) error {
+	query := `DELETE FROM users WHERE id = $1;`
+	_, err := s.pool.Exec(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("error deleting user %s: %w", userID, err)
+	}
+	return nil
+}
+
 // GetRunsByUser retrieves recent runs for a user.
 func (s *PostgresStore) GetRunsByUser(ctx context.Context, userID string, limit int) ([]Run, error) {
 	if limit <= 0 {

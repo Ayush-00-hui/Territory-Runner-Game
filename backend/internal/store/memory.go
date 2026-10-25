@@ -71,6 +71,51 @@ func (m *MemoryStore) UpsertUser(ctx context.Context, u *User) error {
 	return nil
 }
 
+func (m *MemoryStore) DeleteUser(ctx context.Context, userID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	delete(m.users, userID)
+	delete(m.deviceTokens, userID)
+	delete(m.privacyZones, userID)
+	delete(m.userSettings, userID)
+
+	// Cascade delete territories
+	for id, t := range m.territories {
+		if t.OwnerID == userID {
+			delete(m.territories, id)
+		}
+	}
+
+	// Cascade delete runs
+	newOrder := make([]string, 0, len(m.runsByOrder))
+	for _, key := range m.runsByOrder {
+		r, ok := m.runs[key]
+		if ok && r.UserID == userID {
+			delete(m.runs, key)
+		} else if ok {
+			newOrder = append(newOrder, key)
+		}
+	}
+	m.runsByOrder = newOrder
+
+	// Cascade delete friendships
+	for id, f := range m.friendships {
+		if f.RequesterID == userID || f.AddresseeID == userID {
+			delete(m.friendships, id)
+		}
+	}
+
+	// Cascade delete duels
+	for id, d := range m.duels {
+		if d.ChallengerID == userID || d.OpponentID == userID {
+			delete(m.duels, id)
+		}
+	}
+
+	return nil
+}
+
 func (m *MemoryStore) GetRunsByUser(ctx context.Context, userID string, limit int) ([]Run, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

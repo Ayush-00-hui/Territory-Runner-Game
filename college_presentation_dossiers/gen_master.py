@@ -1,0 +1,476 @@
+import sys
+from pathlib import Path
+
+def get_master_html():
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Territory Runner — Master Capstone Work Division & Evaluation Dossier</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- COVER PAGE -->
+  <div class="cover-page">
+    <div class="cover-header">
+      <div class="college-title">DEPARTMENT OF COMPUTER SCIENCE & ENGINEERING</div>
+      <div class="dept-title">FINAL YEAR MAJOR CAPSTONE PROJECT REPORT & DEFENSE HANDBOOK</div>
+      <div class="academic-badge">ACADEMIC YEAR 2025 – 2026</div>
+    </div>
+
+    <div class="cover-body">
+      <div class="project-kicker">MASTER EVALUATION DOSSIER & WORK DIVISION MATRIX</div>
+      <div class="project-main-title">TERRITORY RUNNER</div>
+      <div class="project-sub-title">Server-Authoritative Real-Time GPS Spatial Strategy & Athletic Tracking Platform</div>
+      <div class="role-pill">THREE-STUDENT ENGINEERING PARTNERSHIP (33.3% / 33.3% / 33.3%)</div>
+    </div>
+
+    <div>
+      <div class="cover-details-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+        <div class="detail-card">
+          <div class="detail-label">MEMBER 1 (33.3%)</div>
+          <div class="detail-value">AYUSH</div>
+          <div class="detail-sub">Backend, PostGIS & Anti-Cheat Lead</div>
+        </div>
+        <div class="detail-card">
+          <div class="detail-label">MEMBER 2 (33.3%)</div>
+          <div class="detail-value">GURUDUTT</div>
+          <div class="detail-sub">Mobile Client & Offline Sync Lead</div>
+        </div>
+        <div class="detail-card">
+          <div class="detail-label">MEMBER 3 (33.3%)</div>
+          <div class="detail-value">AVINASH</div>
+          <div class="detail-sub">Geometry, WebSockets & AI Lead</div>
+        </div>
+      </div>
+
+      <div class="cover-signatures">
+        <div>
+          <div class="signature-line">Candidate Representatives<br><strong>AYUSH | GURUDUTT | AVINASH</strong></div>
+        </div>
+        <div>
+          <div class="signature-line">Internal Project Guide<br>Dept. of CSE</div>
+        </div>
+        <div>
+          <div class="signature-line">External Viva Examiner / HOD<br>University Board</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAGE BREAK -->
+  <div class="page-break"></div>
+
+  <!-- SECTION 1: MASTER WORK ALLOCATION MATRIX -->
+  <h1>1. Master Subsystem Allocation & Responsibility Matrix</h1>
+  
+  <p>
+    The <strong>Territory Runner</strong> platform is a multi-tier distributed spatial computing system. To ensure equitable rigor and clear accountability, the system was divided into three distinct, non-overlapping architectural domains of equal academic and engineering weight.
+  </p>
+
+  <div class="callout callout-blue">
+    <strong>Work Equity Guarantee:</strong> Each candidate owns approximately one-third of the codebase, possesses distinct theoretical foundations (Distributed Concurrency, Mobile Lifecycle Hardening, and Computational Geometry/AI), and is individually defensible under tough university examination standards.
+  </div>
+
+  <h2>Master Subsystem Distribution Matrix</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 18%;">Domain</th>
+        <th style="width: 27%;">AYUSH (Backend / DB)</th>
+        <th style="width: 27%;">GURUDUTT (Mobile / Offline)</th>
+        <th style="width: 28%;">AVINASH (Geometry / AI)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Primary Stack</strong></td>
+        <td>Go 1.24, PostgreSQL 16, PostGIS 3.4, Docker</td>
+        <td>Flutter 3.13+, Dart 3, Hive Box Storage</td>
+        <td>Dart Clipper2, Go WebSockets, Gemini Flash, FCM</td>
+      </tr>
+      <tr>
+        <td><strong>Core Modules Owned</strong></td>
+        <td>
+          • Chi REST Router & Middleware<br>
+          • PostGIS Spatial Schema & GiST<br>
+          • <code>pg_advisory_xact_lock</code> Engine<br>
+          • Kinematic Anti-Cheat Filter<br>
+          • Firebase RS256 JWT Verifier<br>
+          • Idempotency Deduplication
+        </td>
+        <td>
+          • Flutter Modular Architecture<br>
+          • Tactical Map Layer Rendering<br>
+          • Foreground Location Service<br>
+          • CPU WakeLocks (<code>wakelock_plus</code>)<br>
+          • Crash Recovery Safety Box<br>
+          • Persistent FIFO Sync Queue
+        </td>
+        <td>
+          • Lasso Loop Closure Snapping<br>
+          • Shoelace / Geodesic Parity<br>
+          • Ray-Casting Donut Classifier<br>
+          • WebSocket Radar Hub<br>
+          • Singleflight Coalescing<br>
+          • FCM HTTP v1 RS256 Push<br>
+          • Gemini 1.5 Flash AI Coach
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Key Source Files</strong></td>
+        <td>
+          <code>backend/cmd/server/main.go</code><br>
+          <code>backend/internal/api/</code><br>
+          <code>backend/internal/store/postgres.go</code><br>
+          <code>backend/internal/anticheat/</code><br>
+          <code>backend/internal/auth/</code>
+        </td>
+        <td>
+          <code>lib/main.dart</code><br>
+          <code>lib/features/map/</code><br>
+          <code>lib/services/location_service.dart</code><br>
+          <code>lib/services/run_recovery_service.dart</code><br>
+          <code>lib/services/sync_queue.dart</code>
+        </td>
+        <td>
+          <code>lib/features/gameplay/polygon_*.dart</code><br>
+          <code>backend/internal/geo/shoelace.go</code><br>
+          <code>backend/internal/ws/hub.go</code><br>
+          <code>backend/internal/notify/fcm.go</code><br>
+          <code>backend/internal/coach/gemini.go</code>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Theoretical Viva Defense</strong></td>
+        <td>
+          ACID vs Spatial Consistency, Advisory Locks vs OCC/Redlock, OGC Simple Features, Biomechanical Velocity Limits
+        </td>
+        <td>
+          Android Doze & iOS Freezing, OOM Killer circumvention, Atomic Key-Value Disk I/O, UI Ergonomics
+        </td>
+        <td>
+          Computational Geometry, Planar vs Ellipsoidal Projections, Cache Stampedes, Singleflight, JWT Assertions
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Test Contributions</strong></td>
+        <td>79 Passing Go Unit/Integration Tests</td>
+        <td>317 Passing Flutter Unit/Widget Tests</td>
+        <td>15 Cross-Platform Golden Parity Tests</td>
+      </tr>
+      <tr>
+        <td><strong>Contribution %</strong></td>
+        <td><strong>33.3%</strong></td>
+        <td><strong>33.3%</strong></td>
+        <td><strong>33.3%</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>RACI Responsibility Assignment Matrix</h2>
+  <p><strong>Legend:</strong> R = Responsible (executes), A = Accountable (final decision), C = Consulted (inputs), I = Informed (notified).</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Lifecycle Feature / Architecture Step</th>
+        <th>AYUSH</th>
+        <th>GURUDUTT</th>
+        <th>AVINASH</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>High-Accuracy 1 Hz Location Capture & Battery Longevity</td>
+        <td>I</td>
+        <td><strong>R / A</strong></td>
+        <td>C</td>
+      </tr>
+      <tr>
+        <td>Real-Time Loop Closure Detection (Lasso Snapping)</td>
+        <td>C</td>
+        <td>C</td>
+        <td><strong>R / A</strong></td>
+      </tr>
+      <tr>
+        <td>Mobile Crash Recovery Safety Box (Hive Disk Serialization)</td>
+        <td>I</td>
+        <td><strong>R / A</strong></td>
+        <td>I</td>
+      </tr>
+      <tr>
+        <td>Optimistic Area Preview & Cross-Engine Golden Verification</td>
+        <td>C</td>
+        <td>C</td>
+        <td><strong>R / A</strong></td>
+      </tr>
+      <tr>
+        <td>Persistent FIFO Offline Sync Queue & Exponential Backoff</td>
+        <td>C</td>
+        <td><strong>R / A</strong></td>
+        <td>I</td>
+      </tr>
+      <tr>
+        <td>REST API Routing, Rate Limiting & Firebase RS256 Auth</td>
+        <td><strong>R / A</strong></td>
+        <td>I</td>
+        <td>C</td>
+      </tr>
+      <tr>
+        <td>Kinematic Anti-Cheat & GPS Spoofing Mitigation Filter</td>
+        <td><strong>R / A</strong></td>
+        <td>I</td>
+        <td>C</td>
+      </tr>
+      <tr>
+        <td>PostGIS Transaction Advisory Locking (<code>pg_advisory_xact_lock</code>)</td>
+        <td><strong>R / A</strong></td>
+        <td>I</td>
+        <td>I</td>
+      </tr>
+      <tr>
+        <td>PostGIS Spatial Topology (<code>ST_Union</code>, <code>ST_Difference</code>)</td>
+        <td><strong>R / A</strong></td>
+        <td>I</td>
+        <td>C</td>
+      </tr>
+      <tr>
+        <td>Real-Time WebSocket Radar & Singleflight Deduplication</td>
+        <td>C</td>
+        <td>C</td>
+        <td><strong>R / A</strong></td>
+      </tr>
+      <tr>
+        <td>Asynchronous FCM HTTP v1 Push Notification Alerts</td>
+        <td>C</td>
+        <td>I</td>
+        <td><strong>R / A</strong></td>
+      </tr>
+      <tr>
+        <td>Google Gemini 1.5 Flash AI Tactical Coaching Proxy</td>
+        <td>C</td>
+        <td>I</td>
+        <td><strong>R / A</strong></td>
+      </tr>
+      <tr>
+        <td>Weekly Competitive League Reset & Percentile Brackets</td>
+        <td>C</td>
+        <td>C</td>
+        <td><strong>R / A</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- PAGE BREAK -->
+  <div class="page-break"></div>
+
+  <!-- SECTION 2: END-TO-END SYSTEM PIPELINE -->
+  <h1>2. Consolidated Architecture & Cross-Member Data Pipeline</h1>
+
+  <p>
+    The sequence below illustrates how the three engineering domains integrate seamlessly during a real-world athletic run session:
+  </p>
+
+  <div class="diagram-box">
+ 🏃 Athlete Runs
+      │
+      ▼
+ [GURUDUTT: Hardware GPS & Foreground Service] ──► Flushes point to Hive Crash Box (GURUDUTT)
+      │
+      ▼ (Lasso Crossing Detected)
+ [AVINASH: Lasso Closure Algorithm] ────────────► Extracts closed polygon ring (AVINASH)
+      │
+      ▼
+ [AVINASH: Client Clipper2 Engine] ─────────────► Instant Optimistic Area Preview on Map (GURUDUTT)
+      │
+      ▼ (Athlete Triggers 1400ms Hold Gesture)
+ [GURUDUTT: Persistent FIFO Sync Queue] ────────► Idempotency Key Generated & Enqueued in Hive (GURUDUTT)
+      │
+      ▼ (Network Sync: POST /v1/runs)
+ [AYUSH: Chi Router & Firebase RS256 Verifier] ──► Token validated & rate-checked (AYUSH)
+      │
+      ▼
+ [AYUSH: Kinematic Anti-Cheat Filter] ──────────► Velocity & acceleration verified (AYUSH)
+      │
+      ▼
+ [AYUSH: pg_advisory_xact_lock Serializable Tx] ► Atomic lock acquired in PostgreSQL (AYUSH)
+      │
+      ▼
+ [AYUSH: PostGIS ST_Union & ST_Difference] ─────► Sovereign land merged; rivals carved (AYUSH)
+      │
+      ├──► HTTP 201 Created ──► Dequeue from Hive & Clear Crash Box (GURUDUTT)
+      │
+      ├──► Async FCM Push (AVINASH) ────────────► "Territory carved by rival" alert dispatched
+      │
+      └──► WebSocket Radar (AVINASH) ───────────► Live presence broadcast via Singleflight hub</div>
+
+  <!-- PAGE BREAK -->
+  <div class="page-break"></div>
+
+  <!-- SECTION 3: 20-MINUTE COLLEGE PRESENTATION DEFENSE STRATEGY -->
+  <h1>3. Joint 20-Minute Defense Presentation Strategy</h1>
+  <p>For the college capstone evaluation panel, the team should execute a synchronized 20-minute presentation followed by a 10-minute viva voce:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 15%;">Time Window</th>
+        <th style="width: 18%;">Presenter</th>
+        <th style="width: 47%;">Presentation Content & Slide Focus</th>
+        <th style="width: 20%;">Visual Asset / Demo</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>0:00 – 2:00</strong><br>(2 mins)</td>
+        <td><strong>AYUSH</strong><br>(Team Lead)</td>
+        <td>
+          • Introduction of project & teammates.<br>
+          • The problem with passive linear trackers (Strava).<br>
+          • Executive overview of Territory Runner & architecture.
+        </td>
+        <td>Project banner & comparative analysis matrix.</td>
+      </tr>
+      <tr>
+        <td><strong>2:00 – 7:30</strong><br>(5.5 mins)</td>
+        <td><strong>AYUSH</strong></td>
+        <td>
+          • Server-authoritative architecture & Go 1.24 Chi API.<br>
+          • PostGIS 3.4 spatial topology (<code>ST_Union</code>, <code>ST_Difference</code>).<br>
+          • Advisory Lock (<code>pg_advisory_xact_lock</code>) vs OCC/Redis.<br>
+          • Kinematic anti-cheat filter & spoofing mitigation.<br>
+          • Idempotency keys & Docker deployment.
+        </td>
+        <td>Database schema, lock contention graph, anti-cheat math.</td>
+      </tr>
+      <tr>
+        <td><strong>7:30 – 13:00</strong><br>(5.5 mins)</td>
+        <td><strong>GURUDUTT</strong></td>
+        <td>
+          • Flutter client architecture & Athletic Minimal design.<br>
+          • Foreground location service & CPU wakelocks.<br>
+          • Overcoming Android Doze & iOS background throttling.<br>
+          • Hive Crash Recovery Safety Box (zero lost waypoints).<br>
+          • Offline-first FIFO sync queue & 1400ms hold gesture.
+        </td>
+        <td>Physical device demo, crash simulation & recovery.</td>
+      </tr>
+      <tr>
+        <td><strong>13:00 – 18:30</strong><br>(5.5 mins)</td>
+        <td><strong>AVINASH</strong></td>
+        <td>
+          • Lasso loop closure snapping & segment intersection math.<br>
+          • Algorithmic parity: Shoelace vs PostGIS (&lt; 0.5% variance).<br>
+          • Ray-casting donut hole classifier (Jordan Curve).<br>
+          • WebSocket radar & singleflight cache coalescing.<br>
+          • FCM HTTP v1 push & Gemini 1.5 Flash AI coaching.
+        </td>
+        <td>Golden fixture comparison table & live radar view.</td>
+      </tr>
+      <tr>
+        <td><strong>18:30 – 20:00</strong><br>(1.5 mins)</td>
+        <td><strong>ALL THREE</strong></td>
+        <td>
+          • Live integrated demonstration: simulating a run loop.<br>
+          • Test metrics: 317 Flutter tests + 79 Go tests passing.<br>
+          • Summary of results and transition to Viva examination.
+        </td>
+        <td>Live dashboard & test execution badge.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- PAGE BREAK -->
+  <div class="page-break"></div>
+
+  <!-- SECTION 4: EVALUATION RUBRIC & GRADING CRITERIA -->
+  <h1>4. College Examination Evaluation Rubric & Sign-Off</h1>
+  <p>Suggested grading evaluation rubric for internal and external project assessment panels:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Evaluation Parameter</th>
+        <th>Max Marks</th>
+        <th>AYUSH (Backend)</th>
+        <th>GURUDUTT (Mobile)</th>
+        <th>AVINASH (Geometry/AI)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Architecture & Design Rigor</strong></td>
+        <td>20</td>
+        <td>PostGIS schema, advisory locks, clean Chi middleware pipeline.</td>
+        <td>Flutter modular design, foreground service, Hive persistence.</td>
+        <td>Dual-engine parity, singleflight WebSocket hub, FCM RS256 flow.</td>
+      </tr>
+      <tr>
+        <td><strong>Code Quality & Implementation</strong></td>
+        <td>20</td>
+        <td>Go 1.24, strict concurrency control, zero race conditions.</td>
+        <td>Dart 3, clean reactive state, zero analyzer warnings.</td>
+        <td>Clipper2 integration, mathematical formulas, prompt engineering.</td>
+      </tr>
+      <tr>
+        <td><strong>Testing, Parity & Verification</strong></td>
+        <td>20</td>
+        <td>79 Go automated tests, lock stress test, CI pipeline.</td>
+        <td>317 Flutter tests, crash recovery simulation, battery profile.</td>
+        <td>15 cross-platform golden fixtures, WebSocket concurrency load tests.</td>
+      </tr>
+      <tr>
+        <td><strong>Viva Voce & Technical Defense</strong></td>
+        <td>20</td>
+        <td>Defense of distributed locks, ACID, anti-cheat kinematics.</td>
+        <td>Defense of OS lifecycle, Doze mode, offline sync mechanics.</td>
+        <td>Defense of Shoelace geometry, singleflight, FCM OAuth2.</td>
+      </tr>
+      <tr>
+        <td><strong>Individual Contribution & Documentation</strong></td>
+        <td>20</td>
+        <td>33.3% equal partner, individual defense dossier, clean docs.</td>
+        <td>33.3% equal partner, individual defense dossier, clean docs.</td>
+        <td>33.3% equal partner, individual defense dossier, clean docs.</td>
+      </tr>
+      <tr>
+        <td><strong>TOTAL SCORE</strong></td>
+        <td><strong>100</strong></td>
+        <td><strong>_____ / 100</strong></td>
+        <td><strong>_____ / 100</strong></td>
+        <td><strong>_____ / 100</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 10mm; border: 2px solid #0f172a; padding: 14px 18px; border-radius: 8px; background: #f8fafc;" class="avoid-break">
+    <h3 style="margin-top: 0; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">CONSOLIDATED FINAL PROJECT EXAMINATION SIGN-OFF</h3>
+    <p style="font-size: 8.5pt; color: #475569; margin-bottom: 14px;">
+      The undersigned examination committee has evaluated the project work entitled <strong>"Territory Runner — Server-Authoritative Real-Time GPS Spatial Strategy & Athletic Tracking Platform"</strong> presented jointly and individually by <strong>AYUSH</strong>, <strong>GURUDUTT</strong>, and <strong>AVINASH</strong>. The individual contributions, technical defenses, and software deliverables meet the standards for the award of the Degree of Bachelor of Technology in Computer Science & Engineering.
+    </p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; text-align: center; margin-top: 12mm;">
+      <div>
+        <div style="border-top: 1px solid #334155; padding-top: 4px; font-weight: 700; font-size: 8.5pt;">Internal Project Guide</div>
+        <div style="font-size: 7.5pt; color: #64748b;">Signature & Date</div>
+      </div>
+      <div>
+        <div style="border-top: 1px solid #334155; padding-top: 4px; font-weight: 700; font-size: 8.5pt;">External Viva Examiner</div>
+        <div style="font-size: 7.5pt; color: #64748b;">Signature & Date</div>
+      </div>
+      <div>
+        <div style="border-top: 1px solid #334155; padding-top: 4px; font-weight: 700; font-size: 8.5pt;">Head of Department (CSE)</div>
+        <div style="font-size: 7.5pt; color: #64748b;">Signature & Seal</div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+"""
+
+if __name__ == "__main__":
+    html_content = get_master_html()
+    out_file = Path(r"c:\Users\AYUSH\Desktop\territory_runner\college_presentation_dossiers\TERRITORY_RUNNER_TEAM_WORK_DIVISION.html")
+    out_file.write_text(html_content, encoding="utf-8")
+    print(f"Written {out_file.name}")

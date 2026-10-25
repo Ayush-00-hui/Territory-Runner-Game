@@ -1,0 +1,411 @@
+/* Shared Print-Ready Styling for College Presentation Dossiers */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@page {
+  size: A4 portrait;
+  margin: 14mm 14mm 14mm 14mm;
+  @bottom-right {
+    content: "Page " counter(page);
+    font-size: 8pt;
+    font-family: 'Inter', sans-serif;
+    color: #64748b;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #0f172a;
+  background-color: #ffffff;
+  line-height: 1.5;
+  font-size: 10pt;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* Page Break Utilities */
+.page-break {
+  page-break-before: always;
+  break-before: page;
+}
+
+.avoid-break {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Cover Page */
+.cover-page {
+  height: 100%;
+  min-height: 250mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 2px solid #0f172a;
+  padding: 24mm 18mm;
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.cover-header {
+  text-align: center;
+  border-bottom: 2px solid #2563eb;
+  padding-bottom: 12mm;
+}
+
+.college-title {
+  font-size: 13pt;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #1e293b;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.dept-title {
+  font-size: 10.5pt;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.academic-badge {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 14px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 8.5pt;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: 1px solid #bfdbfe;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.cover-body {
+  text-align: center;
+  margin: 15mm 0;
+}
+
+.project-kicker {
+  font-size: 9pt;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.project-main-title {
+  font-size: 24pt;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+  margin-bottom: 10px;
+}
+
+.project-sub-title {
+  font-size: 11pt;
+  color: #475569;
+  max-width: 90%;
+  margin: 0 auto 18px auto;
+  line-height: 1.4;
+}
+
+.role-pill {
+  display: inline-block;
+  padding: 8px 20px;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 11pt;
+  font-weight: 700;
+  border-radius: 8px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.cover-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 10mm;
+  text-align: left;
+}
+
+.detail-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.detail-label {
+  font-size: 7.5pt;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+
+.detail-value {
+  font-size: 10pt;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.detail-sub {
+  font-size: 8pt;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.cover-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 8mm;
+  text-align: center;
+}
+
+.signature-line {
+  border-top: 1px dashed #94a3b8;
+  margin-top: 24px;
+  padding-top: 4px;
+  font-size: 8pt;
+  font-weight: 600;
+  color: #334155;
+}
+
+/* Content Headings */
+h1 {
+  font-size: 15pt;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+h2 {
+  font-size: 12pt;
+  font-weight: 700;
+  color: #1e293b;
+  margin-top: 14px;
+  margin-bottom: 8px;
+  border-left: 3px solid #2563eb;
+  padding-left: 8px;
+}
+
+h3 {
+  font-size: 10.5pt;
+  font-weight: 700;
+  color: #334155;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+p {
+  margin-bottom: 8px;
+  color: #334155;
+}
+
+/* Callout Boxes */
+.callout {
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-size: 9pt;
+}
+
+.callout-blue {
+  background-color: #eff6ff;
+  border-left: 4px solid #2563eb;
+  color: #1e40af;
+}
+
+.callout-emerald {
+  background-color: #ecfdf5;
+  border-left: 4px solid #059669;
+  color: #065f46;
+}
+
+.callout-amber {
+  background-color: #fffbeb;
+  border-left: 4px solid #d97706;
+  color: #92400e;
+}
+
+.callout-slate {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #475569;
+  color: #334155;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0 14px 0;
+  font-size: 8.5pt;
+}
+
+th {
+  background-color: #0f172a;
+  color: #ffffff;
+  text-align: left;
+  padding: 7px 10px;
+  font-weight: 600;
+  border: 1px solid #0f172a;
+}
+
+td {
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+
+tr:nth-child(even) td {
+  background-color: #f8fafc;
+}
+
+/* Code & Tech Pills */
+code {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 8pt;
+  background-color: #f1f5f9;
+  padding: 1px 4px;
+  border-radius: 3px;
+  color: #0f172a;
+}
+
+pre {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  background-color: #090b0f;
+  color: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 8pt;
+  line-height: 1.4;
+  overflow-x: hidden;
+  margin: 8px 0 12px 0;
+  border: 1px solid #1e293b;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 7.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-blue { background: #dbeafe; color: #1e40af; }
+.badge-green { background: #d1fae5; color: #065f46; }
+.badge-purple { background: #ede9fe; color: #5b21b6; }
+.badge-coral { background: #ffe4e6; color: #9f1239; }
+.badge-amber { background: #fef3c7; color: #92400e; }
+
+/* Slide Box */
+.slide-card {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #ffffff;
+}
+
+.slide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.slide-number {
+  font-size: 8pt;
+  font-weight: 700;
+  background: #2563eb;
+  color: white;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.slide-title {
+  font-size: 9.5pt;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.speaking-cue {
+  font-size: 8pt;
+  color: #475569;
+  font-style: italic;
+  margin-top: 4px;
+  background: #f8fafc;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border-left: 2px solid #94a3b8;
+}
+
+/* Viva Card */
+.viva-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #ffffff;
+}
+
+.viva-q {
+  font-size: 9.5pt;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.viva-brief {
+  font-size: 8.5pt;
+  font-weight: 600;
+  color: #2563eb;
+  margin-bottom: 4px;
+  background: #eff6ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.viva-defense {
+  font-size: 8.5pt;
+  color: #334155;
+  line-height: 1.45;
+}
+
+/* Diagram Boxes */
+.diagram-box {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 10px;
+  margin: 10px 0;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 7.5pt;
+  line-height: 1.35;
+  color: #0f172a;
+  white-space: pre;
+  overflow: hidden;
+}
