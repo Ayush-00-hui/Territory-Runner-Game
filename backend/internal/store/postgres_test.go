@@ -286,35 +286,22 @@ func TestMigration_000002_OnExistingRows(t *testing.T) {
 
 // 2b. Migration 000011: territories.last_decayed_at column up and down
 func TestMigration_000011_AddLastDecayedAt(t *testing.T) {
-	connStr := getTestConnStr()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	pool, err := pgxpool.New(ctx, connStr)
-	if err != nil {
-		t.Skipf("Skipping: cannot connect: %v", err)
-	}
-	defer pool.Close()
-	if err := pool.Ping(ctx); err != nil {
-		t.Skipf("Skipping: ping failed: %v", err)
-	}
+	_, pool := setupTestStore(t)
+	ctx := context.Background()
 
 	up11, err := readMigration("000011_add_territory_last_decayed_at.up.sql")
 	require.NoError(t, err)
 	down11, err := readMigration("000011_add_territory_last_decayed_at.down.sql")
 	require.NoError(t, err)
 
-	// Apply migration 000011 up
-	_, err = pool.Exec(ctx, up11)
-	require.NoError(t, err, "000011 up should apply cleanly")
-
+	// Since setupTestStore already runs all migrations up to 11, verify column exists
 	var colCount int
 	err = pool.QueryRow(ctx, `
 		SELECT count(*) FROM information_schema.columns 
 		WHERE table_name = 'territories' AND column_name = 'last_decayed_at';
 	`).Scan(&colCount)
 	require.NoError(t, err)
-	assert.Equal(t, 1, colCount, "last_decayed_at column must exist in territories")
+	assert.Equal(t, 1, colCount, "last_decayed_at column must exist in territories initially")
 
 	// Revert 000011 down
 	_, err = pool.Exec(ctx, down11)
@@ -329,7 +316,14 @@ func TestMigration_000011_AddLastDecayedAt(t *testing.T) {
 
 	// Re-apply 000011 up so subsequent tests have the column
 	_, err = pool.Exec(ctx, up11)
+	require.NoError(t, err, "000011 up should re-apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'territories' AND column_name = 'last_decayed_at';
+	`).Scan(&colCount)
 	require.NoError(t, err)
+	assert.Equal(t, 1, colCount, "last_decayed_at column must exist after re-applying up")
 }
 
 // 3. Loop capture with PostGIS ST_PolygonFromText / ST_MakeValid
