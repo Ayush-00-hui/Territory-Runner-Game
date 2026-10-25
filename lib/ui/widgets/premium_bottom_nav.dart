@@ -124,7 +124,6 @@ class PremiumBottomNav extends StatelessWidget {
                   label: isRunActive ? 'Resume run' : 'Start run',
                   child: GestureDetector(
                     onTap: () {
-                      AppMotion.heavyBurst();
                       onStartRun();
                     },
                     behavior: HitTestBehavior.opaque,

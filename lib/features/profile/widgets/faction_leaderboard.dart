@@ -96,78 +96,69 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     return '0 m²';
   }
 
+  static const List<Color> _teamPalette = [
+    AppColors.accent,
+    AppColors.warning,
+    AppColors.info,
+    AppColors.rival,
+    AppColors.success,
+  ];
+
   @override
   Widget build(BuildContext context) {
     final userAreaKm2 = _getUserClaimedAreaKm2();
     final userAreaSqm = userAreaKm2 * 1000000.0;
 
-    // Resolve faction stats either from server standings or local fallback
-    FactionStanding vanguard;
-    FactionStanding syndicate;
-    FactionStanding nomads;
+    List<FactionStanding> activeTeams = [];
 
     if (_standings != null && _standings!.standings.isNotEmpty) {
-      vanguard = _standings!.standings.firstWhere(
-        (s) => s.faction.toLowerCase().contains('vanguard'),
-        orElse: () => const FactionStanding(
-          faction: FactionStanding.defaultFaction,
-          totalAreaSqm: 0,
-          memberCount: 0,
-          percentage: 0,
-        ),
-      );
-      syndicate = _standings!.standings.firstWhere(
-        (s) => s.faction.toLowerCase().contains('syndicate'),
-        orElse: () => const FactionStanding(
-          faction: 'Iron Syndicate',
-          totalAreaSqm: 0,
-          memberCount: 0,
-          percentage: 0,
-        ),
-      );
-      nomads = _standings!.standings.firstWhere(
-        (s) => s.faction.toLowerCase().contains('nomad'),
-        orElse: () => const FactionStanding(
-          faction: 'Neon Nomads',
-          totalAreaSqm: 0,
-          memberCount: 0,
-          percentage: 0,
-        ),
-      );
-    } else {
-      // Local fallback based on verified territories
-      final userFaction = widget.profile.faction.toLowerCase();
-      vanguard = FactionStanding(
-        faction: FactionStanding.defaultFaction,
-        totalAreaSqm: userFaction.contains('vanguard') ? userAreaSqm : 0,
-        memberCount: userFaction.contains('vanguard') ? 1 : 0,
-        percentage: 0,
-      );
-      syndicate = FactionStanding(
-        faction: 'Iron Syndicate',
-        totalAreaSqm: userFaction.contains('syndicate') ? userAreaSqm : 0,
-        memberCount: userFaction.contains('syndicate') ? 1 : 0,
-        percentage: 0,
-      );
-      nomads = FactionStanding(
-        faction: 'Neon Nomads',
-        totalAreaSqm: userFaction.contains('nomad') ? userAreaSqm : 0,
-        memberCount: userFaction.contains('nomad') ? 1 : 0,
-        percentage: 0,
-      );
+      activeTeams =
+          _standings!.standings
+              .where((s) => s.memberCount > 0 || s.totalAreaSqm > 0)
+              .toList()
+            ..sort((a, b) => b.totalAreaSqm.compareTo(a.totalAreaSqm));
+    } else if (_errorMessage != null) {
+      // Server is unreachable, show only player's own team (from local territory area)
+      final userFaction = widget.profile.faction.trim();
+      if (userFaction.isNotEmpty || userAreaSqm > 0) {
+        activeTeams = [
+          FactionStanding(
+            faction: userFaction.isNotEmpty
+                ? userFaction
+                : FactionStanding.defaultFaction,
+            totalAreaSqm: userAreaSqm,
+            memberCount: 1,
+            percentage: 100.0,
+          ),
+        ];
+      }
     }
 
-    final double totalAreaSqm =
-        vanguard.totalAreaSqm + syndicate.totalAreaSqm + nomads.totalAreaSqm;
+    final String badgeText;
+    if (activeTeams.isEmpty) {
+      badgeText = 'Unclaimed';
+    } else if (activeTeams.length == 1) {
+      badgeText = 'Controlled';
+    } else {
+      badgeText = 'Contested';
+    }
 
-    int vanguardPct = 33;
-    int syndicatePct = 33;
-    int nomadsPct = 34;
+    final double totalAreaSqm = activeTeams.fold(
+      0.0,
+      (sum, t) => sum + t.totalAreaSqm,
+    );
 
-    if (totalAreaSqm > 0) {
-      vanguardPct = ((vanguard.totalAreaSqm / totalAreaSqm) * 100).round();
-      syndicatePct = ((syndicate.totalAreaSqm / totalAreaSqm) * 100).round();
-      nomadsPct = (100 - vanguardPct - syndicatePct).clamp(0, 100);
+    final List<int> pctValues = [];
+    final List<int> flexValues = [];
+    for (int i = 0; i < activeTeams.length; i++) {
+      int pct;
+      if (totalAreaSqm > 0) {
+        pct = ((activeTeams[i].totalAreaSqm / totalAreaSqm) * 100).round();
+      } else {
+        pct = (100 / activeTeams.length).round();
+      }
+      pctValues.add(pct);
+      flexValues.add(pct > 0 ? pct : 1);
     }
 
     return Column(
@@ -225,7 +216,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                       ),
                     ),
                     child: Text(
-                      totalAreaSqm > 0 ? 'Contested' : 'Unclaimed',
+                      badgeText,
                       style: AppText.labelSmall.copyWith(
                         color: AppColors.accent,
                         fontSize: 9.5,
@@ -238,64 +229,56 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
               ),
               const SizedBox(height: AppSpacing.s14),
 
-              // Multi-segment territory split bar
-              ClipRRect(
-                borderRadius: AppSpacing.br8,
-                child: SizedBox(
-                  height: 10,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: vanguardPct > 0 ? vanguardPct : 1,
-                        child: Container(color: AppColors.accent),
+              if (activeTeams.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.s16),
+                  child: Center(
+                    child: Text(
+                      'No teams yet',
+                      style: AppText.bodyMedium.copyWith(
+                        color: AppColors.textMuted,
                       ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        flex: syndicatePct > 0 ? syndicatePct : 1,
-                        child: Container(color: AppColors.warning),
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        flex: nomadsPct > 0 ? nomadsPct : 1,
-                        child: Container(color: AppColors.info),
-                      ),
-                    ],
+                    ),
+                  ),
+                )
+              else ...[
+                // Multi-segment territory split bar
+                ClipRRect(
+                  borderRadius: AppSpacing.br8,
+                  child: SizedBox(
+                    height: 10,
+                    child: Row(
+                      children: [
+                        for (int i = 0; i < activeTeams.length; i++) ...[
+                          if (i > 0) const SizedBox(width: 2),
+                          Expanded(
+                            flex: flexValues[i],
+                            child: Container(
+                              color: _teamPalette[i % _teamPalette.length],
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: AppSpacing.s14),
+                const SizedBox(height: AppSpacing.s14),
 
-              // Faction Legend
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildFactionLegend(
-                      'Vanguard',
-                      '$vanguardPct%',
-                      _formatArea(vanguard.totalAreaSqm),
-                      AppColors.accent,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: _buildFactionLegend(
-                      'Syndicate',
-                      '$syndicatePct%',
-                      _formatArea(syndicate.totalAreaSqm),
-                      AppColors.warning,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: _buildFactionLegend(
-                      'Nomads',
-                      '$nomadsPct%',
-                      _formatArea(nomads.totalAreaSqm),
-                      AppColors.info,
-                    ),
-                  ),
-                ],
-              ),
+                // Team Legend
+                Wrap(
+                  spacing: AppSpacing.s16,
+                  runSpacing: AppSpacing.s8,
+                  children: [
+                    for (int i = 0; i < activeTeams.length; i++)
+                      _buildFactionLegend(
+                        activeTeams[i].faction,
+                        '${pctValues[i]}%',
+                        _formatArea(activeTeams[i].totalAreaSqm),
+                        _teamPalette[i % _teamPalette.length],
+                      ),
+                  ],
+                ),
+              ],
 
               if (_errorMessage != null) ...[
                 const SizedBox(height: AppSpacing.s8),
@@ -372,6 +355,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         FittedBox(
           fit: BoxFit.scaleDown,

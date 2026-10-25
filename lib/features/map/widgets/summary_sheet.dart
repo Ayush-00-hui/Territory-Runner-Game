@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../../models/runner_profile.dart';
 import '../../../services/export_service.dart';
+import '../../../services/app_preferences.dart';
+import '../../../services/gallery_saver_service.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../../ui/ui.dart';
 import '../../history/widgets/run_share_card_modal.dart';
@@ -102,6 +105,51 @@ class _SummarySheetState extends State<SummarySheet>
       _replayController.forward();
     } else {
       _replayController.value = 1.0;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _triggerAutoSaveRunCard();
+    });
+  }
+
+  void _triggerAutoSaveRunCard() async {
+    try {
+      if (Platform.environment.containsKey('FLUTTER_TEST')) {
+        return;
+      }
+      final route = widget.routePoints;
+      if (route == null || route.length < 3) {
+        return;
+      }
+      if (!AppPreferences().isAutoSaveCardEnabled) {
+        return;
+      }
+
+      final effectiveArea =
+          widget.areaSqMeters ?? (widget.territoriesClaimed * 15000.0);
+      final renderer = RunShareCardRenderer(
+        distanceKm: widget.distanceKm,
+        durationSeconds: widget.durationSeconds,
+        areaSqMeters: effectiveArea,
+        points: route,
+        callsign: widget.profile.username.isNotEmpty
+            ? widget.profile.username
+            : 'RUNNER',
+        capturedAt: DateTime.now(),
+        theme: ShareCardTheme.athleticDark,
+      );
+
+      final pngBytes = await renderer.render();
+      final result = await GallerySaverService().savePng(pngBytes);
+      if (result.success) {
+        AppToast.showGlobal(
+          result.message,
+          icon: Icons.check_circle_rounded,
+          type: AppToastType.success,
+        );
+      }
+    } catch (_) {
+      // Never block the UI, never throw
     }
   }
 
@@ -749,7 +797,6 @@ class _SummarySheetState extends State<SummarySheet>
             PrimaryButton(
               label: 'Done',
               onPressed: () {
-                AppMotion.heavyBurst();
                 Navigator.pop(context);
               },
             ),

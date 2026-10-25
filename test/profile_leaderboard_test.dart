@@ -208,9 +208,9 @@ void main() {
         // Dominance meter headers
         expect(find.text('Team Standings'), findsOneWidget);
         expect(find.text('Contested'), findsOneWidget);
-        expect(find.text('Vanguard'), findsWidgets);
-        expect(find.text('Syndicate'), findsWidgets);
-        expect(find.text('Nomads'), findsWidgets);
+        expect(find.text('Cyber Vanguard'), findsWidgets);
+        expect(find.text('Iron Syndicate'), findsWidgets);
+        expect(find.text('Neon Nomads'), findsWidgets);
 
         // Scope filter pills
         expect(find.text('Global'), findsOneWidget);
@@ -227,6 +227,34 @@ void main() {
         expect(find.text('GRID_PHANTOM'), findsOneWidget);
       },
     );
+
+    testWidgets('FactionLeaderboard renders empty state when no teams exist', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: FactionLeaderboard(
+                profile: testProfile,
+                territories: const [],
+                initialStandings: const FactionStandingsResponse(
+                  totalAreaSqm: 0,
+                  standings: [],
+                ),
+                initialLeaderboard: const [],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Team Standings'), findsOneWidget);
+      expect(find.text('Unclaimed'), findsOneWidget);
+      expect(find.text('No teams yet'), findsOneWidget);
+    });
 
     testWidgets(
       'ProfileSettingsList renders tactical haptics and no voice coach controls',
@@ -261,7 +289,7 @@ void main() {
 
         // Tap haptic switch
         final switchTiles = find.byType(Switch);
-        expect(switchTiles, findsNWidgets(3));
+        expect(switchTiles, findsNWidgets(5));
 
         await tester.tap(switchTiles.first);
         await tester.pumpAndSettle();

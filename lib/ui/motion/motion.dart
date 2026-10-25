@@ -51,24 +51,29 @@ class AppMotion {
 
   // --- PURPOSEFUL HAPTICS ---
 
-  /// Light selection tick on tap / press
+  /// Global master switch for hardware haptic feedback, kept in sync by [AppPreferences].
+  static bool hapticsEnabled = true;
+
+  /// Light selection tick on tap / press (no-op to prevent UI vibration noise)
   static void selectionTick() {
-    HapticFeedback.selectionClick();
+    // No-op
   }
 
-  /// Light impact tick
+  /// Light impact tick (no-op to prevent UI vibration noise)
   static void lightTick() {
-    HapticFeedback.lightImpact();
+    // No-op
   }
 
-  /// Medium impact on milestone, goal closure or tab switch
+  /// Medium impact (no-op to prevent UI vibration noise)
   static void mediumTick() {
-    HapticFeedback.mediumImpact();
+    // No-op
   }
 
   /// Heavy impact for capture celebration / hold-to-finish completion
   static void heavyBurst() {
-    HapticFeedback.heavyImpact();
+    if (hapticsEnabled) {
+      HapticFeedback.heavyImpact();
+    }
   }
 
   // --- SHARED PAGE TRANSITIONS (FADE + SUBTLE SLIDE) ---

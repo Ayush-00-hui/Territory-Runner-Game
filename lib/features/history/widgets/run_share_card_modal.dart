@@ -10,88 +10,55 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../models/territory.dart';
 import '../../../services/export_service.dart';
+import '../../../services/gallery_saver_service.dart';
 import '../../../ui/ui.dart';
 
 enum ShareCardTheme { athleticDark, cyberVanguard, stealth }
 
-/// Strava / Nike Run Club style story/square card generator for social sharing.
-class RunShareCardModal extends StatefulWidget {
+/// Public standalone 1080x1080 card renderer for social export and auto-save.
+class RunShareCardRenderer {
   final double distanceKm;
   final int durationSeconds;
   final double areaSqMeters;
-  final List<LatLng> points;
+  final dynamic points;
   final String callsign;
-  final String faction;
   final DateTime capturedAt;
+  final ShareCardTheme theme;
 
-  const RunShareCardModal({
-    super.key,
+  const RunShareCardRenderer({
     required this.distanceKm,
     required this.durationSeconds,
     required this.areaSqMeters,
     required this.points,
     required this.callsign,
-    required this.faction,
     required this.capturedAt,
+    this.theme = ShareCardTheme.athleticDark,
   });
 
-  static Future<void> show({
-    required BuildContext context,
-    required double distanceKm,
-    required int durationSeconds,
-    required double areaSqMeters,
-    required List<LatLng> points,
-    required String callsign,
-    required String faction,
-    DateTime? capturedAt,
-  }) {
-    return showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.bgElevated,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (_) => RunShareCardModal(
-        distanceKm: distanceKm,
-        durationSeconds: durationSeconds,
-        areaSqMeters: areaSqMeters,
-        points: points,
-        callsign: callsign,
-        faction: faction,
-        capturedAt: capturedAt ?? DateTime.now(),
-      ),
-    );
+  List<LatLng> get _resolvedPoints {
+    if (points is List<LatLng>) {
+      return points as List<LatLng>;
+    }
+    return const [];
   }
 
-  @override
-  State<RunShareCardModal> createState() => _RunShareCardModalState();
-}
-
-class _RunShareCardModalState extends State<RunShareCardModal> {
-  final GlobalKey _cardKey = GlobalKey();
-  ShareCardTheme _selectedTheme = ShareCardTheme.athleticDark;
-  bool _isExporting = false;
-  String? _exportSuccessMessage;
-  String? _exportErrorMessage;
-
   String _formatPace() {
-    if (widget.distanceKm <= 0) return "--'--\"";
-    final double pace = (widget.durationSeconds / 60.0) / widget.distanceKm;
+    if (distanceKm <= 0) return "--'--\"";
+    final double pace = (durationSeconds / 60.0) / distanceKm;
     final int paceMin = pace.floor();
     final int paceSec = ((pace - paceMin) * 60).round();
     return "$paceMin'${paceSec.toString().padLeft(2, '0')}\"";
   }
 
   String _formatArea() {
-    if (widget.areaSqMeters >= 10000) {
-      return '${(widget.areaSqMeters / 1000000.0).toStringAsFixed(2)} KM²';
+    if (areaSqMeters >= 10000) {
+      return '${(areaSqMeters / 1000000.0).toStringAsFixed(2)} KM²';
     }
-    return '${widget.areaSqMeters.toStringAsFixed(0)} M²';
+    return '${areaSqMeters.toStringAsFixed(0)} M²';
   }
 
   String _formatDate() {
-    final months = [
+    const months = [
       'JAN',
       'FEB',
       'MAR',
@@ -105,14 +72,25 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       'NOV',
       'DEC',
     ];
-    final dt = widget.capturedAt;
+    final dt = capturedAt;
     final hour = dt.hour.toString().padLeft(2, '0');
     final minute = dt.minute.toString().padLeft(2, '0');
     return '${dt.day} ${months[dt.month - 1]} ${dt.year} • $hour:$minute';
   }
 
-  /// Renders a true 1080x1080 PNG image of the share card
-  Future<Uint8List> _renderTrue1080pCard() async {
+  static void _drawText(
+    Canvas canvas,
+    String text,
+    Offset offset,
+    TextStyle style,
+  ) {
+    final span = TextSpan(text: text, style: style);
+    final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
+    tp.layout();
+    tp.paint(canvas, offset);
+  }
+
+  Future<Uint8List> render() async {
     const double targetSize = 1080.0;
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(
@@ -124,7 +102,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     Color accentColor;
     bool hasGridOverlay;
 
-    switch (_selectedTheme) {
+    switch (theme) {
       case ShareCardTheme.athleticDark:
         cardBg = AppColors.bgDeep;
         accentColor = AppColors.accent;
@@ -167,7 +145,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       borderPaint,
     );
 
-    // 4. Header Bar: Logo, App Title, and Sovereign Run Badge
+    // 4. Header Bar: Logo, App Title, and Run Pill
     _drawText(
       canvas,
       'TERRITORY RUNNER',
@@ -181,7 +159,6 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       ),
     );
 
-    // Sovereign Run Pill
     final pillRect = const Rect.fromLTWH(targetSize - 280, 56, 216, 44);
     final pillPaint = Paint()..color = accentColor.withValues(alpha: 0.18);
     canvas.drawRRect(
@@ -213,7 +190,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     canvas.save();
     canvas.translate(80, 150);
     final mapPainter = _ShareCardMapPainter(
-      points: widget.points,
+      points: _resolvedPoints,
       accentColor: accentColor,
     );
     mapPainter.paint(canvas, const Size(920, 500));
@@ -222,7 +199,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     // 6. Callsign & Date Section
     _drawText(
       canvas,
-      widget.callsign.toUpperCase(),
+      callsign.toUpperCase(),
       const Offset(64, 680),
       TextStyle(
         color: AppColors.textPrimary,
@@ -278,7 +255,7 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     );
     _drawText(
       canvas,
-      '${widget.distanceKm.toStringAsFixed(2)} KM',
+      '${distanceKm.toStringAsFixed(2)} KM',
       Offset(64 + colWidth * 0.5 - 65, 846),
       TextStyle(
         color: AppColors.textPrimary,
@@ -381,12 +358,116 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     }
     return byteData.buffer.asUint8List();
   }
+}
 
-  void _drawText(Canvas canvas, String text, Offset offset, TextStyle style) {
-    final span = TextSpan(text: text, style: style);
-    final tp = TextPainter(text: span, textDirection: TextDirection.ltr);
-    tp.layout();
-    tp.paint(canvas, offset);
+/// Strava / Nike Run Club style story/square card generator for social sharing.
+class RunShareCardModal extends StatefulWidget {
+  final double distanceKm;
+  final int durationSeconds;
+  final double areaSqMeters;
+  final List<LatLng> points;
+  final String callsign;
+  final String faction;
+  final DateTime capturedAt;
+
+  const RunShareCardModal({
+    super.key,
+    required this.distanceKm,
+    required this.durationSeconds,
+    required this.areaSqMeters,
+    required this.points,
+    required this.callsign,
+    required this.faction,
+    required this.capturedAt,
+  });
+
+  static Future<void> show({
+    required BuildContext context,
+    required double distanceKm,
+    required int durationSeconds,
+    required double areaSqMeters,
+    required List<LatLng> points,
+    required String callsign,
+    required String faction,
+    DateTime? capturedAt,
+  }) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bgElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (_) => RunShareCardModal(
+        distanceKm: distanceKm,
+        durationSeconds: durationSeconds,
+        areaSqMeters: areaSqMeters,
+        points: points,
+        callsign: callsign,
+        faction: faction,
+        capturedAt: capturedAt ?? DateTime.now(),
+      ),
+    );
+  }
+
+  @override
+  State<RunShareCardModal> createState() => _RunShareCardModalState();
+}
+
+class _RunShareCardModalState extends State<RunShareCardModal> {
+  final GlobalKey _cardKey = GlobalKey();
+  ShareCardTheme _selectedTheme = ShareCardTheme.athleticDark;
+  bool _isExporting = false;
+  String? _exportSuccessMessage;
+  String? _exportErrorMessage;
+
+  String _formatPace() {
+    if (widget.distanceKm <= 0) return "--'--\"";
+    final double pace = (widget.durationSeconds / 60.0) / widget.distanceKm;
+    final int paceMin = pace.floor();
+    final int paceSec = ((pace - paceMin) * 60).round();
+    return "$paceMin'${paceSec.toString().padLeft(2, '0')}\"";
+  }
+
+  String _formatArea() {
+    if (widget.areaSqMeters >= 10000) {
+      return '${(widget.areaSqMeters / 1000000.0).toStringAsFixed(2)} KM²';
+    }
+    return '${widget.areaSqMeters.toStringAsFixed(0)} M²';
+  }
+
+  String _formatDate() {
+    final months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
+    final dt = widget.capturedAt;
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '${dt.day} ${months[dt.month - 1]} ${dt.year} • $hour:$minute';
+  }
+
+  /// Renders a true 1080x1080 PNG image of the share card
+  Future<Uint8List> _renderTrue1080pCard() {
+    return RunShareCardRenderer(
+      distanceKm: widget.distanceKm,
+      durationSeconds: widget.durationSeconds,
+      areaSqMeters: widget.areaSqMeters,
+      points: widget.points,
+      callsign: widget.callsign,
+      capturedAt: widget.capturedAt,
+      theme: _selectedTheme,
+    ).render();
   }
 
   /// Exports the card: renders true 1080x1080 PNG, writes to file, and opens system share sheet
@@ -396,8 +477,6 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
       _exportSuccessMessage = null;
       _exportErrorMessage = null;
     });
-
-    AppMotion.heavyBurst();
 
     try {
       final Uint8List pngBytes = await _renderTrue1080pCard();
@@ -439,33 +518,26 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
     }
   }
 
-  /// Saves the true 1080x1080 PNG to the device documents storage
-  Future<void> _saveCardToDevice() async {
+  /// Saves the true 1080x1080 PNG to the device gallery
+  Future<void> _saveCardToGallery() async {
     setState(() {
       _isExporting = true;
       _exportSuccessMessage = null;
       _exportErrorMessage = null;
     });
 
-    AppMotion.mediumTick();
-
     try {
       final Uint8List pngBytes = await _renderTrue1080pCard();
-      final docDir = await getApplicationDocumentsDirectory();
-      final String filePath =
-          '${docDir.path}/territory_card_${DateTime.now().millisecondsSinceEpoch}.png';
-      final file = File(filePath);
-      await file.writeAsBytes(pngBytes, flush: true);
-
-      if (!await file.exists() || await file.length() == 0) {
-        throw Exception('File write verification failed');
-      }
+      final result = await GallerySaverService().savePng(pngBytes);
 
       if (mounted) {
         setState(() {
           _isExporting = false;
-          _exportSuccessMessage =
-              'Saved 1080x1080 PNG to storage: ${file.path.split(Platform.pathSeparator).last} (${(pngBytes.lengthInBytes / 1024).toStringAsFixed(0)} KB)';
+          if (result.success) {
+            _exportSuccessMessage = result.message;
+          } else {
+            _exportErrorMessage = result.message;
+          }
         });
       }
     } catch (e) {
@@ -657,19 +729,19 @@ class _RunShareCardModalState extends State<RunShareCardModal> {
                       ),
                     ),
                     icon: const Icon(
-                      Icons.download_rounded,
+                      Icons.photo_library_outlined,
                       size: 18,
                       color: AppColors.accent,
                     ),
                     label: Text(
-                      'Save PNG',
+                      'Save to gallery',
                       style: AppText.label.copyWith(
                         color: AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 11,
                       ),
                     ),
-                    onPressed: _isExporting ? null : _saveCardToDevice,
+                    onPressed: _isExporting ? null : _saveCardToGallery,
                   ),
                 ),
               ),

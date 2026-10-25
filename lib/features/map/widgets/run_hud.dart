@@ -17,6 +17,7 @@ class RunHud extends StatefulWidget {
   final double currentSpeedKmh;
   final double satelliteAccuracyMeters;
   final int territoriesClaimed;
+  final int stepCount;
   final double? distanceToClosureMeters;
   final double? proximityToClosure;
   final String? targetPace;
@@ -41,6 +42,7 @@ class RunHud extends StatefulWidget {
     required this.currentSpeedKmh,
     required this.satelliteAccuracyMeters,
     required this.territoriesClaimed,
+    this.stepCount = 0,
     this.distanceToClosureMeters,
     this.proximityToClosure,
     this.targetPace,
@@ -90,6 +92,12 @@ class _RunHudState extends State<RunHud> {
     return "$pMin'${pSec.toString().padLeft(2, '0')}\"";
   }
 
+  String _formatSteps(int steps) {
+    final str = steps.toString();
+    final reg = RegExp(r'\B(?=(\d{3})+(?!\d))');
+    return str.replaceAll(reg, ',');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRunActive = widget.isRunActive;
@@ -101,6 +109,7 @@ class _RunHudState extends State<RunHud> {
     final currentSpeedKmh = widget.currentSpeedKmh;
     final satelliteAccuracyMeters = widget.satelliteAccuracyMeters;
     final territoriesClaimed = widget.territoriesClaimed;
+    final stepCount = widget.stepCount;
     final distanceToClosureMeters = widget.distanceToClosureMeters;
     final proximityToClosure = widget.proximityToClosure;
     final targetPace = widget.targetPace;
@@ -708,6 +717,36 @@ class _RunHudState extends State<RunHud> {
                       Expanded(
                         child: FittedBox(
                           fit: BoxFit.scaleDown,
+                          alignment: Alignment.center,
+                          child: Semantics(
+                            label: 'estimated',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.directions_walk_rounded,
+                                  color: AppColors.accent,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: AppSpacing.s4),
+                                Text(
+                                  '${_formatSteps(stepCount)} steps',
+                                  style: AppText.bodyBold.copyWith(
+                                    fontSize: 11,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.s4),
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
                           alignment: Alignment.centerRight,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -719,7 +758,7 @@ class _RunHudState extends State<RunHud> {
                               ),
                               const SizedBox(width: AppSpacing.s4),
                               Text(
-                                '$territoriesClaimed territories',
+                                '$territoriesClaimed claimed',
                                 style: AppText.bodyBold.copyWith(
                                   fontSize: 11,
                                   fontFeatures: const [
@@ -962,7 +1001,6 @@ class _RunHudState extends State<RunHud> {
                       onTapUp: (_) => setState(() => _isPlayPressed = false),
                       onTapCancel: () => setState(() => _isPlayPressed = false),
                       onTap: () {
-                        AppMotion.heavyBurst();
                         onToggleRun();
                       },
                       behavior: HitTestBehavior.opaque,

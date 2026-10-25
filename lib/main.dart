@@ -187,7 +187,7 @@ class _TerritoryAppState extends State<TerritoryApp> {
       title: 'Territory Runner',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: homeWidget,
+      home: AppIntroGate(child: homeWidget),
     );
   }
 }

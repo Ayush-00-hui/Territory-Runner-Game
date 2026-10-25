@@ -219,7 +219,6 @@ class _RunGoalSheetState extends State<RunGoalSheet>
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
               ),
               onPressed: () {
-                AppMotion.heavyBurst();
                 final goal = RunGoal(
                   type: _selectedType,
                   targetValue: _selectedValue,

@@ -2,15 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
-import '../core/logging/app_logger.dart';
+import '../ui/ui.dart';
 
 /// Supported distance and area measurement systems
 enum DistanceUnit { metric, imperial }
 
 /// Global Application Preferences & Hardware Feedback Service
 ///
-/// Owns persistent user preferences for distance units and tactical haptics,
-/// alongside unit-conversion, formatting helpers, and tactical vibration triggers.
+/// Owns persistent user preferences for distance units and sensory feedback,
+/// alongside unit-conversion, formatting helpers, and vibration triggers.
 class AppPreferences {
   static final AppPreferences _instance = AppPreferences._internal();
   factory AppPreferences() => _instance;
@@ -19,11 +19,15 @@ class AppPreferences {
   static const String _prefUnitKey = 'pref_distance_unit';
   static const String _prefLeftHandedKey = 'pref_left_handed_mode';
   static const String _prefDailyGoalKmKey = 'pref_daily_goal_km';
+  static const String _prefCountdownVoiceKey = 'pref_countdown_voice_enabled';
+  static const String _prefAutoSaveCardKey = 'pref_auto_save_run_card';
 
   bool _isHapticsEnabled = true;
   DistanceUnit _unit = DistanceUnit.metric;
   bool _isLeftHandedMode = false;
   double? _dailyGoalKm;
+  bool _isCountdownVoiceEnabled = true;
+  bool _isAutoSaveCardEnabled = true;
   bool _isInitialized = false;
 
   final ValueNotifier<bool> leftHandedModeNotifier = ValueNotifier<bool>(false);
@@ -35,6 +39,8 @@ class AppPreferences {
   DistanceUnit get unit => _unit;
   bool get isLeftHandedMode => _isLeftHandedMode;
   double? get dailyGoalKm => _dailyGoalKm;
+  bool get isCountdownVoiceEnabled => _isCountdownVoiceEnabled;
+  bool get isAutoSaveCardEnabled => _isAutoSaveCardEnabled;
   bool get isInitialized => _isInitialized;
 
   AppPreferences._internal() {
@@ -47,6 +53,9 @@ class AppPreferences {
     try {
       final prefs = await SharedPreferences.getInstance();
       _isHapticsEnabled = prefs.getBool(_prefHapticsKey) ?? true;
+      AppMotion.hapticsEnabled = _isHapticsEnabled;
+      _isCountdownVoiceEnabled = prefs.getBool(_prefCountdownVoiceKey) ?? true;
+      _isAutoSaveCardEnabled = prefs.getBool(_prefAutoSaveCardKey) ?? true;
       _isLeftHandedMode = prefs.getBool(_prefLeftHandedKey) ?? false;
       leftHandedModeNotifier.value = _isLeftHandedMode;
       _dailyGoalKm = prefs.getDouble(_prefDailyGoalKmKey);
@@ -85,12 +94,31 @@ class AppPreferences {
     } catch (_) {}
   }
 
-  /// Toggles persistent tactical haptic feedback
+  /// Toggles persistent haptic feedback
   Future<void> toggleHaptics(bool enabled) async {
     _isHapticsEnabled = enabled;
+    AppMotion.hapticsEnabled = enabled;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefHapticsKey, enabled);
+    } catch (_) {}
+  }
+
+  /// Toggles countdown voice announcements and audio beeps
+  Future<void> toggleCountdownVoice(bool enabled) async {
+    _isCountdownVoiceEnabled = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefCountdownVoiceKey, enabled);
+    } catch (_) {}
+  }
+
+  /// Toggles automatic gallery export when completing a GPS run
+  Future<void> toggleAutoSaveCard(bool enabled) async {
+    _isAutoSaveCardEnabled = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefAutoSaveCardKey, enabled);
     } catch (_) {}
   }
 
@@ -184,6 +212,7 @@ class AppPreferences {
   Future<void> triggerRunCompleteHaptic() => triggerHaptic([0, 300, 150, 300]);
   Future<void> triggerGoalAchievedHaptic() =>
       triggerHaptic([0, 150, 80, 150, 80, 250]);
-  Future<void> triggerAutoPauseHaptic() => triggerHaptic([0, 100, 100, 100]);
-  Future<void> triggerAutoResumeHaptic() => triggerHaptic([0, 80]);
+  // Auto-pause and auto-resume haptics removed to prevent sensory vibration clutter
+  Future<void> triggerAutoPauseHaptic() async {}
+  Future<void> triggerAutoResumeHaptic() async {}
 }

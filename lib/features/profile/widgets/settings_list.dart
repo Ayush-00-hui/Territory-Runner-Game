@@ -163,7 +163,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
   }
 
   Future<void> _executeAccountDeletion(BuildContext context) async {
-    AppMotion.heavyBurst();
     AppToast.show(context, 'Purging account and data...');
 
     try {
@@ -228,7 +227,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               ),
             ),
             subtitle: Text(
-              'Vibration on loop closure and territory claimed',
+              'Key events only: run start, loop closed, milestones, alerts, and finish',
               style: AppText.bodySmall.copyWith(
                 color: AppColors.textMuted,
                 fontSize: 11,
@@ -311,6 +310,70 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               AppMotion.selectionTick();
               setState(() {
                 _appPrefs.toggleLeftHandedMode(val);
+              });
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          SwitchListTile(
+            secondary: const Icon(
+              Icons.record_voice_over_rounded,
+              color: AppColors.accent,
+              size: 20,
+            ),
+            title: Text(
+              'Countdown voice & sounds',
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            subtitle: Text(
+              'Audio beeps and vocal prompts before run start',
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
+            ),
+            activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accentContainer,
+            value: _appPrefs.isCountdownVoiceEnabled,
+            onChanged: (val) {
+              AppMotion.selectionTick();
+              setState(() {
+                _appPrefs.toggleCountdownVoice(val);
+              });
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          SwitchListTile(
+            secondary: const Icon(
+              Icons.photo_library_rounded,
+              color: AppColors.accent,
+              size: 20,
+            ),
+            title: Text(
+              'Auto-save run card',
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            subtitle: Text(
+              'Save 1080p card to photo gallery when run completes',
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
+            ),
+            activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accentContainer,
+            value: _appPrefs.isAutoSaveCardEnabled,
+            onChanged: (val) {
+              AppMotion.selectionTick();
+              setState(() {
+                _appPrefs.toggleAutoSaveCard(val);
               });
             },
           ),

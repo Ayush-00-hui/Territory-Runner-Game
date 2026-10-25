@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -13,7 +12,6 @@ import '../../../services/auto_pause_engine.dart';
 import '../../../services/gps_quality_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/run_recovery_service.dart';
-import '../../../ui/ui.dart';
 import '../../gameplay/polygon_enclosure_engine.dart';
 import '../../gameplay/territory_service.dart';
 import '../notifiers/run_telemetry_notifier.dart';
@@ -269,7 +267,6 @@ class MapRunController extends ChangeNotifier {
     );
 
     _appPrefs.triggerLoopClosedHaptic();
-    AppMotion.heavyBurst();
   }
 
   void _startRunTimer() {
@@ -283,14 +280,10 @@ class MapRunController extends ChangeNotifier {
         _isAutoPaused = true;
         _locationService.setTrackingMode(GpsTrackingMode.paused);
         telemetryNotifier.setAutoPaused(true);
-        _appPrefs.triggerAutoPauseHaptic();
-        HapticFeedback.mediumImpact();
       } else if (transition == AutoPauseTransition.resumed) {
         _isAutoPaused = false;
         _locationService.setTrackingMode(GpsTrackingMode.activeRun);
         telemetryNotifier.setAutoPaused(false);
-        _appPrefs.triggerAutoResumeHaptic();
-        HapticFeedback.lightImpact();
       }
 
       if (!_autoPauseEngine.isAutoPaused) {

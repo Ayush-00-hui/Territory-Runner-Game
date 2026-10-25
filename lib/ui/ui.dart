@@ -25,5 +25,6 @@ export 'widgets/territory_art.dart';
 export 'widgets/combined_status_indicator.dart';
 export 'widgets/territory_hero_card.dart';
 export 'widgets/premium_bottom_nav.dart';
+export 'widgets/app_intro_animation.dart';
 export 'theme/app_version.dart';
 export '../core/logging/app_logger.dart';

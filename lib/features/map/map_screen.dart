@@ -39,6 +39,7 @@ import 'widgets/run_go_cue.dart';
 import 'widgets/map_layers_sheet.dart';
 import '../profile/widgets/offline_maps_sheet.dart';
 import 'widgets/run_hud.dart';
+import 'widgets/run_countdown_overlay.dart';
 import 'widgets/run_goal_sheet.dart';
 import 'widgets/map_layers.dart';
 import 'widgets/pacer_sheet.dart';
@@ -50,6 +51,22 @@ import 'widgets/amoled_battery_saver_overlay.dart';
 import '../../profile_page.dart';
 import 'models/run_telemetry.dart';
 import 'notifiers/run_telemetry_notifier.dart';
+
+/// Helper to estimate steps from distance based on exercise activity type.
+/// Running: 1.05m per step, walking: 0.75m per step, cycling: 0.
+int estimateSteps(
+  double distanceKm, [
+  ExerciseActivityType activity = ExerciseActivityType.running,
+]) {
+  if (activity == ExerciseActivityType.cycling) {
+    return 0;
+  }
+  final meters = distanceKm * 1000.0;
+  if (activity == ExerciseActivityType.walking) {
+    return (meters / 0.75).round();
+  }
+  return (meters / 1.05).round();
+}
 
 class MapScreenFeature extends StatefulWidget {
   final bool isActive;
@@ -97,6 +114,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   LatLng? _currentLocation;
   bool _isRunActive = false;
+  bool _isCountingDown = false;
   int _lastAnnouncedKm = 0;
   final ExerciseActivityType _selectedActivity = ExerciseActivityType.running;
 
@@ -340,6 +358,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   @override
   void didUpdateWidget(covariant MapScreenFeature oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (!widget.isActive && _isCountingDown) {
+      _cancelCountdown();
+    }
     if (widget.isActive != oldWidget.isActive) {
       if (widget.isActive) {
         _resumeIdleServices();
@@ -355,6 +376,9 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   @override
   void dispose() {
+    if (_isCountingDown) {
+      _cancelCountdown();
+    }
     _territoriesNotifier.dispose();
     _totalAreaSqKmNotifier.dispose();
     _notificationSub?.cancel();
@@ -839,7 +863,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           final int currentKmFloor = _runDistanceKm.floor();
           if (currentKmFloor > _lastAnnouncedKm && currentKmFloor >= 1) {
             _lastAnnouncedKm = currentKmFloor;
-            HapticFeedback.heavyImpact();
             _appPrefs.triggerMilestoneHaptic();
             AppToast.show(
               context,
@@ -979,8 +1002,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       if (progress >= 1.0) {
         _goalCompletedAnnounced = true;
         _appPrefs.triggerGoalAchievedHaptic();
-        HapticFeedback.heavyImpact();
-        AppMotion.heavyBurst();
         AppToast.show(
           context,
           'Target completed: ${_activeGoal.title}',
@@ -1004,14 +1025,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
           _isAutoPaused = true;
           _locationService.setTrackingMode(GpsTrackingMode.paused);
           _telemetryNotifier.setAutoPaused(true);
-          _appPrefs.triggerAutoPauseHaptic();
-          HapticFeedback.mediumImpact();
         } else if (transition == AutoPauseTransition.resumed) {
           _isAutoPaused = false;
           _locationService.setTrackingMode(GpsTrackingMode.activeRun);
           _telemetryNotifier.setAutoPaused(false);
-          _appPrefs.triggerAutoResumeHaptic();
-          HapticFeedback.lightImpact();
         }
 
         if (!_autoPauseEngine.isAutoPaused) {
@@ -1042,97 +1059,131 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   }
 
   void _toggleRun() {
+    if (_isCountingDown) {
+      _cancelCountdown();
+      return;
+    }
     if (!_isRunActive) {
-      // START RUN
-      _polygonEngine.clear();
-      _lastShownRejectionReason = null;
-      _polygonEngine.setActivityType(_selectedActivity);
-      _runCoordinates.clear();
-      _rollingPaceWindow.clear();
-      _runPathUpdateNotifier.value++;
-      _telemetryNotifier.reset();
-      _telemetryNotifier.setRunActive(true);
-      _locationService.setTrackingMode(
-        GpsTrackingMode.activeRun,
-        liveStatusText: "${_selectedActivity.displayName} in progress...",
-        activityType: _selectedActivity,
-      );
-
-      setState(() {
-        _isRunActive = true;
-        MapScreenFeature.isRunActiveNotifier.value = true;
-        _showGoCue = true;
-        _territoriesClaimedThisRun = 0;
-        _accumulatedRunPreviewArea = 0.0;
-        _accumulatedRunPreviewXp = 0;
-        _runDistanceKm = 0.0;
-        _elapsedDurationSeconds = 0;
-        _movingDurationSeconds = 0;
-        _isAutoPaused = false;
-        _goalCompletedAnnounced = false;
-        _autoPauseEngine.reset();
-        _lastAnnouncedKm = 0;
-      });
-
-      _startRunTimer();
-      if (_isScreenAwakeEnabled) {
-        WakelockPlus.enable();
-      }
-
-      _appPrefs.triggerRunStartHaptic();
+      _startCountdownAndRun();
     } else {
-      // STOP RUN & TRIGGER SUMMARY
-      _runTimer?.cancel();
-      WakelockPlus.disable();
-      _runRecoveryService.clearRecovery();
+      _stopRun();
+    }
+  }
+
+  void _startCountdownAndRun() {
+    if (_isRunActive || _isCountingDown) return;
+    setState(() {
+      _isCountingDown = true;
+    });
+  }
+
+  void _cancelCountdown() {
+    if (!_isCountingDown) return;
+    setState(() {
+      _isCountingDown = false;
+    });
+  }
+
+  void _onCountdownComplete() {
+    if (!_isCountingDown) return;
+    setState(() {
+      _isCountingDown = false;
+    });
+    _startRunCore();
+  }
+
+  void _startRunCore() {
+    // START RUN
+    _polygonEngine.clear();
+    _lastShownRejectionReason = null;
+    _polygonEngine.setActivityType(_selectedActivity);
+    _runCoordinates.clear();
+    _rollingPaceWindow.clear();
+    _runPathUpdateNotifier.value++;
+    _telemetryNotifier.reset();
+    _telemetryNotifier.setRunActive(true);
+    _locationService.setTrackingMode(
+      GpsTrackingMode.activeRun,
+      liveStatusText: "${_selectedActivity.displayName} in progress...",
+      activityType: _selectedActivity,
+    );
+
+    setState(() {
+      _isRunActive = true;
+      MapScreenFeature.isRunActiveNotifier.value = true;
+      _showGoCue = true;
+      _territoriesClaimedThisRun = 0;
+      _accumulatedRunPreviewArea = 0.0;
+      _accumulatedRunPreviewXp = 0;
+      _runDistanceKm = 0.0;
+      _elapsedDurationSeconds = 0;
+      _movingDurationSeconds = 0;
+      _isAutoPaused = false;
+      _goalCompletedAnnounced = false;
       _autoPauseEngine.reset();
-      _locationService.setTrackingMode(GpsTrackingMode.idle);
-      _telemetryNotifier.setRunActive(false);
+      _lastAnnouncedKm = 0;
+    });
 
-      final int finalSeconds = _movingDurationSeconds > 0
-          ? _movingDurationSeconds
-          : _elapsedDurationSeconds;
-      final double finalDistance = _runDistanceKm;
-      final int finalTerritories = _territoriesClaimedThisRun;
+    _startRunTimer();
+    if (_isScreenAwakeEnabled) {
+      WakelockPlus.enable();
+    }
 
-      _territoryService.defendTerritory(_firebaseService.currentUserId);
-      _refreshTerritoryCache();
-      setState(() {
-        _isRunActive = false;
-        MapScreenFeature.isRunActiveNotifier.value = false;
-        _isAutoPaused = false;
-        _lastShownRejectionReason = null;
-        _highlightedTerritoryId = null;
-        _activeSuggestedRoute = null;
-      });
+    _appPrefs.triggerRunStartHaptic();
+  }
 
-      _appPrefs.triggerRunCompleteHaptic();
-      _territoryService.addRunDistance(finalDistance);
+  void _stopRun() {
+    // STOP RUN & TRIGGER SUMMARY
+    _runTimer?.cancel();
+    WakelockPlus.disable();
+    _runRecoveryService.clearRecovery();
+    _autoPauseEngine.reset();
+    _locationService.setTrackingMode(GpsTrackingMode.idle);
+    _telemetryNotifier.setRunActive(false);
 
-      if (_runCoordinates.length >= 3) {
-        SyncQueueService().enqueueRun(
-          points: List<LatLng>.from(_runCoordinates),
-          durationSeconds: finalSeconds,
-          distanceMeters: finalDistance * 1000.0,
-          activityType: _selectedActivity.id,
-          clientPreviewArea: _accumulatedRunPreviewArea,
-          clientPreviewXp: _accumulatedRunPreviewXp,
-        );
-      }
+    final int finalSeconds = _movingDurationSeconds > 0
+        ? _movingDurationSeconds
+        : _elapsedDurationSeconds;
+    final double finalDistance = _runDistanceKm;
+    final int finalTerritories = _territoriesClaimedThisRun;
 
-      SummarySheet.show(
-        context: context,
-        distanceKm: finalDistance,
+    _territoryService.defendTerritory(_firebaseService.currentUserId);
+    _refreshTerritoryCache();
+    setState(() {
+      _isRunActive = false;
+      MapScreenFeature.isRunActiveNotifier.value = false;
+      _isAutoPaused = false;
+      _lastShownRejectionReason = null;
+      _highlightedTerritoryId = null;
+      _activeSuggestedRoute = null;
+    });
+
+    _appPrefs.triggerRunCompleteHaptic();
+    _territoryService.addRunDistance(finalDistance);
+
+    if (_runCoordinates.length >= 3) {
+      SyncQueueService().enqueueRun(
+        points: List<LatLng>.from(_runCoordinates),
         durationSeconds: finalSeconds,
-        territoriesClaimed: finalTerritories,
-        profile: _territoryService.getProfile(),
-        coachService: _coachService,
-        routePoints: List<LatLng>.from(_runCoordinates),
-        areaSqMeters: _accumulatedRunPreviewArea > 0
-            ? _accumulatedRunPreviewArea
-            : null,
+        distanceMeters: finalDistance * 1000.0,
+        activityType: _selectedActivity.id,
+        clientPreviewArea: _accumulatedRunPreviewArea,
+        clientPreviewXp: _accumulatedRunPreviewXp,
       );
     }
+
+    SummarySheet.show(
+      context: context,
+      distanceKm: finalDistance,
+      durationSeconds: finalSeconds,
+      territoriesClaimed: finalTerritories,
+      profile: _territoryService.getProfile(),
+      coachService: _coachService,
+      routePoints: List<LatLng>.from(_runCoordinates),
+      areaSqMeters: _accumulatedRunPreviewArea > 0
+          ? _accumulatedRunPreviewArea
+          : null,
+    );
   }
 
   void _openClaimPlanner() {
@@ -1172,7 +1223,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     });
 
     if (!_isRunActive) {
-      _toggleRun();
+      _startCountdownAndRun();
     }
 
     AppToast.show(
@@ -1211,7 +1262,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
   }
 
   void _inspectSectorAt(LatLng point) {
-    HapticFeedback.selectionClick();
     final territories = _territoryService.getCapturedTerritoryObjects();
     final double area = territories.fold(0.0, (sum, t) => sum + t.areaSqMeters);
     AppToast.show(
@@ -1251,7 +1301,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
 
   void _runAutomatedLoopDemo() {
     if (!_isRunActive) {
-      _toggleRun();
+      _startRunCore();
     }
 
     final center = _currentLocation ?? const LatLng(37.7749, -122.4194);
@@ -1326,7 +1376,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
     );
 
     if (!_isRunActive) {
-      _toggleRun();
+      _startRunCore();
     }
 
     const double delta = 0.0018;
@@ -1378,7 +1428,6 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       type: AppToastType.error,
       duration: const Duration(seconds: 4),
     );
-    HapticFeedback.heavyImpact();
   }
 
   void _openToolsSheet() {
@@ -1658,6 +1707,10 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     builder: (context, telemetry, _) {
                       return RunHud(
                         isRunActive: _isRunActive,
+                        stepCount: estimateSteps(
+                          telemetry.distanceKm,
+                          _selectedActivity,
+                        ),
                         isSearchingGps: _currentLocation == null,
                         isAutoPaused: telemetry.isAutoPaused,
                         distanceKm: telemetry.distanceKm,
@@ -1704,6 +1757,15 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
                     onDismissed: () {
                       if (mounted) setState(() => _showGoCue = false);
                     },
+                  ),
+                ),
+
+              // 5b. Run Countdown Overlay (3-second athletic countdown)
+              if (_isCountingDown)
+                Positioned.fill(
+                  child: RunCountdownOverlay(
+                    onComplete: _onCountdownComplete,
+                    onCancel: _cancelCountdown,
                   ),
                 ),
 
@@ -1815,7 +1877,7 @@ class _MapScreenFeatureState extends State<MapScreenFeature> {
       }
 
       if (!_isRunActive) {
-        _toggleRun();
+        _startCountdownAndRun();
       }
 
       AppToast.show(

@@ -30,6 +30,10 @@
 		<string>Territory Runner needs access to your location to track your running routes and map claimed territories.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>Territory Runner needs continuous background location to record your route and claim territory when your screen is locked or the app is minimized.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>Territory Runner needs permission to save run cards to your photo library.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Territory Runner needs permission to access your photo library to save run cards.</string>
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>location</string>

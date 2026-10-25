@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../services/user_settings_service.dart';
 import '../../../ui/ui.dart';
@@ -117,7 +116,6 @@ class _LiveVisibilitySheetContentState
   }) {
     return InkWell(
       onTap: () async {
-        HapticFeedback.selectionClick();
         await _settings.setLiveVisibility(visibility);
         if (mounted) setState(() {});
       },
