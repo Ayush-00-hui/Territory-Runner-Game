@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Territory Runner — High-Yield Technical Study Notes</title>
+<style>
+  @page {
+    size: A4;
+    margin: 16mm 14mm 16mm 14mm;
+    @bottom-right {
+      content: counter(page);
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #1e293b;
+    background-color: #ffffff;
+    line-height: 1.45;
+    font-size: 10.5pt;
+    margin: 0;
+    padding: 0;
+  }
+
+  h1, h2, h3, h4 {
+    color: #0f172a;
+    font-weight: 700;
+    margin-top: 14pt;
+    margin-bottom: 6pt;
+    page-break-after: avoid;
+  }
+
+  h1 {
+    font-size: 18pt;
+    border-bottom: 2.5px solid #2563eb;
+    padding-bottom: 4pt;
+    margin-top: 0;
+  }
+
+  h2 {
+    font-size: 13.5pt;
+    color: #1e40af;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 3pt;
+    margin-top: 16pt;
+  }
+
+  h3 {
+    font-size: 11pt;
+    color: #0f172a;
+    margin-top: 10pt;
+  }
+
+  p {
+    margin-top: 0;
+    margin-bottom: 6pt;
+  }
+
+  ul, ol {
+    margin-top: 0;
+    margin-bottom: 8pt;
+    padding-left: 18pt;
+  }
+
+  li {
+    margin-bottom: 3pt;
+  }
+
+  code {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    font-size: 9pt;
+    background: #f1f5f9;
+    padding: 1.5pt 4pt;
+    border-radius: 3pt;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+  }
+
+  pre {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 8pt 10pt;
+    border-radius: 4pt;
+    font-size: 8.5pt;
+    line-height: 1.35;
+    overflow-x: auto;
+    page-break-inside: avoid;
+    margin-top: 4pt;
+    margin-bottom: 8pt;
+  }
+
+  pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #f8fafc;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 6pt;
+    margin-bottom: 10pt;
+    font-size: 8.8pt;
+    page-break-inside: avoid;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1;
+    padding: 5pt 7pt;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background-color: #f1f5f9;
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2pt 6pt;
+    font-size: 7.5pt;
+    font-weight: 700;
+    border-radius: 3pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-blue { background: #dbeafe; color: #1e40af; }
+  .badge-green { background: #dcfce7; color: #166534; }
+  .badge-purple { background: #f3e8ff; color: #6b21a8; }
+  .badge-amber { background: #fef3c7; color: #92400e; }
+
+  .callout {
+    border-left: 3.5px solid #2563eb;
+    background: #f8fafc;
+    padding: 6pt 10pt;
+    margin: 8pt 0;
+    border-radius: 0 4pt 4pt 0;
+    page-break-inside: avoid;
+  }
+
+  .callout-title {
+    font-weight: 700;
+    color: #1e40af;
+    font-size: 9.5pt;
+    margin-bottom: 2pt;
+  }
+
+  .callout-amber {
+    border-left-color: #f59e0b;
+    background: #fffbeb;
+  }
+
+  .callout-amber .callout-title {
+    color: #b45309;
+  }
+
+  .callout-green {
+    border-left-color: #10b981;
+    background: #f0fdf4;
+  }
+
+  .callout-green .callout-title {
+    color: #047857;
+  }
+
+  .formula-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 4pt;
+    padding: 6pt 10pt;
+    margin: 6pt 0;
+    font-family: "SFMono-Regular", Consolas, monospace;
+    font-size: 9pt;
+    page-break-inside: avoid;
+  }
+
+  .qa-block {
+    margin-bottom: 10pt;
+    page-break-inside: avoid;
+    border: 1px solid #e2e8f0;
+    border-radius: 4pt;
+    padding: 8pt 10pt;
+    background: #ffffff;
+  }
+
+  .qa-q {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 9.8pt;
+    margin-bottom: 4pt;
+  }
+
+  .qa-a {
+    color: #334155;
+    font-size: 9.2pt;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  .meta-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #cbd5e1;
+    padding-bottom: 4pt;
+    margin-bottom: 10pt;
+    font-size: 8.5pt;
+    color: #64748b;
+  }
+
+  .section-divider {
+    page-break-before: always;
+  }
+</style>
+</head>
+<body>
+
+<div class="meta-header">
+  <span><strong>TERRITORY RUNNER</strong> — High-Yield Technical Study Notes & Architecture Dossier</span>
+  <span>Flutter • Go • PostGIS • LightGBM • Gemini AI</span>
+</div>
+
+<h1>🏃 Territory Runner — High-Yield Technical Study Notes</h1>
+
+<p style="font-size: 10.5pt; color: #475569; margin-bottom: 10pt;">
+  A concentrated technical reference for students, engineers, and examiners covering the core spatial geometry, machine learning models, distributed concurrency architecture, and mobile hardening implementations of Territory Runner.
+</p>
+
+<!-- SECTION 1 -->
+<h2>1. The Core Vision & Spatial Paradigm</h2>
+<p>
+  <strong>The Problem with Existing Fitness Apps:</strong> Traditional apps (Strava, Nike Run Club) log passive 1D linear polylines. Existing location games (Ingress, Pokémon GO, Turf) enforce rigid, discrete spatial grids (Google S2 cells or Uber H3 hexagons) that disrupt athletic cadence with stop-and-go screen tapping.
+</p>
+<p>
+  <strong>The Territory Runner Paradigm:</strong>
+</p>
+<ul>
+  <li><strong>Continuous 2D Organic Polygons:</strong> Athletes run closed loops around city blocks, parks, or paths to conquer arbitrary organic 2D geometries without artificial grid constraints.</li>
+  <li><strong>Momentum-Preserving Lasso Snapping:</strong> Crossing an outgoing trail automatically extracts and captures the closed polygon while retaining the preceding trail, allowing continuous multi-loop running without session restarts.</li>
+  <li><strong>Server-Authoritative Concurrency:</strong> All spatial mutations (<code>ST_Union</code>, <code>ST_Difference</code>) execute inside transaction-scoped PostgreSQL advisory locks (<code>pg_advisory_xact_lock</code>) to guarantee atomic, race-free spatial consistency.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Dimension</th>
+      <th>Standard Trackers (Strava, Nike)</th>
+      <th>Grid GPS Games (Ingress, Turf)</th>
+      <th>Territory Runner</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Spatial Model</strong></td>
+      <td>Passive 1D linear tracks (no ownership)</td>
+      <td>Rigid discrete cells (S2 / H3 hexagons)</td>
+      <td><strong>Continuous arbitrary 2D organic polygons</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Enclosure Detection</strong></td>
+      <td>None</td>
+      <td>Fixed point-of-interest portal linking</td>
+      <td><strong>Real-time 2D segment cross-product + proximity snap</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Concurrency Control</strong></td>
+      <td>Independent tracks (no conflict)</td>
+      <td>Optimistic locking with retry aborts</td>
+      <td><strong>PostgreSQL transaction advisory locks (<code>pg_advisory_xact_lock</code>)</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Anti-Cheat Verification</strong></td>
+      <td>Post-hoc manual flag reviews</td>
+      <td>Basic static speed ceilings</td>
+      <td><strong>Tier 1 deterministic gate + Tier 2 LightGBM 25-feature ML ensemble</strong></td>
+    </tr>
+    <tr>
+      <td><strong>Offline Capability</strong></td>
+      <td>Records trail, no gameplay</td>
+      <td>Fails completely without cellular signal</td>
+      <td><strong>Dual-engine: local Clipper2 preview + persistent Hive FIFO sync</strong></td>
+    </tr>
+  </tbody>
+</table>
+
+<!-- SECTION 2 -->
+<h2>2. Complete Mathematical & Geometric Algorithms</h2>
+
+<h3>2.1 Segment Cross-Product Intersection & Lasso Snapping</h3>
+<p>
+  When an athlete moves, segment $\overline{P_1 P_2}$ (current fix) is tested against every historical segment $\overline{P_3 P_4}$. The 2D cross-product line determinant is:
+</p>
+<div class="formula-box">
+  Denominator D = (x1 - x2)(y3 - y4) - (y1 - y2)(x3 - x4)<br>
+  t = [ (x1 - x3)(y3 - y4) - (y1 - y3)(x3 - x4) ] / D<br>
+  u = -[ (x1 - x2)(y1 - y3) - (y1 - y2)(x1 - x3) ] / D
+</div>
+<ul>
+  <li><strong>Intersection Criteria:</strong> A valid intersection occurs iff $0 \le t \le 1$ and $0 \le u \le 1$.</li>
+  <li><strong>Exact Snapping Point:</strong> $\mathbf{P}_{\text{int}} = (x_1 + t(x_2 - x_1), \; y_1 + t(y_2 - y_1))$.</li>
+  <li><strong>Lasso Extraction:</strong> The closed polygon $[\mathbf{P}_{\text{int}}, P_{j+1}, \dots, P_{n-1}, \mathbf{P}_{\text{int}}]$ is carved. Breadcrumbs prior to $P_j$ are retained as the active trail.</li>
+  <li><strong>Proximity Fallback:</strong> If no direct line crossing occurs, a $35\text{ m}$ proximity scan snaps to the nearest vertex that does not induce self-intersection.</li>
+</ul>
+
+<h3>2.2 Azimuthal Equidistant Centroid Tangent Projection + Gauss Shoelace</h3>
+<p>
+  Planar Shoelace formulas fail on spherical Earth coordinates because longitude degrees shrink away from the equator ($\Delta x \approx R \cdot \Delta \lambda \cdot \cos\phi$).
+</p>
+<div class="formula-box">
+  1. Centroid: &phi;0 = (1/N) &sum; &phi;i,   &lambda;0 = (1/N) &sum; &lambda;i<br>
+  2. Local Tangent Projection (R = 6,371,000 m):<br>
+     xi = R * (&lambda;i - &lambda;0) * cos((&phi;i + &phi;0) / 2)<br>
+     yi = R * (&phi;i - &phi;0)<br>
+  3. Planar Shoelace (Gauss Area):<br>
+     Area = 0.5 * | &sum; (xi * y_{i+1} - x_{i+1} * yi) |
+</div>
+<div class="callout callout-green">
+  <div class="callout-title">Geometric Parity Verification</div>
+  For athletic runs (&lt; 5 km&sup2;), the planar projection error against PostGIS ellipsoidal <code>ST_Area(geom::geography)</code> is strictly <strong>&lt; 0.2%</strong>. Across 7 shared golden test fixtures, Dart Clipper2 and Go PostGIS agree within <strong>&lt; 0.5%</strong>.
+</div>
+
+<h3>2.3 PostGIS Topological Sanitation Pipeline</h3>
+<p>GPS noise causes bowtie self-intersections and duplicate vertices that trigger PostGIS <code>TopologyException</code> errors. The server sanitizes all incoming polygons:</p>
+<pre><code>ST_Multi(ST_CollectionExtract(
+    ST_MakeValid(ST_SetSRID(ST_GeomFromText($1), 4326)), 
+    3
+))</code></pre>
+<ul>
+  <li><code>ST_MakeValid</code>: Resolves self-intersecting bowties into valid multipolygon sub-rings and dissolves collinear zero-area spikes.</li>
+  <li><code>ST_CollectionExtract(..., 3)</code>: Discards degenerate points (dim 1) and linestrings (dim 2), retaining strictly 2D polygons (dim 3).</li>
+  <li><code>ST_Multi</code>: Standardizes output to <code>geometry(MultiPolygon, 4326)</code>.</li>
+</ul>
+
+<h3>2.4 Donut Hole Ray-Casting Classification</h3>
+<p>
+  When runners circle a city block enclosing an interior rival island or unclaimable structure, horizontal rays are cast to infinity ($+\infty, y$). By the Jordan Curve Theorem, points with an odd crossing count are interior; points with an odd nesting depth (depth 1, 3, ...) are classified as interior holes and assigned to FlutterMap's <code>holePointsList</code> to render transparent cutouts.
+</p>
+
+<!-- SECTION 3 -->
+<div class="section-divider"></div>
+<h2>3. AI & Machine Learning Systems</h2>
+
+<h3>3.1 Tier 1: Sub-Microsecond Deterministic Rule Gate (0.05 µs)</h3>
+<p>Evaluates incoming fixes with zero heap allocations to reject gross physical impossibilities:</p>
+<ul>
+  <li><strong>Hardware Mock Location:</strong> Inspects Android's <code>is_mocked</code> provider flag (scores 99.0).</li>
+  <li><strong>Activity Speed Ceilings:</strong> Running $25\text{ km/h}$, Walking $10\text{ km/h}$, Cycling $50\text{ km/h}$ (+40 score on violation).</li>
+  <li><strong>Biomechanical Acceleration Limit:</strong> Sprint biomechanics cap forward acceleration at $\approx 4.5\text{ m/s}^2$. Any acceleration $a = \Delta v / \Delta t > 8.0\text{ m/s}^2$ ($> 12.0\text{ m/s}^2$ for cycling) across $\Delta t \le 3.0\text{ s}$ rejects the run.</li>
+  <li><strong>Frozen Replay Detection:</strong> If $\ge 50\%$ of adjacent GPS vertices share identical $(lat, lon)$ coordinates while distance advances, the trace is flagged as synthetic emulator injection.</li>
+</ul>
+
+<h3>3.2 Tier 2: LightGBM Kinematic Anomaly Classifier</h3>
+<p>
+  Classifies subtle transit patterns (e.g. low-speed city buses, electric scooters, timestamp dilation) using a <strong>60-tree LightGBM ensemble</strong>.
+</p>
+<ul>
+  <li><strong>Datasets:</strong> Microsoft GeoLife GNSS (182 users, 17k trajectories, 127k 30s sliding windows) + Synchronized IMU logs (13 athletes, 25 Hz accelerometer) + 1,200 held-out synthetic adversarial attack windows.</li>
+  <li><strong>Validation Protocol:</strong> 5-fold <strong>Leave-One-User-Out Cross-Validation (LOUO-CV)</strong>. Splitting by <code>user_id</code> guarantees that individual runner gait signatures never leak across training/test splits.</li>
+  <li><strong>25 Kinematic Features:</strong> Speed quantiles ($p_{10}, p_{50}, p_{90}, p_{99}$), speed variance, mean/peak acceleration, acceleration jerk ($\Delta a / \Delta t$), sinuosity (path length / displacement), stop frequency ($v < 0.5\text{ m/s}$), mean cadence ($spm$), cadence-to-speed ratio, motion energy.</li>
+</ul>
+
+<table>
+  <thead>
+    <tr>
+      <th>Model Architecture</th>
+      <th>PR-AUC (95% CI)</th>
+      <th>Recall @ 1% FPR</th>
+      <th>Recall @ 5% FPR</th>
+      <th>Inference Latency</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Rule Baseline</strong></td>
+      <td>0.8124 [0.801, 0.824]</td>
+      <td>41.20%</td>
+      <td>58.40%</td>
+      <td>0.05 µs</td>
+    </tr>
+    <tr>
+      <td><strong>Logistic Regression</strong></td>
+      <td>0.8945 [0.885, 0.904]</td>
+      <td>62.10%</td>
+      <td>78.30%</td>
+      <td>1.20 µs</td>
+    </tr>
+    <tr>
+      <td><strong>LightGBM (60 Trees)</strong></td>
+      <td><strong>0.9782 [0.972, 0.984]</strong></td>
+      <td><strong>84.30%</strong></td>
+      <td><strong>92.15%</strong></td>
+      <td><strong>7.52 µs</strong></td>
+    </tr>
+    <tr>
+      <td><strong>1D-CNN + GRU</strong></td>
+      <td>0.9810 [0.975, 0.986]</td>
+      <td>86.10%</td>
+      <td>93.40%</td>
+      <td>84.20 µs</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout callout-green">
+  <div class="callout-title">Zero-Python Native Production Evaluators</div>
+  Model trees compile into pure native Go (<code>ml_ensemble.go</code>) and pure Dart (<code>anomaly_service.dart</code>).
+  Floating-point output agrees with the Python C++ booster within $8.67 \times 10^{-19}$ in Go and $4.12 \times 10^{-5}$ in Dart, achieving <strong>100% decision parity</strong> with zero PyTorch/TensorFlow runtime dependencies. Verified on startup with SHA-256 hash <code>46c87109b1e7...</code>.
+</div>
+
+<h3>3.3 Quantile Athletic Progression Regressors</h3>
+<p>
+  Predicts personalized performance intervals $[p_{10}, p_{50}, p_{90}]$ for achievable pace and distance using pinball loss optimization:
+  $\mathcal{L}_\alpha(y, \hat{y}) = \max(\alpha(y - \hat{y}), (\alpha - 1)(y - \hat{y}))$.
+  Trained on chronological forward temporal splits (first 75% sessions train, last 25% test) to prevent temporal lookahead bias.
+</p>
+
+<h3>3.4 Google Gemini 2.5 Flash Coach Proxy</h3>
+<p>
+  Generates post-run physiological coaching debriefs analyzing cardiovascular effort, split pace degradation, and territory tactics.
+  API keys reside strictly on the server; an on-device rule engine evaluates split pace variance if offline.
+</p>
+
+<!-- SECTION 4 -->
+<h2>4. Distributed Systems & Concurrency Architecture</h2>
+
+<h3>4.1 Transaction-Scoped Advisory Locking (<code>pg_advisory_xact_lock</code>)</h3>
+<p>
+  Multiple athletes contesting the same territory sector serialize via PostgreSQL advisory locks:
+</p>
+<pre><code>-- Transaction-scoped: Automatically released on COMMIT or ROLLBACK
+SELECT pg_advisory_xact_lock(hashtext('territory_mutation_lock'));
+
+-- Atomically update rival territories and union winner's geometry
+UPDATE territories t SET geom = ST_Difference(t.geom, vl.geom) ...;
+INSERT INTO territories (...) VALUES (...) ON CONFLICT (owner_id) 
+DO UPDATE SET geom = ST_Union(territories.geom, EXCLUDED.geom) ...;</code></pre>
+<ul>
+  <li><strong>Why not OCC?</strong> OCC version conflicts cause cascading rollbacks and high retry latency when runners contest the same park.</li>
+  <li><strong>Why not Redis Redlock?</strong> Redis dual-system coordination risks split-brain inconsistencies under network pauses or GC halts. PostgreSQL advisory locks run in-kernel and auto-release on transaction completion.</li>
+  <li><strong>Pooler Caveat:</strong> Connect strictly via <strong>Session Mode (Port 5432)</strong>. Transaction-mode poolers (port 6543) break advisory locks and prepared query execution plans.</li>
+</ul>
+
+<h3>4.2 WebSocket Presence Hub & Singleflight Coalescing</h3>
+<ul>
+  <li><strong>Decoupled Snapshotting:</strong> Takes a quick read-lock snapshot of connected clients and releases <code>hub.mu.RUnlock()</code> before evaluating database or friendship operations, preventing framing deadlocks.</li>
+  <li><strong>Singleflight Coalescing:</strong> Under multi-runner GPS presence broadcasts, concurrent friendship lookups for the same sender coalesce through <code>hub.sfGroup.Do(senderID, ...)</code>. Exactly one database query executes while all callers share the result.</li>
+</ul>
+
+<h3>4.3 Lazy Territory Strength Decay on Read</h3>
+<p>
+  Instead of wasteful scheduled cron sweeps over millions of geometric rows:
+  $\text{Strength}(t) = \max\left(0, 100.0 - 15.0 \times \Delta t_{\text{days}}\right)$.
+  Evaluated lazily on read queries in $O(1)$ time. Defending runners reset strength to 100.0 on write.
+</p>
+
+<!-- SECTION 5 -->
+<div class="section-divider"></div>
+<h2>5. Mobile Client Engineering & Hardware Hardening</h2>
+
+<h3>5.1 Background GPS Tracking Hardening</h3>
+<ul>
+  <li><strong>Android:</strong> Configured an Android Foreground Service (<code>FOREGROUND_SERVICE_LOCATION</code>) with a persistent sticky notification displaying live workout metrics and an acquired CPU WakeLock (<code>wakelock_plus</code>) to prevent OS CPU sleep.</li>
+  <li><strong>iOS:</strong> Configured <code>UIBackgroundModes: location</code>, <code>allowsBackgroundLocationUpdates: true</code>, and <code>activityType: Fitness</code>.</li>
+</ul>
+
+<h3>5.2 Crash Recovery Safety Box (<code>RunRecoveryService</code>)</h3>
+<p>
+  Incoming GPS coordinates flush continuously to disk in Hive box <code>active_run_recovery</code>. Upon unexpected OS termination, the app detects unfinalized sessions on relaunch, restoring coordinates, duration, and live preview area without data loss.
+</p>
+
+<h3>5.3 Offline-First FIFO Sync Queue (<code>SyncQueueService</code>)</h3>
+<p>
+  Runs serialize into Hive box <code>sync_queue</code> with client-generated idempotent UUIDs. Local Clipper2 renders instant optimistic previews. On network reconnection, runs flush sequentially with exponential backoff ($2\text{s}, 4\text{s}, \dots \max 60\text{s}$). Permanent 4xx client errors halt retries immediately to protect battery.
+</p>
+
+<h3>5.4 AMOLED Endurance Battery Saver Mode</h3>
+<ul>
+  <li><strong>Subpixel Physics:</strong> Modern AMOLED displays emit light per subpixel; pure black (<code>#000000</code>) draws $0\text{ mW}$.</li>
+  <li><strong>Suspension:</strong> Suspends 60 FPS map tile repaints, territory shaders, and camera updates.</li>
+  <li><strong>GPS Duty-Cycling:</strong> Relaxes GPS polling from 1 Hz ($1\text{s}, 2\text{m}$) to 0.33 Hz ($3\text{s}, 8\text{m}$), achieving <strong>60–80% display power reduction</strong> during 2+ hour marathon training.</li>
+</ul>
+
+<h3>5.5 15-Second Zero-Interpolation Signal Gap Policy</h3>
+<p>
+  Signal dropouts exceeding 15 seconds segment the track buffer rather than interpolating across unknown terrain. Dead-reckoning through urban canyons or tunnels risks hallucinating paths through impassable buildings or private property; resetting ensures every captured polygon represents physically verified athlete movement.
+</p>
+
+<!-- SECTION 6 -->
+<h2>6. Security, Privacy & Zero-Trust Architecture</h2>
+<ul>
+  <li><strong>Firebase Auth RS256 JWT Verification:</strong> Server fetches and caches Google's public x509 certificates (respecting HTTP <code>Cache-Control</code> headers) and verifies token signatures via <code>rsa.VerifyPKCS1v15</code> with <code>crypto.SHA256</code>.</li>
+  <li><strong>Dual-Layer Privacy Exclusion Zones:</strong> Circular exclusion zones ($50\text{ m} - 2000\text{ m}$) centered around home/workplace coordinates. Coordinates inside active zones are excised from public GPX/GeoJSON exports, and WebSocket presence broadcasts to rivals are suppressed.</li>
+  <li><strong>Social Anti-Abuse Integrity:</strong> Database unique symmetric index <code>ON duels (LEAST(challenger, opponent), GREATEST(challenger, opponent))</code> prevents concurrent duplicate challenges. Self-challenges are blocked, XP stakes bounded $[0, 1000]$, and modality matching enforced.</li>
+</ul>
+
+<!-- SECTION 7 -->
+<h2>7. Master Viva / Interview Defense Cheatsheet</h2>
+
+<div class="qa-block">
+  <div class="qa-q">Q1: Why use PostgreSQL advisory locks (pg_advisory_xact_lock) instead of OCC or Redis Redlock?</div>
+  <div class="qa-a"><strong>Defense:</strong> In territory conquest, multiple runners actively compete to carve the same contested city block. Under OCC, concurrent writes abort with version conflicts, causing cascading rollbacks and wasted CPU overhead re-executing expensive PostGIS differences. Redis Redlock requires managing dual-system state; network pauses or GC halts risk split-brain inconsistencies without monotonic fencing tokens. <code>pg_advisory_xact_lock</code> runs directly inside the PostgreSQL kernel, strictly serializes spatial operations, and auto-releases on COMMIT or ROLLBACK.</div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q">Q2: Why use the planar Shoelace formula on mobile while using PostGIS ST_Area on the server?</div>
+  <div class="qa-a"><strong>Defense:</strong> Evaluating spherical ellipsoidal geodesics (Vincenty or Karney) on mobile UI threads causes 60 FPS frame drops and drains battery. Local tangent projection followed by planar Shoelace computes in $O(N)$ with &lt; 0.2% error for human running scales (&lt; 5 km&sup2;). The client calculation is purely an optimistic preview; server PostGIS <code>ST_Area(geom::geography)</code> is the sole authoritative source of truth. Both engines agree within &lt; 0.5% across 7 shared golden fixtures.</div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q">Q3: How does the presence dispatcher prevent WebSocket deadlocks, and why use singleflight?</div>
+  <div class="qa-a"><strong>Defense:</strong> The hub takes a quick read-lock snapshot of connected clients and releases <code>hub.mu.RUnlock()</code> <em>before</em> entering database operations, completely decoupling network framing from store I/O. Singleflight coalesces concurrent cache-miss lookups per sender so that exactly one database query executes while all waiting callers share the result. When friendships change, <code>hub.InvalidateFriends</code> evicts cached sets with zero staleness.</div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q">Q4: Why reject pure Figure-8 loops while accepting Lasso loops?</div>
+  <div class="qa-a"><strong>Defense:</strong> Pure Figure-8 loops ($A \bowtie B$) produce opposing loops that cancel each other out in EvenOdd fill rules or create topological ambiguity regarding sovereign intent; both engines reject them with <code>INVALID_LOOP</code>. In Lasso loops, a runner circles around an area and crosses their earlier trail; the engine snaps precisely at the intersection point, claims the loop, and retains the preceding trail so the runner can continue and close further loops in the same session.</div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q">Q5: Why evaluate territory decay lazily on read instead of running background cron sweeps?</div>
+  <div class="qa-a"><strong>Defense:</strong> Lazy evaluation ($\text{Strength} = \max(0, 100 - 15 \times \Delta t)$) eliminates wasteful scheduled cron sweeps over millions of inactive geometric rows. Defending runners reset strength to 100 on write, guaranteeing $O(1)$ query evaluation and zero background database I/O amplification.</div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q">Q6: Why zero-interpolation across GPS signal dropouts exceeding 15 seconds?</div>
+  <div class="qa-a"><strong>Defense:</strong> Dead-reckoning through urban canyons or tunnels risks hallucinating paths through impassable buildings or private property. Threshold $\Delta t > 15.0\text{ s}$ immediately segments the track buffer; resetting ensures every captured polygon represents physically verified athlete movement.</div>
+</div>
+
+<div class="qa-block">
+  <div class="qa-q">Q7: Why FCM HTTP v1 with OAuth2 RS256 instead of legacy Firebase server keys?</div>
+  <div class="qa-a"><strong>Defense:</strong> Google deprecated the legacy FCM API in June 2024. Legacy server keys were permanent strings that granted unrestricted access if leaked. FCM HTTP v1 requires short-lived (60 min) OAuth2 tokens signed with RS256 assertions using service account keys. The backend uses the pure Go standard library (<code>crypto/rsa</code>, <code>crypto/sha256</code>) and dispatches in detached goroutines (5s timeout) to prevent push latency from blocking the HTTP 201 response.</div>
+</div>
+
+<div class="meta-header" style="margin-top: 14pt; border-top: 1px solid #cbd5e1; border-bottom: none; padding-top: 6pt;">
+  <span>Territory Runner • Server-Authoritative Real-Time GPS Territory Capture</span>
+  <span>Page End • Level 0 to Master</span>
+</div>
+
+</body>
+</html>
