@@ -42,7 +42,7 @@
 
 <br>
 
-[Level 0: Concept](#-level-0-the-high-altitude-concept--paradigm) • [Level 1: Quickstart](#-level-1-fast-track-onboarding-zero-to-running-in-5-minutes) • [Level 2: Gameplay](#-level-2-gameplay-mechanics--athlete-experience) • [Level 3: Mobile](#-level-3-mobile-client-engineering--offline-resiliency-flutter) • [Level 4: Backend](#-level-4-backend-engineering--distributed-spatial-systems-go--postgis) • [Level 5: Security](#-level-5-cryptography-privacy--zero-trust-security) • [Level 6: AI/ML](#-level-6-machine-learning--anti-cheat-pipeline) • [Level 7: Master](#-level-7-master-level-testing-verification--production-ops)
+[Level 0: Concept](#-level-0-the-high-altitude-concept--paradigm) • [Level 1: Quickstart](#-level-1-fast-track-onboarding-zero-to-running-in-5-minutes) • [Level 2: Gameplay](#-level-2-gameplay-mechanics--athlete-experience) • [Level 3: Mobile](#-level-3-mobile-client-engineering--offline-resiliency-flutter) • [Level 4: Backend](#-level-4-backend-engineering--distributed-spatial-systems-go--postgis) • [Level 5: Security](#-level-5-cryptography-privacy--zero-trust-security) • [Level 6: AI/ML](#-level-6-machine-learning--anti-cheat-pipeline) • [Level 7: Master](#-level-7-master-level-testing-verification--production-ops) • [Dossiers](#-technical-documentation--defense-dossiers)
 
 </div>
 
@@ -71,9 +71,27 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 │ 🤖 Level 6: Machine Learning & Anti-Cheat Pipeline (LightGBM)                          │
 │    └─ Tier 1 deterministic gate | Tier 2 25-feature kinematic ensemble | Quantiles    │
 │ 🏆 Level 7: Master Level (Testing, Audits, Verification & Production Ops)             │
-│    └─ 52 Flutter + 11 Go test suites | WCAG AAA dark HUD | Viva defense cheatsheet     │
+│    └─ 58 Flutter + 17 Go test suites | WCAG AAA dark HUD | Viva defense cheatsheet     │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 📚 Technical Documentation & Defense Dossiers
+
+Every dimension of the platform's distributed systems, mathematics, security posture, and athletic biomechanics is formally specified across dedicated engineering dossiers:
+
+| Engineering Dossier | Primary Scope & Contents | Target Audience |
+| :--- | :--- | :--- |
+| **[Study Notes & Architecture Dossier](docs/STUDY_NOTES.md)** • *(or [PDF](docs/Territory_Runner_Study_Notes.pdf))* | Comprehensive 8-module textbook covering spatial algorithms, distributed concurrency, ML pipelines, and protocol references. | Engineers, Researchers, Examiners |
+| **[STRIDE Threat Model](docs/THREAT_MODEL.md)** | Formal security analysis across Spoofing, Tampering, Repudiation, Info Disclosure, DoS, and Elevation of Privilege. | Security Engineers, Auditors |
+| **[Master Viva Defense Cheatsheet](docs/VIVA.md)** | 335-line comprehensive defense of all architectural trade-offs (`pg_advisory_xact_lock`, Clipper2, Shoelace vs PostGIS, lazy decay). | Examiners, Interviewers |
+| **[AIML Technical Dossier](docs/AIML_EVALUATION.md)** | Statistical proofs, ROC/PR curves, hyperparameter optimization, and parity tests for the 25-feature LightGBM anti-cheat ensemble. | ML Engineers, Data Scientists |
+| **[Activity Type Fairness & Calibration](docs/ACTIVITY_FAIRNESS.md)** | Mathematical speed envelopes, biomechanical cadence constraints, and MET energy expenditure equations across Running, Walking, and Cycling. | Sports Scientists, Product |
+| **[Production Deployment Specification](docs/DEPLOYMENT.md)** | Multi-stage Docker containers, Fly.io edge orchestration, PostgreSQL 16 PostGIS tuning, and Kubernetes manifests. | DevOps, SREs |
+| **[App Store & Play Store Readiness](docs/STORE_READINESS.md)** | Android 14 `FOREGROUND_SERVICE_LOCATION` compliance, iOS Background Modes, and privacy manifest audits. | Release Engineers, Mobile Leads |
+| **[UX Design System & WCAG AAA Audit](docs/UX_CHECKLIST.md)** | High-contrast Ink + Pacer Blue design tokens, tabular typography rules, and automated contrast verification. | UI/UX Designers, Accessibility |
+| **[College Defense Presentation Suite](docs/presentation/)** | 3-minute individual defense speeches (Ayush, Avinash, Gurudutt), 10-minute master team deck, and work breakdown matrices. | Faculty Reviewers, Candidates |
 
 ---
 
