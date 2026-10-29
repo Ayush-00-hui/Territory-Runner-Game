@@ -77,6 +77,7 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 
 ---
 
+<a id="dossiers"></a><a id="-technical-documentation--defense-dossiers"></a>
 ## 📚 Technical Documentation & Defense Dossiers
 
 Every dimension of the platform's distributed systems, mathematics, security posture, and athletic biomechanics is formally specified across dedicated engineering dossiers:
@@ -91,10 +92,13 @@ Every dimension of the platform's distributed systems, mathematics, security pos
 | **[Production Deployment Specification](docs/DEPLOYMENT.md)** | Multi-stage Docker containers, Fly.io edge orchestration, PostgreSQL 16 PostGIS tuning, and Kubernetes manifests. | DevOps, SREs |
 | **[App Store & Play Store Readiness](docs/STORE_READINESS.md)** | Android 14 `FOREGROUND_SERVICE_LOCATION` compliance, iOS Background Modes, and privacy manifest audits. | Release Engineers, Mobile Leads |
 | **[UX Design System & WCAG AAA Audit](docs/UX_CHECKLIST.md)** | High-contrast Ink + Pacer Blue design tokens, tabular typography rules, and automated contrast verification. | UI/UX Designers, Accessibility |
+| **[Privacy Policy & Geodata Architecture](docs/PRIVACY.md)** | Sensitive geodata collection, client-side redaction, server-enforced privacy exclusion zones, and complete account erasure. | Security Engineers, Privacy Officers, Athletes |
+| **[Audio, Fonts & Cartography Assets](docs/ASSETS.md)** | OpenStreetMap tile usage compliance, synthetic harmonic audio specs, and font licensing certifications. | Compliance, Cartographers, Designers |
 | **[College Defense Presentation Suite](docs/presentation/)** | 3-minute individual defense speeches (Ayush, Avinash, Gurudutt), 10-minute master team deck, and work breakdown matrices. | Faculty Reviewers, Candidates |
 
 ---
 
+<a id="level-0"></a><a id="-level-0-the-high-altitude-concept--paradigm"></a>
 ## 🧭 Level 0: The High-Altitude Concept & Paradigm
 
 ### The Problem with Traditional Fitness Trackers
@@ -261,6 +265,7 @@ sequenceDiagram
 
 ---
 
+<a id="level-1"></a><a id="-level-1-fast-track-onboarding-zero-to-running-in-5-minutes"></a>
 ## ⚡ Level 1: Fast-Track Onboarding (Zero to Running in 5 Minutes)
 
 ### Prerequisites
@@ -369,6 +374,7 @@ GEMINI_API_KEY=AIzaSy...
 
 ---
 
+<a id="level-2"></a><a id="-level-2-gameplay-mechanics--athlete-experience"></a>
 ## 🎮 Level 2: Gameplay Mechanics & Athlete Experience
 
 ### 1. Multi-Candidate Proximity & Lasso Closure
@@ -477,6 +483,7 @@ Athletes can plan territory routes before leaving home:
 
 ---
 
+<a id="level-3"></a><a id="-level-3-mobile-client-engineering--offline-resiliency-flutter"></a>
 ## 📱 Level 3: Mobile Client Engineering & Offline Resiliency (Flutter)
 
 ### 1. Screen-Lock Background Tracking Hardening
@@ -502,8 +509,8 @@ Running apps frequently stop recording when users lock their screens or switch a
 ### 2. Encrypted Crash Recovery Safety Box (`RunRecoveryService`)
 
 To protect athlete workouts against sudden process death, OS low-memory termination, or battery exhaustion:
-- Every valid GPS coordinate and telemetry metric received by [location_service.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/location_service.dart) is throttled and flushed to disk into Hive storage box `active_run_recovery` ([run_recovery_service.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/run_recovery_service.dart)).
-- **Hardware-Backed AES-256 Encryption:** Storage is encrypted using `HiveAesCipher` with a 256-bit cryptographically secure key managed by [hive_encryption_service.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/hive_encryption_service.dart) via Android KeyStore / iOS Keychain (`flutter_secure_storage`).
+- Every valid GPS coordinate and telemetry metric received by [location_service.dart](lib/services/location_service.dart) is throttled and flushed to disk into Hive storage box `active_run_recovery` ([run_recovery_service.dart](lib/services/run_recovery_service.dart)).
+- **Hardware-Backed AES-256 Encryption:** Storage is encrypted using `HiveAesCipher` with a 256-bit cryptographically secure key managed by [hive_encryption_service.dart](lib/services/hive_encryption_service.dart) via Android KeyStore / iOS Keychain (`flutter_secure_storage`).
 - Upon relaunch, the app detects unfinalized sessions and prompts the athlete:  
   *"Unfinished run detected (3.42 km, 18 min). Resume tracking or finalize capture?"*
 - Resuming restores all track points, duration timers, and live preview area without data loss.
@@ -519,7 +526,7 @@ Run Completed ──► Local Clipper2 Optimistic Preview ──► Enqueued in 
 ```
 
 1. **Instant Optimistic Preview:** Local Dart Clipper2 computes and renders the captured territory polygon immediately, with zero network wait.
-2. **Encrypted Persistent FIFO Queue:** The run is serialized into encrypted Hive box `unsynced_runs_v2` ([sync_queue.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/sync_queue.dart)) with an idempotent UUID.
+2. **Encrypted Persistent FIFO Queue:** The run is serialized into encrypted Hive box `unsynced_runs_v2` ([sync_queue.dart](lib/services/sync_queue.dart)) with an idempotent UUID.
 3. **Automatic Flushing:** `SyncQueueService` listens to network connectivity changes (`connectivity_plus`) and flushes runs with exponential backoff (`2s`, `4s`, `8s`, ... `max 60s`).
 4. **4xx Permanent Circuit Breaker:** Permanent client errors (`422 ANOMALY_REJECTED`, `400 INVALID_LOOP`) halt retries immediately and archive the run into encrypted box `rejected_runs_v1` to prevent battery and bandwidth drain.
 5. **Reconciliation Toast:** If the server-authoritative PostGIS area differs from the optimistic preview (e.g. rival claimed overlapping land first), a calm notification alerts the runner: *"Synced: Server adjusted area to 3,200 m² (-200 m² due to rival overlap)"*.
@@ -534,7 +541,7 @@ Drain: ~18-24% per hour                         Drain: ~5-7% per hour (60-80% Po
 ```
 
 - **OLED Subpixel Physics:** On AMOLED displays, pure black pixels (`#000000`) draw 0 mW of electrical current.
-- **Map & Animation Suspension:** [battery_saver_service.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/battery_saver_service.dart) suspends 60 FPS map tile rendering, shimmer animations, and camera matrix updates.
+- **Map & Animation Suspension:** [battery_saver_service.dart](lib/services/battery_saver_service.dart) suspends 60 FPS map tile rendering, shimmer animations, and camera matrix updates.
 - **Dynamic GPS Duty-Cycling:** Relaxes GPS polling from 1 Hz ($1000\text{ ms}, 2\text{ m}$ filter) to 0.33 Hz ($3000\text{ ms}, 8\text{ m}$ filter).
 - **Double-Tap Wake:** A responsive double-tap gesture wakes the tactical map HUD instantaneously without interrupting background location tracking.
 
@@ -542,7 +549,7 @@ Drain: ~18-24% per hour                         Drain: ~5-7% per hour (60-80% Po
 
 ### 5. GPS Quality & Zero-Interpolation Policy
 
-- **Signal Dropout Policy:** [gps_quality_service.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/gps_quality_service.dart) tracks the elapsed time since the last valid GPS fix.
+- **Signal Dropout Policy:** [gps_quality_service.dart](lib/services/gps_quality_service.dart) tracks the elapsed time since the last valid GPS fix.
 - **15-Second Gap Rule:** Signal dropouts exceeding 15 seconds segment the track buffer rather than interpolating across unknown terrain. Dead-reckoning through urban canyons or tunnels risks hallucinating paths through impassable buildings or private property; resetting ensures every captured polygon represents physically verified athlete movement.
 - **Jump Suppression:** Reacquired fixes with speed exceeding the activity ceiling are suppressed to prevent teleportation cutting.
 
@@ -562,7 +569,7 @@ Built exclusively for outdoor athletic performance, direct sunlight readability,
 ```
 
 - **Dark-Only Surface Hierarchy:**
-  - `bgDeep` (`#090B0F`): Deepest OLED carbon canvas ([app_colors.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/ui/theme/app_colors.dart)).
+  - `bgDeep` (`#090B0F`): Deepest OLED carbon canvas ([app_colors.dart](lib/ui/theme/app_colors.dart)).
   - `surface` (`#12151B`): Primary card, sheet, and navigation surface.
   - `surface2` (`#1C222D`): Secondary nested containers and chips.
   - `accent` (`#4C8DFF`): Crisp Pacer Blue — single focal primary action.
@@ -571,7 +578,7 @@ Built exclusively for outdoor athletic performance, direct sunlight readability,
 - **Zero Raw Colors Policy:** Verified by automated regression test `no_raw_colors_test.dart`; zero arbitrary `Color(0x...)` or `Colors.*` exist in UI code.
 - **Tabular Figures:** All numeric displays (pace, distance, timer, area, rank) enforce `FontFeature.tabularFigures()`, guaranteeing zero horizontal digit jitter during movement.
 - **Dynamic Collision-Free HUD Tracking:** Floating controls are measured via `MeasureSize` listeners. Bottom offsets calculate dynamically as `pad.bottom + 12 + hudHeight + 12`, eliminating hardcoded magic numbers and overlay collisions.
-- **Unified Obsidian Pills (`AppToast`):** 100% of raw Material `SnackBar` calls are replaced with canonical [app_toast.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/ui/widgets/app_toast.dart) obsidian pills.
+- **Unified Obsidian Pills (`AppToast`):** 100% of raw Material `SnackBar` calls are replaced with canonical [app_toast.dart](lib/ui/widgets/app_toast.dart) obsidian pills.
 
 ---
 
@@ -603,8 +610,8 @@ To ensure high maintainability, zero state spaghetti, and complete testability, 
 └───────────────────────┴────────────────────────────────────────────────────┘
 ```
 
-- **Declarative `MapRunController`:** State management decoupled into [map_run_controller.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/features/map/controllers/map_run_controller.dart) implementing `ChangeNotifier`, exposed via `Provider`. Replaces all ad-hoc `setState()` calls.
-- **Constructor Injection:** Replaced static singletons with constructor injection via `MultiProvider` in [main.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/main.dart), allowing test harnesses to effortlessly inject fakes and mocks without static pollution.
+- **Declarative `MapRunController`:** State management decoupled into [map_run_controller.dart](lib/features/map/controllers/map_run_controller.dart) implementing `ChangeNotifier`, exposed via `Provider`. Replaces all ad-hoc `setState()` calls.
+- **Constructor Injection:** Replaced static singletons with constructor injection via `MultiProvider` in [main.dart](lib/main.dart), allowing test harnesses to effortlessly inject fakes and mocks without static pollution.
 
 ---
 
@@ -616,11 +623,12 @@ To ensure high maintainability, zero state spaghetti, and complete testability, 
    Motorized Transit Rejection ◄── Speed > 6 km/h & Cadence < 20 SPM
 ```
 
-- **Sensor Fusion:** [motion_sensor_service.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/motion_sensor_service.dart) continuously samples device sensors at 50 Hz to extract cadence (steps per minute) and mechanical motion energy.
+- **Sensor Fusion:** [motion_sensor_service.dart](lib/services/motion_sensor_service.dart) continuously samples device sensors at 50 Hz to extract cadence (steps per minute) and mechanical motion energy.
 - **Tier 1 Cadence Stillness Rule:** Cross-validates GPS displacement velocity against physical cadence. If GPS speed exceeds 6.0 km/h while device cadence remains stationary (< 20 SPM) for > 10 seconds, the segment is rejected as passive motorized vehicular transit (e.g., driving a car or riding a bus).
 
 ---
 
+<a id="level-4"></a><a id="-level-4-backend-engineering--distributed-spatial-systems-go--postgis"></a>
 ## 🖥️ Level 4: Backend Engineering & Distributed Spatial Systems (Go + PostGIS)
 
 ### 1. Server-Authoritative Spatial Concurrency (`pg_advisory_xact_lock`)
@@ -681,7 +689,7 @@ $$\text{Area} = \frac{1}{2} \left| \sum_{i=0}^{n-1} (x_i y_{i+1} - x_{i+1} y_i) 
 
 ### 3. Real-Time WebSocket Hub with Singleflight
 
-Located in [backend/internal/ws/hub.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/ws/hub.go):
+Located in [backend/internal/ws/hub.go](backend/internal/ws/hub.go):
 - **Decoupled Snapshotting:** Takes a quick read-lock snapshot of connected clients and releases `hub.mu.RUnlock()` immediately before evaluating spatial or friendship filtering, eliminating network framing deadlocks.
 - **Singleflight Miss Coalescing:** Under multi-runner GPS presence broadcasts, concurrent friendship lookups coalesce through `hub.sfGroup.Do(senderID, ...)`. Exactly one database query fires while all waiting callers share the result.
 - **Atomic Cache Invalidation:** When a friend request is accepted or removed, the HTTP handler notifies `hub.InvalidateFriends(userA, userB)` to evict cached relationships with zero staleness.
@@ -690,7 +698,7 @@ Located in [backend/internal/ws/hub.go](file:///c:/Users/AYUSH/Desktop/territory
 
 ### 4. FCM HTTP v1 Push Infrastructure
 
-Located in [backend/internal/notify/fcm.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/notify/fcm.go):
+Located in [backend/internal/notify/fcm.go](backend/internal/notify/fcm.go):
 - **Pure Go OAuth2 RS256 Client:** Implemented using Go standard library (`crypto/rsa`, `crypto/sha256`) without heavy Google Cloud SDK dependencies.
 - **Asynchronous Non-Blocking Fan-Out:** Push dispatches execute in detached goroutines with a 5-second timeout. Run submissions return `HTTP 201 Created` in $<50\text{ ms}$ without waiting on external Google push network round-trips.
 - **Graceful Dev Fallback:** Operates as a safe no-op when service account credentials are omitted in local development.
@@ -761,11 +769,12 @@ Located in [backend/internal/notify/fcm.go](file:///c:/Users/AYUSH/Desktop/terri
 
 ---
 
+<a id="level-5"></a><a id="-level-5-cryptography-privacy--zero-trust-security"></a>
 ## 🔒 Level 5: Cryptography, Privacy & Zero-Trust Security
 
 ### 1. Firebase Auth RS256 JWT Verification
 
-Located in [backend/internal/auth/verifier.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/auth/verifier.go):
+Located in [backend/internal/auth/auth.go](backend/internal/auth/auth.go):
 1. Client sends `Authorization: Bearer <token>`.
 2. Server extracts token header and reads the `kid` (Key ID).
 3. Server fetches Google's public x509 certificates from Google's secure token endpoint.
@@ -801,7 +810,7 @@ Located in [backend/internal/auth/verifier.go](file:///c:/Users/AYUSH/Desktop/te
 ### 4. Encrypted Local Storage (Hive AES-256 + flutter_secure_storage)
 
 All sensitive on-device offline caches are encrypted at rest using `HiveAesCipher` with 256-bit keys:
-- **Key Derivation & Storage:** [hive_encryption_service.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/hive_encryption_service.dart) generates a 32-byte cryptographic key via `Hive.generateSecureKey()` and secures it in the hardware-backed keystore (Android KeyStore with AES/GCM or iOS Keychain) via `flutter_secure_storage`.
+- **Key Derivation & Storage:** [hive_encryption_service.dart](lib/services/hive_encryption_service.dart) generates a 32-byte cryptographic key via `Hive.generateSecureKey()` and secures it in the hardware-backed keystore (Android KeyStore with AES/GCM or iOS Keychain) via `flutter_secure_storage`.
 - **Encrypted Boxes:**
   - `active_run_recovery`: Active GPS track buffers and telemetry to prevent data loss on crash.
   - `unsynced_runs_v2`: Offline-first pending sync queue containing athlete tracks and claimed areas.
@@ -836,6 +845,7 @@ The complete security posture is documented in the [STRIDE Threat Model](docs/TH
 
 ---
 
+<a id="level-6"></a><a id="-level-6-machine-learning--anti-cheat-pipeline"></a>
 ## 🤖 Level 6: Machine Learning & Anti-Cheat Pipeline
 
 The Territory Runner anti-cheat engine uses a two-tier defense architecture to maintain leaderboard integrity without sacrificing battery life or latency.
@@ -892,6 +902,7 @@ Trained via forward temporal splitting (earliest 75% sessions train, latest 25% 
 
 ---
 
+<a id="level-7"></a><a id="-level-7-master-level-testing-verification--production-ops"></a>
 ## 🏆 Level 7: Master Level (Testing, Verification & Production Ops)
 
 ### 1. Test Verification Matrix
@@ -982,6 +993,7 @@ See **[Production Deployment Specification](docs/DEPLOYMENT.md)** for Docker mul
 
 ---
 
+<a id="troubleshooting"></a><a id="-troubleshooting--faq"></a>
 ## ❓ Troubleshooting & FAQ
 
 #### Q1: GPS tracking drops points when the phone screen is turned off.
@@ -1005,6 +1017,7 @@ Or set `--dart-define=API_BASE_URL=http://10.0.2.2:8080` when launching Flutter.
 
 ---
 
+<a id="contributing"></a><a id="-contributing--license"></a>
 ## 🤝 Contributing & License
 
 Contributions are welcome! Please review [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/UX_CHECKLIST.md](docs/UX_CHECKLIST.md) before opening a pull request.

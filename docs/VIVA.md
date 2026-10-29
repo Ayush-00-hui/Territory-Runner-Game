@@ -41,7 +41,7 @@ This document is the definitive technical examination guide for **Territory Runn
 **Defense:**
 - In **Transaction Mode Pooling**, a client connection is assigned a physical database connection only for the duration of a single transaction (or statement). 
 - If a pooler interleaves queries or resets session state between pooled queries, session-level locks can bounce or cause unexpected state loss. Furthermore, `pgx/v5` prepares binary query execution plans that become invalidated if assigned across heterogeneous server backends.
-- **Our Resolution:** As documented in [`docs/DEPLOYMENT.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/docs/DEPLOYMENT.md), Territory Runner connects strictly via **Session Mode** or **Direct Connection (Port 5432)**, with pool sizing tuned via `pgxpool.Config{MaxConns: 20, MinConns: 2}` to stay within free-tier limits without pooling interference.
+- **Our Resolution:** As documented in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md), Territory Runner connects strictly via **Session Mode** or **Direct Connection (Port 5432)**, with pool sizing tuned via `pgxpool.Config{MaxConns: 20, MinConns: 2}` to stay within free-tier limits without pooling interference.
 
 ---
 
@@ -52,7 +52,7 @@ This document is the definitive technical examination guide for **Territory Runn
   ```sql
   idempotency_key VARCHAR(128) UNIQUE NOT NULL
   ```
-- In [`backend/internal/store/postgres.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/store/postgres.go#L180-L215):
+- In [`backend/internal/store/postgres.go`](backend/internal/store/postgres.go#L180-L215):
   Inside the serializable transaction, the server queries for an existing run matching the `idempotency_key`. If found:
   1. The transaction skips re-executing `ST_Union` and `ST_Difference`.
   2. The server returns HTTP `200 OK` (rather than `201 Created`) with the original `CaptureResult`.
@@ -79,7 +79,7 @@ The presence hub uses a fine-grained `sync.RWMutex` for client connection snapsh
 **Defense:**
 - **Client Constraints:** Evaluating spherical ellipsoidal trigonometry (Vincenty or Karney geodesic polygon algorithms) on 60 FPS mobile UI threads causes UI frame drops and drains mobile batteries during real-time GPS tracking. The Shoelace formula computes projected Euclidean area in $O(N)$ time with minimal CPU footprint.
 - **Curvature Error Mitigation:** For human running sessions ($< 5\text{ km}^2$), the Earth's curvature error between planar projection and WGS84 ellipsoid is less than $0.2\%$.
-- **Golden Fixture Verification:** To guarantee strict parity, [`test_fixtures/`](file:///c:/Users/AYUSH/Desktop/territory_runner/test_fixtures/) contains 7 shared golden geospatial test vectors (valid loops, figure-8s, lasso tails, tiny loops, multi-loops). Both Dart and Go test suites execute against these identical fixtures, proving area discrepancies stay strictly $< 0.5\%$.
+- **Golden Fixture Verification:** To guarantee strict parity, [`test_fixtures/`](test_fixtures/) contains 7 shared golden geospatial test vectors (valid loops, figure-8s, lasso tails, tiny loops, multi-loops). Both Dart and Go test suites execute against these identical fixtures, proving area discrepancies stay strictly $< 0.5\%$.
 - **Server Authority:** The client's Clipper2 calculation is purely an *optimistic UI preview*. The PostGIS calculation (`ST_Area(geom::geography)`) is the single authoritative source of truth that commits to the database.
 
 ---
@@ -87,7 +87,7 @@ The presence hub uses a fine-grained `sync.RWMutex` for client connection snapsh
 ### Q2.2: How do you prevent self-intersecting loops and "bowtie" polygons from corrupting PostGIS topological validity?
 **Defense:**
 - In planar geometry, self-intersecting polygons create non-orientable surfaces that fail the OGC Simple Features specification (`OGC 06-103r4`), which causes native PostGIS `ST_Union` or `ST_Difference` to throw `GEOSIntersects: TopologyException`.
-- In [`backend/internal/store/postgres.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/store/postgres.go#L230-L260), every polygon is sanitized through:
+- In [`backend/internal/store/postgres.go`](backend/internal/store/postgres.go#L230-L260), every polygon is sanitized through:
   ```sql
   ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_PolygonFromText($1, 4326)), 3))
   ```
@@ -163,7 +163,7 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 
 ### Q4.1: How does backend authentication verify Firebase JWTs without trusting client-supplied claims?
 **Defense:**
-- In [`backend/internal/auth/verifier.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/auth/verifier.go):
+- In [`backend/internal/auth/auth.go`](backend/internal/auth/auth.go):
   1. The client sends `Authorization: Bearer <token>`.
   2. The server extracts the token header and reads the `kid` (Key ID).
   3. The server fetches Google's public x509 certificates from `https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com`.
@@ -179,7 +179,7 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 
 ### Q4.2: How does the kinematic anti-cheat engine prevent vehicle spoofing, GPS mocking, and teleportation?
 **Defense:**
-- In [`backend/internal/anticheat/detector.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/anticheat/detector.go) and [`backend/internal/api/handlers.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/handlers.go):
+- In [`backend/internal/anticheat/detector.go`](backend/internal/anticheat/detector.go) and [`backend/internal/api/handlers.go`](backend/internal/api/handlers.go):
   1. **Activity-Aware Speed Ceilings (`DefaultActivityLimits`):**
      - **Running:** 25 km/h instant ceiling, 22 km/h endurance average, 35 km/h teleport ceiling.
      - **Walking:** 10 km/h instant ceiling, 8.5 km/h endurance average, 15 km/h teleport ceiling.
@@ -204,7 +204,7 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 **Defense:**
 - **Google Deprecation:** The legacy FCM API (`https://fcm.googleapis.com/fcm/send`) was deprecated by Google in June 2024.
 - **Credential Security:** Legacy server keys were permanent strings that, if leaked in logs or source control, granted unrestricted push access. FCM HTTP v1 requires short-lived OAuth2 access tokens valid for only 60 minutes.
-- **Pure Go OAuth2 Implementation:** In [`backend/internal/notify/fcm.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/notify/fcm.go), the backend signs an RS256 JWT assertion using the service account's private key and exchanges it with `https://oauth2.googleapis.com/token`. Tokens are cached in-memory with thread-safe double-checked locking until `expires_at - 60s`.
+- **Pure Go OAuth2 Implementation:** In [`backend/internal/notify/fcm.go`](backend/internal/notify/fcm.go), the backend signs an RS256 JWT assertion using the service account's private key and exchanges it with `https://oauth2.googleapis.com/token`. Tokens are cached in-memory with thread-safe double-checked locking until `expires_at - 60s`.
 - **Graceful Unconfigured Fallback:** When Google Service Account credentials are not present in the environment, `NewFCMClient` logs a warning (`FCM service account credentials not configured; push notifications disabled`) and disables itself without failing server startup. Alert dispatches return `nil` gracefully.
 - **Asynchronous Decoupling:** Push alerts to carved victims are dispatched in an asynchronous Go goroutine with a 5-second context timeout, ensuring the conquering runner's HTTP 201 response completes in $< 20\text{ms}$ without waiting for external Google network round-trips.
 
@@ -212,7 +212,7 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 
 ### Q5.2: How does the Weekly League prevent timezone manipulation and calculate promotion/relegation cutoffs?
 **Defense:**
-- In [`backend/internal/league/league.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/league/league.go):
+- In [`backend/internal/league/league.go`](backend/internal/league/league.go):
   - **Server-Authoritative Time:** The league reset time is computed strictly on the backend at `Monday 00:00:00 UTC` using `date_trunc('week', NOW() AT TIME ZONE 'UTC')`. Clients cannot manipulate the deadline by altering their local phone clock.
   - **Percentile-Based Tier Distribution:**
     - **Diamond:** Top $5\%$ of participants ($\lceil 0.05 \times N \rceil$)
@@ -254,7 +254,7 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 **Defense:**
 - When two runners engage in a 24-hour conquest challenge (Area or Distance target with XP stakes):
 - **Database Constraints:** A unique index on `(requester_id, addressee_id)` prevents duplicate challenge issuance.
-- **Atomic Progress Reconciliation:** In [`backend/internal/store/postgres.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/store/postgres.go), `UpdateDuelProgress` is called within the same serializable PostgreSQL transaction (`pg_advisory_xact_lock`) that commits the run:
+- **Atomic Progress Reconciliation:** In [`backend/internal/store/postgres.go`](backend/internal/store/postgres.go), `UpdateDuelProgress` is called within the same serializable PostgreSQL transaction (`pg_advisory_xact_lock`) that commits the run:
   ```sql
   UPDATE duels 
   SET challenger_progress = challenger_progress + $1,

@@ -72,12 +72,12 @@ graph TD
 ```
 
 ### 2.1 Actual Entry Points
-- **Flutter Application**: [lib/main.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/main.dart#L23-L98)
+- **Flutter Application**: [lib/main.dart](lib/main.dart#L23-L98)
   - Configures `runZonedGuarded`, system edge-to-edge UI, `AppLogger`, global `ErrorWidget.builder` (`CalmErrorScreen`), and `PlatformDispatcher.onError`.
   - Initializes Hive boxes (`territories_v3`, `profile`, `active_run_recovery`).
   - Calls `runApp(const TerritoryApp())` immediately to eliminate splash screen latency.
   - Initializes Firebase and notification services asynchronously in background (`_initServicesAsync()`).
-- **Go Backend Server**: [backend/cmd/server/main.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/cmd/server/main.go#L24-L168)
+- **Go Backend Server**: [backend/cmd/server/main.go](backend/cmd/server/main.go#L24-L168)
   - Healthcheck handler via CLI flag `healthcheck` querying `/healthz`.
   - Structured JSON logging via `log/slog`.
   - Environment configuration loader (`config.Load()`).

@@ -9,13 +9,13 @@
 
 | Platform | Attribute | Configured Value | Source File |
 | :--- | :--- | :--- | :--- |
-| **Android** | Namespace | `com.territoryrunner.app` | [android/app/build.gradle.kts](file:///c:/Users/AYUSH/Desktop/territory_runner/android/app/build.gradle.kts) |
-| **Android** | Application ID | `com.territoryrunner.app` | [android/app/build.gradle.kts](file:///c:/Users/AYUSH/Desktop/territory_runner/android/app/build.gradle.kts) |
-| **Android** | App Label | `Territory Runner` | [android/app/src/main/AndroidManifest.xml](file:///c:/Users/AYUSH/Desktop/territory_runner/android/app/src/main/AndroidManifest.xml) |
-| **Android** | Min SDK / Target SDK | Min: 21 / Target: 34 (Android 14) | [android/app/build.gradle.kts](file:///c:/Users/AYUSH/Desktop/territory_runner/android/app/build.gradle.kts) |
-| **iOS** | Bundle Identifier | `com.territoryrunner.app` | [ios/Runner.xcodeproj/project.pbxproj](file:///c:/Users/AYUSH/Desktop/territory_runner/ios/Runner.xcodeproj/project.pbxproj) |
-| **iOS** | CFBundleDisplayName | `Territory Runner` | [ios/Runner/Info.plist](file:///c:/Users/AYUSH/Desktop/territory_runner/ios/Runner/Info.plist) |
-| **iOS** | CFBundleName | `Territory Runner` | [ios/Runner/Info.plist](file:///c:/Users/AYUSH/Desktop/territory_runner/ios/Runner/Info.plist) |
+| **Android** | Namespace | `com.territoryrunner.app` | [android/app/build.gradle.kts](android/app/build.gradle.kts) |
+| **Android** | Application ID | `com.territoryrunner.app` | [android/app/build.gradle.kts](android/app/build.gradle.kts) |
+| **Android** | App Label | `Territory Runner` | [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml) |
+| **Android** | Min SDK / Target SDK | Min: 21 / Target: 34 (Android 14) | [android/app/build.gradle.kts](android/app/build.gradle.kts) |
+| **iOS** | Bundle Identifier | `com.territoryrunner.app` | [ios/Runner.xcodeproj/project.pbxproj](ios/Runner.xcodeproj/project.pbxproj) |
+| **iOS** | CFBundleDisplayName | `Territory Runner` | [ios/Runner/Info.plist](ios/Runner/Info.plist) |
+| **iOS** | CFBundleName | `Territory Runner` | [ios/Runner/Info.plist](ios/Runner/Info.plist) |
 
 ---
 
@@ -26,7 +26,7 @@ Both Google Play Policy (Location in the Background) and Apple App Store Guideli
 ### 2.1 Where the Disclosure Appears
 The prominent disclosure is triggered via the custom bottom sheet component:
 - **Component**: `PermissionPrimerSheet.backgroundLocation`
-- **Source Code**: [lib/ui/widgets/permission_primer_sheet.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/ui/widgets/permission_primer_sheet.dart#L322-L349)
+- **Source Code**: [lib/ui/widgets/permission_primer_sheet.dart](lib/ui/widgets/permission_primer_sheet.dart#L322-L349)
 - **Trigger Sequence**:
   1. Runner starts an active session or enables locked-screen tracking in Run Settings.
   2. The custom `PermissionPrimerSheet` is displayed modally with a dark scrim, **prior** to any operating system dialog.
@@ -60,7 +60,7 @@ Action Buttons:
 In accordance with Android 14 (API level 34) Foreground Service type policies:
 
 ### 3.1 Manifest Declaration
-In [android/app/src/main/AndroidManifest.xml](file:///c:/Users/AYUSH/Desktop/territory_runner/android/app/src/main/AndroidManifest.xml#L44-L48):
+In [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L44-L48):
 ```xml
 <service
     android:name="com.baseflow.geolocator.GeolocatorLocationService"
@@ -106,15 +106,15 @@ Both Google Play and Apple App Store mandate a straightforward in-app and web-ba
 ### 5.1 In-App Deletion Path
 - **Navigation**: Profile -> Settings -> Cloud Sync & Data Export -> "Delete account & data".
 - **Confirmation Flow**: Multi-step destructive confirmation dialog warning the runner that all territories, run history, and stats will be irreversibly purged.
-- **Execution** ([settings_list.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/features/profile/widgets/settings_list.dart)):
-  1. Issues authenticated request to Go backend endpoint `DELETE /v1/me` via [api_client.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/api_client.dart).
+- **Execution** ([settings_list.dart](lib/features/profile/widgets/settings_list.dart)):
+  1. Issues authenticated request to Go backend endpoint `DELETE /v1/me` via [api_client.dart](lib/services/api_client.dart).
   2. Permanently clears all local Hive boxes: `territories_v3`, `profile`, `active_run_recovery`, `unsynced_runs_v2`, `rejected_runs_v1`.
   3. Purges all athlete settings from `SharedPreferences`.
   4. Signs out of Firebase Authentication session (`firebaseService.signOut()`).
   5. Resets application state and returns user to onboarding/authentication.
 
 ### 5.2 Server & Database Cascade Architecture
-The backend Go server handles account deletion via `HandleDeleteMe` in [handlers.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/handlers.go) calling `store.DeleteUser`:
+The backend Go server handles account deletion via `HandleDeleteMe` in [handlers.go](backend/internal/api/handlers.go) calling `store.DeleteUser`:
 - Enforces JWT / Dev authentication to verify requesting user identity.
 - Executes `DELETE FROM users WHERE id = $1;`.
 - The PostgreSQL schema enforces strict cascading foreign keys (`ON DELETE CASCADE`), automatically purging:
@@ -124,7 +124,7 @@ The backend Go server handles account deletion via `HandleDeleteMe` in [handlers
   - `friends` & `duels`: `user_id ... ON DELETE CASCADE`
   - `privacy_zones`: `user_id ... ON DELETE CASCADE`
   - `user_settings`: `user_id ... ON DELETE CASCADE`
-- Both `PostgresStore` and `MemoryStore` implement complete cascading deletion. Verified via `TestHandleDeleteMe_PurgesAccountAndCascades` in [handlers_test.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/handlers_test.go).
+- Both `PostgresStore` and `MemoryStore` implement complete cascading deletion. Verified via `TestHandleDeleteMe_PurgesAccountAndCascades` in [handlers_test.go](backend/internal/api/handlers_test.go).
 
 ### 5.3 Web Deletion Request URL (Staging / Production Placeholder)
 - Public web deletion request portal: `https://territoryrunner.app/privacy/delete-account` (Staging URL — pending production domain deployment).
@@ -135,7 +135,7 @@ The backend Go server handles account deletion via `HandleDeleteMe` in [handlers
 ## 6. Release Signing & ProGuard/R8 Configuration
 
 ### 6.1 Release Signing Configuration
-Release builds require a dedicated signing keystore. Debug signing has been completely excised from the `release` build type in [android/app/build.gradle.kts](file:///c:/Users/AYUSH/Desktop/territory_runner/android/app/build.gradle.kts).
+Release builds require a dedicated signing keystore. Debug signing has been completely excised from the `release` build type in [android/app/build.gradle.kts](android/app/build.gradle.kts).
 
 To generate a new production release keystore:
 ```bash
@@ -159,7 +159,7 @@ storePassword=<YOUR_KEYSTORE_PASSWORD>
 R8 code shrinking and resource shrinking are enabled for all release builds:
 - `isMinifyEnabled = true`
 - `isShrinkResources = true`
-- ProGuard rules: [android/app/proguard-rules.pro](file:///c:/Users/AYUSH/Desktop/territory_runner/android/app/proguard-rules.pro) preserves Flutter engine wrappers, Geolocator background service, Firebase, and serialization classes.
+- ProGuard rules: [android/app/proguard-rules.pro](android/app/proguard-rules.pro) preserves Flutter engine wrappers, Geolocator background service, Firebase, and serialization classes.
 
 ---
 

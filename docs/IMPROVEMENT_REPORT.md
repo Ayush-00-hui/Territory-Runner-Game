@@ -30,7 +30,7 @@ Through a rigorous 8-phase engineering intervention, the codebase was audited, s
 
 ### Phase 0 — Repository Audit & Baseline
 - Conducted deep-dive architectural inspection across client, backend, spatial geometry, and store layers.
-- Published [`docs/IMPROVEMENT_AUDIT.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/docs/IMPROVEMENT_AUDIT.md) cataloging verified components, active git status, and defect classifications.
+- Published [`docs/IMPROVEMENT_AUDIT.md`](docs/IMPROVEMENT_AUDIT.md) cataloging verified components, active git status, and defect classifications.
 - Identified critical discrepancy **DEF-01**: Documentation claimed `DELETE /v1/me` existed for store readiness, but neither Go handlers nor Flutter UI implemented account deletion.
 
 ### Phase 1 — Stabilization & Correctness
@@ -65,22 +65,22 @@ Through a rigorous 8-phase engineering intervention, the codebase was audited, s
   - Implemented session-level 60/20/20 train/validation/test splitting to guarantee **zero session data leakage**.
   - Extracted 5 kinematic features: velocity, acceleration, bearing change rate, temporal jitter, and positional delta.
   - Evaluated 3 models: Rule-Based Baseline, scikit-learn `IsolationForest`, and Production Weighted Z-Score.
-  - Exported production parameters to [`assets/models/gps_anomaly_detector.json`](file:///c:/Users/AYUSH/Desktop/territory_runner/assets/models/gps_anomaly_detector.json).
-  - Documented complete mathematical methodology, confusion matrices, and latency benchmarks in [`docs/AIML_EVALUATION.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/docs/AIML_EVALUATION.md).
+  - Exported production parameters to [`assets/models/gps_anomaly_detector.json`](assets/models/gps_anomaly_detector.json).
+  - Documented complete mathematical methodology, confusion matrices, and latency benchmarks in [`docs/AIML_EVALUATION.md`](docs/AIML_EVALUATION.md).
 
 ### Phase 5 — Offline Reliability & Local Setup
-- Created root [`docker-compose.yml`](file:///c:/Users/AYUSH/Desktop/territory_runner/docker-compose.yml) exposing PostGIS (`postgis/postgis:16-3.4`) on port 5432 with healthchecks and volume persistence.
+- Created root [`docker-compose.yml`](docker-compose.yml) exposing PostGIS (`postgis/postgis:16-3.4`) on port 5432 with healthchecks and volume persistence.
 - Verified Hive FIFO synchronization queue (`SyncQueueService`) with bounded retry backoff and permanent rejection quarantine.
 - Documented single-command developer reproduction workflow in `README.md`.
 
 ### Phase 6 — Security, Privacy & Release Readiness
-- Audited and updated [`docs/STORE_READINESS.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/docs/STORE_READINESS.md):
+- Audited and updated [`docs/STORE_READINESS.md`](docs/STORE_READINESS.md):
   - Documented verified account deletion implementation satisfying Apple App Store Review Guideline 5.1.1(v) and Google Play Data Safety policies.
   - Documented ephemeral privacy zones masking location telemetry within 200m of designated sanctuaries (home/work).
   - Removed outdated claims and established honest environment variable requirements.
 
 ### Phase 7 — Recruiter-Ready GitHub Presentation
-- Rewrote [`README.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/README.md) to showcase:
+- Rewrote [`README.md`](README.md) to showcase:
   - 1-minute executive pitch and high-impact visual architecture diagram.
   - Verified badges with truthful test counts (381 Flutter tests, 131 Go tests, Go 1.27, AIML model badge).
   - Accurate data flow from mobile GPS sensor to authoritative PostGIS polygon persistence.
@@ -97,23 +97,23 @@ Through a rigorous 8-phase engineering intervention, the codebase was audited, s
 
 | File Path | Type | Rationale |
 |:---|:---|:---|
-| [`backend/internal/store/store.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/store/store.go) | Go | Added `DeleteUser(ctx, userID)` to authoritative store interface. |
-| [`backend/internal/store/memory.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/store/memory.go) | Go | Implemented in-memory cascading purge across all collections for local dev & unit tests. |
-| [`backend/internal/store/postgres.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/store/postgres.go) | Go | Implemented PostgreSQL deletion relying on foreign key cascade. |
-| [`backend/internal/api/handlers.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/handlers.go) | Go | Added `HandleDeleteMe` HTTP handler. |
-| [`backend/internal/api/router.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/router.go) | Go | Registered authenticated route `DELETE /v1/me`. |
-| [`backend/internal/api/handlers_test.go`](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/api/handlers_test.go) | Go | Added unit tests verifying 401 on unauthenticated and cascading deletion on authenticated calls. |
-| [`lib/services/api_client.dart`](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/api_client.dart) | Dart | Added `deleteAccount()` network call. |
-| [`lib/features/profile/widgets/settings_list.dart`](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/features/profile/widgets/settings_list.dart) | Dart | Added destructive UI confirmation dialog, cloud delete trigger, and local storage purge. |
-| [`test/api_client_test.dart`](file:///c:/Users/AYUSH/Desktop/territory_runner/test/api_client_test.dart) | Dart | Added unit tests for client-side account deletion requests. |
-| [`test/history_profile_responsive_test.dart`](file:///c:/Users/AYUSH/Desktop/territory_runner/test/history_profile_responsive_test.dart) | Dart | Added widget test verifying presence and styling of delete account settings tile. |
-| [`scripts/train_anomaly_model.py`](file:///c:/Users/AYUSH/Desktop/territory_runner/scripts/train_anomaly_model.py) | Python | Built empirical training, benchmarking, and model export script for AIML anomaly detector. |
-| [`assets/models/gps_anomaly_detector.json`](file:///c:/Users/AYUSH/Desktop/territory_runner/assets/models/gps_anomaly_detector.json) | JSON | Production model parameters (feature weights, normalization medians, IQRs, thresholds). |
-| [`docker-compose.yml`](file:///c:/Users/AYUSH/Desktop/territory_runner/docker-compose.yml) | YAML | Created root Docker Compose configuration for PostGIS database service. |
-| [`docs/IMPROVEMENT_AUDIT.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/docs/IMPROVEMENT_AUDIT.md) | Markdown | Comprehensive baseline audit and defect tracking. |
-| [`docs/AIML_EVALUATION.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/docs/AIML_EVALUATION.md) | Markdown | Mathematical and empirical evaluation dossier for AIML portfolio defense. |
-| [`docs/STORE_READINESS.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/docs/STORE_READINESS.md) | Markdown | Updated release compliance and privacy documentation. |
-| [`README.md`](file:///c:/Users/AYUSH/Desktop/territory_runner/README.md) | Markdown | Overhauled presentation, diagrams, truthful metrics, and quick-start instructions. |
+| [`backend/internal/store/store.go`](backend/internal/store/store.go) | Go | Added `DeleteUser(ctx, userID)` to authoritative store interface. |
+| [`backend/internal/store/memory.go`](backend/internal/store/memory.go) | Go | Implemented in-memory cascading purge across all collections for local dev & unit tests. |
+| [`backend/internal/store/postgres.go`](backend/internal/store/postgres.go) | Go | Implemented PostgreSQL deletion relying on foreign key cascade. |
+| [`backend/internal/api/handlers.go`](backend/internal/api/handlers.go) | Go | Added `HandleDeleteMe` HTTP handler. |
+| [`backend/internal/api/router.go`](backend/internal/api/router.go) | Go | Registered authenticated route `DELETE /v1/me`. |
+| [`backend/internal/api/handlers_test.go`](backend/internal/api/handlers_test.go) | Go | Added unit tests verifying 401 on unauthenticated and cascading deletion on authenticated calls. |
+| [`lib/services/api_client.dart`](lib/services/api_client.dart) | Dart | Added `deleteAccount()` network call. |
+| [`lib/features/profile/widgets/settings_list.dart`](lib/features/profile/widgets/settings_list.dart) | Dart | Added destructive UI confirmation dialog, cloud delete trigger, and local storage purge. |
+| [`test/api_client_test.dart`](test/api_client_test.dart) | Dart | Added unit tests for client-side account deletion requests. |
+| [`test/history_profile_responsive_test.dart`](test/history_profile_responsive_test.dart) | Dart | Added widget test verifying presence and styling of delete account settings tile. |
+| [`scripts/train_anomaly_model.py`](scripts/train_anomaly_model.py) | Python | Built empirical training, benchmarking, and model export script for AIML anomaly detector. |
+| [`assets/models/gps_anomaly_detector.json`](assets/models/gps_anomaly_detector.json) | JSON | Production model parameters (feature weights, normalization medians, IQRs, thresholds). |
+| [`docker-compose.yml`](docker-compose.yml) | YAML | Created root Docker Compose configuration for PostGIS database service. |
+| [`docs/IMPROVEMENT_AUDIT.md`](docs/IMPROVEMENT_AUDIT.md) | Markdown | Comprehensive baseline audit and defect tracking. |
+| [`docs/AIML_EVALUATION.md`](docs/AIML_EVALUATION.md) | Markdown | Mathematical and empirical evaluation dossier for AIML portfolio defense. |
+| [`docs/STORE_READINESS.md`](docs/STORE_READINESS.md) | Markdown | Updated release compliance and privacy documentation. |
+| [`README.md`](README.md) | Markdown | Overhauled presentation, diagrams, truthful metrics, and quick-start instructions. |
 
 ---
 

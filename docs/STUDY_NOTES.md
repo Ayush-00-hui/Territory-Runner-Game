@@ -312,7 +312,7 @@ SET geom = ST_Union(territories.geom, EXCLUDED.geom),
 
 ### 4.3 WebSocket Presence Hub with Singleflight
 
-Located in [backend/internal/ws/hub.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/ws/hub.go):
+Located in [backend/internal/ws/hub.go](backend/internal/ws/hub.go):
 - **Decoupled Snapshotting:** Takes a quick read-lock snapshot of connected clients and releases `hub.mu.RUnlock()` immediately before evaluating spatial or friendship filtering. This prevents network framing deadlocks.
 - **Singleflight Miss Coalescing:** Under multi-runner GPS presence broadcasts, concurrent friendship lookups coalesce through `hub.sfGroup.Do(senderID, ...)`. Exactly one database query fires while all waiting callers share the result.
 - **Atomic Cache Invalidation:** When a friend request is accepted or removed, the HTTP handler notifies `hub.InvalidateFriends(userA, userB)` to evict cached relationships with zero staleness.
@@ -344,7 +344,7 @@ $$\text{Strength}(t) = \max\left(0, 100.0 - 15.0 \times \Delta t_{\text{days}}\r
 
 ### 4.6 FCM HTTP v1 Push Infrastructure (Pure Go OAuth2 RS256)
 
-Located in [backend/internal/notify/fcm.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/notify/fcm.go):
+Located in [backend/internal/notify/fcm.go](backend/internal/notify/fcm.go):
 - **Why FCM HTTP v1?** Legacy FCM server keys were deprecated by Google in June 2024. FCM HTTP v1 requires short-lived (60 min) OAuth2 access tokens.
 - **Pure Go RS256 Signing:** Uses Go standard library (`crypto/rsa`, `crypto/sha256`) to sign JWT assertions without bulky GCP SDK dependencies.
 - **Asynchronous Detached Fan-Out:** Push alerts execute in detached goroutines with a 5-second timeout. Run submissions return `HTTP 201 Created` in $<50\text{ ms}$ without waiting on external Google push round-trips.
@@ -365,7 +365,7 @@ Standard mobile background timers suspend within 30 seconds of screen lock or ap
 
 ### 5.2 Crash Recovery Safety Box (`RunRecoveryService`)
 
-- Every valid GPS coordinate and telemetry metric received by [location_service.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/services/location_service.dart) is throttled and flushed to disk into Hive storage box `active_run_recovery`.
+- Every valid GPS coordinate and telemetry metric received by [location_service.dart](lib/services/location_service.dart) is throttled and flushed to disk into Hive storage box `active_run_recovery`.
 - On app launch, `MapScreen` detects unfinalized sessions:
   *"Unfinished run detected (3.42 km, 18 min). Resume tracking or finalize capture?"*
 - Resuming restores all track points, duration timers, and live preview area without data loss.
@@ -406,7 +406,7 @@ Standard mobile background timers suspend within 30 seconds of screen lock or ap
 - **Zero Raw Colors Policy:** Verified by automated regression test `no_raw_colors_test.dart`; zero arbitrary `Color(0x...)` exist in UI code.
 - **Tabular Figures:** All numeric displays (pace, distance, timer, area, rank) enforce `FontFeature.tabularFigures()`, eliminating horizontal digit jitter during movement.
 - **Collision-Free Dynamic HUD:** Bottom offsets calculate dynamically as `pad.bottom + 12 + hudHeight + 12`, eliminating hardcoded magic numbers and overlay collisions.
-- **Unified Obsidian Pills (`AppToast`):** 100% of raw Material `SnackBar` calls are replaced with canonical [app_toast.dart](file:///c:/Users/AYUSH/Desktop/territory_runner/lib/ui/widgets/app_toast.dart) obsidian pills.
+- **Unified Obsidian Pills (`AppToast`):** 100% of raw Material `SnackBar` calls are replaced with canonical [app_toast.dart](lib/ui/widgets/app_toast.dart) obsidian pills.
 
 ---
 
@@ -414,7 +414,7 @@ Standard mobile background timers suspend within 30 seconds of screen lock or ap
 
 ### 6.1 Firebase Auth RS256 JWT Verification
 
-Located in [backend/internal/auth/verifier.go](file:///c:/Users/AYUSH/Desktop/territory_runner/backend/internal/auth/verifier.go):
+Located in [backend/internal/auth/auth.go](backend/internal/auth/auth.go):
 1. Client sends `Authorization: Bearer <token>`.
 2. Server extracts token header and reads the `kid` (Key ID).
 3. Server fetches Google's public x509 certificates from Google's secure token endpoint.
