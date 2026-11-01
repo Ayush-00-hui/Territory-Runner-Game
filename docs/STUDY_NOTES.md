@@ -158,69 +158,81 @@ If $d \le r_{\text{zone}}$, the coordinate is excised, and the path entering the
 
 # Module 3: AI & Machine Learning Systems (Anti-Cheat & Coaching)
 
-### 3.1 Two-Tier Anti-Cheat Architecture
+### 3.1 Two-Tier Anti-Cheat Architecture & Telemetry Auditing
 
-Location-based games face GPS mocking, motorized vehicle spoofing, emulator replay scripts, and coordinate dilation. Territory Runner deploys a two-tier defense:
+Location-based games face GPS mocking, motorized vehicle spoofing, emulator replay scripts, and coordinate dilation. Territory Runner deploys a defense-in-depth architecture combining deterministic physical constraints with server-side motion telemetry auditing:
 
 ```
-Raw GPS Fixes ──► Tier 1: Sub-Microsecond Gate (0.05 µs) ──► Instant Reject (v > v_ceil, Mock)
-                               │ (Pass)
-                               ▼
-                  Tier 2: LightGBM Kinematic Ensemble (7.52 µs, 25 Features)
-                               │
-               ┌───────────────┴───────────────┐
-               ▼                               ▼
-       Legitimate Human               Motorized / Spoof
-      (HTTP 201 Created)             (HTTP 422 Rejected)
+Incoming GPS & Motion Fixes ──► Server Velocity Recalculation (Client Speed Untrusted)
+                                                │
+                                                ▼
+                                Tier 1: Deterministic Physical Gate (Primary Defense)
+                                • Speed Ceilings (25 km/h run, 10 km/h walk, 50 km/h cycle)
+                                • Accel Ceilings (8.0 m/s²), Teleport (50m/s), Mock GPS
+                                • Motion Window Sanity & Sustained Vehicle Stillness Heuristic
+                                                │
+                 ┌──────────────────────────────┼──────────────────────────────┐
+                 ▼                              ▼                              ▼
+      [verified_human]                [unverified_motion]                 [rejected]
+   Full territory claimed &       Territory claimed; active duel       HTTP 422 Rejected
+  competitive duels advanced      & 1.5x weak bonus restricted        Gross physics breach
 ```
 
 ---
 
-### 3.2 Tier 1: Sub-Microsecond Deterministic Rule Gate
+### 3.2 Tier 1: Sub-Microsecond Deterministic Rule Gate & Motion Auditing
 
 Runs in pure Go and pure Dart with **zero heap memory allocations**:
-1. **OS Mock Location Flag:** Checks Android `is_mocked` provider flag (scores $99.0$).
-2. **Activity-Calibrated Instant Ceilings:**
+1. **Server Velocity Recalculation:** Client-reported `speed` telemetry is explicitly discarded; velocity is recalculated from geodesic haversine distance and timestamps.
+2. **OS Mock Location Flag:** Checks Android `is_mocked` provider flag (scores $99.0$).
+3. **Activity-Calibrated Instant Ceilings:**
    - Running: $25.0\text{ km/h}$ instant max ($35.0\text{ km/h}$ teleport cutoff)
    - Walking: $10.0\text{ km/h}$ instant max ($15.0\text{ km/h}$ teleport cutoff)
    - Cycling: $50.0\text{ km/h}$ instant max ($60.0\text{ km/h}$ teleport cutoff)
-3. **Biomechanical Acceleration Limit:** Usain Bolt's peak acceleration is $\approx 4.5\text{ m/s}^2$. Any acceleration $a = \Delta v / \Delta t > 8.0\text{ m/s}^2$ ($> 12.0\text{ m/s}^2$ for cycling) across consecutive fixes ($\Delta t \le 3.0\text{ s}$) physically proves motorized transport or synthetic injection.
-4. **Frozen GPS Replay Detection:** Bot scripts often replay static coordinates while advancing distance. When $\ge 50\%$ of adjacent GPS vertices share identical coordinates during movement, the trace is rejected.
+4. **Biomechanical Acceleration Limit:** Usain Bolt's peak acceleration is $\approx 4.5\text{ m/s}^2$. Any acceleration $a = \Delta v / \Delta t > 8.0\text{ m/s}^2$ ($> 12.0\text{ m/s}^2$ for cycling) across consecutive fixes ($\Delta t \le 3.0\text{ s}$) physically proves motorized transport or synthetic injection.
+5. **Frozen GPS Replay Detection:** Bot scripts often replay static coordinates while advancing distance. When $\ge 50\%$ of adjacent GPS vertices share identical coordinates during movement, the trace is rejected.
+6. **Server-Side Motion Window Auditing (`SanityCheckMotionWindows`):** Audits client-supplied motion windows for duration inflation ($> 15\%$), sensor bounds ($[0, 300]\text{ SPM}$), and bot repeat patterns.
+7. **Three Verification States:**
+   - `verified_human`: Physical GPS kinematics pass AND motion windows pass server sanity checks. Full territory and duel progression awarded.
+   - `unverified_motion`: Physical GPS kinematics pass, but motion windows are missing or unverified. Territory is claimed, but duel challenge advancement and the $1.5\times$ weak-territory capture bonus are withheld.
+   - `rejected`: Severe physical violations result in HTTP 422 rejection.
 
 ---
 
-### 3.3 Tier 2: LightGBM Kinematic Anomaly Ensemble
+### 3.3 Tier 2: LightGBM Kinematic Anomaly Ensemble (Experimental)
+
+> [!NOTE]
+> **Integrity Disclosure**: Tier 2 ML is currently **experimental and disabled by default** (`EnableMLTier2: false`) pending collection of $\ge 30$ validated team app traces. The GeoLife dataset does not contain accelerometer logs; all evaluated models operate strictly on **GPS kinematic telemetry** (22 features). Label-to-cadence synthesis has been completely eliminated.
 
 #### Dataset & Provenance
-- **Microsoft GeoLife GNSS Dataset:** 182 users, 17,621 trajectories, 1,200,000+ km, 24M raw points across walking, running, cycling, buses, cars, taxis, subways, and trains. Filtered into 127,655 fixed 30-second sliding windows (15s stride).
-- **Synchronized IMU Logs:** 13 athletes, 1,195 validated athletic sessions with continuous 25 Hz accelerometer logging providing cadence ($spm$), motion energy, and confidence metrics.
-- **Adversarial Spoof Suite:** 1,200 synthetically generated attack windows (sparse sampling, timestamp dilation, offset replay) **strictly held-out from training**.
+- **Microsoft GeoLife GNSS Dataset:** 182 users, 17,621 trajectories, 1,200,000+ km, 24M raw points across walking, running, cycling, buses, cars, taxis, subways, and trains. Filtered into 127,655 fixed 30-second sliding windows (15s stride) across 13 labeled users.
+- **Team-Collected App Traces:** Evaluator gates cadence model enablement on $\ge 30$ real traces across $\ge 3$ users with duration $\ge 180\text{s}$. Currently 0 traces imported; cadence model remains disabled.
+- **Adversarial Spoof Suite:** 200 windows (100 sessions) generated by `ml/data/generate_spoofs.py` **strictly held-out as a separate test set**.
 
-#### 25 Engineered Kinematic Features
-1. **Velocity Profile:** $p_{10}, p_{50}, p_{90}, p_{99}$ speed quantiles, mean speed, speed variance.
-2. **Acceleration Dynamics:** Mean acceleration, peak acceleration, acceleration jerk ($\Delta a / \Delta t$).
-3. **Path Topography:** Sinuosity (actual track length / Euclidean end-to-end displacement), turning angle entropy, stop frequency (ratio of fixes with $v < 0.5\text{ m/s}$).
-4. **Cadence & Inertial Coupling:** Mean cadence ($spm$), cadence variance, cadence-to-speed ratio ($spm / (m/s)$), motion energy, cadence confidence.
+#### 22 Engineered Kinematic Features (GPS-Only)
+1. **Velocity Profile:** $p_{10}, p_{50}, p_{90}, p_{99}$ speed quantiles, mean speed, speed variance, max speed.
+2. **Acceleration Dynamics:** Mean acceleration, peak acceleration, acceleration jerk ($\Delta a / \Delta t$), jerk variance.
+3. **Path Topography:** Sinuosity (actual track length / Euclidean end-to-end displacement), turning angle entropy, heading change rate, stop frequency (ratio of fixes with $v < 0.5\text{ m/s}$).
+4. **Regularity & GPS Quality:** Median inter-fix interval ($\Delta t$), interval variance, horizontal dilution of precision (HDOP) mean and peak.
 
 #### Training Methodology: Leave-One-User-Out Cross-Validation (LOUO-CV)
-- Grouped 5-fold cross-validation partitioned strictly by `user_id`.
-- **Why?** Stride cadence and commuter routes exhibit high intra-subject correlation. Random shuffling leaks user signatures into validation, artificially deflating error. Grouping by `user_id` proves generalization to unseen humans.
+- Grouped 5-fold cross-validation partitioned strictly by `user_id` across 127,655 windows.
+- **Why?** Commuter routes exhibit high intra-subject correlation. Random shuffling leaks user signatures into validation, artificially deflating error. Grouping by `user_id` proves generalization to unseen humans.
 
-#### Empirical Benchmark Comparison
+#### Empirical Benchmark Comparison (GPS-Only, 22 Features)
 
-| Model Architecture | PR-AUC (95% CI) | Recall @ 1% FPR | Recall @ 5% FPR | ECE | Inference Latency |
+| Model Architecture | PR-AUC (95% CI) | Recall @ 1% FPR (95% CI) | Recall @ 5% FPR (95% CI) | ECE | Inference Latency |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Rule Baseline** | 0.8124 `[0.801, 0.824]` | 41.20% | 58.40% | 0.1240 | 0.05 µs |
-| **Logistic Regression** | 0.8945 `[0.885, 0.904]` | 62.10% | 78.30% | 0.0612 | 1.20 µs |
-| **LightGBM (60 Trees)** | **0.9782** `[0.972, 0.984]` | **84.30%** | **92.15%** | **0.0318** | **7.52 µs** |
-| **1D-CNN + GRU** | 0.9810 `[0.975, 0.986]` | 86.10% | 93.40% | 0.0289 | 84.20 µs |
+| **Rule Baseline** | 0.9248 `[0.9203, 0.9291]` | 43.17% `[42.32%, 45.23%]` | 57.29% `[55.50%, 59.37%]` | 0.1334 | 29.5 µs |
+| **Logistic Regression** | 0.9402 `[0.9369, 0.9433]` | 52.13% `[47.65%, 55.86%]` | 78.10% `[77.14%, 79.00%]` | 0.0626 | 25.6 µs |
+| **LightGBM (60 Trees)** | **0.9485** `[0.9446, 0.9520]` | **59.50%** `[55.16%, 63.70%]` | **76.53%** `[75.74%, 77.47%]` | **0.0567** | **34.7 µs** |
+| **1D-CNN + GRU** | 0.9472 `[0.9431, 0.9509]` | 62.23% `[58.16%, 65.45%]` | 79.88% `[79.12%, 80.66%]` | 0.0629 | 53.6 µs |
 
-*LightGBM achieves 99.7% of the deep learning model's PR-AUC with $11\times$ lower latency and zero heavy tensor runtime dependencies.*
-
-#### Zero-Python Production Deployment
+#### Zero-Python Production Deployment & Fail-Safe Fallback
 The 60 trees are serialized to JSON (`assets/models/anomaly_detector_trees.json`) and parsed by pure native tree evaluators in Go (`backend/internal/anticheat/ml_ensemble.go`) and Dart (`lib/features/security/anomaly_service.dart`).
 - **Floating-point parity:** $8.67 \times 10^{-19}$ max absolute delta between Python C++ booster and Go runtime; 100% decision match on 200 canonical test vectors.
 - **Cryptographic integrity:** Verified on boot against SHA-256 hash `46c87109b1e7...`.
+- **Safe Fallback:** If model loading or checksum verification fails, the engine logs a warning once (`sync.Once`) and gracefully executes Tier 1 deterministic physical rules with zero crashes.
 
 ---
 

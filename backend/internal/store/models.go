@@ -84,17 +84,18 @@ func (t *Territory) IsWeak(now time.Time) bool {
 
 // Run records a runner's GPS session and capture result.
 type Run struct {
-	ID              string    `json:"id"`
-	UserID          string    `json:"user_id"`
-	IdempotencyKey  string    `json:"idempotency_key"`
-	ActivityType    string    `json:"activity_type,omitempty"`
-	DurationSeconds int       `json:"duration_seconds"`
-	DistanceMeters  float64   `json:"distance_meters"`
-	AreaClaimed     float64   `json:"area_claimed"`
-	AnomalyScore    float64   `json:"anomaly_score"`
-	AnomalyReasons  []string  `json:"anomaly_reasons"`
-	Status          string    `json:"status"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID                 string    `json:"id"`
+	UserID             string    `json:"user_id"`
+	IdempotencyKey     string    `json:"idempotency_key"`
+	ActivityType       string    `json:"activity_type,omitempty"`
+	DurationSeconds    int       `json:"duration_seconds"`
+	DistanceMeters     float64   `json:"distance_meters"`
+	AreaClaimed        float64   `json:"area_claimed"`
+	AnomalyScore       float64   `json:"anomaly_score"`
+	AnomalyReasons     []string  `json:"anomaly_reasons"`
+	VerificationStatus string    `json:"verification_status,omitempty"`
+	Status             string    `json:"status"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 // CaptureResult encapsulates the output of a single transaction territory capture.
@@ -103,6 +104,7 @@ type CaptureResult struct {
 	IdempotencyKey     string   `json:"idempotency_key"`
 	ActivityType       string   `json:"activity_type,omitempty"`
 	Status             string   `json:"status"`
+	VerificationStatus string   `json:"verification_status,omitempty"`
 	AnomalyScore       float64  `json:"anomaly_score"`
 	AnomalyReasons     []string `json:"anomaly_reasons"`
 	LoopDetected       bool     `json:"loop_detected"`

@@ -74,11 +74,11 @@ class RuleBaselineClassifier:
             if avg_speed > 30.0 and sinuosity < 1.08:
                 penalty += 1.0
 
-            # 5. Accelerometer cadence & motion energy rule:
+            # 5. Accelerometer cadence & motion energy rule (applied ONLY if real valid motion data present):
             # GPS speed > 6 km/h with near-zero cadence (< 35 SPM) and low motion energy (< 0.25) => strong vehicle signal
             cadence = row.get("cadence_spm", None)
             energy = row.get("motion_energy", None)
-            if cadence is not None and energy is not None:
+            if cadence is not None and energy is not None and not np.isnan(cadence) and not np.isnan(energy):
                 if avg_speed > 6.0 and cadence < 35.0 and energy < 0.25:
                     overshoot = (avg_speed - 6.0) / 10.0
                     penalty += 3.0 + min(2.5, overshoot)

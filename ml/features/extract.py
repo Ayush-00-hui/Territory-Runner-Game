@@ -204,59 +204,23 @@ def extract_single_window_features(pts: List[dict]) -> Optional[Tuple[dict, np.n
         "dt_std_s": float(np.std(dts)),
     }
 
-    # Accelerometer cadence and motion energy features (from app traces or synthesized from kinematics)
+    # Accelerometer cadence and motion energy features (only from real recorded app traces)
     explicit_cadences = [float(p["cadence_spm"]) for p in pts if p.get("cadence_spm") is not None]
     explicit_energies = [float(p["motion_energy"]) for p in pts if p.get("motion_energy") is not None]
     explicit_confs = [float(p["cadence_confidence"]) for p in pts if p.get("cadence_confidence") is not None]
 
     if explicit_cadences and explicit_energies:
-        cadence_spm = float(np.mean(explicit_cadences))
-        motion_energy = float(np.mean(explicit_energies))
-        cadence_conf = float(np.mean(explicit_confs)) if explicit_confs else 0.8
+        feat["cadence_spm"] = float(np.mean(explicit_cadences))
+        feat["motion_energy"] = float(np.mean(explicit_energies))
+        feat["cadence_confidence"] = float(np.mean(explicit_confs)) if explicit_confs else 0.8
+        feat["has_motion_data"] = 1
     else:
-        # Synthesize realistic biomechanically-calibrated IMU telemetry
-        mode = pts[0].get("transport_mode", "legit_walk_run")
-        raw = str(pts[0].get("raw_mode", mode)).lower()
-        mean_spd = float(np.mean(speeds_kmh))
-
-        # Deterministic window PRNG based on session & timestamp
-        sess_str = str(pts[0].get("session_id", "sess")) + "_" + str(pts[0].get("timestamp", 0))
-        w_seed = int(abs(hash(sess_str))) % (2**31)
-        rng = np.random.RandomState(w_seed)
-
-        if mode == "legit_walk_run" or raw in ("walk", "run"):
-            if mean_spd < 7.0 or raw == "walk":
-                # Walking: cadence ~110-125 SPM, energy ~0.45-0.95
-                cadence_spm = float(np.clip(rng.normal(114.0, 7.0), 85.0, 135.0))
-                motion_energy = float(np.clip(rng.normal(0.68, 0.12), 0.30, 1.20))
-                cadence_conf = float(np.clip(rng.normal(0.86, 0.04), 0.70, 0.96))
-            else:
-                # Running: cadence ~150-185 SPM, energy ~1.2-2.8
-                base_cad = 152.0 + 1.8 * min(mean_spd, 18.0)
-                cadence_spm = float(np.clip(rng.normal(base_cad, 6.0), 140.0, 205.0))
-                base_energy = 1.3 + 0.08 * mean_spd
-                motion_energy = float(np.clip(rng.normal(base_energy, 0.25), 0.85, 3.80))
-                cadence_conf = float(np.clip(rng.normal(0.92, 0.03), 0.80, 0.99))
-        elif mode == "legit_cycle" or raw in ("bike", "cycle"):
-            # Cycling: 70% pedaling, 30% coasting
-            is_coasting = rng.uniform(0.0, 1.0) < 0.30 or mean_spd < 3.0
-            if is_coasting:
-                cadence_spm = 0.0
-                cadence_conf = 0.0
-                motion_energy = float(np.clip(rng.normal(0.18, 0.04), 0.10, 0.35))
-            else:
-                cadence_spm = float(np.clip(rng.normal(76.0, 8.0), 50.0, 100.0))
-                cadence_conf = float(np.clip(rng.normal(0.70, 0.08), 0.45, 0.88))
-                motion_energy = float(np.clip(rng.normal(0.24, 0.05), 0.12, 0.42))
-        else:
-            # Motorized vehicle (car, bus, taxi, train, subway):
-            cadence_spm = float(np.clip(rng.normal(3.5, 3.0), 0.0, 16.0))
-            motion_energy = float(np.clip(rng.normal(0.06, 0.03), 0.01, 0.16))
-            cadence_conf = float(np.clip(rng.normal(0.08, 0.05), 0.0, 0.20))
-
-    feat["cadence_spm"] = cadence_spm
-    feat["motion_energy"] = motion_energy
-    feat["cadence_confidence"] = cadence_conf
+        # Public GNSS datasets (e.g. GeoLife) do NOT contain accelerometer data.
+        # Accelerometer features are NEVER synthesized from transport mode labels.
+        feat["cadence_spm"] = np.nan
+        feat["motion_energy"] = np.nan
+        feat["cadence_confidence"] = np.nan
+        feat["has_motion_data"] = 0
 
 
     # Point-level sequence tensor for 1D-CNN / GRU: [speed_ms, abs_accel, abs_jerk, bearing_diff, accuracy]

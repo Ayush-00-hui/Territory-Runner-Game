@@ -330,7 +330,11 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 
 		// Enforce 25 m² minimum new area floor before awarding XP, league, or duel credit
 		if areaClaimed >= MinCaptureFloorSqm {
-			effectiveXpArea := areaClaimed + weakBonusArea
+			effectiveXpArea := areaClaimed
+			if run.VerificationStatus != "unverified_motion" {
+				// Only verified motion runs receive high-value weak-territory 1.5x bonus
+				effectiveXpArea += weakBonusArea
+			}
 			xpAwarded = int(math.Max(100, math.Round(effectiveXpArea/20.0)))
 		} else {
 			areaClaimed = 0.0
@@ -392,7 +396,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		return nil, fmt.Errorf("failed to commit capture transaction: %w", err)
 	}
 
-	if run.Status != "flagged_review" {
+	if run.Status != "flagged_review" && run.Status != "unverified_motion" && run.VerificationStatus != "unverified_motion" {
 		_ = s.UpdateDuelProgress(ctx, run.UserID, activityType, areaClaimed, run.DistanceMeters)
 	}
 
@@ -401,6 +405,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		IdempotencyKey:     run.IdempotencyKey,
 		ActivityType:       activityType,
 		Status:             run.Status,
+		VerificationStatus: run.VerificationStatus,
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,
 		LoopDetected:       len(loops) > 0,

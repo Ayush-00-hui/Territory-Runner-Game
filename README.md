@@ -848,47 +848,61 @@ The complete security posture is documented in the [STRIDE Threat Model](docs/TH
 <a id="level-6"></a><a id="-level-6-machine-learning--anti-cheat-pipeline"></a>
 ## 🤖 Level 6: Machine Learning & Anti-Cheat Pipeline
 
-The Territory Runner anti-cheat engine uses a two-tier defense architecture to maintain leaderboard integrity without sacrificing battery life or latency.
+The Territory Runner anti-cheat engine uses a defense-in-depth architecture combining deterministic physical constraints with server-side motion telemetry auditing:
 
 ```
-Incoming GPS Fixes ──► Tier 1: Sub-Microsecond Deterministic Gate (0.05 µs)
-                                       │ (Pass)
-                                       ▼
-                       Tier 2: LightGBM Kinematic Ensemble (7.52 µs)
-                                       │
-                ┌──────────────────────┴──────────────────────┐
-                ▼                                             ▼
-       Legitimate Athletic Run                       Motorized / Spoofed Trace
-         (HTTP 201 Created)                           (HTTP 422 Rejected)
+Incoming GPS & Motion Fixes ──► Server Velocity Recalculation (Client Speed Untrusted)
+                                                │
+                                                ▼
+                                Tier 1: Deterministic Physical Gate (Primary Defense)
+                                • Speed Ceilings (25 km/h run, 10 km/h walk, 50 km/h cycle)
+                                • Accel Ceilings (8.0 m/s²), Teleport (50m/s), Mock GPS
+                                • Motion Window Sanity & Sustained Vehicle Stillness Heuristic
+                                                │
+                 ┌──────────────────────────────┼──────────────────────────────┐
+                 ▼                              ▼                              ▼
+      [verified_human]                [unverified_motion]                 [rejected]
+   Full territory claimed &       Territory claimed; active duel       HTTP 422 Rejected
+  competitive duels advanced      & 1.5x weak bonus restricted        Gross physics breach
 ```
 
 ---
 
-### 1. Tier 1: Sub-Microsecond Deterministic Gate
+### 1. Tier 1: Primary Deterministic Physical Gate & Motion Auditing
 
-Evaluates physical impossibilities with zero heap allocations:
+Evaluates physical kinematics server-side with zero reliance on client-reported speed:
+- **Server Velocity Recalculation:** Client-reported `speed` telemetry is explicitly discarded; speed is recalculated from geodesic haversine distance and timestamps.
 - **Hardware Mock Location Flag:** Inspects Android's `is_mocked` provider flag (scores $99.0$).
-- **Instant Speed Ceilings:** Exceeding sport ceilings ($25\text{ km/h}$ run, $10\text{ km/h}$ walk, $50\text{ km/h}$ cycle) scores $+40$ anomaly points.
+- **Instant Speed & Teleport Ceilings:** Exceeding sport ceilings ($25\text{ km/h}$ run, $10\text{ km/h}$ walk, $50\text{ km/h}$ cycle) or jumping $> 50\text{ m}$ in $\le 1\text{ s}$ triggers instant rejection.
 - **Biomechanical Acceleration Limit:** Usain Bolt's peak acceleration is $\approx 4.5\text{ m/s}^2$. Any acceleration $\Delta v / \Delta t > 8.0\text{ m/s}^2$ ($> 12.0\text{ m/s}^2$ for cycling) across consecutive fixes physically indicates motorized transport or synthetic injection.
-- **Identical-Step GPS Replay Detection:** Bot scripts often replay static coordinates while incrementing distance. When $\ge 50\%$ of adjacent GPS vertices share identical coordinates during movement, the trace is rejected.
+- **Identical-Step GPS Replay Detection:** When $\ge 50\%$ of adjacent GPS vertices share identical coordinates during movement, the trace is rejected.
+- **Server-Side Motion Window Auditing (`SanityCheckMotionWindows`):** Audits client-supplied motion windows for duration inflation ($> 15\%$), sensor bounds ($[0, 300]\text{ SPM}$), and bot repeat patterns.
+- **Three Verification States:**
+  - `verified_human`: Physical GPS kinematics pass AND motion windows pass server sanity checks. Full territory and duel progression awarded.
+  - `unverified_motion`: Physical GPS kinematics pass, but motion windows are missing or unverified. Territory is claimed, but duel challenge advancement and the $1.5\times$ weak-territory capture bonus are withheld.
+  - `rejected`: Severe physical violations result in HTTP 422 rejection.
 
 ---
 
-### 2. Tier 2: LightGBM Kinematic Anomaly Ensemble
+### 2. Tier 2: LightGBM Kinematic Anomaly Ensemble (Experimental)
 
-Classifies subtle transit patterns (e.g. city buses, low-speed traffic, synthetic interpolation) using a 60-tree LightGBM ensemble compiled into pure native Go and pure Dart:
+> [!NOTE]
+> **Status Disclosure**: Tier 2 ML is currently **experimental and disabled by default** (`EnableMLTier2: false`) pending collection of $\ge 30$ validated team app traces. Evaluated below on 127,655 real-world windows from the **Microsoft GeoLife GNSS Dataset** using strictly **22 GPS kinematic features** (zero synthetic cadence leakage):
 
-- **Features (25 Engineered Kinematics):** Speed quantiles ($p_{10}, p_{50}, p_{90}, p_{99}$), acceleration jerk variance, path sinuosity, stop frequency, and synchronized cadence energy.
-- **Validation Protocol:** Leave-One-User-Out Cross-Validation (LOUO-CV) on 127,655 real-world windows from the **Microsoft GeoLife GNSS Dataset** + synchronized IMU logs.
+- **Features (22 GPS Displacement Kinematics):** Speed quantiles ($p_{10}, p_{50}, p_{90}, p_{99}$), acceleration jerk variance, path sinuosity, heading entropy, and stop ratio.
+- **Validation Protocol:** 5-fold Leave-One-User-Out Cross-Validation (LOUO-CV) grouped by `user_id` (zero user data leakage).
 
-| Model Architecture | PR-AUC (95% CI) | Recall @ 1% FPR | Recall @ 5% FPR | Latency |
-| :--- | :---: | :---: | :---: | :---: |
-| **Rule Baseline** | 0.8124 `[0.801, 0.824]` | 41.20% | 58.40% | 0.05 µs |
-| **Logistic Regression** | 0.8945 `[0.885, 0.904]` | 62.10% | 78.30% | 1.20 µs |
-| **LightGBM (60 Trees)** | **0.9782** `[0.972, 0.984]` | **84.30%** | **92.15%** | **7.52 µs** |
-| **1D-CNN + GRU** | 0.9810 `[0.975, 0.986]` | 86.10% | 93.40% | 84.20 µs |
+| Model Architecture | PR-AUC (95% CI) | Recall @ 1% FPR (95% CI) | Recall @ 5% FPR (95% CI) | ECE | Latency |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Rule Baseline** | 0.9248 `[0.9203, 0.9291]` | 43.17% `[42.32%, 45.23%]` | 57.29% `[55.50%, 59.37%]` | 0.1334 | 29.5 µs |
+| **Logistic Regression** | 0.9402 `[0.9369, 0.9433]` | 52.13% `[47.65%, 55.86%]` | 78.10% `[77.14%, 79.00%]` | 0.0626 | 25.6 µs |
+| **LightGBM** | **0.9485** `[0.9446, 0.9520]` | **59.50%** `[55.16%, 63.70%]` | **76.53%** `[75.74%, 77.47%]` | **0.0567** | **34.7 µs** |
+| **1D-CNN + GRU** | 0.9472 `[0.9431, 0.9509]` | 62.23% `[58.16%, 65.45%]` | 79.88% `[79.12%, 80.66%]` | 0.0629 | 53.6 µs |
 
-*LightGBM achieves 99.7% of the deep learning model's PR-AUC with $11\times$ lower latency and zero heavy tensor runtime dependencies.*
+*Key Findings & Real False Positive Behavior:*
+- **Zero False Flags on Normal Walking**: At the 1% target FPR operating point, empirical false positive rate on walkers is **0.00%** (< 4 km/h, 6,925 windows) and **0.02%** (4–7 km/h, 11,033 windows).
+- **Urban Bus Blindspot**: GPS-only models catch 93.8% of trains and 55.1% of subways, but slow stop-and-go urban buses (36.8% recall) overlap with cycling kinematics.
+- **Fail-Safe Fallback**: If model files fail cryptographic SHA256 checksum verification, the system logs a single warning and seamlessly falls back to Tier 1 physical rules without crashing.
 
 > For full statistical proofs, hyperparameter tables, and calibration curves, see the **[AIML Technical Dossier](docs/AIML_EVALUATION.md)**.
 

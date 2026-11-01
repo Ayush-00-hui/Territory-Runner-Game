@@ -237,7 +237,11 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 
 		// Enforce 25 m² minimum new area floor before awarding XP, league, or duel credit
 		if areaClaimed >= MinCaptureFloorSqm {
-			effectiveXpArea := areaClaimed + weakBonusArea
+			effectiveXpArea := areaClaimed
+			if run.VerificationStatus != "unverified_motion" {
+				// Only verified motion runs receive high-value weak-territory 1.5x bonus
+				effectiveXpArea += weakBonusArea
+			}
 			xpAwarded = int(math.Max(100, math.Round(effectiveXpArea/20.0)))
 			user.TotalAreaSqm += areaClaimed
 			user.XP += int64(xpAwarded)
@@ -289,13 +293,17 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	if runCopy.Status == "" {
 		runCopy.Status = "accepted"
 	}
+	if runCopy.VerificationStatus == "" {
+		runCopy.VerificationStatus = run.VerificationStatus
+	}
 	if runCopy.CreatedAt.IsZero() {
 		runCopy.CreatedAt = now
 	}
 	m.runs[run.IdempotencyKey] = &runCopy
 	m.runsByOrder = append(m.runsByOrder, run.IdempotencyKey)
 
-	if runCopy.Status != "flagged_review" {
+	// High-value reward: Only advance duels when movement has verified human motion
+	if runCopy.Status != "flagged_review" && runCopy.VerificationStatus != "unverified_motion" {
 		m.updateDuelProgressLocked(run.UserID, runCopy.ActivityType, areaClaimed, run.DistanceMeters)
 	}
 
@@ -303,7 +311,8 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		RunID:              run.ID,
 		IdempotencyKey:     run.IdempotencyKey,
 		ActivityType:       runCopy.ActivityType,
-		Status:             run.Status,
+		Status:             runCopy.Status,
+		VerificationStatus: runCopy.VerificationStatus,
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,
 		LoopDetected:       len(loops) > 0,

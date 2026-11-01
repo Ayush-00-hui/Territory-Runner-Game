@@ -4,9 +4,11 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
@@ -55,12 +57,28 @@ type MotionWindow struct {
 	CadenceConfidence float64   `json:"cadence_confidence"`
 }
 
+// Verification Status constants
+const (
+	VerificationStatusVerifiedHuman    = "verified_human"
+	VerificationStatusUnverifiedMotion = "unverified_motion"
+	VerificationStatusRejected         = "rejected"
+)
+
+// MotionSanityReport captures the server-side audit of client-supplied motion windows.
+type MotionSanityReport struct {
+	Valid            bool     `json:"valid"`
+	WindowCount      int      `json:"window_count"`
+	TotalDurationSec float64  `json:"total_duration_sec"`
+	Issues           []string `json:"issues,omitempty"`
+}
+
 // Result captures the evaluation of GPS anomaly detection and spoofing mitigation.
 type Result struct {
-	IsAnomaly bool               `json:"is_anomaly"`
-	Score     float64            `json:"score"`
-	Reasons   []string           `json:"reasons"`
-	Features  map[string]float64 `json:"features,omitempty"`
+	IsAnomaly          bool               `json:"is_anomaly"`
+	VerificationStatus string             `json:"verification_status"`
+	Score              float64            `json:"score"`
+	Reasons            []string           `json:"reasons"`
+	Features           map[string]float64 `json:"features,omitempty"`
 }
 
 // ActivityLimits defines realistic human kinematics ceilings for a specific exercise activity.
@@ -112,7 +130,9 @@ func DefaultConfig() Config {
 		AnomalyThreshold: m.AnomalyThreshold,
 		MaxHumanSpeedKmh: m.HardRules.MaxHumanSpeedKmh,
 		MaxTeleportSpeed: m.HardRules.MaxTeleportSpeed,
-		EnableMLTier2:    true,
+		// Tier 2 ML cadence model is disabled by default until the threshold of real team traces
+		// (min 30 validated traces) is met, preventing false positives from leaked synthetic cadence.
+		EnableMLTier2: false,
 	}
 	if cfg.MaxHumanSpeedKmh <= 0 {
 		cfg.MaxHumanSpeedKmh = 25.0
@@ -143,13 +163,37 @@ type Detector struct {
 	mlEnsemble *MLEnsemble
 }
 
+var mlFallbackLogOnce sync.Once
+
+// ResetMLFallbackLogOnce resets the logging guard (used in testing).
+func ResetMLFallbackLogOnce() {
+	mlFallbackLogOnce = sync.Once{}
+}
+
 // NewDetector creates an anomaly detector instance.
+// If the ML ensemble fails to load or fails its cryptographic checksum check,
+// the detector safely falls back to deterministic Tier 1 physical rules without crashing and logs a warning once.
 func NewDetector(cfg ...Config) *Detector {
 	c := DefaultConfig()
 	if len(cfg) > 0 {
 		c = cfg[0]
 	}
-	ensemble, _ := NewDefaultMLEnsemble()
+	ensemble, err := NewDefaultMLEnsemble()
+	if err != nil {
+		mlFallbackLogOnce.Do(func() {
+			log.Printf("[anticheat] WARNING: ML Tier 2 model failed to load or checksum failed: %v. Falling back to deterministic Tier 1 physical rules safely.", err)
+		})
+		ensemble = nil
+	}
+	return &Detector{cfg: c, mlEnsemble: ensemble}
+}
+
+// NewDetectorWithEnsemble creates a detector instance with an explicitly supplied ML ensemble (can be nil).
+func NewDetectorWithEnsemble(ensemble *MLEnsemble, cfg ...Config) *Detector {
+	c := DefaultConfig()
+	if len(cfg) > 0 {
+		c = cfg[0]
+	}
 	return &Detector{cfg: c, mlEnsemble: ensemble}
 }
 
@@ -192,13 +236,101 @@ func (d *Detector) EvaluateTrackWithMetrics(points []geo.TrackPoint, activityTyp
 	return d.EvaluateTrackWithMotion(points, activityType, declaredDuration, declaredDistance, nil)
 }
 
+// SanityCheckMotionWindows inspects client-provided accelerometer windows for physical plausibility.
+// It detects:
+// 1. Duration Inflation: Total motion window duration exceeding run duration by > 15% (+15s grace for window rounding).
+// 2. Individual Window Duration: Non-positive or excessive duration (< 2s or > 30s).
+// 3. Sensor Bounds Violations: Cadence < 0 or > 300 SPM, Motion Energy < 0 or > 50.0, Confidence not in [0, 1].
+// 4. Bot / Static Injector Patterns: Exactly identical cadence & motion energy repeated identically across >= 5 windows.
+// 5. Non-monotonic window timestamps (when StartTime is provided).
+func SanityCheckMotionWindows(windows []MotionWindow, runDurationSec float64) MotionSanityReport {
+	report := MotionSanityReport{
+		Valid:       true,
+		WindowCount: len(windows),
+	}
+	if len(windows) == 0 {
+		return report
+	}
+
+	var totalWinSec float64
+	var prevStartTime time.Time
+	identicalCadenceCount := 1
+	identicalEnergyCount := 1
+
+	for i, w := range windows {
+		winDur := w.DurationSeconds
+		if winDur <= 0 {
+			winDur = 10.0
+		}
+		if winDur < 2.0 || winDur > 30.0 {
+			report.Valid = false
+			report.Issues = append(report.Issues, fmt.Sprintf("window %d: duration %.1fs out of plausible range [2s, 30s]", i, winDur))
+		}
+		totalWinSec += winDur
+
+		// Value bounds
+		if w.CadenceSPM < 0.0 || w.CadenceSPM > 300.0 {
+			report.Valid = false
+			report.Issues = append(report.Issues, fmt.Sprintf("window %d: cadence %.1f SPM out of physical human bounds [0, 300]", i, w.CadenceSPM))
+		}
+		if w.MotionEnergy < 0.0 || w.MotionEnergy > 50.0 {
+			report.Valid = false
+			report.Issues = append(report.Issues, fmt.Sprintf("window %d: motion energy %.3f out of physical bounds [0, 50]", i, w.MotionEnergy))
+		}
+		if w.CadenceConfidence < 0.0 || w.CadenceConfidence > 1.0 {
+			report.Valid = false
+			report.Issues = append(report.Issues, fmt.Sprintf("window %d: cadence confidence %.2f out of bounds [0, 1]", i, w.CadenceConfidence))
+		}
+
+		// Timestamp monotonicity
+		if !w.StartTime.IsZero() {
+			if !prevStartTime.IsZero() && w.StartTime.Before(prevStartTime) {
+				report.Valid = false
+				report.Issues = append(report.Issues, fmt.Sprintf("window %d: non-monotonic start time (%v before %v)", i, w.StartTime, prevStartTime))
+			}
+			prevStartTime = w.StartTime
+		}
+
+		// Check for static/frozen values (bot/injector check)
+		if i > 0 {
+			prevW := windows[i-1]
+			if math.Abs(w.CadenceSPM-prevW.CadenceSPM) < 1e-6 {
+				identicalCadenceCount++
+			}
+			if math.Abs(w.MotionEnergy-prevW.MotionEnergy) < 1e-6 {
+				identicalEnergyCount++
+			}
+		}
+	}
+
+	report.TotalDurationSec = totalWinSec
+
+	// Duration inflation check: if runDurationSec is known (> 0)
+	if runDurationSec > 0 {
+		maxAllowedMotionDuration := runDurationSec*1.15 + 15.0
+		if totalWinSec > maxAllowedMotionDuration {
+			report.Valid = false
+			report.Issues = append(report.Issues, fmt.Sprintf("total motion duration (%.1fs) exceeds run duration (%.1fs) by > 15%%", totalWinSec, runDurationSec))
+		}
+	}
+
+	// Repeated identical values: e.g. >= 5 windows with exact same cadence and energy
+	if len(windows) >= 5 && identicalCadenceCount == len(windows) && identicalEnergyCount == len(windows) && windows[0].CadenceSPM > 0 {
+		report.Valid = false
+		report.Issues = append(report.Issues, fmt.Sprintf("bot/synthetic injector signature: %d consecutive windows with bit-for-bit identical cadence (%.2f SPM) and motion energy", len(windows), windows[0].CadenceSPM))
+	}
+
+	return report
+}
+
 // EvaluateTrackWithMotion evaluates GPS points, declared metrics, and optional accelerometer cadence/motion windows.
 func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType string, declaredDuration int, declaredDistance float64, motionWindows []MotionWindow) Result {
 	if len(points) == 0 {
 		return Result{
-			IsAnomaly: false,
-			Score:     0.0,
-			Reasons:   []string{"Empty GPS telemetry"},
+			IsAnomaly:          false,
+			VerificationStatus: VerificationStatusUnverifiedMotion,
+			Score:              0.0,
+			Reasons:            []string{"Empty GPS telemetry"},
 		}
 	}
 
@@ -218,10 +350,11 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 	for _, pt := range points {
 		if pt.IsMocked {
 			return Result{
-				IsAnomaly: true,
-				Score:     99.0,
-				Reasons:   []string{"Mock location provider detected"},
-				Features:  map[string]float64{"is_mocked": 1.0},
+				IsAnomaly:          true,
+				VerificationStatus: VerificationStatusRejected,
+				Score:              99.0,
+				Reasons:            []string{"Mock location provider detected"},
+				Features:           map[string]float64{"is_mocked": 1.0},
 			}
 		}
 	}
@@ -458,106 +591,125 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 	}
 
 	// 9. Accelerometer Cadence & Motion Energy Validation
+	runDurationSec := float64(declaredDuration)
+	if runDurationSec <= 0 && len(points) >= 2 && !hasZeroTimestamp {
+		runDurationSec = math.Abs(points[len(points)-1].Timestamp.Sub(points[0].Timestamp).Seconds())
+	}
+
+	motionWindowsValid := false
 	if len(motionWindows) > 0 {
-		var sumCadence, sumEnergy, sumConfidence float64
-		for _, w := range motionWindows {
-			sumCadence += w.CadenceSPM
-			sumEnergy += w.MotionEnergy
-			sumConfidence += w.CadenceConfidence
-		}
-		numW := float64(len(motionWindows))
-		features["cadence_spm"] = sumCadence / numW
-		features["motion_energy"] = sumEnergy / numW
-		features["cadence_confidence"] = sumConfidence / numW
-
-		// Rule: GPS speed > 6 km/h with near-zero cadence (< 35 SPM) and low motion energy (< 0.25) for > 30s => strong vehicle signal.
-		// Handle cycling separately: pedalling cadence is lower and coasting on bike is normal, but highway cruising lacks road vibration.
-		sustainedVehicleSec := 0.0
-		sustainedVehicleSpeed := 0.0
-
-		for _, w := range motionWindows {
-			winDuration := w.DurationSeconds
-			if winDuration <= 0 {
-				winDuration = 10.0
+		sanity := SanityCheckMotionWindows(motionWindows, runDurationSec)
+		if !sanity.Valid {
+			features["motion_sanity_valid"] = 0.0
+			for _, issue := range sanity.Issues {
+				reasons = append(reasons, fmt.Sprintf("Implausible motion telemetry: %s", issue))
 			}
+		} else {
+			features["motion_sanity_valid"] = 1.0
+			motionWindowsValid = true
+			var sumCadence, sumEnergy, sumConfidence float64
+			for _, w := range motionWindows {
+				sumCadence += w.CadenceSPM
+				sumEnergy += w.MotionEnergy
+				sumConfidence += w.CadenceConfidence
+			}
+			numW := float64(len(motionWindows))
+			features["cadence_spm"] = sumCadence / numW
+			features["motion_energy"] = sumEnergy / numW
+			features["cadence_confidence"] = sumConfidence / numW
 
-			// Estimate GPS speed corresponding to this window
-			gpsSpeedKmh := 0.0
-			if len(points) >= 2 && !w.StartTime.IsZero() {
-				wEnd := w.StartTime.Add(time.Duration(winDuration * float64(time.Second)))
-				var winPts []geo.TrackPoint
-				for _, pt := range points {
-					if !pt.Timestamp.IsZero() && (pt.Timestamp.Equal(w.StartTime) || pt.Timestamp.After(w.StartTime)) && (pt.Timestamp.Equal(wEnd) || pt.Timestamp.Before(wEnd)) {
-						winPts = append(winPts, pt)
+			// Rule: GPS speed > 6 km/h with near-zero cadence (< 35 SPM) and low motion energy (< 0.25) for > 30s => strong vehicle signal.
+			// Handle cycling separately: pedalling cadence is lower and coasting on bike is normal, but highway cruising lacks road vibration.
+			sustainedVehicleSec := 0.0
+			sustainedVehicleSpeed := 0.0
+
+			for _, w := range motionWindows {
+				winDuration := w.DurationSeconds
+				if winDuration <= 0 {
+					winDuration = 10.0
+				}
+
+				// Estimate GPS speed corresponding to this window
+				gpsSpeedKmh := 0.0
+				if len(points) >= 2 && !w.StartTime.IsZero() {
+					wEnd := w.StartTime.Add(time.Duration(winDuration * float64(time.Second)))
+					var winPts []geo.TrackPoint
+					for _, pt := range points {
+						if !pt.Timestamp.IsZero() && (pt.Timestamp.Equal(w.StartTime) || pt.Timestamp.After(w.StartTime)) && (pt.Timestamp.Equal(wEnd) || pt.Timestamp.Before(wEnd)) {
+							winPts = append(winPts, pt)
+						}
+					}
+					if len(winPts) >= 2 {
+						var dMeters float64
+						for j := 1; j < len(winPts); j++ {
+							dMeters += geo.HaversineDistanceMeters(winPts[j-1].ToLatLng(), winPts[j].ToLatLng())
+						}
+						dtSec := math.Abs(winPts[len(winPts)-1].Timestamp.Sub(winPts[0].Timestamp).Seconds())
+						if dtSec > 0 {
+							gpsSpeedKmh = (dMeters / dtSec) * 3.6
+						}
 					}
 				}
-				if len(winPts) >= 2 {
-					var dMeters float64
-					for j := 1; j < len(winPts); j++ {
-						dMeters += geo.HaversineDistanceMeters(winPts[j-1].ToLatLng(), winPts[j].ToLatLng())
-					}
-					dtSec := math.Abs(winPts[len(winPts)-1].Timestamp.Sub(winPts[0].Timestamp).Seconds())
-					if dtSec > 0 {
-						gpsSpeedKmh = (dMeters / dtSec) * 3.6
+
+				// Fallback: If point timestamps don't align with window timestamps, use overall run speed or avg_speed feature
+				if gpsSpeedKmh == 0.0 {
+					if declaredDuration > 0 && declaredDistance > 0 {
+						gpsSpeedKmh = (declaredDistance / float64(declaredDuration)) * 3.6
+					} else if s, ok := features["avg_speed"]; ok {
+						gpsSpeedKmh = s
 					}
 				}
-			}
 
-			// Fallback: If point timestamps don't align with window timestamps, use overall run speed or avg_speed feature
-			if gpsSpeedKmh == 0.0 {
-				if declaredDuration > 0 && declaredDistance > 0 {
-					gpsSpeedKmh = (declaredDistance / float64(declaredDuration)) * 3.6
-				} else if s, ok := features["avg_speed"]; ok {
-					gpsSpeedKmh = s
-				}
-			}
+				if activityType == "cycling" {
+					// Cycling: Coasting is permitted at normal cycling speeds (6-25 km/h).
+					// Only flag if moving at high vehicle cruising speed (> 25 km/h) with zero cadence (< 15 RPM)
+					// AND almost zero vibration (< 0.05 m^2/s^4) for > 60s, or speed > 45 km/h.
+					if gpsSpeedKmh > 25.0 && w.CadenceSPM < 15.0 && w.MotionEnergy < 0.05 {
+						sustainedVehicleSec += winDuration
+						sustainedVehicleSpeed = math.Max(sustainedVehicleSpeed, gpsSpeedKmh)
+					} else {
+						sustainedVehicleSec = 0.0
+					}
 
-			if activityType == "cycling" {
-				// Cycling: Coasting is permitted at normal cycling speeds (6-25 km/h).
-				// Only flag if moving at high vehicle cruising speed (> 25 km/h) with zero cadence (< 15 RPM)
-				// AND almost zero vibration (< 0.05 m^2/s^4) for > 60s, or speed > 45 km/h.
-				if gpsSpeedKmh > 25.0 && w.CadenceSPM < 15.0 && w.MotionEnergy < 0.05 {
-					sustainedVehicleSec += winDuration
-					sustainedVehicleSpeed = math.Max(sustainedVehicleSpeed, gpsSpeedKmh)
+					if sustainedVehicleSec >= 60.0 {
+						ruleScore := 75.0 + (sustainedVehicleSpeed - 25.0)
+						if ruleScore > maxScore {
+							maxScore = ruleScore
+						}
+						reasons = append(reasons, fmt.Sprintf("Strong vehicle signal in cycling mode: GPS speed %.1f km/h with zero pedaling cadence (< 15 rpm) and zero road vibration (energy %.3f) sustained for %.0fs", sustainedVehicleSpeed, w.MotionEnergy, sustainedVehicleSec))
+						break
+					}
 				} else {
-					sustainedVehicleSec = 0.0
-				}
-
-				if sustainedVehicleSec >= 60.0 {
-					ruleScore := 75.0 + (sustainedVehicleSpeed - 25.0)
-					if ruleScore > maxScore {
-						maxScore = ruleScore
+					// Running & Walking: Human locomotion at > 6 km/h physically requires cadence (>= 35 spm) and motion energy (>= 0.25 m^2/s^4).
+					if gpsSpeedKmh > 6.0 && w.CadenceSPM < 35.0 && w.MotionEnergy < 0.25 {
+						sustainedVehicleSec += winDuration
+						sustainedVehicleSpeed = math.Max(sustainedVehicleSpeed, gpsSpeedKmh)
+					} else {
+						sustainedVehicleSec = 0.0
 					}
-					reasons = append(reasons, fmt.Sprintf("Strong vehicle signal in cycling mode: GPS speed %.1f km/h with zero pedaling cadence (< 15 rpm) and zero road vibration (energy %.3f) sustained for %.0fs", sustainedVehicleSpeed, w.MotionEnergy, sustainedVehicleSec))
-					break
-				}
-			} else {
-				// Running & Walking: Human locomotion at > 6 km/h physically requires cadence (>= 35 spm) and motion energy (>= 0.25 m^2/s^4).
-				if gpsSpeedKmh > 6.0 && w.CadenceSPM < 35.0 && w.MotionEnergy < 0.25 {
-					sustainedVehicleSec += winDuration
-					sustainedVehicleSpeed = math.Max(sustainedVehicleSpeed, gpsSpeedKmh)
-				} else {
-					sustainedVehicleSec = 0.0
-				}
 
-				if sustainedVehicleSec >= 30.0 {
-					ruleScore := 75.0 + (sustainedVehicleSpeed - 6.0)
-					if ruleScore > maxScore {
-						maxScore = ruleScore
+					if sustainedVehicleSec >= 30.0 {
+						ruleScore := 75.0 + (sustainedVehicleSpeed - 6.0)
+						if ruleScore > maxScore {
+							maxScore = ruleScore
+						}
+						reasons = append(reasons, fmt.Sprintf("Strong vehicle signal: GPS speed > 6 km/h (%.1f km/h) with near-zero cadence (%.1f spm) and low motion energy (%.3f) sustained for %.0fs", sustainedVehicleSpeed, w.CadenceSPM, w.MotionEnergy, sustainedVehicleSec))
+						break
 					}
-					reasons = append(reasons, fmt.Sprintf("Strong vehicle signal: GPS speed > 6 km/h (%.1f km/h) with near-zero cadence (%.1f spm) and low motion energy (%.3f) sustained for %.0fs", sustainedVehicleSpeed, w.CadenceSPM, w.MotionEnergy, sustainedVehicleSec))
-					break
 				}
 			}
 		}
+	} else {
+		features["motion_sanity_valid"] = 0.0
+		features["has_motion_windows"] = 0.0
 	}
 
 	// 10. Tier 2: Production LightGBM Machine Learning Ensemble Model
 	// Only evaluated if:
 	// - Tier 1 hard physics rules did not already trigger a high-severity rejection (score >= 50.0)
 	// - ML Tier 2 is enabled by feature flag
-	// - Motion windows are present (preserving backward compatibility for clients without motion sensors)
-	if d.cfg.EnableMLTier2 && d.mlEnsemble != nil && len(points) >= 3 && len(motionWindows) > 0 {
+	// - Motion windows are present and passed server-side sanity checks
+	if d.cfg.EnableMLTier2 && d.mlEnsemble != nil && len(points) >= 3 && motionWindowsValid {
 		if maxScore < 50.0 {
 			f25 := Extract25Features(points, motionWindows)
 			isMLAnomaly, mlProb := d.mlEnsemble.Predict(f25)
@@ -574,11 +726,26 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 	}
 
 	isAnomaly := maxScore > d.cfg.AnomalyThreshold
+	var verificationStatus string
+	if isAnomaly {
+		if maxScore >= 50.0 {
+			verificationStatus = VerificationStatusRejected
+		} else {
+			verificationStatus = VerificationStatusUnverifiedMotion
+		}
+	} else if len(motionWindows) == 0 || !motionWindowsValid {
+		// Runs without motion windows or with implausible motion telemetry are never marked verified_human
+		verificationStatus = VerificationStatusUnverifiedMotion
+	} else {
+		verificationStatus = VerificationStatusVerifiedHuman
+	}
+
 	return Result{
-		IsAnomaly: isAnomaly,
-		Score:     maxScore,
-		Reasons:   reasons,
-		Features:  features,
+		IsAnomaly:          isAnomaly,
+		VerificationStatus: verificationStatus,
+		Score:              maxScore,
+		Reasons:            reasons,
+		Features:           features,
 	}
 }
 

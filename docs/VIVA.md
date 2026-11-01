@@ -198,6 +198,25 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 
 ---
 
+### Q4.4: Why are runs with missing or omitted accelerometer windows treated as `unverified_motion`, and why restrict rewards?
+**Examiner Defense Rationale (2-3 lines):**
+Motion windows are client-supplied telemetry that a modified client can omit or synthesize. Treating runs without verified motion as `unverified_motion` preserves casual gameplay (athletes keep claimed territory and distance stats), but withholding duel advancement and weak-territory capture multipliers prevents motor vehicle exploiters from farming competitive leaderboards without physical human exertion.
+
+**Deep Defense:**
+- **The Client Trust Reality:** While client-reported GPS speed is easily defeated by recalculating haversine distance over timestamps on the server, accelerometer cadence is an on-device sensor metric. There is no cryptographically verifiable Android/iOS attestation token for accelerometer time-series.
+- **Three Verification Tiers:**
+  1. `verified_human`: GPS kinematics pass physical rules AND motion windows pass server sanity checks (`SanityCheckMotionWindows` verifies bounds [0, 300] SPM, duration inflation <= 15%, and absence of frozen bot patterns).
+  2. `unverified_motion`: GPS kinematics pass physical rules, but motion windows are missing, empty, or failed sanity checks. Run commits territory, but duel progress is skipped and the 1.5x weak territory bonus is withheld.
+  3. `rejected`: Physical physics violations (speed > 25 km/h, teleportation, or sustained vehicle stillness > 6 km/h with 0 cadence and low vibration for > 30s) result in HTTP 422 rejection.
+
+---
+
+### Q4.5: Why is Tier 2 ML disabled by default, and how does the server guarantee fail-safe fallback on corrupt models?
+**Defense:**
+- **Decoupling from Synthetic Leakage:** The public GeoLife dataset contains pure GPS coordinates without accelerometer telemetry. Early implementations synthesized cadence from ground-truth transport labels, leaking labels into training. In M1-M2, label synthesis was permanently eliminated, and the cadence model was gated behind a strict threshold (>= 30 real team app traces across >= 3 users). Because zero team traces are currently collected, the cadence model remains disabled (`EnableMLTier2: false`).
+- **Fail-Safe Startup Guarantee:** In [`backend/internal/anticheat/detector.go`](backend/internal/anticheat/detector.go#L160-L185), `NewDetector` cryptographically verifies the SHA256 checksum of `anomaly_detector_trees.json`. If metadata is corrupt or SHA256 mismatches, `anticheat.NewMLEnsembleFromBytes` returns `ErrModelIntegrityFailed`. The detector catches the error, logs a single warning via `sync.Once`, sets `mlEnsemble = nil`, and continues serving requests purely via deterministic Tier 1 physical rules with zero crashes or panics.
+
+
 ## 5. Push Notification Infrastructure & Weekly League
 
 ### Q5.1: Why implement FCM HTTP v1 with OAuth2 Service Account JWT instead of the legacy Firebase server key?
@@ -323,7 +342,9 @@ Signal dropouts exceeding 15 seconds segment the track buffer rather than interp
 7. **Social & Duels Offline Resilience & Anti-Abuse (Resolved in Phase 4)**:
    - Head-to-Head Duels and Squad Friends feature local offline caching via `SharedPreferences`. When network connectivity is lost, active duel challenges and progress meters display gracefully from local cache with an offline warning indicator.
    - Anti-abuse limits (max 5 active, max 10 pending) and activity-type segregation strictly enforced across Dart client and Go backend.
-8. **Kinematic Anticheat & Battery Longevity (Resolved in Phase 5)**:
+8. **Kinematic Anticheat, Verification States & Battery Longevity (Resolved in Phase 5 & Integrity Audit)**:
+   - Two-tier anti-cheat architecture: Tier 1 deterministic physical constraints serve as the primary production gate, with full parity across Dart and Go. Tier 2 ML LightGBM is experimental and kept disabled by default pending real team trace collection (>= 30 traces), eliminating synthetic cadence false positives on wheeled conveyances (strollers) and cushioned bags.
+   - Server-side motion window auditing (`SanityCheckMotionWindows`) evaluates bounds, duration inflation, and bot repeat signatures. Missing or unverified motion resolves to `unverified_motion` (territory claims permitted; duel progress and 1.5x weak-territory multiplier restricted).
    - Full parity across Dart `AnomalyService` and Go `anticheat.Detector` for mock GPS detection, activity speed ceilings, teleportation jumps, biomechanical acceleration limits ($8.0\text{ m/s}^2$ running, $12.0\text{ m/s}^2$ cycling), and $\ge 50\%$ identical-step frozen replay rejection.
    - Dynamic GPS duty-cycling ($1\text{s} \to 3\text{s}$, $2\text{m} \to 8\text{m}$) coupled with pure black AMOLED screen overlay achieves up to $60-80\%$ display power reduction during marathon endurance workouts.
 9. **Accessibility, Dark Tactical HUD & Production Polish (Resolved in Phase 6)**:

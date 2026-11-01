@@ -231,41 +231,23 @@ def parse_plt_file(plt_path: str, intervals: List[dict]) -> List[dict]:
 
 
 def load_team_app_traces(app_traces_dir: str) -> List[dict]:
-    """Loads any real field recordings collected by team members from app_traces_dir."""
-    points = []
-    if not os.path.exists(app_traces_dir):
-        return points
+    """
+    Loads and validates team-collected app traces from app_traces_dir using
+    the strict sensor and schema validator (import_app_traces.py).
+    Enforces minimum trace threshold for cadence model enablement.
+    """
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+    from ml.data.import_app_traces import import_all_team_traces, write_status_manifest
 
-    import json
-    for fname in os.listdir(app_traces_dir):
-        if not fname.endswith(".json"):
-            continue
-        fpath = os.path.join(app_traces_dir, fname)
-        try:
-            with open(fpath, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            user_id = data.get("user_id", "team_member")
-            session_id = data.get("session_id", fname.replace(".json", ""))
-            raw_mode = data.get("transport_mode", "walk").lower()
-            mapped_mode = MODE_MAPPING.get(raw_mode, "legit_walk_run")
+    points, motion, audit = import_all_team_traces(app_traces_dir=app_traces_dir)
+    manifest_path = os.path.join(app_traces_dir, "..", "app_traces_manifest.json")
+    write_status_manifest(audit, os.path.abspath(manifest_path))
 
-            for pt in data.get("points", []):
-                points.append({
-                    "user_id": user_id,
-                    "session_id": session_id,
-                    "timestamp": pt["timestamp_ms"] / 1000.0 if pt.get("timestamp_ms") else pt.get("timestamp", 0),
-                    "latitude": float(pt["latitude"]),
-                    "longitude": float(pt["longitude"]),
-                    "altitude_m": float(pt.get("altitude", 0.0)),
-                    "accuracy_m": float(pt.get("accuracy", 4.0)),
-                    "raw_mode": raw_mode,
-                    "transport_mode": mapped_mode,
-                })
-        except Exception as e:
-            print(f"[-] Warning: Failed to parse team trace {fname}: {e}")
+    if not audit.cadence_model_enabled:
+        print(f"[-] Cadence Model Audit: {audit.status_message}")
+    else:
+        print(f"[+] Cadence Model Audit: {audit.status_message}")
 
-    if points:
-        print(f"[+] Loaded {len(points)} team field trace points from {app_traces_dir}")
     return points
 
 

@@ -885,3 +885,82 @@ func TestMemory_ApplyTerritoryDecay_UpdatesOnlyLastDecayedAt(t *testing.T) {
 	assert.WithinDuration(t, time.Now().UTC(), defendedT.LastDefendedAt, 5*time.Second, "last_defended_at must be refreshed on defense")
 	assert.WithinDuration(t, time.Now().UTC(), defendedT.LastDecayedAt, 5*time.Second, "last_decayed_at must be refreshed on defense")
 }
+
+func TestMemory_UnverifiedMotion_RewardsRestricted(t *testing.T) {
+	memStore := store.NewMemoryStore()
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	// 1. Setup two users and an active duel
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_athlete_1", Username: "Athlete1", Faction: "Cyber Vanguard"})
+	_ = memStore.UpsertUser(ctx, &store.User{ID: "usr_athlete_2", Username: "Athlete2", Faction: "Solar Syndicate"})
+
+	duel := &store.Duel{
+		ID:           "duel_unverified_test",
+		ChallengerID: "usr_athlete_1",
+		OpponentID:   "usr_athlete_2",
+		TargetType:   "distance",
+		ActivityType: "running",
+		TargetValue:  10.0,
+		XpStake:      250,
+	}
+	err := memStore.CreateDuel(ctx, duel)
+	require.NoError(t, err)
+	err = memStore.AcceptDuel(ctx, duel.ID, "usr_athlete_2")
+	require.NoError(t, err)
+
+	loop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       1000.0,
+		LoopDistanceMeters: 500.0,
+		ClosedAt:           now,
+	}
+
+	// 2. Submit run with VerificationStatus = "unverified_motion" (e.g. missing motion windows)
+	resUnverified, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:                 "run_unverified_001",
+		UserID:             "usr_athlete_1",
+		IdempotencyKey:     "idem_unver_001",
+		ActivityType:       "running",
+		DistanceMeters:     500.0,
+		VerificationStatus: "unverified_motion",
+		Status:             "accepted",
+		CreatedAt:          now,
+	}, []geo.EnclosedLoop{loop}, nil)
+	require.NoError(t, err)
+
+	// Basic territory capture works
+	assert.Equal(t, 1000.0, resUnverified.AreaClaimedSqm)
+	assert.Equal(t, "unverified_motion", resUnverified.VerificationStatus)
+
+	// High-value reward (duel progress) must NOT be updated for unverified motion
+	duels, err := memStore.GetDuelsByUser(ctx, "usr_athlete_1")
+	require.NoError(t, err)
+	require.Len(t, duels, 1)
+	assert.Equal(t, 0.0, duels[0].ChallengerProgress, "Unverified motion must NOT advance duel challenge progress")
+
+	// 3. Submit run with VerificationStatus = "verified_human"
+	_, err = memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:                 "run_verified_001",
+		UserID:             "usr_athlete_1",
+		IdempotencyKey:     "idem_ver_001",
+		ActivityType:       "running",
+		DistanceMeters:     500.0,
+		VerificationStatus: "verified_human",
+		Status:             "accepted",
+		CreatedAt:          now.Add(1 * time.Hour),
+	}, []geo.EnclosedLoop{loop}, nil)
+	require.NoError(t, err)
+
+	// Verified human run DOES advance duel progress (500 meters = 0.5 km)
+	duelsAfter, err := memStore.GetDuelsByUser(ctx, "usr_athlete_1")
+	require.NoError(t, err)
+	require.Len(t, duelsAfter, 1)
+	assert.Equal(t, 0.5, duelsAfter[0].ChallengerProgress, "Verified human motion MUST advance duel challenge progress")
+}

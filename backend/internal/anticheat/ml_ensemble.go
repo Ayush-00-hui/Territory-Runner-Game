@@ -62,15 +62,15 @@ type MLEnsemble struct {
 	isVerified bool
 }
 
-// NewDefaultMLEnsemble initializes and cryptographically verifies the production LightGBM model.
-func NewDefaultMLEnsemble() (*MLEnsemble, error) {
+// NewMLEnsembleFromBytes parses and cryptographically verifies the LightGBM model from raw metadata and tree JSON bytes.
+func NewMLEnsembleFromBytes(metaBytes, treesBytes []byte) (*MLEnsemble, error) {
 	var meta ModelMetadata
-	if err := json.Unmarshal(embeddedMetaJSON, &meta); err != nil {
-		return nil, fmt.Errorf("anticheat: failed to parse embedded metadata: %w", err)
+	if err := json.Unmarshal(metaBytes, &meta); err != nil {
+		return nil, fmt.Errorf("anticheat: failed to parse metadata: %w", err)
 	}
 
 	// Normalize line endings to LF for platform-independent cryptographic verification
-	normalized := bytes.ReplaceAll(embeddedTreesJSON, []byte("\r\n"), []byte("\n"))
+	normalized := bytes.ReplaceAll(treesBytes, []byte("\r\n"), []byte("\n"))
 	h := sha256.Sum256(normalized)
 	actualSHA := hex.EncodeToString(h[:])
 
@@ -79,8 +79,8 @@ func NewDefaultMLEnsemble() (*MLEnsemble, error) {
 	}
 
 	var model TreeEnsembleModel
-	if err := json.Unmarshal(embeddedTreesJSON, &model); err != nil {
-		return nil, fmt.Errorf("anticheat: failed to parse embedded tree ensemble: %w", err)
+	if err := json.Unmarshal(treesBytes, &model); err != nil {
+		return nil, fmt.Errorf("anticheat: failed to parse tree ensemble: %w", err)
 	}
 
 	if meta.ModelVersion != "" && model.ModelVersion != meta.ModelVersion {
@@ -93,6 +93,11 @@ func NewDefaultMLEnsemble() (*MLEnsemble, error) {
 		sha256Hex:  actualSHA,
 		isVerified: true,
 	}, nil
+}
+
+// NewDefaultMLEnsemble initializes and cryptographically verifies the production LightGBM model.
+func NewDefaultMLEnsemble() (*MLEnsemble, error) {
+	return NewMLEnsembleFromBytes(embeddedMetaJSON, embeddedTreesJSON)
 }
 
 // Metadata returns the active model metadata.

@@ -10,16 +10,18 @@
 
 Territory Runner is a real-time, location-based territory conquest platform where physical athletic runs enclose geographic polygons to claim territory, climb weekly competitive leagues, and challenge rivals in duels.
 
-Because real estate and leaderboard prestige are tied directly to GPS coordinates, the system operates under a **zero-trust client model**:
+Because real estate and leaderboard prestige are tied directly to GPS coordinates, the system operates under a **server-authoritative model with independent telemetry auditing**:
 
 ```
 [ Untrusted Client Device ]                [ Server Authority Boundary ]
 ┌─────────────────────────┐               ┌─────────────────────────────────────────┐
 │ • Compromised OS/Root   │   Untrusted   │ • Independent Velocity Recalculation   │
 │ • Spoofed GPS Provider  │   HTTP/WS     │ • Monotonic Timestamp Verification     │
-│ • Faked Accelerometer   │ ────────────► │ • Pure Go LightGBM Kinematic Ensemble   │
-│ • Reverse Engineered UI │   Payload     │ • PostGIS Transaction Advisory Locks    │
-└─────────────────────────┘               │ • Cryptographic RS256 JWT Enforcement   │
+│ • Faked Accelerometer   │ ────────────► │ • Motion Window Sanity Auditing         │
+│ • Missing Motion Data   │   Payload     │ • Deterministic Physical Gate (Tier 1)  │
+│ • Reverse Engineered UI │               │ • Pure Go LightGBM Ensemble (Tier 2-Exp)│
+└─────────────────────────┘               │ • PostGIS Transaction Advisory Locks    │
+                                          │ • Cryptographic RS256 JWT Enforcement   │
                                           └─────────────────────────────────────────┘
 ```
 
@@ -59,8 +61,11 @@ Incoming Run Submission (GeoJSON Polygon + Breadcrumb Telemetry)
     • Hard Ceilings: Max Speed (25 km/h running), Max Accel (8 m/s²), Teleport (>50m/s)
                              │
                              ▼
- 4. Tier 2 ML Anti-Cheat: Native Go LightGBM 25-Feature Decision Tree Ensemble
-    • Sinuosity, Heading Entropy, Speed Variance, Motion Cadence
+ 4. Motion Telemetry Audit & Tier 1/2 Evaluation:
+    • Server audits motion windows (bounds, inflation, bot signatures)
+    • Tier 1 Physical Constraints: Primary gate (speed, accel, vehicle stillness)
+    • Tier 2 ML Ensemble: Experimental; disabled by default until >=30 team traces
+    • Verification: verified_human, unverified_motion, or rejected
                              │
                              ▼
  5. Geometric & Topological Validation:
@@ -90,9 +95,17 @@ Incoming Run Submission (GeoJSON Polygon + Breadcrumb Telemetry)
    - Instantaneous acceleration ceiling: $a_i = \frac{v_i - v_{i-1}}{\Delta t} \le 8.0\text{ m/s}^2$ for running ($12.0\text{ m/s}^2$ for cycling).
    - Teleportation jump detector: A spatial displacement $> 50.0\text{ m}$ in $\le 1.0\text{ s}$ is flagged as an invalid jump.
 
-4. **Tier 2 ML Kinematic Ensemble (Pure Go)**  
-   - The Go backend runs a compiled 60-tree LightGBM ensemble (`backend/internal/anticheat/ml_ensemble.go`) evaluating 25 kinematic and motion features over 30-second sliding windows.
-   - Evaluates multi-dimensional signals: speed variance, acceleration jerk, heading change rate, turning angle entropy, and stop frequency.
+4. **Motion Window Sanity Auditing & Verification States**  
+   - Accelerometer windows are client-supplied and cannot be cryptographically attested by mobile OS APIs.
+   - The server executes `SanityCheckMotionWindows`:
+     - Checks total window duration against run duration (flags inflation $> 15\%$).
+     - Rejects out-of-bounds metrics (cadence $\notin [0, 300]\text{ SPM}$, motion energy $\notin [0, 50]$, confidence $\notin [0, 1]$).
+     - Detects bot/synthetic injectors ($\ge 5$ consecutive windows with bit-for-bit identical cadence and motion energy).
+   - **Verification State Resolution**:
+     - `verified_human`: Physical GPS kinematics pass AND motion windows pass server sanity checks. Full territory and duel rewards granted.
+     - `unverified_motion`: Physical GPS kinematics pass, but motion windows are missing, empty, or failed sanity checks. Run is accepted and territory is claimed, but active duel challenges are NOT advanced and the $1.5\times$ weak-territory multiplier is withheld.
+     - `rejected`: Severe physical violations (mock GPS, teleportation, velocity $> 25\text{ km/h}$, or sustained vehicle stillness $> 6\text{ km/h}$ with 0 cadence and low vibration for $> 30\text{s}$) trigger instant rejection (`422 ANOMALY_REJECTED`).
+   - **Tier 2 ML Ensemble (Experimental / Disabled by Default)**: Evaluates a 60-tree LightGBM model only when motion windows are valid and `EnableMLTier2: true`. Kept disabled by default until $\ge 30$ verified team traces are gathered.
 
 5. **Topological & Spatial Sanitization (PostGIS & Clipper2)**  
    - **Minimum Distance**: Loop path perimeter must be $\ge 40\text{ m}$.
@@ -111,10 +124,13 @@ Incoming Run Submission (GeoJSON Polygon + Breadcrumb Telemetry)
 
 ## 4. Known Gaps & Residual Risks
 
-While the combination of Tier 1 deterministic physical rules and Tier 2 ML kinematic classification detects standard spoofing and vehicle transit, the following attack vectors represent **known residual risks**:
+While the combination of Tier 1 deterministic physical rules and server-side motion auditing mitigates standard spoofing and vehicle transit, the following attack vectors represent **known residual risks**:
 
 | Residual Risk | Attack Description | Current Mitigation | Architectural Gap / Future Work |
 | :--- | :--- | :--- | :--- |
+| **Client-Supplied Motion Omission** | Adversary strips all accelerometer telemetry from the payload to avoid triggering cadence stillness checks while in a car. | Server categorizes trace as `unverified_motion`. Run captures base territory but receives zero duel progress and forfeits territory capture multipliers. | Pure GPS vehicle classification in slow urban traffic ($10 - 25\text{ km/h}$) has a ~37% recall at 1% FPR. |
+| **Padded / Cushioned Backpack False Positive** | Legitimate runner carries phone in a heavily padded backpack with foam damping, causing motion energy to drop $< 0.25\text{ m}^2/\text{s}^4$ at $10\text{ km/h}$ for $> 30\text{s}$. | Tier 1 vehicle stillness heuristic requires both cadence $< 35$ and energy $< 0.25$. Normal backpack bounce exceeds $0.25$. | If heavily cushioned, triggers vehicle stillness rule. Advise athletes to wear phone in armbands or waistbands. |
+| **Fast Stroller Jogging False Positive** | Athlete jogs at $7.5\text{ km/h}$ ($> 6.0\text{ km/h}$) pushing a baby stroller on smooth asphalt with phone mounted on handlebar (0 cadence, low vibration). | Walking with stroller ($\le 6.0\text{ km/h}$) passes cleanly. | Jogging with stroller at $> 6.0\text{ km/h}$ with low handlebar vibration mimics motorized vehicle cruising. |
 | **Low-Speed E-Bike with Phone Shaker** | Adversary rides an electric bicycle at $12 - 16\text{ km/h}$ while an oscillating phone cradle generates a rhythmic $165\text{ SPM}$ accelerometer cadence. | Speed ceiling ($25\text{ km/h}$) and cadence stillness rules pass because speed and cadence appear human. | Requires high-frequency IMU jerk analysis (foot-strike ground reaction forces have higher peak sharpness than mechanical shakers). |
 | **Hardware-Level RF GNSS Spoofing** | Attacker uses a Software-Defined Radio (e.g. HackRF) to broadcast simulated GPS satellite signals directly to the phone's physical antenna. | OS sees legitimate satellite carrier signals; `isMocked` is `false`. | Cannot be detected by client OS. Mitigated server-side solely by kinematic plausibility and route realism. |
 | **Coordinated Multi-Account Collusion** | Two real athletes physically run to exchange or farm territories, deliberately surrendering zones to boost duel XP. | Rules against duplicate device IDs and IP rate limits. | Kinematic telemetry cannot detect social intent or collusive gameplay between legitimate human runners. |

@@ -519,15 +519,16 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 
 	runID := "run_" + uuid.New().String()
 	runRecord := &store.Run{
-		ID:              runID,
-		UserID:          uid,
-		IdempotencyKey:  req.IdempotencyKey,
-		ActivityType:    activityType,
-		DurationSeconds: req.DurationSeconds,
-		DistanceMeters:  req.DistanceMeters,
-		AnomalyScore:    anomalyRes.Score,
-		AnomalyReasons:  anomalyRes.Reasons,
-		Status:          "accepted",
+		ID:                 runID,
+		UserID:             uid,
+		IdempotencyKey:     req.IdempotencyKey,
+		ActivityType:       activityType,
+		DurationSeconds:    req.DurationSeconds,
+		DistanceMeters:     req.DistanceMeters,
+		AnomalyScore:       anomalyRes.Score,
+		AnomalyReasons:     anomalyRes.Reasons,
+		VerificationStatus: anomalyRes.VerificationStatus,
+		Status:             "accepted",
 	}
 	if anomalyRes.IsAnomaly {
 		runRecord.Status = "flagged_review"
