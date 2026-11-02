@@ -99,7 +99,8 @@ class MapToolsSheet extends StatelessWidget {
             _ToolTile(
               icon: Icons.speed_rounded,
               title: 'Virtual pacer',
-              subtitle: activePacerLabel ?? 'Select target split pace & test lab',
+              subtitle:
+                  activePacerLabel ?? 'Select target split pace & test lab',
               accentColor: AppColors.accent,
               onTap: onOpenPacer,
             ),

@@ -15,10 +15,10 @@ func TestXP_ProportionalScalingAndAntiFarmingFloor(t *testing.T) {
 	ctx := context.Background()
 
 	testCases := []struct {
-		name         string
-		areaSqm      float64
-		expectedXP   int
-		expectClaim  bool
+		name        string
+		areaSqm     float64
+		expectedXP  int
+		expectClaim bool
 	}{
 		{
 			name:        "Below 25 sqm floor awards zero XP",
@@ -115,4 +115,3 @@ func TestXP_ProportionalScalingAndAntiFarmingFloor(t *testing.T) {
 		})
 	}
 }
-

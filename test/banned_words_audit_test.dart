@@ -247,7 +247,9 @@ void main() {
       }
 
       // Check all IconButton tooltips
-      for (final btn in tester.widgetList<IconButton>(find.byType(IconButton))) {
+      for (final btn in tester.widgetList<IconButton>(
+        find.byType(IconButton),
+      )) {
         final tooltip = btn.tooltip ?? '';
         expect(
           bannedRegex.hasMatch(tooltip),
@@ -257,24 +259,27 @@ void main() {
       }
     });
 
-    test('Server error and anti-cheat messages are verified clean of banned words', () {
-      final sampleServerMessages = [
-        'Empty GPS data',
-        'Speed mismatch: reported 25.0 km/h vs computed 45.0 km/h (>15 km/h difference)',
-        'Unnatural movement pattern (Z-Score: 3.50 > 2.50)',
-        'Implausible motion data: duration mismatch',
-        'Territory alert: rival Athlete claimed 1200 m².',
-        'Network offline: displaying cached squads',
-        'Start running to claim your first territory.',
-      ];
+    test(
+      'Server error and anti-cheat messages are verified clean of banned words',
+      () {
+        final sampleServerMessages = [
+          'Empty GPS data',
+          'Speed mismatch: reported 25.0 km/h vs computed 45.0 km/h (>15 km/h difference)',
+          'Unnatural movement pattern (Z-Score: 3.50 > 2.50)',
+          'Implausible motion data: duration mismatch',
+          'Territory alert: rival Athlete claimed 1200 m².',
+          'Network offline: displaying cached squads',
+          'Start running to claim your first territory.',
+        ];
 
-      for (final msg in sampleServerMessages) {
-        expect(
-          bannedRegex.hasMatch(msg),
-          isFalse,
-          reason: 'Server message contains banned jargon: "$msg"',
-        );
-      }
-    });
+        for (final msg in sampleServerMessages) {
+          expect(
+            bannedRegex.hasMatch(msg),
+            isFalse,
+            reason: 'Server message contains banned jargon: "$msg"',
+          );
+        }
+      },
+    );
   });
 }

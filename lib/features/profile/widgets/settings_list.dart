@@ -205,9 +205,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                           return;
                         }
                         final parsed = double.tryParse(text);
-                        if (parsed == null ||
-                            parsed < 20.0 ||
-                            parsed > 300.0) {
+                        if (parsed == null || parsed < 20.0 || parsed > 300.0) {
                           setSheetState(() {
                             errorText =
                                 'Enter a valid weight between 20 and 300 kg';

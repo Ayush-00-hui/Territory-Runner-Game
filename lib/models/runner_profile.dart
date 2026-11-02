@@ -23,7 +23,6 @@ class RunnerProfile {
     'Cyber Rookie': 'Rookie Runner',
   };
 
-
   static String canonicalBadge(String name) => badgeAliases[name] ?? name;
 
   String get displayFaction => FactionStanding.canonicalFaction(faction);

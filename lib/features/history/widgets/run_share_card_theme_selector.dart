@@ -26,7 +26,11 @@ class RunShareCardThemeSelector extends StatelessWidget {
             'Athletic Dark',
           ),
           const SizedBox(width: AppSpacing.s8),
-          _buildThemePill(context, ShareCardTheme.highContrast, 'High Contrast'),
+          _buildThemePill(
+            context,
+            ShareCardTheme.highContrast,
+            'High Contrast',
+          ),
           const SizedBox(width: AppSpacing.s8),
           _buildThemePill(context, ShareCardTheme.stealth, 'Stealth'),
         ],

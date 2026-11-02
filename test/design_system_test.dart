@@ -217,11 +217,17 @@ void main() {
     });
 
     test('FactionStanding.canonicalFaction handles values cleanly without crashing', () {
-      expect(FactionStanding.canonicalFaction('Cyber Vanguard'), 'Cyber Vanguard');
+      expect(
+        FactionStanding.canonicalFaction('Cyber Vanguard'),
+        'Cyber Vanguard',
+      );
       expect(FactionStanding.canonicalFaction(null), '');
       expect(FactionStanding.canonicalFaction(''), '');
       expect(FactionStanding.canonicalFaction('Vanguard'), 'Vanguard');
-      expect(FactionStanding.canonicalFaction('Morning Striders'), 'Morning Striders');
+      expect(
+        FactionStanding.canonicalFaction('Morning Striders'),
+        'Morning Striders',
+      );
     });
 
     testWidgets(

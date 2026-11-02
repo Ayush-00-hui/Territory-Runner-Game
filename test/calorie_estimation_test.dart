@@ -22,11 +22,14 @@ void main() {
       expect(calories, 0);
     });
 
-    test('Standard reference 70kg runner burns ~72.5 kcal/km (ACSM 1.036 factor)', () {
-      // 5.0 km * 70.0 kg * 1.036 = 362.6 -> 363 kcal
-      final calories = AppPreferences().estimateCalories(distanceKm: 5.0);
-      expect(calories, 363);
-    });
+    test(
+      'Standard reference 70kg runner burns ~72.5 kcal/km (ACSM 1.036 factor)',
+      () {
+        // 5.0 km * 70.0 kg * 1.036 = 362.6 -> 363 kcal
+        final calories = AppPreferences().estimateCalories(distanceKm: 5.0);
+        expect(calories, 363);
+      },
+    );
 
     test('Custom weight adjusts calorie calculation proportionally', () {
       // 5.0 km * 60.0 kg * 1.036 = 310.8 -> 311 kcal
@@ -57,21 +60,24 @@ void main() {
       expect(defaultCal, 725);
     });
 
-    test('Walking and cycling activity types use appropriate metabolic factors', () {
-      // Walking: 5.0 km * 70.0 kg * 0.73 = 255.5 -> 256 kcal
-      final walkCalories = AppPreferences().estimateCalories(
-        distanceKm: 5.0,
-        activityType: 'walking',
-      );
-      expect(walkCalories, 256);
+    test(
+      'Walking and cycling activity types use appropriate metabolic factors',
+      () {
+        // Walking: 5.0 km * 70.0 kg * 0.73 = 255.5 -> 256 kcal
+        final walkCalories = AppPreferences().estimateCalories(
+          distanceKm: 5.0,
+          activityType: 'walking',
+        );
+        expect(walkCalories, 256);
 
-      // Cycling: 20.0 km * 70.0 kg * 0.40 = 560 kcal
-      final cycleCalories = AppPreferences().estimateCalories(
-        distanceKm: 20.0,
-        activityType: 'cycling',
-      );
-      expect(cycleCalories, 560);
-    });
+        // Cycling: 20.0 km * 70.0 kg * 0.40 = 560 kcal
+        final cycleCalories = AppPreferences().estimateCalories(
+          distanceKm: 20.0,
+          activityType: 'cycling',
+        );
+        expect(cycleCalories, 560);
+      },
+    );
 
     test('formatCalories appends (est.) label and tilde prefix', () {
       expect(AppPreferences().formatCalories(363), '~363 kcal (est.)');
@@ -83,125 +89,125 @@ void main() {
   });
 
   group('HUD and Summary Calorie UI Rendering', () {
-    testWidgets('RunHudMetricsCard displays calorie estimate with (est.) label', (
-      tester,
-    ) async {
-      AppPreferences().setMockBodyWeight(null);
+    testWidgets(
+      'RunHudMetricsCard displays calorie estimate with (est.) label',
+      (tester) async {
+        AppPreferences().setMockBodyWeight(null);
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: RunHudMetricsCard(
-              isRunActive: true,
-              isAutoPaused: false,
-              distanceKm: 5.0,
-              elapsedSeconds: 1500,
-              movingSeconds: 1450,
-              splitPace: "5'00\"",
-              currentSpeedKmh: 12.0,
-              satelliteAccuracyMeters: 4.5,
-              stepCount: 5200,
-              territoriesClaimed: 2,
-              onToggleExpanded: () {},
-            ),
-          ),
-        ),
-      );
-
-      // 5.0 km * 70 kg * 1.036 = 363 kcal
-      expect(find.text('~363 kcal (est.)'), findsOneWidget);
-    });
-
-    testWidgets('SummaryRouteReplay displays calorie estimate with (est.) label', (
-      tester,
-    ) async {
-      final animationController = AnimationController(
-        vsync: const TestVSync(),
-        duration: const Duration(seconds: 1),
-      );
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: SummaryRouteReplay(
-              routePoints: const [LatLng(37.7749, -122.4194)],
-              effectiveArea: 15000.0,
-              calories: 363,
-              replayController: animationController,
-            ),
-          ),
-        ),
-      );
-
-      expect(
-        find.textContaining('~363 kcal (est.)'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('Settings list allows configuring and resetting optional body weight', (
-      tester,
-    ) async {
-      final prefs = AppPreferences();
-      prefs.setMockBodyWeight(null);
-
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.darkTheme,
-          home: Scaffold(
-            body: SingleChildScrollView(
-              child: ProfileSettingsList(
-                firebaseService: FirebaseService(),
-                territoryService: TerritoryService(),
-                onOpenAuth: () {},
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: RunHudMetricsCard(
+                isRunActive: true,
+                isAutoPaused: false,
+                distanceKm: 5.0,
+                elapsedSeconds: 1500,
+                movingSeconds: 1450,
+                splitPace: "5'00\"",
+                currentSpeedKmh: 12.0,
+                satelliteAccuracyMeters: 4.5,
+                stepCount: 5200,
+                territoriesClaimed: 2,
+                onToggleExpanded: () {},
               ),
             ),
           ),
-        ),
-      );
+        );
 
-      final weightTile = find.text('Body weight (optional)');
-      expect(weightTile, findsOneWidget);
-      await tester.ensureVisible(weightTile);
-      await tester.pumpAndSettle();
+        // 5.0 km * 70 kg * 1.036 = 363 kcal
+        expect(find.text('~363 kcal (est.)'), findsOneWidget);
+      },
+    );
 
-      expect(
-        find.text('Default: 70.0 kg (not set) • Tap to customize'),
-        findsOneWidget,
-      );
+    testWidgets(
+      'SummaryRouteReplay displays calorie estimate with (est.) label',
+      (tester) async {
+        final animationController = AnimationController(
+          vsync: const TestVSync(),
+          duration: const Duration(seconds: 1),
+        );
 
-      // Open dialog
-      await tester.tap(weightTile);
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SummaryRouteReplay(
+                routePoints: const [LatLng(37.7749, -122.4194)],
+                effectiveArea: 15000.0,
+                calories: 363,
+                replayController: animationController,
+              ),
+            ),
+          ),
+        );
 
-      expect(find.byType(TextField), findsOneWidget);
-      await tester.enterText(find.byType(TextField), '68.5');
-      await tester.pumpAndSettle();
+        expect(find.textContaining('~363 kcal (est.)'), findsOneWidget);
+      },
+    );
 
-      final saveButton = find.text('Save weight');
-      await tester.tap(saveButton);
-      await tester.pumpAndSettle();
+    testWidgets(
+      'Settings list allows configuring and resetting optional body weight',
+      (tester) async {
+        final prefs = AppPreferences();
+        prefs.setMockBodyWeight(null);
 
-      expect(prefs.bodyWeightKg, 68.5);
-      expect(
-        find.text('68.5 kg • Used for calorie estimates'),
-        findsOneWidget,
-      );
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ProfileSettingsList(
+                  firebaseService: FirebaseService(),
+                  territoryService: TerritoryService(),
+                  onOpenAuth: () {},
+                ),
+              ),
+            ),
+          ),
+        );
 
-      // Re-open dialog and reset
-      await tester.tap(weightTile);
-      await tester.pumpAndSettle();
+        final weightTile = find.text('Body weight (optional)');
+        expect(weightTile, findsOneWidget);
+        await tester.ensureVisible(weightTile);
+        await tester.pumpAndSettle();
 
-      final resetButton = find.text('Reset to standard default (70 kg)');
-      expect(resetButton, findsOneWidget);
-      await tester.tap(resetButton);
-      await tester.pumpAndSettle();
+        expect(
+          find.text('Default: 70.0 kg (not set) • Tap to customize'),
+          findsOneWidget,
+        );
 
-      expect(prefs.bodyWeightKg, isNull);
-      expect(
-        find.text('Default: 70.0 kg (not set) • Tap to customize'),
-        findsOneWidget,
-      );
-    });
+        // Open dialog
+        await tester.tap(weightTile);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(TextField), findsOneWidget);
+        await tester.enterText(find.byType(TextField), '68.5');
+        await tester.pumpAndSettle();
+
+        final saveButton = find.text('Save weight');
+        await tester.tap(saveButton);
+        await tester.pumpAndSettle();
+
+        expect(prefs.bodyWeightKg, 68.5);
+        expect(
+          find.text('68.5 kg • Used for calorie estimates'),
+          findsOneWidget,
+        );
+
+        // Re-open dialog and reset
+        await tester.tap(weightTile);
+        await tester.pumpAndSettle();
+
+        final resetButton = find.text('Reset to standard default (70 kg)');
+        expect(resetButton, findsOneWidget);
+        await tester.tap(resetButton);
+        await tester.pumpAndSettle();
+
+        expect(prefs.bodyWeightKg, isNull);
+        expect(
+          find.text('Default: 70.0 kg (not set) • Tap to customize'),
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

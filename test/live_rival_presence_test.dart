@@ -17,10 +17,7 @@ void main() {
         MapLayers.getFactionColor('Solar Fleet'),
         equals(AppColors.secondary),
       );
-      expect(
-        MapLayers.getFactionColor('Rogue Pacer'),
-        equals(AppColors.rival),
-      );
+      expect(MapLayers.getFactionColor('Rogue Pacer'), equals(AppColors.rival));
       expect(
         MapLayers.getFactionColor('Unknown Rogue'),
         equals(AppColors.rival),

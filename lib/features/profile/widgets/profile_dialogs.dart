@@ -1,4 +1,5 @@
 import '../../../models/faction_standing.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../gameplay/territory_service.dart';
@@ -160,7 +161,8 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
       final resp = await ApiClient().getFactionStandings();
       if (mounted) {
         setState(() {
-          _serverTeams = resp?.standings
+          _serverTeams =
+              resp?.standings
                   .where((s) => s.faction.trim().isNotEmpty)
                   .toList() ??
               [];
@@ -181,7 +183,9 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
     final trimmed = teamName.trim();
     widget.profile.faction = trimmed;
     await widget.territoryService.saveProfile(widget.profile);
-    ApiClient().updateUserFaction(widget.profile.faction).catchError((_) => false);
+    ApiClient()
+        .updateUserFaction(widget.profile.faction)
+        .catchError((_) => false);
     if (!mounted) return;
     Navigator.pop(context);
     widget.onUpdated();
@@ -246,7 +250,8 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
           )
         else
           ..._serverTeams.map((team) {
-            final isSelected = currentFaction.isNotEmpty && currentFaction == team.faction;
+            final isSelected =
+                currentFaction.isNotEmpty && currentFaction == team.faction;
 
             return Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.s10),
@@ -351,7 +356,10 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
                 ),
                 decoration: InputDecoration(
                   hintText: 'e.g. Morning Striders',
-                  hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  hintStyle: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                  ),
                   counterText: '',
                   filled: true,
                   fillColor: AppColors.surface2,
@@ -382,10 +390,11 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.bgDeep,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppSpacing.br12,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
               ),
               onPressed: () {
                 final name = _customTeamController.text.trim();
@@ -393,7 +402,10 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
                   _setTeam(name);
                 }
               },
-              child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)),
+              child: const Text(
+                'Save',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ],
         ),
@@ -417,7 +429,6 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
     );
   }
 }
-
 
 void showStatDetailModal(
   BuildContext context, {

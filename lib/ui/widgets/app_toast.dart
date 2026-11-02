@@ -80,7 +80,6 @@ class AppToast extends StatelessWidget {
     VoidCallback? onAction,
     String? actionLabel,
   }) {
-
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
 

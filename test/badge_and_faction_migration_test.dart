@@ -53,25 +53,28 @@ void main() {
       expect(profile.hasBadge('Nonexistent Badge'), isFalse);
     });
 
-    test('persisted faction values are preserved cleanly without crashing the app', () {
-      final profile = RunnerProfile(
-        id: 'usr_vanguard',
-        username: 'PacerOne',
-        faction: 'Cyber Vanguard',
-      );
+    test(
+      'persisted faction values are preserved cleanly without crashing the app',
+      () {
+        final profile = RunnerProfile(
+          id: 'usr_vanguard',
+          username: 'PacerOne',
+          faction: 'Cyber Vanguard',
+        );
 
-      // Raw value preserved for API / backend parity without crashing
-      expect(profile.faction, equals('Cyber Vanguard'));
-      expect(profile.displayFaction, equals('Cyber Vanguard'));
+        // Raw value preserved for API / backend parity without crashing
+        expect(profile.faction, equals('Cyber Vanguard'));
+        expect(profile.displayFaction, equals('Cyber Vanguard'));
 
-      // Empty faction returns calm empty string
-      final emptyProfile = RunnerProfile(
-        id: 'usr_independent',
-        username: 'SoloRunner',
-      );
-      expect(emptyProfile.faction, isEmpty);
-      expect(emptyProfile.displayFaction, isEmpty);
-    });
+        // Empty faction returns calm empty string
+        final emptyProfile = RunnerProfile(
+          id: 'usr_independent',
+          username: 'SoloRunner',
+        );
+        expect(emptyProfile.faction, isEmpty);
+        expect(emptyProfile.displayFaction, isEmpty);
+      },
+    );
 
     test('persisted factions display without hardcoded aliases', () {
       final syndicateProfile = RunnerProfile(

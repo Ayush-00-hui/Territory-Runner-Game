@@ -66,8 +66,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
   }
 
   void _onPointerUp(PointerUpEvent _) {
-    if (_isHolding && _holdController.value < 1.0) {
-    }
+    if (_isHolding && _holdController.value < 1.0) {}
     _holdController.reset();
     _lastTickMilestone = 0;
     setState(() {
@@ -76,8 +75,7 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
   }
 
   void _onPointerCancel(PointerCancelEvent _) {
-    if (_isHolding && _holdController.value < 1.0) {
-    }
+    if (_isHolding && _holdController.value < 1.0) {}
     _holdController.reset();
     _lastTickMilestone = 0;
     setState(() {
