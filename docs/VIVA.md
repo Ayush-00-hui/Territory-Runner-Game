@@ -213,8 +213,22 @@ Motion windows are client-supplied telemetry that a modified client can omit or 
 
 ### Q4.5: Why is Tier 2 ML disabled by default, and how does the server guarantee fail-safe fallback on corrupt models?
 **Defense:**
-- **Decoupling from Synthetic Leakage:** The public GeoLife dataset contains pure GPS coordinates without accelerometer telemetry. Early implementations synthesized cadence from ground-truth transport labels, leaking labels into training. In M1-M2, label synthesis was permanently eliminated, and the cadence model was gated behind a strict threshold (>= 30 real team app traces across >= 3 users). Because zero team traces are currently collected, the cadence model remains disabled (`EnableMLTier2: false`).
+- **Decoupling from Synthetic Leakage:** The public GeoLife dataset contains pure GPS coordinates without accelerometer telemetry. Early implementations synthesized cadence from ground-truth transport labels, leaking labels into training. In M1-M2, label synthesis was permanently eliminated, and the cadence model was gated behind a strict threshold (>= 30 real team app traces across >= 3 users). Because zero team traces are currently collected (`ml/data/app_traces/` has 0 files; `app_traces_manifest.json` reports `min_threshold_met: false`), the cadence model remains disabled (`ENABLE_CADENCE_MODEL: false`, `EnableMLTier2: false`).
 - **Fail-Safe Startup Guarantee:** In [`backend/internal/anticheat/detector.go`](backend/internal/anticheat/detector.go#L160-L185), `NewDetector` cryptographically verifies the SHA256 checksum of `anomaly_detector_trees.json`. If metadata is corrupt or SHA256 mismatches, `anticheat.NewMLEnsembleFromBytes` returns `ErrModelIntegrityFailed`. The detector catches the error, logs a single warning via `sync.Once`, sets `mlEnsemble = nil`, and continues serving requests purely via deterministic Tier 1 physical rules with zero crashes or panics.
+
+---
+
+### Q4.6: What are the exact empirical data counts, cohort limits, and adversarial threat boundaries of the anti-cheat system?
+**Examiner Defense Rationale (2-3 lines):**
+Evaluation is strictly grounded in 127,655 kinematic windows from 13 public GeoLife users (2008–2012) using 22 GPS features with zero synthetic cadence. The system is explicitly limited by small sample size, local Beijing transit conditions, and a critical 0.0% detection rate against geographic offset replay attacks, as it has not been tested against motivated human adversaries.
+
+**Deep Defense:**
+- **Exact Empirical Volume:** 127,655 sliding windows across 13 labeled GeoLife users. Real in-repo team app traces currently stand at **0 validated traces across 0 users** (`app_traces_manifest.json` confirms `0/30` traces, `0/3` distinct users, `min_threshold_met: false`).
+- **Small User Cohort:** 13 users cannot capture global physiological variance, stride mechanics, or heterogeneous phone sensor hardware.
+- **Local Beijing Environment:** GeoLife reflects Beijing transit layouts from 2008–2012 recorded on legacy GPS loggers, not modern multi-constellation GNSS phones (dual-band L1/L5) or suburban Western roads.
+- **Adversarial Evaluation Caveat:** Stress tests were generated with parameterized synthetic scripts (`generate_spoofs.py`). The system has **not been tested against motivated human adversaries** reverse-engineering detection code.
+- **Replay Blindspot:** Replay attacks with geographic offsets yield **0.0% detection** because underlying kinematic physics are identical to real running.
+- **Safe Rollout Controls:** Tier 2 cadence model defaults to OFF (`ENABLE_CADENCE_MODEL=false`). Submissions lacking valid motion are marked `unverified_motion` (territory captured, duel advancement restricted). Known false positives on heavily padded backpacks (energy < 0.25) or fast stroller jogging (> 6 km/h) are mitigated by Tier 1 physical rules.
 
 
 ## 5. Push Notification Infrastructure & Weekly League
@@ -343,7 +357,7 @@ Motion windows are client-supplied telemetry that a modified client can omit or 
    - Head-to-Head Duels and Squad Friends feature local offline caching via `SharedPreferences`. When network connectivity is lost, active duel challenges and progress meters display gracefully from local cache with an offline warning indicator.
    - Anti-abuse limits (max 5 active, max 10 pending) and activity-type segregation strictly enforced across Dart client and Go backend.
 8. **Kinematic Anticheat, Verification States & Battery Longevity (Resolved in Phase 5 & Integrity Audit)**:
-   - Two-tier anti-cheat architecture: Tier 1 deterministic physical constraints serve as the primary production gate, with full parity across Dart and Go. Tier 2 ML LightGBM is experimental and kept disabled by default pending real team trace collection (>= 30 traces), eliminating synthetic cadence false positives on wheeled conveyances (strollers) and cushioned bags.
+   - Two-tier anti-cheat architecture: Tier 1 deterministic physical constraints serve as the primary production gate, with full parity across Dart and Go. Tier 2 ML LightGBM is experimental and kept disabled by default pending real team trace collection (gated by `ENABLE_CADENCE_MODEL`, defaulting to `false`). The dataset consists strictly of 127,655 windows across 13 GeoLife users in Beijing (0 team traces; manifest status `min_threshold_met: false`). Not evaluated against motivated human attackers, with 0% detection on geographic offset replays.
    - Server-side motion window auditing (`SanityCheckMotionWindows`) evaluates bounds, duration inflation, and bot repeat signatures. Missing or unverified motion resolves to `unverified_motion` (territory claims permitted; duel progress and 1.5x weak-territory multiplier restricted).
    - Full parity across Dart `AnomalyService` and Go `anticheat.Detector` for mock GPS detection, activity speed ceilings, teleportation jumps, biomechanical acceleration limits ($8.0\text{ m/s}^2$ running, $12.0\text{ m/s}^2$ cycling), and $\ge 50\%$ identical-step frozen replay rejection.
    - Dynamic GPS duty-cycling ($1\text{s} \to 3\text{s}$, $2\text{m} \to 8\text{m}$) coupled with pure black AMOLED screen overlay achieves up to $60-80\%$ display power reduction during marathon endurance workouts.

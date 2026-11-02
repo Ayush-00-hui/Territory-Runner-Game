@@ -20,20 +20,21 @@ var (
 
 // Config encapsulates backend service configuration.
 type Config struct {
-	Port              string
-	DatabaseURL       string
-	AuthMode          string // "firebase" or "dev"
-	Env               string // "development", "staging", "production"
-	FirebaseProjectID string
-	GeminiAPIKey      string
-	GeminiModel       string
-	AllowedOrigins    []string
-	AllowAnyOrigin    bool
-	MaxPointsPerRun   int
-	MaxRunDurationSec int
-	RunMigrations     bool
-	MetricsToken      string
-	TrustedProxies    string
+	Port               string
+	DatabaseURL        string
+	AuthMode           string // "firebase" or "dev"
+	Env                string // "development", "staging", "production"
+	FirebaseProjectID  string
+	GeminiAPIKey       string
+	GeminiModel        string
+	AllowedOrigins     []string
+	AllowAnyOrigin     bool
+	MaxPointsPerRun    int
+	MaxRunDurationSec  int
+	RunMigrations      bool
+	MetricsToken       string
+	TrustedProxies     string
+	EnableCadenceModel bool
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -49,6 +50,7 @@ func Load() (*Config, error) {
 	trustedProxies := getEnv("TRUSTED_PROXIES", "")
 	runMigrations := strings.ToLower(getEnv("RUN_MIGRATIONS", "false")) == "true" || getEnv("RUN_MIGRATIONS", "false") == "1"
 	allowAnyOrigin := strings.ToLower(getEnv("ALLOW_ANY_ORIGIN", "false")) == "true" || getEnv("ALLOW_ANY_ORIGIN", "false") == "1"
+	enableCadenceModel := strings.ToLower(getEnv("ENABLE_CADENCE_MODEL", "false")) == "true" || getEnv("ENABLE_CADENCE_MODEL", "false") == "1" || strings.ToLower(getEnv("ENABLE_ML_TIER2", "false")) == "true" || getEnv("ENABLE_ML_TIER2", "false") == "1"
 
 	allowedOriginsStr := os.Getenv("ALLOWED_ORIGINS")
 	var allowedOrigins []string
@@ -78,20 +80,21 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		Port:              port,
-		DatabaseURL:       dbURL,
-		AuthMode:          authMode,
-		Env:               env,
-		FirebaseProjectID: firebaseProjectID,
-		GeminiAPIKey:      geminiKey,
-		GeminiModel:       geminiModel,
-		AllowedOrigins:    allowedOrigins,
-		AllowAnyOrigin:    allowAnyOrigin,
-		MaxPointsPerRun:   maxPoints,
-		MaxRunDurationSec: maxDuration,
-		RunMigrations:     runMigrations,
-		MetricsToken:      metricsToken,
-		TrustedProxies:    trustedProxies,
+		Port:               port,
+		DatabaseURL:        dbURL,
+		AuthMode:           authMode,
+		Env:                env,
+		FirebaseProjectID:  firebaseProjectID,
+		GeminiAPIKey:       geminiKey,
+		GeminiModel:        geminiModel,
+		AllowedOrigins:     allowedOrigins,
+		AllowAnyOrigin:     allowAnyOrigin,
+		MaxPointsPerRun:    maxPoints,
+		MaxRunDurationSec:  maxDuration,
+		RunMigrations:      runMigrations,
+		MetricsToken:       metricsToken,
+		TrustedProxies:     trustedProxies,
+		EnableCadenceModel: enableCadenceModel,
 	}
 
 	if err := cfg.Validate(); err != nil {

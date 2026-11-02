@@ -136,6 +136,23 @@ While the combination of Tier 1 deterministic physical rules and server-side mot
 | **Coordinated Multi-Account Collusion** | Two real athletes physically run to exchange or farm territories, deliberately surrendering zones to boost duel XP. | Rules against duplicate device IDs and IP rate limits. | Kinematic telemetry cannot detect social intent or collusive gameplay between legitimate human runners. |
 | **Downhill Running Sprint Bursts** | An athlete running down a steep $15\%$ grade mountain trail can temporarily reach $21 - 23\text{ km/h}$ with erratic steps. | Conservative acceleration threshold ($8\text{ m/s}^2$). | May occasionally hover near the Tier 2 anomaly threshold ($\tau \approx 0.48$). Elevation delta weighting is applied to reduce false positives. |
 
+### 4.1 Evaluation Dataset Limits & Adversarial Caveats
+
+> [!WARNING]
+> **Adversarial Evaluation Caveat**: The anti-cheat models have **not been evaluated against a motivated human attacker** who actively reverse-engineers the client APK, inspects the Go backend rules, or scripts kinematically plausible GPS tracks.
+
+1. **Small User Cohort (13 Users) & Geographic Bias**:
+   - The primary dataset consists of 127,655 windows from only 13 users in Beijing, China (GeoLife 1.3, 2008–2012).
+   - In-repo team app traces currently total **0 validated traces** across **0 users** (`app_traces_manifest.json` indicates `min_threshold_met: false`).
+   - Local conditions (Beijing subway/bus layouts, legacy GPS loggers) do not reflect global heterogeneous transit or modern multi-band GNSS smartphone chipsets.
+2. **Synthetic Generator Caveat**:
+   - Synthetic stress tests (`ml/data/generate_spoofs.py`) test specific generator parameters (fixed dt, constant velocity), not creative adversarial evasion.
+   - **Replay Attack Vulnerability**: Geographic offset replays achieve **0.0% detection** by kinematic ML models because the underlying movement physics are identical to real human running.
+3. **Safe Rollout Controls**:
+   - Tier 2 ML cadence model is gated by `ENABLE_CADENCE_MODEL` (default: `false` / OFF).
+   - SHA-256 checksums are verified on startup; any mismatch triggers immediate fallback to Tier 1 physical rules.
+   - Submissions without valid motion are classified as `unverified_motion`, allowing casual territory capture while withholding competitive duel progression.
+
 ---
 
 ## 5. Security Checklist for Production Deployments

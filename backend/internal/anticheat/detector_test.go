@@ -1337,3 +1337,204 @@ func TestEdgeCase_StrollerOrCart(t *testing.T) {
 	assert.Equal(t, anticheat.VerificationStatusRejected, resJog.VerificationStatus)
 	assert.Contains(t, resJog.Reasons[0], "Strong vehicle signal")
 }
+
+// R3: Safe Rollout Tests
+
+func TestCadenceModelRollout_EnvironmentFlag_DefaultOff(t *testing.T) {
+	os.Unsetenv("ENABLE_CADENCE_MODEL")
+	os.Unsetenv("ENABLE_ML_TIER2")
+
+	cfg := anticheat.DefaultConfig()
+	assert.False(t, cfg.EnableCadenceModel, "Cadence model must be disabled by default (default OFF)")
+	assert.False(t, cfg.EnableMLTier2, "ML Tier 2 must be disabled by default")
+
+	// Verify activation via environment flag ENABLE_CADENCE_MODEL=true
+	os.Setenv("ENABLE_CADENCE_MODEL", "true")
+	defer os.Unsetenv("ENABLE_CADENCE_MODEL")
+
+	cfgActive := anticheat.DefaultConfig()
+	assert.True(t, cfgActive.EnableCadenceModel, "ENABLE_CADENCE_MODEL=true must activate cadence model in DefaultConfig")
+	assert.True(t, cfgActive.EnableMLTier2, "ENABLE_CADENCE_MODEL=true must activate ML Tier 2 in DefaultConfig")
+}
+
+func TestCadenceModelRollout_SHA256IntegrityGuardAndFallback(t *testing.T) {
+	// Corrupt SHA256 trees in metadata
+	tamperedMeta := []byte(`{
+		"model_name": "lgbm_gps_cadence_v3",
+		"model_version": "3.0.0",
+		"sha256_trees": "0000000000000000000000000000000000000000000000000000000000000000"
+	}`)
+	validTrees := []byte(`{"model_version": "3.0.0", "trees": []}`)
+
+	_, err := anticheat.NewMLEnsembleFromBytes(tamperedMeta, validTrees)
+	require.Error(t, err, "Mismatched SHA-256 must be rejected by integrity check")
+	assert.ErrorIs(t, err, anticheat.ErrModelIntegrityFailed)
+
+	// Verify detector falls back safely to Tier 1 physical rules with nil ensemble
+	cfg := anticheat.DefaultConfig()
+	cfg.EnableCadenceModel = true
+	detector := anticheat.NewDetectorWithEnsemble(nil, cfg)
+
+	now := time.Now().UTC()
+	points := make([]geo.TrackPoint, 5)
+	for i := 0; i < 5; i++ {
+		points[i] = geo.TrackPoint{
+			Latitude:  37.7749 + (float64(i) * 0.00002),
+			Longitude: -122.4194,
+			Timestamp: now.Add(time.Duration(i) * time.Second),
+			Speed:     2.22,
+		}
+	}
+	var sumDist float64
+	for i := 1; i < len(points); i++ {
+		sumDist += geo.HaversineDistanceMeters(points[i-1].ToLatLng(), points[i].ToLatLng())
+	}
+	durSec := int(points[len(points)-1].Timestamp.Sub(points[0].Timestamp).Seconds())
+
+	res := detector.EvaluateTrackWithMotion(points, "running", durSec, sumDist, nil)
+	assert.False(t, res.IsAnomaly, "Detector with nil ensemble must safely evaluate physical rules without panic")
+}
+
+func TestCadenceModelRollout_UnverifiedMotionWithoutMotion(t *testing.T) {
+	detector := anticheat.NewDetector()
+	now := time.Now().UTC()
+
+	// Legitimate 5-point run at 8 km/h (~2.22 m/s)
+	points := make([]geo.TrackPoint, 5)
+	for i := 0; i < 5; i++ {
+		points[i] = geo.TrackPoint{
+			Latitude:  37.7749 + (float64(i) * 0.00002),
+			Longitude: -122.4194,
+			Timestamp: now.Add(time.Duration(i) * time.Second),
+			Speed:     2.22,
+		}
+	}
+	var sumDist float64
+	for i := 1; i < len(points); i++ {
+		sumDist += geo.HaversineDistanceMeters(points[i-1].ToLatLng(), points[i].ToLatLng())
+	}
+	durSec := int(points[len(points)-1].Timestamp.Sub(points[0].Timestamp).Seconds())
+
+	// 1. Completely missing motion windows => must be unverified_motion
+	resNoMotion := detector.EvaluateTrackWithMotion(points, "running", durSec, sumDist, nil)
+	assert.False(t, resNoMotion.IsAnomaly)
+	assert.Equal(t, anticheat.VerificationStatusUnverifiedMotion, resNoMotion.VerificationStatus,
+		"Run without motion telemetry must be marked unverified_motion, never verified_human")
+
+	// 2. Corrupted motion windows (cadence > 300 SPM) => must be unverified_motion
+	badWindows := []anticheat.MotionWindow{
+		{
+			StartTime:         now,
+			DurationSeconds:   10.0,
+			CadenceSPM:        450.0, // Implausible
+			MotionEnergy:      1.5,
+			CadenceConfidence: 0.9,
+		},
+	}
+	resBadMotion := detector.EvaluateTrackWithMotion(points, "running", durSec, sumDist, badWindows)
+	assert.False(t, resBadMotion.IsAnomaly)
+	assert.Equal(t, anticheat.VerificationStatusUnverifiedMotion, resBadMotion.VerificationStatus,
+		"Run with implausible motion data must be marked unverified_motion")
+}
+
+func TestEdgeCase_PhoneInBag_LegitimateRunning_Comprehensive(t *testing.T) {
+	detector := anticheat.NewDetector()
+	now := time.Now().UTC()
+
+	// Runner moving at 9.7 km/h (~2.7 m/s) outdoors over 40 seconds
+	points := make([]geo.TrackPoint, 40)
+	for i := 0; i < 40; i++ {
+		points[i] = geo.TrackPoint{
+			Latitude:  37.7749 + (float64(i) * 0.000024),
+			Longitude: -122.4194,
+			Timestamp: now.Add(time.Duration(i) * time.Second),
+			Speed:     2.7,
+			Heading:   0.0,
+		}
+	}
+	durSec := 40
+	var sumDist float64
+	for i := 1; i < len(points); i++ {
+		sumDist += geo.HaversineDistanceMeters(points[i-1].ToLatLng(), points[i].ToLatLng())
+	}
+
+	// Case 1: Phone in backpack/hydration pack. Step counter detects attenuated cadence (154 SPM)
+	// and moderate motion energy (0.52 m^2/s^4). This is verified_human.
+	bagWindowsReal := []anticheat.MotionWindow{
+		{
+			StartTime:         now,
+			DurationSeconds:   10.0,
+			CadenceSPM:        152.0,
+			MotionEnergy:      0.50,
+			CadenceConfidence: 0.72,
+		},
+		{
+			StartTime:         now.Add(10 * time.Second),
+			DurationSeconds:   10.0,
+			CadenceSPM:        156.0,
+			MotionEnergy:      0.54,
+			CadenceConfidence: 0.75,
+		},
+		{
+			StartTime:         now.Add(20 * time.Second),
+			DurationSeconds:   10.0,
+			CadenceSPM:        153.0,
+			MotionEnergy:      0.51,
+			CadenceConfidence: 0.71,
+		},
+		{
+			StartTime:         now.Add(30 * time.Second),
+			DurationSeconds:   10.0,
+			CadenceSPM:        155.0,
+			MotionEnergy:      0.53,
+			CadenceConfidence: 0.74,
+		},
+	}
+	resBag := detector.EvaluateTrackWithMotion(points, "running", durSec, sumDist, bagWindowsReal)
+	assert.False(t, resBag.IsAnomaly, "Legitimate jogger with phone in backpack must not be flagged")
+	assert.Equal(t, anticheat.VerificationStatusVerifiedHuman, resBag.VerificationStatus,
+		"Phone in backpack with valid cadence/energy must be verified_human")
+
+	// Case 2: Phone cushioned in backpack with zero detected motion windows (sensors unrecorded/disabled).
+	// Must NOT be rejected; safely accepted under physical rules as unverified_motion.
+	resDamped := detector.EvaluateTrackWithMotion(points, "running", durSec, sumDist, nil)
+	assert.False(t, resDamped.IsAnomaly, "Phone in bag without motion sensor windows must NOT be rejected")
+	assert.Equal(t, anticheat.VerificationStatusUnverifiedMotion, resDamped.VerificationStatus,
+		"Phone in bag without motion sensor windows must be marked unverified_motion")
+
+	// Case 3: Phone in loose bag having low motion energy (0.18 m^2/s^4 < 0.25) but legitimate step cadence (148 SPM).
+	// Because CadenceSPM >= 35.0, vehicle stillness rule (>6 km/h with <35 SPM and <0.25 energy) does NOT fire.
+	bagWindowsLowEnergy := []anticheat.MotionWindow{
+		{
+			StartTime:         now,
+			DurationSeconds:   10.0,
+			CadenceSPM:        146.0,
+			MotionEnergy:      0.18,
+			CadenceConfidence: 0.65,
+		},
+		{
+			StartTime:         now.Add(10 * time.Second),
+			DurationSeconds:   10.0,
+			CadenceSPM:        150.0,
+			MotionEnergy:      0.20,
+			CadenceConfidence: 0.68,
+		},
+		{
+			StartTime:         now.Add(20 * time.Second),
+			DurationSeconds:   10.0,
+			CadenceSPM:        148.0,
+			MotionEnergy:      0.17,
+			CadenceConfidence: 0.64,
+		},
+		{
+			StartTime:         now.Add(30 * time.Second),
+			DurationSeconds:   10.0,
+			CadenceSPM:        149.0,
+			MotionEnergy:      0.19,
+			CadenceConfidence: 0.66,
+		},
+	}
+	resLowEnergy := detector.EvaluateTrackWithMotion(points, "running", durSec, sumDist, bagWindowsLowEnergy)
+	assert.False(t, resLowEnergy.IsAnomaly, "Phone in bag with stepping cadence (>=35 SPM) must NOT trigger vehicle stillness flag")
+	assert.Equal(t, anticheat.VerificationStatusVerifiedHuman, resLowEnergy.VerificationStatus)
+}

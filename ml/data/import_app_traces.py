@@ -47,6 +47,16 @@ VALID_MODALITIES = {
     "boat": "vehicle",
 }
 
+VALID_PLACEMENTS = {
+    "pocket": "pocket",
+    "hand": "hand",
+    "bag": "bag",
+    "backpack": "bag",
+    "waistpack": "pocket",
+    "armband": "hand",
+    "unknown": "unknown",
+}
+
 
 @dataclass
 class ValidationResult:
@@ -56,6 +66,7 @@ class ValidationResult:
     user_id: str = ""
     transport_mode: str = ""
     mapped_mode: str = ""
+    phone_placement: str = "unknown"
     points_count: int = 0
     motion_windows_count: int = 0
     duration_seconds: float = 0.0
@@ -70,7 +81,10 @@ class AuditStatus:
     valid_traces_count: int = 0
     rejected_traces_count: int = 0
     distinct_users: List[str] = field(default_factory=list)
+    user_counts: Dict[str, int] = field(default_factory=dict)
     modality_counts: Dict[str, int] = field(default_factory=dict)
+    placement_counts: Dict[str, int] = field(default_factory=dict)
+    rejected_traces_details: List[Dict[str, Any]] = field(default_factory=list)
     traces_with_valid_motion: int = 0
     min_threshold_met: bool = False
     cadence_model_enabled: bool = False
@@ -128,10 +142,21 @@ def validate_single_trace(file_path: str) -> Tuple[ValidationResult, List[dict],
     if raw_mode not in VALID_MODALITIES:
         res.errors.append(f"Invalid transport_mode: '{raw_mode}'. Must be one of: {list(VALID_MODALITIES.keys())}")
 
+    # Phone Placement validation
+    raw_placement = str(data.get("phone_placement", "unknown")).strip().lower()
+    if raw_placement not in VALID_PLACEMENTS:
+        res.errors.append(
+            f"Invalid or suspicious phone_placement: '{raw_placement}'. "
+            f"Must be one of: {sorted(list(VALID_PLACEMENTS.keys()))}"
+        )
+    elif "phone_placement" not in data:
+        res.warnings.append("Missing 'phone_placement'; defaulted to 'unknown'")
+
     res.session_id = session_id
     res.user_id = user_id
     res.transport_mode = raw_mode
     res.mapped_mode = VALID_MODALITIES.get(raw_mode, "unknown")
+    res.phone_placement = VALID_PLACEMENTS.get(raw_placement, "unknown")
 
     raw_points = data.get("points", [])
     if not isinstance(raw_points, list):
@@ -163,6 +188,10 @@ def validate_single_trace(file_path: str) -> Tuple[ValidationResult, List[dict],
 
         if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
             res.errors.append(f"Point {i}: Coordinates out of physical bounds ({lat}, {lon})")
+            return res, [], []
+
+        if lat == 0.0 and lon == 0.0:
+            res.errors.append(f"Point {i}: Null Island (0.0, 0.0) coordinates are suspicious/invalid")
             return res, [], []
 
         # Parse timestamp
@@ -219,6 +248,7 @@ def validate_single_trace(file_path: str) -> Tuple[ValidationResult, List[dict],
             "reported_speed": speed_mps,
             "raw_mode": raw_mode,
             "transport_mode": res.mapped_mode,
+            "phone_placement": res.phone_placement,
             "is_anomaly": 1 if res.mapped_mode == "vehicle" else 0,
         })
 
@@ -317,26 +347,51 @@ def import_all_team_traces(
     all_points = []
     all_motion = []
     seen_users = set()
+    seen_sessions = set()
+    user_counts = {}
     modality_counts = {}
+    placement_counts = {}
 
     for fname in fnames:
         fpath = os.path.join(app_traces_dir, fname)
         res, pts, motion = validate_single_trace(fpath)
 
         if res.is_valid:
+            if res.session_id in seen_sessions:
+                res.is_valid = False
+                res.errors.append(f"Duplicate session_id '{res.session_id}' already seen in batch")
+                audit.rejected_traces_count += 1
+                audit.rejected_traces_details.append({
+                    "file_name": fname,
+                    "session_id": res.session_id,
+                    "errors": res.errors,
+                })
+                print(f"[-] Rejected suspicious duplicate app trace '{fname}': {', '.join(res.errors)}")
+                continue
+
+            seen_sessions.add(res.session_id)
             audit.valid_traces_count += 1
             seen_users.add(res.user_id)
+            user_counts[res.user_id] = user_counts.get(res.user_id, 0) + 1
             modality_counts[res.transport_mode] = modality_counts.get(res.transport_mode, 0) + 1
+            placement_counts[res.phone_placement] = placement_counts.get(res.phone_placement, 0) + 1
             if res.has_valid_motion:
                 audit.traces_with_valid_motion += 1
             all_points.extend(pts)
             all_motion.extend(motion)
         else:
             audit.rejected_traces_count += 1
+            audit.rejected_traces_details.append({
+                "file_name": fname,
+                "session_id": res.session_id,
+                "errors": res.errors,
+            })
             print(f"[-] Rejected invalid app trace '{fname}': {', '.join(res.errors)}")
 
     audit.distinct_users = sorted(list(seen_users))
+    audit.user_counts = user_counts
     audit.modality_counts = modality_counts
+    audit.placement_counts = placement_counts
 
     # Evaluate minimum threshold requirement
     has_min_traces = audit.valid_traces_count >= min_traces_threshold
@@ -395,13 +450,16 @@ def main():
         min_users_threshold=args.min_users,
     )
 
-    print(f"[*] Files Examined:        {audit.total_files_examined}")
-    print(f"[*] Valid Traces:          {audit.valid_traces_count} (Required: {audit.min_required_traces})")
-    print(f"[*] Distinct Users:        {len(audit.distinct_users)} {audit.distinct_users} (Required: {audit.min_required_users})")
-    print(f"[*] Traces with Motion:    {audit.traces_with_valid_motion}")
-    print(f"[*] Modality Breakdown:    {audit.modality_counts}")
-    print(f"[*] Cadence Model Active:  {audit.cadence_model_enabled}")
-    print(f"[*] Status:                {audit.status_message}")
+    print(f"[*] Files Examined:            {audit.total_files_examined}")
+    print(f"[*] Valid Traces:              {audit.valid_traces_count} (Required: {audit.min_required_traces})")
+    print(f"[*] Rejected Traces:           {audit.rejected_traces_count}")
+    print(f"[*] Distinct Users:            {len(audit.distinct_users)} {audit.distinct_users} (Required: {audit.min_required_users})")
+    print(f"[*] Counts Per User:           {audit.user_counts}")
+    print(f"[*] Counts Per Activity:       {audit.modality_counts}")
+    print(f"[*] Counts Per Phone Placement:{audit.placement_counts}")
+    print(f"[*] Traces with Valid Motion:  {audit.traces_with_valid_motion}")
+    print(f"[*] Cadence Model Active:      {audit.cadence_model_enabled}")
+    print(f"[*] Status:                    {audit.status_message}")
     print("=" * 70)
 
     write_status_manifest(audit, args.manifest)

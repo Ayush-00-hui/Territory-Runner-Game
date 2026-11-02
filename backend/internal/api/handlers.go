@@ -134,6 +134,25 @@ func (a *API) RunsLimiter() *RateLimiter {
 	return a.runsLimiter
 }
 
+// WithDetector configures a custom anticheat detector.
+func WithDetector(d *anticheat.Detector) Option {
+	return func(a *API) {
+		if d != nil {
+			a.detector = d
+		}
+	}
+}
+
+// WithCadenceModel configures whether the Tier 2 ML cadence model is enabled in the detector.
+func WithCadenceModel(enabled bool) Option {
+	return func(a *API) {
+		cfg := a.detector.Config()
+		cfg.EnableCadenceModel = enabled
+		cfg.EnableMLTier2 = enabled
+		a.detector = anticheat.NewDetectorWithEnsemble(a.detector.MLEnsemble(), cfg)
+	}
+}
+
 // CoachLimiter returns the coach endpoint rate limiter.
 func (a *API) CoachLimiter() *RateLimiter {
 	return a.coachLimiter

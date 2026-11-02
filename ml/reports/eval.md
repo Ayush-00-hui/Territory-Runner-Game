@@ -98,3 +98,31 @@ Breakdown evaluated at the **1% False Positive Rate operating point** determined
 ### Confusion Matrices (1% FPR Operating Point)
 ![Confusion Matrices](figures/confusion_matrices.png)
 
+---
+
+## 7. Real-World Limitations, Dataset Constraints & Threat Boundary
+
+> [!CAUTION]
+> **Production Boundary Disclosure**: The metrics in this report represent theoretical performance on public benchmark GNSS trajectories. They must NOT be interpreted as proof of general security against real-world human adversaries or across heterogeneous modern smartphone sensors.
+
+### 7.1 Exact In-Repo Data Counts
+- **Public GNSS Benchmark (GeoLife 1.3)**: 127,655 windows across 13 labeled users (2008–2012).
+- **Team-Collected In-App Traces (`ml/data/app_traces/`)**: **0 validated traces** across **0 distinct users** (precondition threshold: $\ge 30$ traces across $\ge 3$ users). Manifest status: `min_threshold_met: false`.
+- **Active Real Features**: 22 / 22 GPS kinematic features. 0 accelerometer cadence features synthesized or used in training.
+
+### 7.2 Dataset & Environmental Limitations
+1. **Small Number of Users**: The model was cross-validated on only 13 distinct user profiles from a single academic dataset. This small sample size cannot guarantee generalization across diverse human body proportions, gait variations, or running styles.
+2. **Local Conditions & Geographic Homogeneity**: GeoLife was collected almost exclusively in Beijing, China under regional satellite constellation coverage (GPS-only era) and local transit conditions (dense urban buses, subways, and bicycles). Modern multi-constellation GNSS receivers (GPS, GLONASS, Galileo, BeiDou) and Western suburban transit layouts possess differing signal noise characteristics.
+3. **Hardware Sensor Heterogeneity**: Trajectories collected on legacy standalone GPS loggers differ significantly in sampling jitter and multipath rejection from modern Android/iOS smartphones.
+
+### 7.3 Adversarial Threat Boundary (Not Tested Against a Motivated Attacker)
+- The synthetic stress test in Section 5 was evaluated exclusively against deterministic script generators (`ml/data/generate_spoofs.py`).
+- **No Evaluation Against Human Adversaries**: The models have NOT been evaluated against motivated human cheaters who actively reverse-engineer the feature extraction code, analyze decision tree thresholds, or craft smooth trajectory splines that mimic human pace.
+- **Critical Replay Blindspot (0.0% Detection)**: Geographic offset replay attacks (recording a real 10 km run and replaying it shifted by coordinates into another territory) exhibit **0.0% detection** across all machine learning models. Without cryptographic server-side nonce challenges or cellular cell tower triangulation, pure kinematic evaluation cannot detect replayed genuine human motion.
+
+### 7.4 Safe Production Rollout Controls
+- **Cadence Model Flag**: Gated behind `ENABLE_CADENCE_MODEL` (default: `false` / OFF).
+- **Cryptographic Model Verification**: SHA-256 tree checksum checked on initialization. Corrupt or unverified models automatically drop Tier 2 and fall back to Tier 1 physical rules.
+- **Sensorless Degradation**: Runs without verified motion windows are classified as `unverified_motion`, preserving base territory conquest while restricting competitive multipliers.
+- **Known Mechanical False Positives**: Phones cushioned in heavily padded backpacks with foam damping, or mounted on baby strollers pushed at speeds $> 6\text{ km/h}$, lack body vibration and trigger the vehicle stillness heuristic after 30 seconds. Athletes in these situations receive `unverified_motion` or physical boundary rejections.
+
