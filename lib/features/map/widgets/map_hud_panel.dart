@@ -7,7 +7,7 @@ import '../models/run_telemetry.dart';
 import 'run_goal_sheet.dart';
 import 'run_hud.dart';
 
-/// Wrapped telemetry HUD panel with size measurement and goal/run action triggers.
+/// Wrapped metrics HUD panel with size measurement and goal/run action triggers.
 class MapHudPanel extends StatelessWidget {
   final MapRunController controller;
   final ValueNotifier<double> hudHeightNotifier;
@@ -60,7 +60,6 @@ class MapHudPanel extends StatelessWidget {
             },
             isBatterySaverActive: BatterySaverService().isBatterySaverEnabled,
             onToggleAmoledSaver: () {
-              AppMotion.mediumTick();
               BatterySaverService().setAmoledHudActive(true);
             },
             onToggleRun: onToggleRun,

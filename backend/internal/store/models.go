@@ -30,7 +30,7 @@ type User struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 }
 
-// Territory represents sovereign claimed territory stored as a PostGIS MultiPolygon.
+// Territory represents claimed territory stored as a PostGIS MultiPolygon.
 type Territory struct {
 	ID             string    `json:"id"`
 	OwnerID        string    `json:"owner_id"`
@@ -88,6 +88,7 @@ type Run struct {
 	UserID             string    `json:"user_id"`
 	IdempotencyKey     string    `json:"idempotency_key"`
 	ActivityType       string    `json:"activity_type,omitempty"`
+	StepCount          *int      `json:"step_count,omitempty"`
 	DurationSeconds    int       `json:"duration_seconds"`
 	DistanceMeters     float64   `json:"distance_meters"`
 	AreaClaimed        float64   `json:"area_claimed"`
@@ -103,6 +104,7 @@ type CaptureResult struct {
 	RunID              string   `json:"run_id"`
 	IdempotencyKey     string   `json:"idempotency_key"`
 	ActivityType       string   `json:"activity_type,omitempty"`
+	StepCount          *int     `json:"step_count,omitempty"`
 	Status             string   `json:"status"`
 	VerificationStatus string   `json:"verification_status,omitempty"`
 	AnomalyScore       float64  `json:"anomaly_score"`
@@ -188,7 +190,7 @@ type Friendship struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// FriendUser represents a friend with their current athlete telemetry.
+// FriendUser represents a friend with their current athlete stats.
 type FriendUser struct {
 	ID           string  `json:"id"`
 	Username     string  `json:"username"`

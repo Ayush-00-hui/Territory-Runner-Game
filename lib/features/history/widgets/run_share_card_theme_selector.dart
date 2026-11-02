@@ -26,7 +26,7 @@ class RunShareCardThemeSelector extends StatelessWidget {
             'Athletic Dark',
           ),
           const SizedBox(width: AppSpacing.s8),
-          _buildThemePill(context, ShareCardTheme.cyberVanguard, 'Vanguard'),
+          _buildThemePill(context, ShareCardTheme.highContrast, 'High Contrast'),
           const SizedBox(width: AppSpacing.s8),
           _buildThemePill(context, ShareCardTheme.stealth, 'Stealth'),
         ],
@@ -47,7 +47,6 @@ class RunShareCardThemeSelector extends StatelessWidget {
       excludeSemantics: true,
       child: GestureDetector(
         onTap: () {
-          AppMotion.selectionTick();
           onThemeChanged(theme);
         },
         behavior: HitTestBehavior.opaque,

@@ -44,7 +44,7 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
     }
   }
 
-  Future<void> _preDownloadCurrentSector() async {
+  Future<void> _preDownloadCurrentArea() async {
     setState(() {
       _isDownloading = true;
       _downloaded = 0;
@@ -299,7 +299,7 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
                   'Pre-cache current area (1.2 km)',
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 ),
-                onPressed: _isDownloading ? null : _preDownloadCurrentSector,
+                onPressed: _isDownloading ? null : _preDownloadCurrentArea,
               ),
             ),
             const SizedBox(height: AppSpacing.s10),

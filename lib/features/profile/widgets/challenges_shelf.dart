@@ -324,7 +324,6 @@ class ChallengesShelf extends StatelessWidget {
         child: InkWell(
           borderRadius: AppSpacing.br16,
           onTap: () {
-            AppMotion.selectionTick();
             showBadgeDetailModal(
               context,
               title: b.name,

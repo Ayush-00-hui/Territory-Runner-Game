@@ -33,7 +33,6 @@ class ModeTabs extends StatelessWidget {
           return Expanded(
             child: GestureDetector(
               onTap: () {
-                AppMotion.lightTick();
                 onTabSelected(index);
               },
               behavior: HitTestBehavior.opaque,

@@ -17,15 +17,15 @@ All commands were executed in the active host environment (Windows 11, Flutter 3
 | Component | Target / Command | Exit Code | Real Result |
 | :--- | :--- | :---: | :--- |
 | **Flutter Static Analysis** | `flutter analyze` | `0` | **0 issues found** (clean in 60.1s) |
-| **Flutter Test Suite** | `flutter test` | `0` | **378 passed, 0 failed** across 51 test suites |
+| **Flutter Test Suite** | `flutter test` | `0` | **434 passed, 0 failed** across 62 test files |
 | **Go Static Analysis** | `go vet ./...` (in `backend/`) | `0` | **0 issues found** (clean exit) |
-| **Go Test Suite** | `go test -v -count=1 ./...` | `0` | **130 passed, 0 failed** across 10 packages |
+| **Go Test Suite** | `go test -v -count=1 ./...` | `0` | **201 passed, 0 failed** across 11 packages |
 
 ```
 Verified Test Baseline:
-  • Flutter Unit & Widget Tests: 378 passing
-  • Go Unit & Integration Tests: 130 passing
-  • Combined Suite: 508 verified passing tests
+  • Flutter Unit & Widget Tests: 434 passing
+  • Go Unit & Integration Tests: 201 passing
+  • Combined Suite: 635 verified passing tests
 ```
 
 ---

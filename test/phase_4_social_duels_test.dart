@@ -28,7 +28,7 @@ void main() {
       final friend = FriendUser.fromJson(json);
       expect(friend.id, equals('u1'));
       expect(friend.username, equals('NeonRacer'));
-      expect(friend.faction, equals('Vanguard'));
+      expect(friend.faction, equals('Cyber Vanguard'));
       expect(friend.totalAreaSqm, equals(150000.0));
       expect(friend.level, equals(7));
       expect(friend.xp, equals(12500));
@@ -352,7 +352,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       // Verify Squad tab is active and shows ValkyrieRunner
-      expect(find.text('Social Syndicate & Duels'), findsOneWidget);
+      expect(find.text('Social Squads & Duels'), findsOneWidget);
       expect(find.text('ValkyrieRunner'), findsOneWidget);
       expect(find.text('Lvl 5'), findsOneWidget);
       expect(find.text('Duel'), findsOneWidget);
@@ -488,7 +488,7 @@ void main() {
 
       // Verify offline banner is shown
       expect(
-        find.text('Network offline: displaying cached syndicates'),
+        find.text('Network offline: displaying cached squads'),
         findsOneWidget,
       );
 

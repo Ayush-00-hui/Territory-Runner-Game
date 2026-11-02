@@ -136,7 +136,7 @@ class PolygonEnclosureEngine {
   }
 
   /// Manual "SEAL CURRENT SHAPE" override action.
-  /// Force-closes the active GPS path into a sovereign territory polygon.
+  /// Force-closes the active GPS path into a player territory polygon.
   EnclosedLoopEvent? sealCurrentPath() {
     _lastInvalidReason = null;
     if (_path.length < 3) return null;

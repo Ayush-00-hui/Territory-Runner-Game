@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
-import '../motion/motion.dart';
 
 enum AppToastType { info, success, warning, error }
 
@@ -38,7 +37,6 @@ class AppToast extends StatelessWidget {
     VoidCallback? onAction,
     String? actionLabel,
   }) {
-    AppMotion.selectionTick();
     final messenger = messengerKey.currentState;
     if (messenger == null) return;
 
@@ -82,7 +80,6 @@ class AppToast extends StatelessWidget {
     VoidCallback? onAction,
     String? actionLabel,
   }) {
-    AppMotion.selectionTick();
 
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
@@ -179,7 +176,6 @@ class AppToast extends StatelessWidget {
               const SizedBox(width: AppSpacing.s8),
               GestureDetector(
                 onTap: () {
-                  AppMotion.selectionTick();
                   onAction!();
                 },
                 behavior: HitTestBehavior.opaque,

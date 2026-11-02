@@ -45,7 +45,7 @@ type RunnerLeftMessage struct {
 	UserID string      `json:"user_id"`
 }
 
-// TerritoryAlertMessage sends an instant tactical warning to an attacked player.
+// TerritoryAlertMessage sends an instant alert to an attacked player.
 type TerritoryAlertMessage struct {
 	Type           MessageType `json:"type"`
 	Event          string      `json:"event"`

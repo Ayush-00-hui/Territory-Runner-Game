@@ -363,7 +363,6 @@ class _MainScreenState extends State<MainScreen> {
                   child: _CenterRunAction(
                     isSelected: _selectedIndex == 1,
                     onTap: () {
-                      AppMotion.selectionTick();
                       _onTabSelected(1);
                     },
                   ),
@@ -399,7 +398,6 @@ class _MainScreenState extends State<MainScreen> {
       child: GestureDetector(
         onTap: () {
           if (_selectedIndex != index) {
-            AppMotion.selectionTick();
             _onTabSelected(index);
           }
         },

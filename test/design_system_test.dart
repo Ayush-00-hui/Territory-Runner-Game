@@ -186,7 +186,7 @@ void main() {
             body: EmptyState(
               icon: Icons.map_rounded,
               title: 'No Active Route',
-              message: 'Start running to claim your first sector.',
+              message: 'Start running to claim your first territory.',
             ),
           ),
         ),
@@ -195,7 +195,7 @@ void main() {
       expect(find.byIcon(Icons.map_rounded), findsOneWidget);
       expect(find.text('No Active Route'), findsOneWidget);
       expect(
-        find.text('Start running to claim your first sector.'),
+        find.text('Start running to claim your first territory.'),
         findsOneWidget,
       );
     });
@@ -216,13 +216,12 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    test('FactionStanding.canonicalFaction aliases Cyber Vanguard and persists cleanly', () {
-      expect(FactionStanding.canonicalFaction('Cyber Vanguard'), 'Vanguard');
-      expect(FactionStanding.canonicalFaction(null), 'Vanguard');
-      expect(FactionStanding.canonicalFaction(''), 'Vanguard');
+    test('FactionStanding.canonicalFaction handles values cleanly without crashing', () {
+      expect(FactionStanding.canonicalFaction('Cyber Vanguard'), 'Cyber Vanguard');
+      expect(FactionStanding.canonicalFaction(null), '');
+      expect(FactionStanding.canonicalFaction(''), '');
       expect(FactionStanding.canonicalFaction('Vanguard'), 'Vanguard');
-      expect(FactionStanding.canonicalFaction('Iron Syndicate'), 'Syndicate');
-      expect(FactionStanding.canonicalFaction('Neon Nomads'), 'Nomads');
+      expect(FactionStanding.canonicalFaction('Morning Striders'), 'Morning Striders');
     });
 
     testWidgets(

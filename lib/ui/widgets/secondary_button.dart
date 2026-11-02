@@ -34,7 +34,6 @@ class _SecondaryButtonState extends State<SecondaryButton> {
 
   void _handleTapDown(TapDownDetails _) {
     if (widget.onPressed == null || widget.isLoading) return;
-    AppMotion.selectionTick();
     setState(() => _isPressed = true);
   }
 

@@ -283,7 +283,7 @@ func (h *Hub) BroadcastConquest(attackerID, attackerName string, areaClaimed flo
 		}
 	}
 
-	// 1. Send targeted high-priority tactical warning to each victim
+	// 1. Send targeted high-priority alert to each victim
 	for victimID := range victimSet {
 		isFriend := attackerFriends != nil && attackerFriends[victimID]
 		reportedAttackerID := ""

@@ -4,7 +4,7 @@ import '../../../ui/ui.dart';
 
 enum SocialTab { squad, duels }
 
-/// Header with Syndicate title, refresh button, and Squad/Duels tab switcher.
+/// Header with Social title, refresh button, and Squad/Duels tab switcher.
 class SocialHubHeader extends StatelessWidget {
   final SocialTab activeTab;
   final int friendsCount;
@@ -37,7 +37,7 @@ class SocialHubHeader extends StatelessWidget {
               const SizedBox(width: AppSpacing.s8),
               Expanded(
                 child: Text(
-                  'Social Syndicate & Duels',
+                  'Social Squads & Duels',
                   style: AppText.headingSmall.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,

@@ -5,7 +5,7 @@ import 'app_colors.dart';
 /// Territory Runner Design System: Typography Scale
 /// Enforces 'Inter' across the entire interface.
 /// Big numbers use Inter w600-w700 with tabular figures (`FontFeature.tabularFigures()`)
-/// and subtle negative letter spacing for clean, jitter-free athletic telemetry.
+/// and subtle negative letter spacing for clean, jitter-free athletic metrics.
 class AppText {
   AppText._();
 

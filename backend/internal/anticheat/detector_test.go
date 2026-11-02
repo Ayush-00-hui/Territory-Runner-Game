@@ -982,7 +982,7 @@ func TestEvaluateTrackWithMotion_ImplausibleMotionDowngradedToUnverifiedMotion(t
 
 	foundSanityIssue := false
 	for _, r := range res.Reasons {
-		if strings.Contains(r, "Implausible motion telemetry") {
+		if strings.Contains(r, "Implausible motion data") {
 			foundSanityIssue = true
 			break
 		}

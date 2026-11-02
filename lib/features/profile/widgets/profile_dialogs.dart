@@ -1,3 +1,4 @@
+import '../../../models/faction_standing.dart';
 import 'package:flutter/material.dart';
 
 import '../../gameplay/territory_service.dart';
@@ -108,167 +109,315 @@ void showFactionSelectionDialog(
   TerritoryService territoryService,
   VoidCallback onUpdated,
 ) {
-  final factions = [
-    {
-      'name': 'Vanguard',
-      'tag': 'Vanguard',
-      'color': AppColors.accent,
-      'icon': Icons.security_rounded,
-      'perk': 'Fast loop closure recognition & precision spatial tracking (+10% base claim speed)',
-    },
-    {
-      'name': 'Iron Syndicate',
-      'tag': 'Syndicate',
-      'color': AppColors.warning,
-      'icon': Icons.wb_sunny_rounded,
-      'perk': 'Steady cadence endurance & stamina battery optimization (+15% cadence boost)',
-    },
-    {
-      'name': 'Neon Nomads',
-      'tag': 'Nomads',
-      'color': AppColors.info,
-      'icon': Icons.bolt_rounded,
-      'perk': 'Pace acceleration & dynamic sprint momentum (+40% sprint momentum conversion)',
-    },
-  ];
-
   AppSheet.show(
     context: context,
     builder: (ctx) => AppSheet(
-      title: 'Choose Team',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Select a team to represent on the map grid and earn run bonuses:',
-            style: AppText.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-              height: 1.4,
-            ),
+      title: 'Teams',
+      child: TeamSelectionSheet(
+        profile: profile,
+        territoryService: territoryService,
+        onUpdated: onUpdated,
+      ),
+    ),
+  );
+}
+
+class TeamSelectionSheet extends StatefulWidget {
+  final RunnerProfile profile;
+  final TerritoryService territoryService;
+  final VoidCallback onUpdated;
+
+  const TeamSelectionSheet({
+    super.key,
+    required this.profile,
+    required this.territoryService,
+    required this.onUpdated,
+  });
+
+  @override
+  State<TeamSelectionSheet> createState() => _TeamSelectionSheetState();
+}
+
+class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
+  final TextEditingController _customTeamController = TextEditingController();
+  List<FactionStanding> _serverTeams = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTeams();
+  }
+
+  @override
+  void dispose() {
+    _customTeamController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadTeams() async {
+    try {
+      final resp = await ApiClient().getFactionStandings();
+      if (mounted) {
+        setState(() {
+          _serverTeams = resp?.standings
+                  .where((s) => s.faction.trim().isNotEmpty)
+                  .toList() ??
+              [];
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _serverTeams = [];
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _setTeam(String teamName) async {
+    final trimmed = teamName.trim();
+    widget.profile.faction = trimmed;
+    await widget.territoryService.saveProfile(widget.profile);
+    ApiClient().updateUserFaction(widget.profile.faction).catchError((_) => false);
+    if (!mounted) return;
+    Navigator.pop(context);
+    widget.onUpdated();
+    AppToast.showGlobal(
+      trimmed.isEmpty ? 'Left team (Independent)' : 'Team set to $trimmed',
+    );
+  }
+
+  String _formatArea(double areaSqm) {
+    if (areaSqm >= 1000000.0) {
+      return '${(areaSqm / 1000000.0).toStringAsFixed(2)} km²';
+    } else if (areaSqm > 0.0) {
+      return '${areaSqm.toStringAsFixed(0)} m²';
+    }
+    return '0 m²';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentFaction = widget.profile.faction.trim();
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Join an active team or create your own:',
+          style: AppText.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            height: 1.4,
           ),
-          const SizedBox(height: AppSpacing.s16),
-          ...factions.map((f) {
-            final isSelected = profile.faction == f['name'];
-            final factionColor = f['color'] as Color;
-            final factionIcon = f['icon'] as IconData;
+        ),
+        const SizedBox(height: AppSpacing.s16),
+
+        if (_isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.s24),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.accent,
+                ),
+              ),
+            ),
+          )
+        else if (_serverTeams.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.s16),
+            alignment: Alignment.center,
+            child: Text(
+              'No teams currently active.\nCreate a team below to get started!',
+              textAlign: TextAlign.center,
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.4,
+              ),
+            ),
+          )
+        else
+          ..._serverTeams.map((team) {
+            final isSelected = currentFaction.isNotEmpty && currentFaction == team.faction;
 
             return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.s12),
+              padding: const EdgeInsets.only(bottom: AppSpacing.s10),
               child: GestureDetector(
-                onTap: () async {
-                  AppMotion.mediumTick();
-                  profile.faction = f['name'] as String;
-                  await territoryService.saveProfile(profile);
-                  // Fire-and-forget sync to backend
-                  ApiClient()
-                      .updateUserFaction(profile.faction)
-                      .catchError((_) => false);
-                  if (ctx.mounted) {
-                    Navigator.pop(ctx);
-                  }
-                  onUpdated();
-                  if (context.mounted) {
-                    AppToast.show(context, 'Aligned with ${f['name']}');
-                  }
-                },
+                onTap: () => _setTeam(team.faction),
                 child: Container(
-                  padding: const EdgeInsets.all(AppSpacing.s16),
+                  padding: const EdgeInsets.all(AppSpacing.s14),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? factionColor.withValues(alpha: 0.12)
+                        ? AppColors.accent.withValues(alpha: 0.12)
                         : AppColors.surface2,
-                    borderRadius: AppSpacing.br16,
+                    borderRadius: AppSpacing.br14,
                     border: Border.all(
-                      color: isSelected ? factionColor : AppColors.border,
+                      color: isSelected ? AppColors.accent : AppColors.border,
                       width: isSelected ? 1.5 : 1.0,
                     ),
                   ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: factionColor.withValues(alpha: 0.16),
+                          color: AppColors.accent.withValues(alpha: 0.16),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(factionIcon, color: factionColor, size: 20),
+                        child: const Icon(
+                          Icons.shield_outlined,
+                          color: AppColors.accent,
+                          size: 18,
+                        ),
                       ),
                       const SizedBox(width: AppSpacing.s12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  f['name'] as String,
-                                  style: AppText.bodyMedium.copyWith(
-                                    color: isSelected
-                                        ? factionColor
-                                        : AppColors.textPrimary,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                if (isSelected)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: factionColor.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      borderRadius: AppSpacing.br8,
-                                    ),
-                                    child: Text(
-                                      'Active',
-                                      style: AppText.labelSmall.copyWith(
-                                        color: factionColor,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                              ],
+                            Text(
+                              team.faction,
+                              style: AppText.bodyMedium.copyWith(
+                                color: isSelected
+                                    ? AppColors.accent
+                                    : AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              f['tag'] as String,
+                              '${team.memberCount} ${team.memberCount == 1 ? "member" : "members"} • ${_formatArea(team.totalAreaSqm)}',
                               style: AppText.labelSmall.copyWith(
                                 color: AppColors.textMuted,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              f['perk'] as String,
-                              style: AppText.bodySmall.copyWith(
-                                color: AppColors.textSecondary,
-                                fontSize: 12,
-                                height: 1.3,
+                                fontSize: 11,
                               ),
                             ),
                           ],
                         ),
                       ),
+                      if (isSelected)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withValues(alpha: 0.2),
+                            borderRadius: AppSpacing.br8,
+                          ),
+                          child: Text(
+                            'Active',
+                            style: AppText.labelSmall.copyWith(
+                              color: AppColors.accent,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),
               ),
             );
           }),
+
+        const SizedBox(height: AppSpacing.s16),
+        Text(
+          'Create or enter team name:',
+          style: AppText.labelSmall.copyWith(
+            color: AppColors.textSecondary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.s8),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _customTeamController,
+                maxLength: 24,
+                style: AppText.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Morning Striders',
+                  hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                  counterText: '',
+                  filled: true,
+                  fillColor: AppColors.surface2,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s12,
+                    vertical: AppSpacing.s10,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: AppSpacing.br12,
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: AppSpacing.br12,
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: AppSpacing.br12,
+                    borderSide: const BorderSide(
+                      color: AppColors.accent,
+                      width: 1.5,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.s8),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.bgDeep,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: AppSpacing.br12,
+                ),
+              ),
+              onPressed: () {
+                final name = _customTeamController.text.trim();
+                if (name.isNotEmpty) {
+                  _setTeam(name);
+                }
+              },
+              child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+
+        if (currentFaction.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.s12),
+          Center(
+            child: TextButton(
+              onPressed: () => _setTeam(''),
+              child: Text(
+                'Leave Team (Run Independent)',
+                style: AppText.bodySmall.copyWith(
+                  color: AppColors.rival,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
         ],
-      ),
-    ),
-  );
+      ],
+    );
+  }
 }
+
 
 void showStatDetailModal(
   BuildContext context, {

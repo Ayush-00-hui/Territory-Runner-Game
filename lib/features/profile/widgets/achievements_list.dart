@@ -120,7 +120,6 @@ class ProfileAchievementTile extends StatelessWidget {
       child: GestureDetector(
         onTap: () {
           if (onTap != null) {
-            AppMotion.selectionTick();
             onTap!();
           }
         },

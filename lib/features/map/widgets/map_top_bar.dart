@@ -31,7 +31,6 @@ class MapTopBar extends StatelessWidget {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
-                  AppMotion.selectionTick();
                   Navigator.push(
                     context,
                     AppMotion.pageRoute(builder: (_) => const ProfilePage()),

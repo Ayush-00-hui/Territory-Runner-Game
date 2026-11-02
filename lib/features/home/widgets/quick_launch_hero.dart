@@ -43,7 +43,6 @@ class QuickLaunchHero extends StatelessWidget {
   }
 
   void _showGoalPicker(BuildContext context, double? currentGoal) {
-    AppMotion.lightTick();
     double? selectedGoal = currentGoal ?? 5.0;
 
     AppSheet.show(
@@ -258,7 +257,6 @@ class QuickLaunchHero extends StatelessWidget {
                 label: 'Start run',
                 icon: Icons.play_arrow_rounded,
                 onPressed: () {
-                  AppMotion.mediumTick();
                   onStartRun?.call();
                 },
               ),

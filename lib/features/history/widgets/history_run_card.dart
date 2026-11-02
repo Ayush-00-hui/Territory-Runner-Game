@@ -273,7 +273,6 @@ class HistoryRunCard extends StatelessWidget {
         child: InkWell(
           borderRadius: AppSpacing.br20,
           onTap: () {
-            AppMotion.lightTick();
             if (onTap != null) {
               onTap!();
             } else {
@@ -388,7 +387,6 @@ class HistoryRunCard extends StatelessWidget {
                   ),
                   tooltip: 'Share Card',
                   onPressed: () {
-                    AppMotion.lightTick();
                     RunShareCardModal.show(
                       context: context,
                       distanceKm: estimatedKm,

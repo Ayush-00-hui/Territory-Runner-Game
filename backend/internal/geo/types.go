@@ -24,7 +24,7 @@ func (tp TrackPoint) ToLatLng() LatLng {
 	return LatLng{Latitude: tp.Latitude, Longitude: tp.Longitude}
 }
 
-// EnclosedLoop represents a verified closed sovereign loop ready for territory ingestion.
+// EnclosedLoop represents a verified closed loop ready for territory ingestion.
 type EnclosedLoop struct {
 	Polygon            []LatLng  `json:"polygon"`
 	AreaSqMeters       float64   `json:"area_sq_meters"`

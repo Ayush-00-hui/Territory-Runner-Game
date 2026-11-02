@@ -62,7 +62,6 @@ class _AppIconButtonState extends State<AppIconButton> {
 
   void _handleTap() {
     if (widget.onTap == null) return;
-    AppMotion.selectionTick();
     widget.onTap!();
   }
 

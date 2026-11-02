@@ -120,12 +120,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     } else if (_errorMessage != null) {
       // Server is unreachable, show only player's own team (from local territory area)
       final userFaction = widget.profile.faction.trim();
-      if (userFaction.isNotEmpty || userAreaSqm > 0) {
+      if (userFaction.isNotEmpty) {
         activeTeams = [
           FactionStanding(
-            faction: userFaction.isNotEmpty
-                ? userFaction
-                : FactionStanding.defaultFaction,
+            faction: userFaction,
             totalAreaSqm: userAreaSqm,
             memberCount: 1,
             percentage: 100.0,
@@ -417,7 +415,6 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       excludeSemantics: true,
       child: GestureDetector(
         onTap: () {
-          AppMotion.selectionTick();
           setState(() => _scope = scope);
         },
         behavior: HitTestBehavior.opaque,
@@ -639,7 +636,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  '${RunnerProfile.factionAliases[entry.faction] ?? entry.faction} • Lvl ${entry.level}',
+                  '${entry.faction.isNotEmpty ? "${entry.faction} • " : ""}Lvl ${entry.level}',
                   style: AppText.bodySmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 11,

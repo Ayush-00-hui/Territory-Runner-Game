@@ -330,7 +330,7 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 			IsAnomaly:          false,
 			VerificationStatus: VerificationStatusUnverifiedMotion,
 			Score:              0.0,
-			Reasons:            []string{"Empty GPS telemetry"},
+			Reasons:            []string{"Empty GPS data"},
 		}
 	}
 
@@ -490,7 +490,7 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 					if ruleScore > maxScore {
 						maxScore = ruleScore
 					}
-					reasons = append(reasons, fmt.Sprintf("Speed telemetry mismatch: reported %.1f km/h vs computed %.1f km/h (>15 km/h difference)", reportedKmh, computedSpeedKmh))
+					reasons = append(reasons, fmt.Sprintf("Speed mismatch: reported %.1f km/h vs computed %.1f km/h (>15 km/h difference)", reportedKmh, computedSpeedKmh))
 				}
 			}
 		}
@@ -514,7 +514,7 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 		}
 	}
 
-	// 6. Cross-check declared duration and distance against GPS telemetry (flag if > 10% mismatch)
+	// 6. Cross-check declared duration and distance against GPS track (flag if > 10% mismatch)
 	if declaredDuration > 0 && len(points) >= 2 && !hasZeroTimestamp {
 		firstTs := points[0].Timestamp
 		lastTs := points[len(points)-1].Timestamp
@@ -586,7 +586,7 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 		}
 
 		if normalizedScore > d.cfg.AnomalyThreshold {
-			reasons = append(reasons, fmt.Sprintf("Unnatural movement telemetry pattern (Z-Score: %.2f > %.2f)", normalizedScore, d.cfg.AnomalyThreshold))
+			reasons = append(reasons, fmt.Sprintf("Unnatural movement pattern (Z-Score: %.2f > %.2f)", normalizedScore, d.cfg.AnomalyThreshold))
 		}
 	}
 
@@ -602,7 +602,7 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 		if !sanity.Valid {
 			features["motion_sanity_valid"] = 0.0
 			for _, issue := range sanity.Issues {
-				reasons = append(reasons, fmt.Sprintf("Implausible motion telemetry: %s", issue))
+				reasons = append(reasons, fmt.Sprintf("Implausible motion data: %s", issue))
 			}
 		} else {
 			features["motion_sanity_valid"] = 1.0
@@ -734,7 +734,7 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 			verificationStatus = VerificationStatusUnverifiedMotion
 		}
 	} else if len(motionWindows) == 0 || !motionWindowsValid {
-		// Runs without motion windows or with implausible motion telemetry are never marked verified_human
+		// Runs without motion windows or with implausible motion data are never marked verified_human
 		verificationStatus = VerificationStatusUnverifiedMotion
 	} else {
 		verificationStatus = VerificationStatusVerifiedHuman

@@ -162,7 +162,7 @@ class NotificationService {
     _attackedTerritoryController.add(territoryId);
   }
 
-  /// Displays the tactical radar alerts permission primer bottom sheet if not already prompted
+  /// Displays the radar alerts permission primer bottom sheet if not already prompted
   Future<bool> showPermissionPrimerIfNeeded(
     BuildContext context, {
     bool force = false,

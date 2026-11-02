@@ -16,7 +16,7 @@ class AppLogger {
 
   static bool _crashlyticsEnabled = false;
 
-  /// Enables or disables Crashlytics telemetry.
+  /// Enables or disables Crashlytics logging.
   /// Strictly no-ops if in [kDebugMode] or if Crashlytics is uninitialized.
   static void setCrashlyticsEnabled(bool enabled) {
     if (kDebugMode) {

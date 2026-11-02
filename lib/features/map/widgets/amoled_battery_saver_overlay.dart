@@ -39,7 +39,6 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
       label: 'Endurance Battery Saver Mode active. Double tap anywhere on screen to wake map view.',
       child: GestureDetector(
         onDoubleTap: () {
-          AppMotion.mediumTick();
           onWake();
         },
         behavior: HitTestBehavior.opaque,
@@ -106,7 +105,7 @@ class AmoledBatterySaverOverlay extends StatelessWidget {
                     ],
                   ),
 
-                  // Center Telemetry Numbers
+                  // Center Metric Numbers
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [

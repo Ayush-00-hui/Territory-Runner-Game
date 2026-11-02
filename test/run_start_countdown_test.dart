@@ -123,8 +123,8 @@ void main() {
           ),
         );
 
-        // Verify formatted thousands separator step count
-        expect(find.text('1,234 steps'), findsOneWidget);
+        // Verify formatted thousands separator step count with estimate label
+        expect(find.text('~1,234 steps (est.)'), findsOneWidget);
 
         // Verify walking icon
         expect(find.byIcon(Icons.directions_walk_rounded), findsOneWidget);
@@ -139,6 +139,38 @@ void main() {
         // Verify shortened territories label ("2 claimed")
         expect(find.text('2 claimed'), findsOneWidget);
       });
+
+      testWidgets(
+        'RunHud hides steps completely when stepCount is null (e.g. cycling)',
+        (tester) async {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: Scaffold(
+                body: RunHud(
+                  isRunActive: true,
+                  isAutoPaused: false,
+                  distanceKm: 5.2,
+                  elapsedSeconds: 600,
+                  movingSeconds: 580,
+                  splitPace: "02'15\"",
+                  currentSpeedKmh: 24.5,
+                  territoriesClaimed: 3,
+                  satelliteAccuracyMeters: 4.5,
+                  stepCount: null,
+                  onToggleRun: () {},
+                  onSealShape: () {},
+                  onFinishRun: () {},
+                ),
+              ),
+            ),
+          );
+
+          // Steps and walking icon should NOT be present
+          expect(find.textContaining('steps'), findsNothing);
+          expect(find.byIcon(Icons.directions_walk_rounded), findsNothing);
+          expect(find.text('3 claimed'), findsOneWidget);
+        },
+      );
 
       test('selectionTick, lightTick and mediumTick send no platform haptic calls; heavyBurst sends one, and none when hapticsEnabled is false', () async {
         final List<MethodCall> hapticCalls = [];

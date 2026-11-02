@@ -100,7 +100,6 @@ class AppChip extends StatelessWidget {
         label: label,
         child: GestureDetector(
           onTap: () {
-            AppMotion.selectionTick();
             onTap!();
           },
           behavior: HitTestBehavior.opaque,

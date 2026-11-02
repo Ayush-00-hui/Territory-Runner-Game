@@ -112,7 +112,6 @@ class SummaryVictoryHeader extends StatelessWidget {
               label: 'Close summary',
               child: GestureDetector(
                 onTap: () {
-                  AppMotion.selectionTick();
                   onClose();
                 },
                 behavior: HitTestBehavior.opaque,

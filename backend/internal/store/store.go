@@ -44,7 +44,7 @@ type Store interface {
 	// GetTerritoryByID retrieves a territory by its unique ID.
 	GetTerritoryByID(ctx context.Context, id string) (*Territory, error)
 
-	// GetLeaderboard returns runners ordered descending by total claimed sovereign area, optionally filtered by activity type.
+	// GetLeaderboard returns runners ordered descending by total claimed area, optionally filtered by activity type.
 	GetLeaderboard(ctx context.Context, limit int, activityType string) ([]LeaderboardEntry, error)
 
 	// SaveDeviceToken persists or updates an FCM registration token for a user.

@@ -168,7 +168,7 @@ class _TerritoryArtState extends State<TerritoryArt>
               ),
             ),
 
-            // 2. Telemetry Readout Overlay (for Hero / Summary cards)
+            // 2. Metrics Readout Overlay (for Hero / Summary cards)
             if (!widget.isThumbnail &&
                 (widget.totalAreaSqm != null || widget.subtitle != null))
               Positioned(
@@ -228,7 +228,6 @@ class _TerritoryArtState extends State<TerritoryArt>
     if (widget.onTap != null) {
       return GestureDetector(
         onTap: () {
-          AppMotion.lightTick();
           widget.onTap!();
         },
         behavior: HitTestBehavior.opaque,

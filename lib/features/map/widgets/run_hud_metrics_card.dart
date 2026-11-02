@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
 
 /// Primary Distance, Time, Pace and Secondary Metrics Card for RunHud.
@@ -13,7 +14,7 @@ class RunHudMetricsCard extends StatelessWidget {
   final String? targetPace;
   final double currentSpeedKmh;
   final double satelliteAccuracyMeters;
-  final int stepCount;
+  final int? stepCount;
   final int territoriesClaimed;
   final VoidCallback onToggleExpanded;
 
@@ -28,7 +29,7 @@ class RunHudMetricsCard extends StatelessWidget {
     this.targetPace,
     required this.currentSpeedKmh,
     required this.satelliteAccuracyMeters,
-    required this.stepCount,
+    this.stepCount,
     required this.territoriesClaimed,
     required this.onToggleExpanded,
   });
@@ -182,7 +183,7 @@ class RunHudMetricsCard extends StatelessWidget {
 
         const SizedBox(height: AppSpacing.s12),
 
-        // Secondary Telemetry Row (Tap to expand/collapse extended metrics)
+        // Secondary Metrics Row (Tap to expand/collapse extended metrics)
         GestureDetector(
           onTap: onToggleExpanded,
           behavior: HitTestBehavior.opaque,
@@ -237,7 +238,11 @@ class RunHudMetricsCard extends StatelessWidget {
                         ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
-                          '+${(distanceKm * 65.0).round()} kcal',
+                          AppPreferences().formatCalories(
+                            AppPreferences().estimateCalories(
+                              distanceKm: distanceKm,
+                            ),
+                          ),
                           style: AppText.bodyBold.copyWith(
                             fontSize: 11,
                             fontFeatures: const [FontFeature.tabularFigures()],
@@ -283,36 +288,38 @@ class RunHudMetricsCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: AppSpacing.s4),
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.center,
-                    child: Semantics(
-                      label: 'estimated',
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.directions_walk_rounded,
-                            color: AppColors.accent,
-                            size: 14,
-                          ),
-                          const SizedBox(width: AppSpacing.s4),
-                          Text(
-                            '${_formatSteps(stepCount)} steps',
-                            style: AppText.bodyBold.copyWith(
-                              fontSize: 11,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
+                if (stepCount != null) ...[
+                  const SizedBox(width: AppSpacing.s4),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.center,
+                      child: Semantics(
+                        label: 'estimated',
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.directions_walk_rounded,
+                              color: AppColors.accent,
+                              size: 14,
                             ),
-                          ),
-                        ],
+                            const SizedBox(width: AppSpacing.s4),
+                            Text(
+                              '~${_formatSteps(stepCount!)} steps (est.)',
+                              style: AppText.bodyBold.copyWith(
+                                fontSize: 11,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
                 const SizedBox(width: AppSpacing.s4),
                 Expanded(
                   child: FittedBox(

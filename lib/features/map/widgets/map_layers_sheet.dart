@@ -54,7 +54,6 @@ class _MapLayersSheetState extends State<MapLayersSheet> {
             subtitle: 'Render claimed polygons and team areas',
             value: _showTerritories,
             onChanged: (val) {
-              AppMotion.selectionTick();
               setState(() => _showTerritories = val);
               widget.onStyleChanged?.call();
             },
@@ -68,7 +67,6 @@ class _MapLayersSheetState extends State<MapLayersSheet> {
             subtitle: 'Display live kinematic presence of rival runners',
             value: _showRivals,
             onChanged: (val) {
-              AppMotion.selectionTick();
               setState(() => _showRivals = val);
               widget.onStyleChanged?.call();
             },
@@ -82,7 +80,6 @@ class _MapLayersSheetState extends State<MapLayersSheet> {
             subtitle: 'Boost tile contrast and linework for bright sunlight',
             value: _highContrast,
             onChanged: (val) {
-              AppMotion.selectionTick();
               setState(() => _highContrast = val);
               widget.onStyleChanged?.call();
             },
@@ -91,7 +88,6 @@ class _MapLayersSheetState extends State<MapLayersSheet> {
             const SizedBox(height: AppSpacing.s12),
             GestureDetector(
               onTap: () {
-                AppMotion.selectionTick();
                 Navigator.pop(context);
                 widget.onLocateNearestRival!();
               },

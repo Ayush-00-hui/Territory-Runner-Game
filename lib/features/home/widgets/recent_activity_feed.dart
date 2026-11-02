@@ -196,7 +196,6 @@ class RecentActivityFeed extends StatelessWidget {
         return AppCard(
           padding: EdgeInsets.zero,
           onTap: () {
-            AppMotion.selectionTick();
             _showRunDetail(context, territory);
           },
           child: Padding(

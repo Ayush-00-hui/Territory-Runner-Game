@@ -183,7 +183,9 @@ class _SummarySheetState extends State<SummarySheet>
       AppSpacing.s16,
     );
     final maxHeight = MediaQuery.sizeOf(context).height * 0.90;
-    final calories = (widget.distanceKm * 62).round();
+    final calories = AppPreferences().estimateCalories(
+      distanceKm: widget.distanceKm,
+    );
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),

@@ -37,7 +37,6 @@ class _AppCardState extends State<AppCard> {
 
   void _handleTapDown(TapDownDetails _) {
     if (widget.onTap == null) return;
-    AppMotion.selectionTick();
     setState(() => _isPressed = true);
   }
 

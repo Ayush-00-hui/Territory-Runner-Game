@@ -90,7 +90,7 @@ class TerritoryService {
           totalDistanceKm: 0.0,
           xp: 0,
           level: 1,
-          badges: ['Rookie Runner', 'Cyber Rookie'],
+          badges: ['Rookie Runner'],
           totalTerritoriesClaimed: 0,
           currentStreak: 1,
         ),
@@ -128,7 +128,7 @@ class TerritoryService {
           totalDistanceKm: 0.0,
           xp: 0,
           level: 1,
-          badges: ['Rookie Runner', 'Cyber Rookie'],
+          badges: ['Rookie Runner'],
           totalTerritoriesClaimed: 0,
           currentStreak: 1,
         );
@@ -157,7 +157,7 @@ class TerritoryService {
     return box.values.toList();
   }
 
-  /// Captures an arbitrary enclosed GPS polygon as sovereign player territory.
+  /// Captures an arbitrary enclosed GPS polygon as player territory.
   /// 1. Unions the new loop with the player's existing territory into a single MultiPolygon.
   /// 2. Uses Clipper difference to contest and carve away overlapping rival territories.
   /// 3. Computes accurate total area in m² and awards XP.
@@ -378,7 +378,7 @@ class TerritoryService {
       rivalPolygon,
     );
     const rivalOwner = 'rival_crimson_runner_99';
-    const territoryId = 'poly_rival_crimson_sector';
+    const territoryId = 'poly_rival_crimson_zone';
 
     final rivalTerritory = Territory(
       id: territoryId,

@@ -325,7 +325,7 @@ func TestGetMeProfile(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &u)
 	require.NoError(t, err)
 	assert.Equal(t, "profile_tester", u.ID)
-	assert.Equal(t, "Cyber Vanguard", u.Faction)
+	assert.Equal(t, "", u.Faction)
 }
 
 func TestRunCoachEndpoint(t *testing.T) {
@@ -857,7 +857,7 @@ func TestGetFactionStandings(t *testing.T) {
 	err := json.Unmarshal(rec.Body.Bytes(), &resp)
 	assert.NoError(t, err)
 	assert.Equal(t, 50000.0, resp.TotalAreaSqm)
-	assert.Len(t, resp.Standings, 3) // All 3 canonical factions
+	assert.Len(t, resp.Standings, 2) // Exactly the active data-driven teams
 	assert.Equal(t, "Cyber Vanguard", resp.Standings[0].Faction)
 	assert.Equal(t, 100.0, resp.Standings[0].Percentage)
 }
@@ -1987,4 +1987,67 @@ func TestSubmitRunTableDrivenAntiCheat(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSubmitRunStepCountBackwardCompatible(t *testing.T) {
+	router, st := setupTestServer()
+	startTime := time.Now().Add(-10 * time.Minute)
+	pts, dur, dist := buildRealisticLoop(startTime)
+
+	// 1. With step count (e.g. walking/running)
+	steps := 1250
+	payloadWithSteps := api.SubmitRunRequest{
+		IdempotencyKey:  "key_with_steps_1",
+		ActivityType:    "running",
+		StepCount:       &steps,
+		Points:          pts,
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+	}
+
+	body, _ := json.Marshal(payloadWithSteps)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "user_steps_1")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusCreated, rec.Code)
+	var res1 store.CaptureResult
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &res1))
+	require.NotNil(t, res1.StepCount)
+	assert.Equal(t, 1250, *res1.StepCount)
+
+	runInDb, err := st.GetRunByIdempotencyKey(context.Background(), "key_with_steps_1")
+	require.NoError(t, err)
+	require.NotNil(t, runInDb)
+	require.NotNil(t, runInDb.StepCount)
+	assert.Equal(t, 1250, *runInDb.StepCount)
+
+	// 2. Without step count (e.g. cycling or legacy client)
+	payloadWithoutSteps := api.SubmitRunRequest{
+		IdempotencyKey:  "key_without_steps_2",
+		ActivityType:    "cycling",
+		StepCount:       nil,
+		Points:          pts,
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+	}
+
+	body2, _ := json.Marshal(payloadWithoutSteps)
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	req2.Header.Set("X-Dev-User", "user_steps_2")
+	rec2 := httptest.NewRecorder()
+	router.ServeHTTP(rec2, req2)
+
+	assert.Equal(t, http.StatusCreated, rec2.Code)
+	var res2 store.CaptureResult
+	require.NoError(t, json.Unmarshal(rec2.Body.Bytes(), &res2))
+	assert.Nil(t, res2.StepCount)
+
+	runInDb2, err := st.GetRunByIdempotencyKey(context.Background(), "key_without_steps_2")
+	require.NoError(t, err)
+	require.NotNil(t, runInDb2)
+	assert.Nil(t, runInDb2.StepCount)
 }

@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/theme/app_spacing.dart';
 import '../../../ui/theme/app_text.dart';
-import '../../../ui/motion/motion.dart';
 
 /// Classroom & Viva Demo Lab triggers for simulated real-time GPS scenarios.
 class DemoControlsLab extends StatelessWidget {
@@ -114,7 +113,6 @@ class DemoControlsLab extends StatelessWidget {
         child: InkWell(
           borderRadius: AppSpacing.br16,
           onTap: () {
-            AppMotion.mediumTick();
             Navigator.pop(context);
             onTap();
           },

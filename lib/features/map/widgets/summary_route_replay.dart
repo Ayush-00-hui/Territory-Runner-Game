@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
+import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
 
 /// Interactive skippable route replay card with territory art for SummarySheet.
@@ -36,7 +37,6 @@ class SummaryRouteReplay extends StatelessWidget {
       button: true,
       child: GestureDetector(
         onTap: () {
-          AppMotion.selectionTick();
           if (replayController.value < 1.0) {
             replayController.animateTo(1.0, duration: AppMotion.fast);
           } else {
@@ -85,7 +85,7 @@ class SummaryRouteReplay extends StatelessWidget {
                     border: Border.all(color: AppColors.borderSubtle),
                   ),
                   child: Text(
-                    'Claimed: ${_formatArea(effectiveArea)} • $calories kcal',
+                    'Claimed: ${_formatArea(effectiveArea)} • ${AppPreferences().formatCalories(calories)}',
                     style: AppText.label.copyWith(
                       color: AppColors.accent,
                       fontSize: 9.5,

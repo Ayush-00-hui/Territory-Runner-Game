@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
-import '../motion/motion.dart';
 
 /// Unified section header with title left, optional action right,
 /// strictly aligned on the same typographic baseline, and consistent spacing.
@@ -38,7 +37,6 @@ class SectionHeader extends StatelessWidget {
             label: actionLabel!,
             child: GestureDetector(
               onTap: () {
-                AppMotion.selectionTick();
                 onAction!();
               },
               behavior: HitTestBehavior.opaque,

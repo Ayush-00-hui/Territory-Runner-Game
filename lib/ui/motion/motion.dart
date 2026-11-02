@@ -54,17 +54,20 @@ class AppMotion {
   /// Global master switch for hardware haptic feedback, kept in sync by [AppPreferences].
   static bool hapticsEnabled = true;
 
-  /// Light selection tick on tap / press (no-op to prevent UI vibration noise)
+  /// Light selection tick on tap / press (no-op; all 94 UI call sites removed)
+  @Deprecated('Dead code no-op; removed to prevent UI vibration noise')
   static void selectionTick() {
     // No-op
   }
 
-  /// Light impact tick (no-op to prevent UI vibration noise)
+  /// Light impact tick (no-op; all 94 UI call sites removed)
+  @Deprecated('Dead code no-op; removed to prevent UI vibration noise')
   static void lightTick() {
     // No-op
   }
 
-  /// Medium impact (no-op to prevent UI vibration noise)
+  /// Medium impact (no-op; all 94 UI call sites removed)
+  @Deprecated('Dead code no-op; removed to prevent UI vibration noise')
   static void mediumTick() {
     // No-op
   }

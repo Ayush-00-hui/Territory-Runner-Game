@@ -110,8 +110,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   List<Position> get recentPositions => List.unmodifiable(_recentPositions);
   ExerciseActivityType get selectedActivity => _selectedActivity;
 
-  int get stepCount {
-    if (_selectedActivity == ExerciseActivityType.cycling) return 0;
+  int? get stepCount {
+    if (_selectedActivity == ExerciseActivityType.cycling) return null;
     final meters = _runDistanceKm * 1000.0;
     return (_selectedActivity == ExerciseActivityType.walking
             ? meters / 0.75
@@ -228,6 +228,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       'territories': finalTerritories,
       'areaSqm': finalArea,
       'xp': finalXp,
+      'stepCount': stepCount,
       'points': List<LatLng>.from(_runCoordinates),
     };
   }

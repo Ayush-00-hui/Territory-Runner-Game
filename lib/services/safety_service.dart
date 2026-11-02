@@ -9,7 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-/// Tactical runner safety and emergency SOS service providing one-tap emergency
+/// Runner safety and emergency SOS service providing one-tap emergency
 /// dialing, GPS coordinate distress SMS, location sharing, and loud audio sirens.
 class SafetyService {
   static final SafetyService _instance = SafetyService._internal();
@@ -145,7 +145,7 @@ class SafetyService {
   }
 
   /// Triggers a loud audio siren beacon to deter threats or alert passersby
-  Future<void> playTacticalSiren() async {
+  Future<void> playSafetySiren() async {
     if (_isSirenPlaying) return;
     _isSirenPlaying = true;
     try {
@@ -163,7 +163,7 @@ class SafetyService {
   }
 
   /// Silences the audio siren beacon
-  Future<void> stopTacticalSiren() async {
+  Future<void> stopSafetySiren() async {
     _isSirenPlaying = false;
     try {
       if (_sirenPlayer != null) {
@@ -177,4 +177,10 @@ class SafetyService {
       );
     }
   }
+
+  @Deprecated('Use playSafetySiren instead')
+  Future<void> playTacticalSiren() => playSafetySiren();
+
+  @Deprecated('Use stopSafetySiren instead')
+  Future<void> stopTacticalSiren() => stopSafetySiren();
 }

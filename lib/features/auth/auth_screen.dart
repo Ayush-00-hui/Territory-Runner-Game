@@ -226,7 +226,6 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _handleGuestContinue() {
-    AppMotion.selectionTick();
     _finishAuth('Athlete');
   }
 
@@ -527,7 +526,6 @@ class _AuthScreenState extends State<AuthScreen> {
                         Center(
                           child: GestureDetector(
                             onTap: () {
-                              AppMotion.selectionTick();
                               setState(() => _codeSent = false);
                             },
                             behavior: HitTestBehavior.opaque,
@@ -611,7 +609,6 @@ class _AuthScreenState extends State<AuthScreen> {
                       Center(
                         child: GestureDetector(
                           onTap: () {
-                            AppMotion.selectionTick();
                             setState(() {
                               _isSignUp = !_isSignUp;
                               _errorMessage = null;
@@ -754,7 +751,6 @@ class _AuthScreenState extends State<AuthScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          AppMotion.selectionTick();
           setState(() {
             _selectedTab = index;
             _errorMessage = null;

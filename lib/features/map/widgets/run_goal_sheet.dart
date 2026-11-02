@@ -572,7 +572,6 @@ class _RunGoalSheetState extends State<RunGoalSheet>
   ) {
     return GestureDetector(
       onTap: () {
-        AppMotion.lightTick();
         setState(() {
           _selectedValue = val;
         });

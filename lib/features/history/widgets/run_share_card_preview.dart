@@ -76,7 +76,7 @@ class RunShareCardPreview extends StatelessWidget {
         borderColor = AppColors.border;
         hasGridOverlay = false;
         break;
-      case ShareCardTheme.cyberVanguard:
+      case ShareCardTheme.highContrast:
         cardBg = AppColors.bgElevated;
         accentColor = AppColors.rival;
         borderColor = AppColors.rival.withValues(alpha: 0.4);
@@ -103,7 +103,7 @@ class RunShareCardPreview extends StatelessWidget {
         borderRadius: AppSpacing.br24,
         child: Stack(
           children: [
-            // Background subtle grid if cyber theme
+            // Background subtle grid if high contrast theme
             if (hasGridOverlay)
               Positioned.fill(
                 child: CustomPaint(

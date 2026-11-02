@@ -106,7 +106,7 @@ func ConfigForActivity(activity string) Config {
 	}
 }
 
-// Engine implements server-side GPS breadcrumb tracking and sovereign loop enclosure.
+// Engine implements server-side GPS breadcrumb tracking and loop enclosure.
 type Engine struct {
 	cfg              Config
 	path             []LatLng

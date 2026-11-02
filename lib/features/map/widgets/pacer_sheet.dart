@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/app_preferences.dart';
 import '../../../services/location_service.dart';
 import '../../../ui/ui.dart';
 import 'demo_controls.dart';
@@ -14,6 +15,7 @@ class VirtualPacerSheet extends StatelessWidget {
   final VoidCallback onSimulateDecayAndAttack;
   final bool isRivalSimulating;
   final VoidCallback? onToggleRivalSimulation;
+  final bool? isDemoMode;
 
   const VirtualPacerSheet({
     super.key,
@@ -25,6 +27,7 @@ class VirtualPacerSheet extends StatelessWidget {
     required this.onSimulateDecayAndAttack,
     this.isRivalSimulating = false,
     this.onToggleRivalSimulation,
+    this.isDemoMode,
   });
 
   static Future<void> show({
@@ -37,6 +40,7 @@ class VirtualPacerSheet extends StatelessWidget {
     required VoidCallback onSimulateDecayAndAttack,
     bool isRivalSimulating = false,
     VoidCallback? onToggleRivalSimulation,
+    bool? isDemoMode,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -54,12 +58,15 @@ class VirtualPacerSheet extends StatelessWidget {
         onSimulateDecayAndAttack: onSimulateDecayAndAttack,
         isRivalSimulating: isRivalSimulating,
         onToggleRivalSimulation: onToggleRivalSimulation,
+        isDemoMode: isDemoMode,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final showDemo = isDemoMode ?? AppPreferences().isDemoModeEnabled;
+
     return StatefulBuilder(
       builder: (context, setModalState) {
         return SingleChildScrollView(
@@ -136,18 +143,20 @@ class VirtualPacerSheet extends StatelessWidget {
                 color: AppColors.accent,
                 setModalState: setModalState,
               ),
-              const SizedBox(height: AppSpacing.s16),
-              const Divider(color: AppColors.border),
-              const SizedBox(height: AppSpacing.s12),
-              DemoControlsLab(
-                onSimulateLoop: onSimulateLoop,
-                onSimulateRivalCut: onSimulateRivalCut,
-                onSimulateAnomaly: onSimulateAnomaly,
-                onSimulateCoachDebrief: onSimulateCoachDebrief,
-                onSimulateDecayAndAttack: onSimulateDecayAndAttack,
-                isRivalSimulating: isRivalSimulating,
-                onToggleRivalSimulation: onToggleRivalSimulation,
-              ),
+              if (showDemo) ...[
+                const SizedBox(height: AppSpacing.s16),
+                const Divider(color: AppColors.border),
+                const SizedBox(height: AppSpacing.s12),
+                DemoControlsLab(
+                  onSimulateLoop: onSimulateLoop,
+                  onSimulateRivalCut: onSimulateRivalCut,
+                  onSimulateAnomaly: onSimulateAnomaly,
+                  onSimulateCoachDebrief: onSimulateCoachDebrief,
+                  onSimulateDecayAndAttack: onSimulateDecayAndAttack,
+                  isRivalSimulating: isRivalSimulating,
+                  onToggleRivalSimulation: onToggleRivalSimulation,
+                ),
+              ],
             ],
           ),
         );
@@ -167,7 +176,6 @@ class VirtualPacerSheet extends StatelessWidget {
     final isSelected = locationService.pacerMode == mode;
     return GestureDetector(
       onTap: () {
-        AppMotion.mediumTick();
         locationService.setVirtualPacer(mode);
         setModalState(() {});
         Navigator.pop(context);

@@ -85,7 +85,7 @@ class FirebaseService {
 
   User? get currentUser => _isInitialized ? _auth?.currentUser : null;
 
-  /// Google Sign-In with Tactical Auth Credential Handling
+  /// Google Sign-In with Auth Credential Handling
   Future<UserCredential?> signInWithGoogle() async {
     if (!_isInitialized || _auth == null) return null;
     try {

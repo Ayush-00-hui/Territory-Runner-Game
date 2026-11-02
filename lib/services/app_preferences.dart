@@ -21,6 +21,9 @@ class AppPreferences {
   static const String _prefDailyGoalKmKey = 'pref_daily_goal_km';
   static const String _prefCountdownVoiceKey = 'pref_countdown_voice_enabled';
   static const String _prefAutoSaveCardKey = 'pref_auto_save_run_card';
+  static const String _prefDemoModeUnlockedKey = 'pref_demo_mode_unlocked';
+  static const String _prefDemoModeEnabledKey = 'pref_demo_mode_enabled';
+  static const String _prefBodyWeightKgKey = 'pref_body_weight_kg';
 
   bool _isHapticsEnabled = true;
   DistanceUnit _unit = DistanceUnit.metric;
@@ -28,10 +31,18 @@ class AppPreferences {
   double? _dailyGoalKm;
   bool _isCountdownVoiceEnabled = true;
   bool _isAutoSaveCardEnabled = true;
+  bool _isDemoModeUnlocked = false;
+  bool _isDemoModeEnabled = false;
+  double? _bodyWeightKg;
   bool _isInitialized = false;
 
   final ValueNotifier<bool> leftHandedModeNotifier = ValueNotifier<bool>(false);
   final ValueNotifier<double?> dailyGoalKmNotifier = ValueNotifier<double?>(
+    null,
+  );
+  final ValueNotifier<bool> demoModeNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> demoUnlockedNotifier = ValueNotifier<bool>(false);
+  final ValueNotifier<double?> bodyWeightKgNotifier = ValueNotifier<double?>(
     null,
   );
 
@@ -41,6 +52,9 @@ class AppPreferences {
   double? get dailyGoalKm => _dailyGoalKm;
   bool get isCountdownVoiceEnabled => _isCountdownVoiceEnabled;
   bool get isAutoSaveCardEnabled => _isAutoSaveCardEnabled;
+  bool get isDemoModeUnlocked => _isDemoModeUnlocked;
+  bool get isDemoModeEnabled => _isDemoModeEnabled;
+  double? get bodyWeightKg => _bodyWeightKg;
   bool get isInitialized => _isInitialized;
 
   AppPreferences._internal() {
@@ -64,6 +78,12 @@ class AppPreferences {
       _unit = unitStr == 'imperial'
           ? DistanceUnit.imperial
           : DistanceUnit.metric;
+      _isDemoModeUnlocked = prefs.getBool(_prefDemoModeUnlockedKey) ?? false;
+      demoUnlockedNotifier.value = _isDemoModeUnlocked;
+      _isDemoModeEnabled = prefs.getBool(_prefDemoModeEnabledKey) ?? false;
+      demoModeNotifier.value = _isDemoModeEnabled;
+      _bodyWeightKg = prefs.getDouble(_prefBodyWeightKgKey);
+      bodyWeightKgNotifier.value = _bodyWeightKg;
       _isInitialized = true;
     } catch (e) {
       AppLogger.debug('Init note: $e', tag: 'AppPreferences');
@@ -134,6 +154,107 @@ class AppPreferences {
     } catch (_) {}
   }
 
+  /// Unlocks demo & simulation developer settings (e.g. after tapping version row 7 times)
+  Future<void> unlockDemoMode() async {
+    _isDemoModeUnlocked = true;
+    demoUnlockedNotifier.value = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefDemoModeUnlockedKey, true);
+    } catch (_) {}
+  }
+
+  /// Toggles demo mode & GPS simulation controls
+  Future<void> toggleDemoMode(bool enabled) async {
+    _isDemoModeEnabled = enabled;
+    demoModeNotifier.value = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefDemoModeEnabledKey, enabled);
+    } catch (_) {}
+  }
+
+  /// Manually inject demo mode state for testing
+  void setMockDemoState({bool? unlocked, bool? enabled}) {
+    if (unlocked != null) {
+      _isDemoModeUnlocked = unlocked;
+      demoUnlockedNotifier.value = unlocked;
+    }
+    if (enabled != null) {
+      _isDemoModeEnabled = enabled;
+      demoModeNotifier.value = enabled;
+    }
+  }
+
+  /// Sets or clears the user's optional body weight in kilograms (null = default 70.0 kg fallback).
+  Future<void> setBodyWeightKg(double? weightKg) async {
+    _bodyWeightKg = (weightKg != null && weightKg > 0) ? weightKg : null;
+    bodyWeightKgNotifier.value = _bodyWeightKg;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_bodyWeightKg != null) {
+        await prefs.setDouble(_prefBodyWeightKgKey, _bodyWeightKg!);
+      } else {
+        await prefs.remove(_prefBodyWeightKgKey);
+      }
+    } catch (_) {}
+  }
+
+  /// Manually inject body weight state for testing
+  void setMockBodyWeight(double? weightKg) {
+    _bodyWeightKg = (weightKg != null && weightKg > 0) ? weightKg : null;
+    bodyWeightKgNotifier.value = _bodyWeightKg;
+  }
+
+  // --- CALORIE ESTIMATION HELPERS ---
+
+  /// Estimates gross energy expenditure in kilocalories (kcal).
+  ///
+  /// Uses the documented ACSM / Margaria metabolic formula:
+  ///   Calories (kcal) = Distance (km) * Body Weight (kg) * Factor
+  ///
+  /// Activity factors (kcal / kg / km):
+  /// - Running: 1.036 (Margaria et al. 1963, "Energy cost of running in humans")
+  /// - Walking: 0.73 (American College of Sports Medicine metabolic equation)
+  /// - Cycling: 0.40 (ACSM outdoor cycling metabolic guidelines)
+  ///
+  /// If [customWeightKg] is not provided, uses [_bodyWeightKg] if configured,
+  /// otherwise defaults to a standard reference runner weight of 70.0 kg (~154.3 lbs).
+  int estimateCalories({
+    required double distanceKm,
+    double? customWeightKg,
+    String activityType = 'running',
+  }) {
+    if (distanceKm <= 0) return 0;
+    final weight = customWeightKg ?? _bodyWeightKg ?? 70.0;
+    final double factor;
+    switch (activityType.toLowerCase()) {
+      case 'walking':
+      case 'walk':
+        factor = 0.73;
+        break;
+      case 'cycling':
+      case 'cycle':
+      case 'bike':
+      case 'biking':
+        factor = 0.40;
+        break;
+      case 'running':
+      case 'run':
+      default:
+        factor = 1.036;
+        break;
+    }
+    return (distanceKm * weight * factor).round();
+  }
+
+  /// Formats estimated calories with the required "(est.)" label.
+  /// Example: "~363 kcal (est.)" or "+~363 kcal (est.)" if [withPrefixPlus] is true.
+  String formatCalories(int calories, {bool withPrefixPlus = false}) {
+    final prefix = withPrefixPlus ? '+~' : '~';
+    return '$prefix$calories kcal (est.)';
+  }
+
   // --- UNIT CONVERSION & FORMATTING HELPERS ---
 
   /// Converts a kilometer value into current unit (km or miles)
@@ -183,7 +304,7 @@ class AppPreferences {
     }
   }
 
-  // --- TACTICAL HAPTIC HELPERS ---
+  // --- RUN HAPTIC HELPERS ---
 
   /// Lightweight tactile vibration dispatcher using [Vibration] package
   /// Respects [_isHapticsEnabled] setting.
@@ -203,7 +324,7 @@ class AppPreferences {
     }
   }
 
-  /// Preset tactical vibration patterns
+  /// Preset run vibration patterns
   Future<void> triggerRunStartHaptic() => triggerHaptic([0, 150, 100, 150]);
   Future<void> triggerMilestoneHaptic() => triggerHaptic([0, 200, 150, 200]);
   Future<void> triggerLoopClosedHaptic() => triggerHaptic([0, 80, 80, 80]);

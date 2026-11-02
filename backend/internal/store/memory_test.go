@@ -964,3 +964,48 @@ func TestMemory_UnverifiedMotion_RewardsRestricted(t *testing.T) {
 	require.Len(t, duelsAfter, 1)
 	assert.Equal(t, 0.5, duelsAfter[0].ChallengerProgress, "Verified human motion MUST advance duel challenge progress")
 }
+
+func TestCaptureRunStepCountIdempotency(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	steps := 3450
+	run := &store.Run{
+		ID:              "run_step_test_1",
+		UserID:          "usr_step_walker",
+		IdempotencyKey:  "idem_step_test_1",
+		ActivityType:    "walking",
+		StepCount:       &steps,
+		DistanceMeters:  2500.0,
+		DurationSeconds: 1800,
+		Status:          "accepted",
+		CreatedAt:       time.Now().UTC(),
+	}
+
+	res1, err := memStore.CaptureRunAndMutateTerritories(ctx, run, nil, nil)
+	require.NoError(t, err)
+	require.NotNil(t, res1.StepCount)
+	assert.Equal(t, 3450, *res1.StepCount)
+
+	// Idempotency replay returns exact step count
+	res2, err := memStore.CaptureRunAndMutateTerritories(ctx, run, nil, nil)
+	require.NoError(t, err)
+	require.NotNil(t, res2.StepCount)
+	assert.Equal(t, 3450, *res2.StepCount)
+
+	// Run without step count (e.g. cycling)
+	runCycling := &store.Run{
+		ID:              "run_step_test_2",
+		UserID:          "usr_step_cyclist",
+		IdempotencyKey:  "idem_step_test_2",
+		ActivityType:    "cycling",
+		StepCount:       nil,
+		DistanceMeters:  5000.0,
+		DurationSeconds: 1200,
+		Status:          "accepted",
+		CreatedAt:       time.Now().UTC(),
+	}
+	resCycling, err := memStore.CaptureRunAndMutateTerritories(ctx, runCycling, nil, nil)
+	require.NoError(t, err)
+	assert.Nil(t, resCycling.StepCount)
+}

@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../ui/ui.dart';
 
 /// 3-Slide Vector Onboarding Experience with Charcoal + Ember athletic styling.
-/// Educates the athlete on loop-based enclosure, rival attack radar, and AI telemetry.
+/// Educates the athlete on loop-based enclosure, rival attack radar, and AI coaching metrics.
 class OnboardingScreen extends StatefulWidget {
   final VoidCallback onCompleted;
   final bool autoAnimate;
@@ -453,7 +453,7 @@ class _RunAndClaimPainter extends CustomPainter {
       canvas.drawLine(Offset(20, y), Offset(size.width - 20, y), gridPaint);
     }
 
-    // 2. Closed Loop Polygon (Sector)
+    // 2. Closed Loop Polygon (Territory)
     final polyPath = Path()
       ..moveTo(center.dx - 80, center.dy - 30)
       ..lineTo(center.dx - 10, center.dy - 70)
@@ -670,7 +670,7 @@ class _AthleticPrecisionPainter extends CustomPainter {
       activePaint,
     );
 
-    // 2. Center Telemetry Card
+    // 2. Center Metrics Card
     final cardRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: center, width: 90, height: 50),
       const Radius.circular(10),

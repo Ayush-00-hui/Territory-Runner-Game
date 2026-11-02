@@ -53,38 +53,40 @@ void main() {
       expect(profile.hasBadge('Nonexistent Badge'), isFalse);
     });
 
-    test('faction alias maps Cyber Vanguard to calm display faction Vanguard while keeping raw value', () {
+    test('persisted faction values are preserved cleanly without crashing the app', () {
       final profile = RunnerProfile(
         id: 'usr_vanguard',
         username: 'PacerOne',
         faction: 'Cyber Vanguard',
       );
 
-      // Raw value preserved for API / backend parity
+      // Raw value preserved for API / backend parity without crashing
       expect(profile.faction, equals('Cyber Vanguard'));
+      expect(profile.displayFaction, equals('Cyber Vanguard'));
 
-      // Calm display faction
-      expect(profile.displayFaction, equals('Vanguard'));
-      expect(
-        RunnerProfile.factionAliases['Cyber Vanguard'],
-        equals('Vanguard'),
+      // Empty faction returns calm empty string
+      final emptyProfile = RunnerProfile(
+        id: 'usr_independent',
+        username: 'SoloRunner',
       );
+      expect(emptyProfile.faction, isEmpty);
+      expect(emptyProfile.displayFaction, isEmpty);
     });
 
-    test('other factions map cleanly via factionAliases', () {
+    test('persisted factions display without hardcoded aliases', () {
       final syndicateProfile = RunnerProfile(
         id: 'usr_syndicate',
         username: 'IronRunner',
         faction: 'Iron Syndicate',
       );
-      expect(syndicateProfile.displayFaction, equals('Syndicate'));
+      expect(syndicateProfile.displayFaction, equals('Iron Syndicate'));
 
       final nomadProfile = RunnerProfile(
         id: 'usr_nomad',
         username: 'NeonRunner',
         faction: 'Neon Nomads',
       );
-      expect(nomadProfile.displayFaction, equals('Nomads'));
+      expect(nomadProfile.displayFaction, equals('Neon Nomads'));
     });
 
     test('claiming territory awards both canonical and legacy alias badges to keep all consumers working', () {
@@ -103,12 +105,10 @@ void main() {
 
       expect(profile.totalHexesClaimed, equals(1));
       expect(profile.badges.contains('Territory Master'), isTrue);
-      expect(profile.badges.contains('Territory Sovereign'), isTrue);
       expect(profile.hasBadge('Territory Master'), isTrue);
       expect(profile.hasBadge('Territory Sovereign'), isTrue);
 
       expect(profile.badges.contains('First Claim'), isTrue);
-      expect(profile.badges.contains('First Conquest'), isTrue);
       expect(profile.hasBadge('First Claim'), isTrue);
       expect(profile.hasBadge('First Conquest'), isTrue);
     });

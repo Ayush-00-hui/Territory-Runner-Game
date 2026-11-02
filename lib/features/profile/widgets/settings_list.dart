@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../gameplay/territory_service.dart';
@@ -43,6 +42,46 @@ class ProfileSettingsList extends StatefulWidget {
 
 class _ProfileSettingsListState extends State<ProfileSettingsList> {
   final AppPreferences _appPrefs = AppPreferences();
+  int _versionTapCount = 0;
+  DateTime? _lastVersionTap;
+
+  void _onVersionTap() {
+    final now = DateTime.now();
+    if (_lastVersionTap == null ||
+        now.difference(_lastVersionTap!) > const Duration(seconds: 4)) {
+      _versionTapCount = 0;
+    }
+    _lastVersionTap = now;
+    _versionTapCount++;
+
+    if (_appPrefs.isDemoModeUnlocked) {
+      AppToast.show(
+        context,
+        'Demo mode is already unlocked',
+        type: AppToastType.info,
+      );
+      return;
+    }
+
+    if (_versionTapCount >= 7) {
+      _appPrefs.unlockDemoMode();
+      _appPrefs.toggleDemoMode(true);
+      setState(() {});
+      AppToast.show(
+        context,
+        'Demo mode unlocked! Simulation controls enabled.',
+        type: AppToastType.success,
+        icon: Icons.science_rounded,
+      );
+    } else if (_versionTapCount >= 4) {
+      final remaining = 7 - _versionTapCount;
+      AppToast.show(
+        context,
+        'Tap $remaining more times to unlock demo mode',
+        type: AppToastType.info,
+      );
+    }
+  }
 
   void _showExportSheet(BuildContext context) {
     final territories = widget.territoryService.getCapturedTerritoryObjects();
@@ -71,7 +110,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                     icon: Icons.route_rounded,
                     onPressed: () async {
                       Navigator.pop(ctx);
-                      AppMotion.mediumTick();
                       final allPoints = <LatLng>[];
                       for (final t in territories) {
                         allPoints.addAll(t.polygon);
@@ -90,7 +128,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                     icon: Icons.map_rounded,
                     onPressed: () async {
                       Navigator.pop(ctx);
-                      AppMotion.mediumTick();
                       await ExportService().exportAndShareGeoJson(
                         territories: territories,
                       );
@@ -105,8 +142,110 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
     );
   }
 
+  void _showWeightPickerDialog(BuildContext context) {
+    final currentWeight = _appPrefs.bodyWeightKg;
+    final controller = TextEditingController(
+      text: currentWeight != null ? currentWeight.toStringAsFixed(1) : '',
+    );
+    String? errorText;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
+              ),
+              child: AppSheet(
+                title: 'Body weight (optional)',
+                subtitle:
+                    'Used solely for estimating calories burned during runs',
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'If not specified, calorie estimates use a reference runner weight of 70.0 kg (~154 lbs).',
+                      style: AppText.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s16),
+                    TextField(
+                      controller: controller,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      style: AppText.bodyLarge.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                      decoration: InputDecoration(
+                        labelText: 'Weight (kg)',
+                        hintText: 'e.g. 68.5',
+                        errorText: errorText,
+                        suffixText: 'kg',
+                        border: OutlineInputBorder(
+                          borderRadius: AppSpacing.br12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s20),
+                    PrimaryButton(
+                      label: 'Save weight',
+                      onPressed: () {
+                        final text = controller.text.trim();
+                        if (text.isEmpty) {
+                          _appPrefs.setBodyWeightKg(null);
+                          setState(() {});
+                          Navigator.pop(sheetCtx);
+                          return;
+                        }
+                        final parsed = double.tryParse(text);
+                        if (parsed == null ||
+                            parsed < 20.0 ||
+                            parsed > 300.0) {
+                          setSheetState(() {
+                            errorText =
+                                'Enter a valid weight between 20 and 300 kg';
+                          });
+                          return;
+                        }
+                        _appPrefs.setBodyWeightKg(parsed);
+                        setState(() {});
+                        Navigator.pop(sheetCtx);
+                      },
+                    ),
+                    if (currentWeight != null) ...[
+                      const SizedBox(height: AppSpacing.s8),
+                      TextButton(
+                        onPressed: () {
+                          _appPrefs.setBodyWeightKg(null);
+                          setState(() {});
+                          Navigator.pop(sheetCtx);
+                        },
+                        child: Text(
+                          'Reset to standard default (70 kg)',
+                          style: AppText.labelMedium.copyWith(
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showDeleteAccountDialog(BuildContext context) {
-    AppMotion.mediumTick();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -237,7 +376,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             activeTrackColor: AppColors.accentContainer,
             value: _appPrefs.isHapticsEnabled,
             onChanged: (val) {
-              AppMotion.selectionTick();
               setState(() {
                 _appPrefs.toggleHaptics(val);
               });
@@ -275,7 +413,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             activeTrackColor: AppColors.accentContainer,
             value: BatterySaverService().isBatterySaverEnabled,
             onChanged: (val) {
-              AppMotion.selectionTick();
               setState(() {
                 BatterySaverService().setBatterySaver(val);
               });
@@ -307,7 +444,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             activeTrackColor: AppColors.accentContainer,
             value: _appPrefs.isLeftHandedMode,
             onChanged: (val) {
-              AppMotion.selectionTick();
               setState(() {
                 _appPrefs.toggleLeftHandedMode(val);
               });
@@ -339,7 +475,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             activeTrackColor: AppColors.accentContainer,
             value: _appPrefs.isCountdownVoiceEnabled,
             onChanged: (val) {
-              AppMotion.selectionTick();
               setState(() {
                 _appPrefs.toggleCountdownVoice(val);
               });
@@ -371,7 +506,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             activeTrackColor: AppColors.accentContainer,
             value: _appPrefs.isAutoSaveCardEnabled,
             onChanged: (val) {
-              AppMotion.selectionTick();
               setState(() {
                 _appPrefs.toggleAutoSaveCard(val);
               });
@@ -384,7 +518,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             subtitle:
                 'Alerts when nearby runners enter or contest your territory',
             onTap: () {
-              AppMotion.selectionTick();
               NotificationService().showPermissionPrimerIfNeeded(
                 context,
                 force: true,
@@ -397,7 +530,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             title: 'Location & GPS',
             subtitle: 'Review GPS accuracy and background location access',
             onTap: () {
-              AppMotion.selectionTick();
               PermissionPrimerSheet.show(
                 context,
                 type: PermissionPrimerType.location,
@@ -481,12 +613,42 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 backgroundColor: AppColors.surface2,
               ),
               onSelectionChanged: (Set<DistanceUnit> selected) {
-                AppMotion.selectionTick();
                 setState(() {
                   _appPrefs.setUnit(selected.first);
                 });
               },
             ),
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ListTile(
+            leading: const Icon(
+              Icons.monitor_weight_outlined,
+              color: AppColors.accent,
+              size: 20,
+            ),
+            title: Text(
+              'Body weight (optional)',
+              style: AppText.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            subtitle: Text(
+              _appPrefs.bodyWeightKg != null
+                  ? '${_appPrefs.bodyWeightKg!.toStringAsFixed(1)} kg • Used for calorie estimates'
+                  : 'Default: 70.0 kg (not set) • Tap to customize',
+              style: AppText.bodySmall.copyWith(
+                color: AppColors.textMuted,
+                fontSize: 11,
+              ),
+            ),
+            trailing: const Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.textMuted,
+              size: 20,
+            ),
+            onTap: () => _showWeightPickerDialog(context),
           ),
         ]),
 
@@ -512,7 +674,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                   ),
                 ),
                 onTap: () {
-                  AppMotion.selectionTick();
                   showLiveVisibilitySheet(context);
                 },
               );
@@ -524,7 +685,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             title: 'Privacy zones',
             subtitle: 'Exclude home or work areas from public maps and exports',
             onTap: () {
-              AppMotion.selectionTick();
               showPrivacyZonesSheet(context);
             },
           ),
@@ -534,7 +694,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             title: 'Emergency contact & SOS',
             subtitle: 'Configure emergency contact and distress SMS',
             onTap: () {
-              AppMotion.selectionTick();
               showEmergencyContactDialog(context);
             },
           ),
@@ -554,7 +713,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 ? 'Download map areas for running without cellular signal'
                 : 'Local viewing cache (bulk prefetch disabled under OSM policy)',
             onTap: () {
-              AppMotion.selectionTick();
               showOfflineMapsSheet(context);
             },
           ),
@@ -565,7 +723,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             subtitle:
                 'Export GPS tracks and claimed territory as GeoJSON or GPX',
             onTap: () {
-              AppMotion.selectionTick();
               _showExportSheet(context);
             },
           ),
@@ -593,7 +750,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               AppVersion.display,
               style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
             ),
-            onTap: null,
+            onTap: _onVersionTap,
           ),
           const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
@@ -601,7 +758,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             title: 'Open Source Licenses',
             subtitle: 'Software dependencies & attributions',
             onTap: () {
-              AppMotion.selectionTick();
               showLicensePage(
                 context: context,
                 applicationName: 'Territory Runner',
@@ -623,7 +779,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             title: 'Replay intro',
             subtitle: 'Introduction to territory running and closed loops',
             onTap: () {
-              AppMotion.selectionTick();
               Navigator.of(context).push(
                 AppMotion.pageRoute(
                   builder: (_) => OnboardingScreen(
@@ -633,8 +788,44 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               );
             },
           ),
-          // Developer tools (hidden behind kDebugMode)
-          if (kDebugMode) ...[
+          // Developer & Demo tools (unlocked by tapping version row 7 times)
+          if (_appPrefs.isDemoModeUnlocked) ...[
+            const Divider(height: 1, color: AppColors.border),
+            SwitchListTile(
+              secondary: const Icon(
+                Icons.science_rounded,
+                color: AppColors.info,
+                size: 20,
+              ),
+              title: Text(
+                'Demo mode & simulation',
+                style: AppText.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              subtitle: Text(
+                'Enable virtual pacer, simulated routes & demo lab triggers',
+                style: AppText.bodySmall.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                ),
+              ),
+              activeThumbColor: AppColors.accent,
+              activeTrackColor: AppColors.accentContainer,
+              value: _appPrefs.isDemoModeEnabled,
+              onChanged: (val) {
+                setState(() {
+                  _appPrefs.toggleDemoMode(val);
+                });
+                AppToast.show(
+                  context,
+                  val ? 'Demo mode enabled' : 'Demo mode disabled',
+                  type: AppToastType.info,
+                );
+              },
+            ),
             const Divider(height: 1, color: AppColors.border),
             ProfileOptionTile(
               icon: Icons.palette_rounded,
@@ -642,7 +833,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               subtitle:
                   'Inspect Graphite, Bone and Moss tokens and UI components',
               onTap: () {
-                AppMotion.selectionTick();
                 Navigator.of(context).push(
                   AppMotion.pageRoute(
                     builder: (_) => const DesignGalleryScreen(),
@@ -656,7 +846,6 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               title: 'Reset Local Territories (Dev)',
               subtitle: 'Clears offline polygons to initial state',
               onTap: () async {
-                AppMotion.mediumTick();
                 await widget.territoryService.resetTerritories();
                 if (context.mounted) {
                   AppToast.show(context, 'Territories reset to initial grid');

@@ -56,8 +56,8 @@ mixin MapRivalSimulationMixin on ChangeNotifier {
 
       final event = RunnerPresenceEvent(
         userId: 'sim_rival_phantom',
-        username: 'Phantom_Vanguard',
-        faction: 'Neon Syndicate',
+        username: 'Pacer_Rival',
+        faction: '',
         position: rivalPos,
         speed: 3.2,
         heading: headingDeg,

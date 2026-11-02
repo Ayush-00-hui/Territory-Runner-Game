@@ -124,15 +124,15 @@ void main() {
 
         expect(find.text('Share run'), findsOneWidget);
         expect(find.text('Athletic Dark'), findsOneWidget);
-        expect(find.text('Vanguard'), findsOneWidget);
+        expect(find.text('High Contrast'), findsOneWidget);
         expect(find.text('Stealth'), findsOneWidget);
         expect(find.text('TERRITORY RUNNER'), findsOneWidget);
         expect(find.text('Closed loop'), findsOneWidget);
         expect(find.text('NEONPHANTOM'), findsOneWidget);
         expect(find.text('5.20 KM'), findsOneWidget);
 
-        // Switch to Vanguard theme
-        await tester.tap(find.text('Vanguard'));
+        // Switch to High Contrast theme
+        await tester.tap(find.text('High Contrast'));
         await tester.pumpAndSettle();
 
         expect(find.text('Share card'), findsOneWidget);

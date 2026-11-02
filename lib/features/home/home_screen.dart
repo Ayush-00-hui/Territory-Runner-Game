@@ -106,7 +106,6 @@ class HomeScreen extends StatelessWidget {
                 backgroundColor: AppColors.surface,
                 displacement: 40,
                 onRefresh: () async {
-                  AppMotion.lightTick();
                   await SyncQueueService().syncPendingRuns();
                 },
                 child: SingleChildScrollView(
@@ -149,7 +148,6 @@ class HomeScreen extends StatelessWidget {
                         title: 'Recent runs',
                         actionLabel: 'View all',
                         onAction: () {
-                          AppMotion.lightTick();
                           Navigator.push(
                             context,
                             AppMotion.pageRoute(

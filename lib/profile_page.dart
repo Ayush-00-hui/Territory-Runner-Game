@@ -280,7 +280,6 @@ class _ProfilePageState extends State<ProfilePage>
       child: GestureDetector(
         onTap: () {
           if (_activeTab != tab) {
-            AppMotion.selectionTick();
             setState(() => _activeTab = tab);
           }
         },

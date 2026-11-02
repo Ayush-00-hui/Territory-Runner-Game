@@ -40,7 +40,7 @@ class RunnerPresenceEvent {
   }
 }
 
-/// Instant tactical alert received when a rival carves into the player's territory
+/// Instant alert received when a rival carves into the player's territory
 class TerritoryAlertEvent {
   final String event;
   final String attackerId;

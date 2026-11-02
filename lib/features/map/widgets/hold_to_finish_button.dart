@@ -37,10 +37,8 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
       final progress = _holdController.value;
       if (progress >= 0.66 && _lastTickMilestone < 2) {
         _lastTickMilestone = 2;
-        AppMotion.lightTick();
       } else if (progress >= 0.33 && _lastTickMilestone < 1) {
         _lastTickMilestone = 1;
-        AppMotion.lightTick();
       }
     });
 
@@ -61,7 +59,6 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
   void _onPointerDown(PointerDownEvent _) {
     if (!widget.isRunActive) return;
     _lastTickMilestone = 0;
-    AppMotion.mediumTick();
     setState(() {
       _isHolding = true;
     });
@@ -70,7 +67,6 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
 
   void _onPointerUp(PointerUpEvent _) {
     if (_isHolding && _holdController.value < 1.0) {
-      AppMotion.selectionTick();
     }
     _holdController.reset();
     _lastTickMilestone = 0;
@@ -81,7 +77,6 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
 
   void _onPointerCancel(PointerCancelEvent _) {
     if (_isHolding && _holdController.value < 1.0) {
-      AppMotion.selectionTick();
     }
     _holdController.reset();
     _lastTickMilestone = 0;
@@ -99,7 +94,6 @@ class _HoldToFinishButtonState extends State<HoldToFinishButton>
         label: 'Hold to finish. Disabled. Start a run first.',
         child: GestureDetector(
           onTap: () {
-            AppMotion.lightTick();
             AppToast.show(
               context,
               'Start a run first',

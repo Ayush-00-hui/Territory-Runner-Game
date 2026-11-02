@@ -4,7 +4,6 @@ import '../../../ui/ui.dart';
 
 /// Shows the confirmation dialog when runner attempts to back out of an active run.
 Future<bool> showExitRunConfirmation(BuildContext context) async {
-  AppMotion.lightTick();
   final bool? shouldExit = await showDialog<bool>(
     context: context,
     barrierDismissible: true,

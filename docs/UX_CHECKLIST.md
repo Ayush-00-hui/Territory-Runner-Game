@@ -110,7 +110,7 @@ This document tracks the complete UI/UX overhaul of Territory Runner on the `v9-
 
 ### Phase D7: Verification, Documentation & Screenshots (`HEAD`)
 - [x] Full code analysis: `flutter analyze` completed with **0 errors, 0 warnings, 0 lints**.
-- [x] Full test suite: `flutter test` completed with **359/359 tests passed**.
+- [x] Full test suite: `flutter test` completed with **434/434 tests passed**.
 - [x] Captured live screenshots on Android emulator verifying all redesigned flows.
 - [x] Created `docs/UX_CHECKLIST.md`.
 

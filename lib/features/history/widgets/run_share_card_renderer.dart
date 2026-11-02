@@ -7,7 +7,7 @@ import 'package:latlong2/latlong.dart' hide Path;
 import '../../../ui/ui.dart';
 import 'run_share_card_painters.dart';
 
-enum ShareCardTheme { athleticDark, cyberVanguard, stealth }
+enum ShareCardTheme { athleticDark, highContrast, stealth }
 
 /// Public standalone 1080x1080 card renderer for social export and auto-save.
 class RunShareCardRenderer {
@@ -102,7 +102,7 @@ class RunShareCardRenderer {
         accentColor = AppColors.accent;
         hasGridOverlay = false;
         break;
-      case ShareCardTheme.cyberVanguard:
+      case ShareCardTheme.highContrast:
         cardBg = AppColors.bgElevated;
         accentColor = AppColors.rival;
         hasGridOverlay = true;

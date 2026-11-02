@@ -212,7 +212,7 @@ class ExportService {
     return file;
   }
 
-  /// Exports and shares a raw labeled telemetry JSON file for ML anti-cheat dataset collection.
+  /// Exports and shares a raw labeled trace JSON file for ML anti-cheat dataset collection.
   Future<File> exportAndShareDebugTrace({
     required String sessionId,
     required String userTag,

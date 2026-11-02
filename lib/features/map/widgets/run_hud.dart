@@ -7,7 +7,7 @@ import 'run_hud_controls_bar.dart';
 import 'run_hud_expanded_drawer.dart';
 import 'run_hud_metrics_card.dart';
 
-/// Strava / Nike Run Club Grade Live Telemetry HUD Obsidian Glass Card.
+/// Strava / Nike Run Club Grade Live Metrics HUD Obsidian Glass Card.
 /// Wrapped in a [RepaintBoundary] to isolate metric updates from map redraws.
 class RunHud extends StatefulWidget {
   final bool isRunActive;
@@ -19,7 +19,7 @@ class RunHud extends StatefulWidget {
   final double currentSpeedKmh;
   final double satelliteAccuracyMeters;
   final int territoriesClaimed;
-  final int stepCount;
+  final int? stepCount;
   final double? distanceToClosureMeters;
   final double? proximityToClosure;
   final String? targetPace;
@@ -44,7 +44,7 @@ class RunHud extends StatefulWidget {
     required this.currentSpeedKmh,
     required this.satelliteAccuracyMeters,
     required this.territoriesClaimed,
-    this.stepCount = 0,
+    this.stepCount,
     this.distanceToClosureMeters,
     this.proximityToClosure,
     this.targetPace,
@@ -67,7 +67,6 @@ class _RunHudState extends State<RunHud> {
   bool _isExpanded = false;
 
   void _toggleExpanded() {
-    AppMotion.selectionTick();
     setState(() {
       _isExpanded = !_isExpanded;
     });

@@ -168,7 +168,6 @@ class SummaryCoachCard extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
                 ),
                 onPressed: () {
-                  AppMotion.lightTick();
                   RunShareCardModal.show(
                     context: context,
                     distanceKm: distanceKm,
@@ -200,7 +199,6 @@ class SummaryCoachCard extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
                 ),
                 onPressed: () async {
-                  AppMotion.lightTick();
                   final file = await ExportService().exportAndShareGpx(
                     runTitle: 'Territory Run - ${profile.username}',
                     coordinates: routePoints,

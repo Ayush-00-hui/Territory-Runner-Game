@@ -241,7 +241,6 @@ class MapDemoRunner {
     }
 
     if (nearest != null) {
-      AppMotion.lightTick();
       try {
         mapController.move(nearest.position, 17.5);
       } catch (_) {}

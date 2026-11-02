@@ -1,7 +1,7 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
-/// GNSS Signal Quality classification for tactical HUD telemetry.
+/// GNSS Signal Quality classification for HUD metrics.
 enum GpsQuality {
   optimal, // <= 10m accuracy (sub-meter or high precision)
   fair, // 10m - 30m accuracy (acceptable running GPS)

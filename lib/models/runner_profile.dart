@@ -23,11 +23,6 @@ class RunnerProfile {
     'Cyber Rookie': 'Rookie Runner',
   };
 
-  static const Map<String, String> factionAliases = {
-    'Cyber Vanguard': 'Vanguard',
-    'Iron Syndicate': 'Syndicate',
-    'Neon Nomads': 'Nomads',
-  };
 
   static String canonicalBadge(String name) => badgeAliases[name] ?? name;
 
@@ -46,11 +41,11 @@ class RunnerProfile {
   RunnerProfile({
     required this.id,
     required this.username,
-    this.faction = FactionStanding.defaultFaction,
+    this.faction = '',
     this.totalDistanceKm = 0.0,
     this.xp = 0,
     this.level = 1,
-    this.badges = const ['Rookie Runner', 'Cyber Rookie'],
+    this.badges = const ['Rookie Runner'],
     int totalTerritoriesClaimed = 0,
     int? totalHexesClaimed,
     this.currentStreak = 1,
@@ -89,12 +84,16 @@ class RunnerProfile {
   bool claimHex({double multiplier = 1.0}) =>
       claimTerritory(multiplier: multiplier);
 
-  /// Claims an arbitrary enclosed polygon territory and awards dynamic XP scaled to area: max(100, round(Area / 20)) * multiplier
+  /// Claims an arbitrary enclosed polygon territory and awards dynamic XP scaled to area:
+  /// max(5, round(Area / 20)) * multiplier (0 XP if below the 25 m² capture floor).
   int claimPolygonArea(double areaSqMeters, {double multiplier = 1.0}) {
+    if (areaSqMeters < 25.0) {
+      return 0;
+    }
     totalTerritoriesClaimed++;
     _evaluateBadges();
     final int baseAward = (areaSqMeters / 20.0).round();
-    final int effectiveBase = baseAward < 100 ? 100 : baseAward;
+    final int effectiveBase = baseAward < 5 ? 5 : baseAward;
     final int awardedXp = (effectiveBase * multiplier).round();
     addXp(awardedXp);
     return awardedXp;
@@ -106,30 +105,18 @@ class RunnerProfile {
       if (!current.contains('First Claim')) {
         current.add('First Claim');
       }
-      if (!current.contains('First Conquest')) {
-        current.add('First Conquest');
-      }
       if (!current.contains('Territory Master')) {
         current.add('Territory Master');
-      }
-      if (!current.contains('Territory Sovereign')) {
-        current.add('Territory Sovereign');
       }
     }
     if (totalTerritoriesClaimed >= 25) {
       if (!current.contains('Area Leader')) {
         current.add('Area Leader');
       }
-      if (!current.contains('Sector Commander')) {
-        current.add('Sector Commander');
-      }
     }
     if (totalTerritoriesClaimed >= 100) {
       if (!current.contains('Grid Leader')) {
         current.add('Grid Leader');
-      }
-      if (!current.contains('Hex Grid Overlord')) {
-        current.add('Hex Grid Overlord');
       }
     }
     if (totalDistanceKm >= 10.0 && !current.contains('10K Centurion')) {
@@ -158,7 +145,7 @@ class RunnerProfile {
   factory RunnerProfile.fromJson(Map<String, dynamic> json) {
     final rawBadges =
         (json['badges'] as List?)?.map((e) => e.toString()).toList() ??
-        const ['Rookie Runner', 'Cyber Rookie'];
+        const ['Rookie Runner'];
     final migratedBadges = <String>[...rawBadges];
     for (final b in rawBadges) {
       final canon = badgeAliases[b];

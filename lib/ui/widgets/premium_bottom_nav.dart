@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
-import '../motion/motion.dart';
 
 /// 5-destination athletic bottom navigation bar:
 /// [Home] | [Activity] | [Run] (centre, primary) | [Compete] | [Profile].
@@ -43,7 +42,6 @@ class PremiumBottomNav extends StatelessWidget {
         child: GestureDetector(
           onTap: () {
             if (selectedIndex != index) {
-              AppMotion.selectionTick();
               onTabSelected(index);
             }
           },

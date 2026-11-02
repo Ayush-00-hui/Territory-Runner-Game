@@ -100,7 +100,6 @@ class OfflineSyncBanner extends StatelessWidget {
                         minimumSize: const Size(0, 48),
                       ),
                       onPressed: () {
-                        AppMotion.selectionTick();
                         queue.syncPendingRuns();
                       },
                       child: Text(

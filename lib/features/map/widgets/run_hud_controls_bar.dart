@@ -56,12 +56,10 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
               onTapCancel: () => setState(() => _isSealPressed = false),
               onTap: () {
                 if (!isRunActive) {
-                  AppMotion.lightTick();
                   AppToast.show(context, 'Start a run first');
                   return;
                 }
                 if (!isNearClosure) {
-                  AppMotion.lightTick();
                   final distText = closureDist != null
                       ? ' (${closureDist.round()}m away)'
                       : '';
@@ -71,7 +69,6 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                   );
                   return;
                 }
-                AppMotion.mediumTick();
                 widget.onSealShape();
               },
               behavior: HitTestBehavior.opaque,

@@ -627,7 +627,7 @@ func TestPostgres_MultiLoopRunCapture_SummedXP(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedSummedArea := area1 + area2
-	expectedXP := int(math.Max(100, math.Round(expectedSummedArea/20.0)))
+	expectedXP := int(math.Max(5, math.Round(expectedSummedArea/20.0)))
 
 	assert.True(t, result.LoopDetected)
 	assert.InDelta(t, expectedSummedArea, result.AreaClaimedSqm, 1.0)

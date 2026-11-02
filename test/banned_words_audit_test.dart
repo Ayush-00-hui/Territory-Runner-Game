@@ -8,6 +8,7 @@ import 'package:territory_runner/features/profile/widgets/challenges_shelf.dart'
 import 'package:territory_runner/features/profile/widgets/stat_grid.dart';
 import 'package:territory_runner/models/run_goal.dart';
 import 'package:territory_runner/models/runner_profile.dart';
+import 'package:territory_runner/features/social/widgets/social_hub_header.dart';
 import 'package:territory_runner/ui/widgets/permission_primer_sheet.dart';
 
 void main() {
@@ -26,6 +27,8 @@ void main() {
       'conquest',
       'conquests',
       'sovereign',
+      'syndicate',
+      'vanguard',
     ];
     final bannedRegex = RegExp(
       '\\b(${bannedWords.join('|')})\\b',
@@ -35,14 +38,11 @@ void main() {
     // Persisted or raw backwards-compatibility keys that are explicitly permitted
     // in internal migration tables or backward compatibility code.
     final allowedRawSubstrings = [
-      'Cyber Vanguard', // Raw DB/Hive faction value
       'Territory Sovereign', // Raw badge alias key
       'First Conquest', // Raw badge alias key
       'Sector Commander', // Raw badge alias key
       'Hex Grid Overlord', // Raw badge alias key
       'Cyber Rookie', // Raw badge alias key
-      "'cyber'", // Internal faction color lookup key
-      '"cyber"', // Internal faction color lookup key
     ];
 
     test('lib/ directory contains zero banned jargon in user-visible strings', () {
@@ -205,6 +205,74 @@ void main() {
           bannedRegex.hasMatch(content),
           isFalse,
           reason: 'RunGoalSheet contains banned jargon: "$content"',
+        );
+      }
+    });
+
+    testWidgets('SocialHubHeader renders calm squad text and clean tooltips', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SocialHubHeader(
+              activeTab: SocialTab.squad,
+              friendsCount: 3,
+              activeDuelsCount: 1,
+              onTabChanged: (_) {},
+              onRefresh: () {},
+            ),
+          ),
+        ),
+      );
+
+      // Check all Text widgets
+      for (final text in tester.widgetList<Text>(find.byType(Text))) {
+        final content = text.data ?? text.textSpan?.toPlainText() ?? '';
+        expect(
+          bannedRegex.hasMatch(content),
+          isFalse,
+          reason: 'SocialHubHeader text contains banned jargon: "$content"',
+        );
+      }
+
+      // Check all Tooltip widgets
+      for (final tooltip in tester.widgetList<Tooltip>(find.byType(Tooltip))) {
+        final message = tooltip.message ?? '';
+        expect(
+          bannedRegex.hasMatch(message),
+          isFalse,
+          reason: 'SocialHubHeader tooltip contains banned jargon: "$message"',
+        );
+      }
+
+      // Check all IconButton tooltips
+      for (final btn in tester.widgetList<IconButton>(find.byType(IconButton))) {
+        final tooltip = btn.tooltip ?? '';
+        expect(
+          bannedRegex.hasMatch(tooltip),
+          isFalse,
+          reason: 'IconButton tooltip contains banned jargon: "$tooltip"',
+        );
+      }
+    });
+
+    test('Server error and anti-cheat messages are verified clean of banned words', () {
+      final sampleServerMessages = [
+        'Empty GPS data',
+        'Speed mismatch: reported 25.0 km/h vs computed 45.0 km/h (>15 km/h difference)',
+        'Unnatural movement pattern (Z-Score: 3.50 > 2.50)',
+        'Implausible motion data: duration mismatch',
+        'Territory alert: rival Athlete claimed 1200 m².',
+        'Network offline: displaying cached squads',
+        'Start running to claim your first territory.',
+      ];
+
+      for (final msg in sampleServerMessages) {
+        expect(
+          bannedRegex.hasMatch(msg),
+          isFalse,
+          reason: 'Server message contains banned jargon: "$msg"',
         );
       }
     });

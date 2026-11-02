@@ -44,7 +44,7 @@ func CalculateStandings(currentUserID string, participants []store.WeeklyPartici
 	// Handle empty league
 	if n == 0 {
 		username := "Runner"
-		faction := "Cyber Vanguard"
+		faction := ""
 		if currentUser != nil {
 			username = currentUser.Username
 			faction = currentUser.Faction
@@ -146,8 +146,7 @@ func CalculateStandings(currentUserID string, participants []store.WeeklyPartici
 			userFaction = currentUser.Faction
 		} else {
 			userUsername = "Runner_" + currentUserID[:min(6, len(currentUserID))]
-			factionList := []string{"Cyber Vanguard", "Neon Syndicate", "Solaris Nomads"}
-			userFaction = factionList[0]
+			userFaction = ""
 		}
 
 		standings = append(standings, store.LeagueParticipant{

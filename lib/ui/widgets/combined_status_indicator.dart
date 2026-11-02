@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
-import '../motion/motion.dart';
 import 'app_sheet.dart';
 import '../../services/sync_queue.dart';
 
@@ -42,7 +41,6 @@ class CombinedStatusIndicator extends StatefulWidget {
     WebSocketService? webSocketService,
     VoidCallback? onExpanded,
   }) {
-    AppMotion.lightTick();
     onExpanded?.call();
 
     AppSheet.show(

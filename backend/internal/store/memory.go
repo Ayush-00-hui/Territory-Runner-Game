@@ -176,11 +176,15 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		if u != nil {
 			totalArea = u.TotalAreaSqm
 		}
-		xpAwarded := int(math.Max(100, math.Round(existing.AreaClaimed/20.0)))
+		xpAwarded := 0
+		if existing.AreaClaimed >= MinCaptureFloorSqm {
+			xpAwarded = int(math.Max(5, math.Round(existing.AreaClaimed/20.0)))
+		}
 		return &CaptureResult{
 			RunID:              existing.ID,
 			IdempotencyKey:     existing.IdempotencyKey,
 			ActivityType:       existing.ActivityType,
+			StepCount:          existing.StepCount,
 			Status:             existing.Status,
 			AnomalyScore:       existing.AnomalyScore,
 			AnomalyReasons:     existing.AnomalyReasons,
@@ -201,7 +205,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		user = &User{
 			ID:           run.UserID,
 			Username:     "Runner_" + run.UserID,
-			Faction:      "Cyber Vanguard",
+			Faction:      "",
 			TotalAreaSqm: 0.0,
 			XP:           0,
 			Level:        1,
@@ -242,7 +246,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 				// Only verified motion runs receive high-value weak-territory 1.5x bonus
 				effectiveXpArea += weakBonusArea
 			}
-			xpAwarded = int(math.Max(100, math.Round(effectiveXpArea/20.0)))
+			xpAwarded = int(math.Max(5, math.Round(effectiveXpArea/20.0)))
 			user.TotalAreaSqm += areaClaimed
 			user.XP += int64(xpAwarded)
 		} else {
@@ -274,7 +278,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	} else {
 		if areaClaimed >= MinCaptureFloorSqm {
 			user.TotalAreaSqm += areaClaimed
-			xpAwarded = int(math.Max(100, math.Round(areaClaimed/20.0)))
+			xpAwarded = int(math.Max(5, math.Round(areaClaimed/20.0)))
 			user.XP += int64(xpAwarded)
 		} else {
 			areaClaimed = 0.0
@@ -311,6 +315,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		RunID:              run.ID,
 		IdempotencyKey:     run.IdempotencyKey,
 		ActivityType:       runCopy.ActivityType,
+		StepCount:          runCopy.StepCount,
 		Status:             runCopy.Status,
 		VerificationStatus: runCopy.VerificationStatus,
 		AnomalyScore:       run.AnomalyScore,
@@ -527,7 +532,7 @@ func (m *MemoryStore) GetWeeklyStandings(ctx context.Context, weekStart time.Tim
 	var participants []WeeklyParticipant
 	for uid, s := range userStats {
 		username := "Runner_" + uid[:min(6, len(uid))]
-		faction := "Cyber Vanguard"
+		faction := ""
 		if u, exists := m.users[uid]; exists {
 			username = u.Username
 			faction = u.Faction
@@ -556,11 +561,7 @@ func (m *MemoryStore) GetFactionStandings(ctx context.Context) (*FactionStanding
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	canonical := map[string]*FactionStanding{
-		"Cyber Vanguard": {Faction: "Cyber Vanguard", TotalAreaSqm: 0, MemberCount: 0},
-		"Neon Syndicate": {Faction: "Neon Syndicate", TotalAreaSqm: 0, MemberCount: 0},
-		"Solaris Nomads": {Faction: "Solaris Nomads", TotalAreaSqm: 0, MemberCount: 0},
-	}
+	canonical := make(map[string]*FactionStanding)
 
 	for _, u := range m.users {
 		if u.Faction == "" {
@@ -594,7 +595,7 @@ func (m *MemoryStore) GetFactionStandings(ctx context.Context) (*FactionStanding
 		if totalArea > 0 {
 			st.Percentage = math.Round((st.TotalAreaSqm/totalArea)*1000.0) / 10.0
 		} else {
-			st.Percentage = 33.3
+			st.Percentage = 0.0
 		}
 		standings = append(standings, *st)
 	}
@@ -793,7 +794,7 @@ func (m *MemoryStore) GetFriendRequests(ctx context.Context, userID string) ([]F
 		addUser := m.users[f.AddresseeID]
 
 		reqName := f.RequesterID
-		reqFaction := "Cyber Vanguard"
+		reqFaction := ""
 		if reqUser != nil {
 			reqName = reqUser.Username
 			reqFaction = reqUser.Faction

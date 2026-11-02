@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/activity_type.dart';
 import '../core/logging/app_logger.dart';
+import 'app_preferences.dart';
 import 'battery_saver_service.dart';
 
 /// Operational GPS tracking modes balancing positional accuracy and battery longevity.
@@ -358,6 +359,9 @@ class LocationService {
   }
 
   void setVirtualPacer(VirtualPacerMode mode) {
+    if (mode != VirtualPacerMode.none && !AppPreferences().isDemoModeEnabled) {
+      mode = VirtualPacerMode.none;
+    }
     _pacerMode = mode;
     if (mode == VirtualPacerMode.none) {
       isSimulationMode = false;
@@ -375,6 +379,7 @@ class LocationService {
     double forwardMeters = 0.0,
     double turnDegrees = 0.0,
   }) {
+    if (!AppPreferences().isDemoModeEnabled) return;
     _simHeading = (_simHeading + turnDegrees) % 360.0;
     if (_simHeading < 0) _simHeading += 360.0;
 

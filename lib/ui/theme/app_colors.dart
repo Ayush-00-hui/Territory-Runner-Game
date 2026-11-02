@@ -37,7 +37,7 @@ class AppColors {
     0xFF86A5D3,
   ); // Rival territory (Steel Blue, dashed)
 
-  // Status & Telemetry Semantics
+  // Status & Metric Semantics
   static const Color warning = Color(
     0xFFD9A441,
   ); // Ochre / Amber (Caution / Anomaly)
@@ -46,7 +46,7 @@ class AppColors {
   ); // Terracotta / Rose (Destructive / Failure)
   static const Color info = Color(
     0xFF9AA4B2,
-  ); // Slate (Guidance / Neutral Telemetry)
+  ); // Slate (Guidance / Neutral Metrics)
   static const Color success =
       accent; // Success is an alias of accent (no second green)
 

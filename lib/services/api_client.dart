@@ -201,6 +201,7 @@ class ApiClient {
     double? clientPreviewArea,
     int? clientPreviewXp,
     List<MotionWindow>? motionWindows,
+    int? stepCount,
   }) async {
     final uri = Uri.parse('$baseUrl/v1/runs');
     final headers = await _buildHeaders();
@@ -229,6 +230,9 @@ class ApiClient {
       }).toList(),
     };
 
+    if (stepCount != null) {
+      payload['step_count'] = stepCount;
+    }
     if (motionWindows != null && motionWindows.isNotEmpty) {
       payload['motion_windows'] = motionWindows.map((w) => w.toJson()).toList();
     }

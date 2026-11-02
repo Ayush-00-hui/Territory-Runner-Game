@@ -25,6 +25,7 @@ void handleFinishRun({
   final finalTerritories = summary['territories'] as int;
   final finalArea = summary['areaSqm'] as double;
   final finalXp = summary['xp'] as int;
+  final finalStepCount = summary['stepCount'] as int?;
   final points = summary['points'] as List<LatLng>;
 
   TerritoryService().defendTerritory(FirebaseService().currentUserId);
@@ -40,6 +41,7 @@ void handleFinishRun({
       clientPreviewArea: finalArea,
       clientPreviewXp: finalXp,
       motionWindows: motionWindows,
+      stepCount: finalStepCount,
     );
   }
 

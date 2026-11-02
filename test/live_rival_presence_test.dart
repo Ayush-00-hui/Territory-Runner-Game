@@ -10,15 +10,15 @@ void main() {
   group('Live Rival GPS & Map Layer Tests', () {
     test('MapLayers.getFactionColor assigns dedicated faction accents', () {
       expect(
-        MapLayers.getFactionColor('Cyber Vanguard'),
+        MapLayers.getFactionColor('Blue Striders'),
         equals(AppColors.info),
       );
       expect(
-        MapLayers.getFactionColor('Iron Legion'),
+        MapLayers.getFactionColor('Solar Fleet'),
         equals(AppColors.secondary),
       );
       expect(
-        MapLayers.getFactionColor('Neon Syndicate'),
+        MapLayers.getFactionColor('Rogue Pacer'),
         equals(AppColors.rival),
       );
       expect(

@@ -390,7 +390,6 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   color: AppColors.bgElevated,
                   shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
                   onSelected: (opt) {
-                    AppMotion.selectionTick();
                     setState(() => _sortOption = opt);
                   },
                   itemBuilder: (ctx) => [
@@ -549,7 +548,6 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
       label: 'Filter: $label',
       child: GestureDetector(
         onTap: () {
-          AppMotion.selectionTick();
           setState(() => _timeFilter = filter);
         },
         behavior: HitTestBehavior.opaque,

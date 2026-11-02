@@ -45,10 +45,10 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
 
   void _toggleSiren() {
     if (_isSirenOn) {
-      _safetyService.stopTacticalSiren();
+      _safetyService.stopSafetySiren();
       setState(() => _isSirenOn = false);
     } else {
-      _safetyService.playTacticalSiren();
+      _safetyService.playSafetySiren();
       setState(() => _isSirenOn = true);
     }
   }

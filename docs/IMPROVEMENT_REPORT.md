@@ -15,13 +15,13 @@ This report documents the end-to-end engineering transformation of **Territory R
 Through a rigorous 8-phase engineering intervention, the codebase was audited, stabilized, enhanced with an authoritative GDPR/CCPA-compliant account deletion cascade, verified against design token strictness, equipped with an empirical AIML kinematic anomaly detector, hardened with root container orchestration, and verified against a comprehensive 512-test automated regression suite.
 
 ### Key Metrics Summary
-- **Flutter Test Suite**: **381 passed, 0 failed** across 51 test suites.
+- **Flutter Test Suite**: **434 passed, 0 failed** across 62 test files.
 - **Flutter Static Analysis**: **0 issues found** via `flutter analyze`.
 - **Flutter Formatting**: **100% clean** across 172 files via `dart format`.
-- **Go Test Suite**: **131 passed, 0 failed** across 11 internal packages.
+- **Go Test Suite**: **201 passed, 0 failed** across 11 internal packages.
 - **Go Static Analysis**: **0 issues found** via `go vet ./...`.
 - **Go Code Formatting**: **100% clean** via `gofmt`.
-- **Total Automated Test Baseline**: **512 passed, 0 failed** (100% pass rate).
+- **Total Automated Test Baseline**: **635 passed, 0 failed** (100% pass rate).
 - **AIML Anomaly Detector**: 0.27 µs inference latency, 100% test F1 score, 0.0% false positive rate across 6 movement modalities on a session-partitioned dataset.
 
 ---

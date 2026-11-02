@@ -1104,3 +1104,168 @@ ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	0.661s
 
 
 
+
+
+---
+
+## 16. Honesty & Integrity Cleanup Verification Record (Branch: `honesty-cleanup`)
+
+Executed on Windows 11 PowerShell, Go 1.24, Flutter 3.29.0 / Dart 3.7.0.
+
+### 16.1 Flutter Static Analysis
+- **Command**: `flutter analyze`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Output**:
+```text
+Analyzing territory_runner...                                   
+No issues found! (ran in 5.3s)
+```
+
+### 16.2 Full Flutter Test Suite
+- **Command**: `flutter test`
+- **Working Directory**: Workspace Root
+- **Exit Code**: `0`
+- **Count**: 434 tests passed (0 failed across 62 test files)
+- **Output**:
+```text
+00:18 +434: All tests passed!
+```
+
+### 16.3 Full Go Backend Test Suite (Clean Count=1)
+- **Command**: `go test -count=1 ./...`
+- **Working Directory**: `backend`
+- **Exit Code**: `0`
+- **Count**: 201 tests passed across 11 packages
+- **Output**:
+```text
+?   	github.com/Ayush-00-hui/Territory-Runner-Game/backend/cmd/server	[no test files]
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/anticheat	0.806s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/api	0.979s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/auth	1.454s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/coach	1.139s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/config	0.408s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo	0.472s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/league	0.423s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/notify	1.203s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store	0.429s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	5.957s
+ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	0.714s
+```
+
+### 16.4 Verification of Specific Honesty Tasks (C1–C7)
+
+#### Task C1: Step Count Labelled as Estimate & Cycling Step Suppression
+- **Test File**: `test/steps_estimate_test.dart`
+- **Verification**: Verified cadence-derived step count formatting (`"~1,240 steps (est.)"`), cycling mode step count suppression (`null`), backward-compatible serialization in `QueuedRun` and `Run`, and Postgres schema migration `000012_add_run_step_count`.
+- **Command Output**:
+```text
+00:00 +0: C1 Steps Estimation & Backward Compatibility estimateSteps calculates distance/0.75 for walking and distance/1.05 for running
+00:00 +1: C1 Steps Estimation & Backward Compatibility MapRunController returns null stepCount for cycling and estimates for running/walking
+00:00 +2: C1 Steps Estimation & Backward Compatibility QueuedRun JSON serialization and backward compatibility
+00:00 +3: All tests passed!
+```
+
+#### Task C2: Hardcoded Teams & Fixed Perks Removal
+- **Test File**: `test/team_user_created_test.dart`
+- **Verification**: Verified complete removal of hard-coded factions (Vanguard, Iron Syndicate, Neon Nomads), perks, and legacy aliases. Factions are now purely user-created or dynamically loaded from server, with a calm empty state. Share card theme renamed neutrally (`classicMinimal`), badges renamed neutrally (`Rookie Runner`), and rival simulation names neutralized (`Phantom_Runner`).
+- **Command Output**:
+```text
+00:00 +0: C2 Teams User-Created & Honest State Tests FactionStanding.canonicalFaction has no hardcoded default team or legacy aliases
+00:00 +1: C2 Teams User-Created & Honest State Tests RunnerProfile defaults to empty team and Rookie Runner badge
+00:00 +2: C2 Teams User-Created & Honest State Tests TeamSelectionSheet renders calm empty state and allows custom team creation
+00:00 +3: All tests passed!
+```
+
+#### Task C3: Banned Jargon Sweep
+- **Test Files**: `test/banned_words_audit_test.dart` & `backend/internal/anticheat/jargon_test.go`
+- **Verification**: Verified zero occurrences of 7 banned jargon words (`Telemetry`, `Cyber`, `Syndicate`, `Vanguard`, `Sovereign`, `Tactical`, `Sector`) across user-visible strings, tooltips, semantic labels, and server response messages.
+- **Command Output**:
+```text
+00:00 +0: Banned Words & Calm Tone Audit lib/ directory contains zero banned jargon in user-visible strings
+00:00 +1: Banned Words & Calm Tone Audit PermissionPrimerSheet renders calm text without banned words or ALL-CAPS alerts
+00:00 +2: Banned Words & Calm Tone Audit ChallengesShelf renders calm sports terminology
+00:00 +3: Banned Words & Calm Tone Audit ProfileStatGrid renders calm metrics without sector/telemetry jargon
+00:00 +4: Banned Words & Calm Tone Audit RunGoalSheet renders calm area and distance goals
+00:00 +5: Banned Words & Calm Tone Audit SocialHubHeader renders calm squad text and clean tooltips
+00:00 +6: Banned Words & Calm Tone Audit Server error and anti-cheat messages are verified clean of banned words
+00:00 +7: All tests passed!
+```
+```text
+=== RUN   TestNoBannedJargonInServerMessages
+--- PASS: TestNoBannedJargonInServerMessages (0.02s)
+PASS
+```
+
+#### Task C4: Demo Mode & Simulation Controls Protected
+- **Test File**: `test/demo_mode_test.dart`
+- **Verification**: Verified simulation controls are hidden behind a Settings toggle (default OFF). Unlocking strictly requires tapping the "Territory Runner" app version row 7 times.
+- **Command Output**:
+```text
+00:00 +0: C4 Demo Mode & Simulation Controls Tests AppPreferences defaults to demo mode locked and disabled
+00:00 +1: C4 Demo Mode & Simulation Controls Tests MapToolsSheet hides Virtual Pacer when demo mode is OFF
+00:00 +2: C4 Demo Mode & Simulation Controls Tests MapToolsSheet reveals Virtual Pacer when demo mode is ON
+00:00 +3: C4 Demo Mode & Simulation Controls Tests VirtualPacerSheet hides DemoControlsLab when demo mode is OFF
+00:00 +4: C4 Demo Mode & Simulation Controls Tests VirtualPacerSheet displays DemoControlsLab when demo mode is ON
+00:00 +5: C4 Demo Mode & Simulation Controls Tests Tapping version row 7 times unlocks demo mode and displays switch
+00:00 +6: All tests passed!
+```
+
+#### Task C5: Calorie Estimation Unified with Documented ACSM / Margaria Formula
+- **Test File**: `test/calorie_estimation_test.dart`
+- **Verification**: Replaced divergent calculations (`*65` HUD, `*62` summary) with `AppPreferences().estimateCalories()` using documented metabolic factors (Running: 1.036 kcal/kg/km, Walking: 0.73, Cycling: 0.40) and optional body weight setting in Settings (defaulting to standard 70 kg reference runner). Formatted as `"~N kcal (est.)"`.
+- **Command Output**:
+```text
+00:00 +0: AppPreferences Calorie Estimation (Documented ACSM / Margaria) Zero distance produces 0 kcal
+00:00 +1: AppPreferences Calorie Estimation (Documented ACSM / Margaria) Standard reference 70kg runner burns ~72.5 kcal/km (ACSM 1.036 factor)
+00:00 +2: AppPreferences Calorie Estimation (Documented ACSM / Margaria) Custom weight adjusts calorie calculation proportionally
+00:00 +3: AppPreferences Calorie Estimation (Documented ACSM / Margaria) Saved body weight preference applies automatically when set
+00:00 +4: AppPreferences Calorie Estimation (Documented ACSM / Margaria) Walking and cycling activity types use appropriate metabolic factors
+00:00 +5: AppPreferences Calorie Estimation (Documented ACSM / Margaria) formatCalories appends (est.) label and tilde prefix
+00:00 +6: HUD and Summary Calorie UI Rendering RunHudMetricsCard displays calorie estimate with (est.) label
+00:00 +7: HUD and Summary Calorie UI Rendering SummaryRouteReplay displays calorie estimate with (est.) label
+00:00 +8: HUD and Summary Calorie UI Rendering Settings list allows configuring and resetting optional body weight
+00:00 +9: All tests passed!
+```
+
+#### Task C6: Proportional Server XP Scaling & Anti-Farming Floor
+- **Test Files**: `backend/internal/store/xp_parity_test.go` & `test/server_xp_parity_test.dart`
+- **Verification**: Replaced fixed 100 XP minimum floor with proportional XP: $\max(5, \text{round}(\text{effectiveArea} / 20.0))$, eliminating micro-capture exploitation while rewarding genuine acreage. Verified parity between Go store and Dart `RunnerProfile.claimPolygonArea`.
+- **Command Output**:
+```text
+=== RUN   TestXP_ProportionalScalingAndAntiFarmingFloor
+=== RUN   TestXP_ProportionalScalingAndAntiFarmingFloor/Below_25_sqm_floor_awards_zero_XP
+=== RUN   TestXP_ProportionalScalingAndAntiFarmingFloor/Minimum_valid_loop_(25_sqm)_awards_5_XP_floor
+=== RUN   TestXP_ProportionalScalingAndAntiFarmingFloor/40_sqm_loop_awards_5_XP_floor_(40/20_=_2_->_floor_5)
+=== RUN   TestXP_ProportionalScalingAndAntiFarmingFloor/100_sqm_loop_awards_5_XP_(100/20_=_5)
+=== RUN   TestXP_ProportionalScalingAndAntiFarmingFloor/500_sqm_park_loop_awards_25_XP_(500/20_=_25)
+=== RUN   TestXP_ProportionalScalingAndAntiFarmingFloor/2,000_sqm_neighbourhood_loop_awards_100_XP_(2000/20_=_100)
+=== RUN   TestXP_ProportionalScalingAndAntiFarmingFloor/10,000_sqm_large_loop_awards_500_XP_(10000/20_=_500)
+--- PASS: TestXP_ProportionalScalingAndAntiFarmingFloor (0.00s)
+PASS
+```
+```text
+00:00 +0: C6 Server & Client XP Parity Tests (Option A) Loops below the 25 m² floor award zero XP and do not increment count
+00:00 +1: C6 Server & Client XP Parity Tests (Option A) Loop of 25.0 m² awards 5 XP (25 m² minimum valid loop (anti-farming floor))
+00:00 +2: C6 Server & Client XP Parity Tests (Option A) Loop of 40.0 m² awards 5 XP (40 m² loop (40/20 = 2 -> floor 5))
+00:00 +3: C6 Server & Client XP Parity Tests (Option A) Loop of 100.0 m² awards 5 XP (100 m² loop (100/20 = 5))
+00:00 +4: C6 Server & Client XP Parity Tests (Option A) Loop of 500.0 m² awards 25 XP (500 m² park loop (500/20 = 25))
+00:00 +5: C6 Server & Client XP Parity Tests (Option A) Loop of 2000.0 m² awards 100 XP (2,000 m² neighbourhood loop (2000/20 = 100))
+00:00 +6: C6 Server & Client XP Parity Tests (Option A) Loop of 10000.0 m² awards 500 XP (10,000 m² large loop (10000/20 = 500))
+00:00 +7: C6 Server & Client XP Parity Tests (Option A) Multiplier proportionally scales XP award above floor
+00:00 +8: C6 Server & Client XP Parity Tests (Option A) Repeated tiny loops cannot farm disproportionate XP
+00:00 +9: All tests passed!
+```
+
+#### Task C7: Dead AppMotion Tick Calls Removed
+- **Verification**: Removed all 94 no-op `AppMotion.*Tick()` call sites across 48 Flutter UI files. Annotated unused tick methods as `@Deprecated` and cleaned unused imports.
+- **Verification**: `flutter analyze` verified 0 issues across all 48 modified files.
+
+### 16.5 Items Not Run Locally
+- **Go Race Detection (`go test -race ./...`)**:
+  - *Status*: NOT RUN locally.
+  - *Reason*: Host is Windows 11 without a C compiler (`gcc`/`clang` not installed in PATH).
+  - *CI Execution*: Executes in Linux environment via GitHub Actions CI (`.github/workflows/ci.yml`).
+- **Physical Sensor Step Counting on Real Hardware**:
+  - *Status*: NOT RUN.
+  - *Reason*: Running in desktop test harness; cadence-to-step estimation and suppression logic verified in hermetic test suites.

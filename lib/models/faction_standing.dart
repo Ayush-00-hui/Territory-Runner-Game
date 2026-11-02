@@ -1,23 +1,14 @@
-/// Model representing territory dominance by athletic faction
+/// Model representing territory dominance by athletic team
 class FactionStanding {
   final String faction;
   final double totalAreaSqm;
   final int memberCount;
   final double percentage;
 
-  static const String defaultFaction = 'Vanguard';
-
-  static const Map<String, String> factionAliases = {
-    'Cyber Vanguard': 'Vanguard',
-    'Iron Syndicate': 'Syndicate',
-    'Neon Nomads': 'Nomads',
-  };
-
-  /// Canonicalizes legacy/persisted faction names into human, neutral display names
+  /// Returns clean display team name from raw/persisted value; empty if null/empty
   static String canonicalFaction(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return defaultFaction;
-    final trimmed = raw.trim();
-    return factionAliases[trimmed] ?? trimmed;
+    if (raw == null || raw.trim().isEmpty) return '';
+    return raw.trim();
   }
 
   const FactionStanding({
@@ -32,7 +23,7 @@ class FactionStanding {
       faction: canonicalFaction(json['faction'] as String?),
       totalAreaSqm: (json['total_area_sqm'] as num?)?.toDouble() ?? 0.0,
       memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
-      percentage: (json['percentage'] as num?)?.toDouble() ?? 33.3,
+      percentage: (json['percentage'] as num?)?.toDouble() ?? 0.0,
     );
   }
 

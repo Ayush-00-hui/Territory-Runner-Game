@@ -82,7 +82,7 @@ class MapLayers {
     );
   }
 
-  /// Sovereign & Rival Territory Multi-Polygons Layer
+  /// Player & Rival Territory Multi-Polygons Layer
   static PolygonLayer buildPolygonLayer(
     List<Territory> territories, {
     String? highlightedTerritoryId,
@@ -492,13 +492,13 @@ class MapLayers {
   /// Maps faction name to dedicated accent color
   static Color getFactionColor(String faction) {
     final lower = faction.toLowerCase();
-    if (lower.contains('vanguard') ||
+    if (lower.contains('blue') ||
         lower.contains('cyan') ||
-        lower.contains('cyber')) {
+        lower.contains('contrast')) {
       return AppColors.info;
     }
-    if (lower.contains('iron') ||
-        lower.contains('legion') ||
+    if (lower.contains('gold') ||
+        lower.contains('amber') ||
         lower.contains('solar')) {
       return AppColors.secondary;
     }

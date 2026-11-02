@@ -120,7 +120,7 @@ func NewService(apiKey string, opts ...Option) *Service {
 	return s
 }
 
-// GenerateInsight generates tactical coaching advice, delegating to Gemini if configured
+// GenerateInsight generates run coaching advice, delegating to Gemini if configured
 // or falling back to on-device equivalent heuristics.
 func (s *Service) GenerateInsight(ctx context.Context, run RunContext) CoachInsight {
 	if s.apiKey == "" {

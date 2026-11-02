@@ -28,6 +28,7 @@ class QueuedRun {
   final DateTime createdAt;
   final int retryCount;
   final List<MotionWindow>? motionWindows;
+  final int? stepCount;
 
   QueuedRun({
     required this.idempotencyKey,
@@ -40,6 +41,7 @@ class QueuedRun {
     required this.createdAt,
     this.retryCount = 0,
     this.motionWindows,
+    this.stepCount,
   });
 
   Map<String, dynamic> toJson() => {
@@ -54,6 +56,7 @@ class QueuedRun {
     'clientPreviewXp': clientPreviewXp,
     'createdAt': createdAt.toIso8601String(),
     'retryCount': retryCount,
+    if (stepCount != null) 'stepCount': stepCount,
     if (motionWindows != null && motionWindows!.isNotEmpty)
       'motionWindows': motionWindows!.map((w) => w.toJson()).toList(),
   };
@@ -83,6 +86,7 @@ class QueuedRun {
           : DateTime.now(),
       retryCount: (json['retryCount'] as num?)?.toInt() ?? 0,
       motionWindows: motionWindows,
+      stepCount: (json['stepCount'] as num?)?.toInt(),
     );
   }
 
@@ -90,6 +94,7 @@ class QueuedRun {
     int? retryCount,
     String? activityType,
     List<MotionWindow>? motionWindows,
+    int? stepCount,
   }) {
     return QueuedRun(
       idempotencyKey: idempotencyKey,
@@ -102,6 +107,7 @@ class QueuedRun {
       createdAt: createdAt,
       retryCount: retryCount ?? this.retryCount,
       motionWindows: motionWindows ?? this.motionWindows,
+      stepCount: stepCount ?? this.stepCount,
     );
   }
 }
@@ -304,6 +310,7 @@ class SyncQueueService {
     String activityType = 'running',
     String? idempotencyKey,
     List<MotionWindow>? motionWindows,
+    int? stepCount,
     bool autoSync = true,
   }) async {
     final box = await _getBox();
@@ -319,6 +326,7 @@ class SyncQueueService {
       clientPreviewXp: clientPreviewXp,
       createdAt: DateTime.now(),
       motionWindows: motionWindows,
+      stepCount: stepCount,
     );
 
     await box.put(key, jsonEncode(item.toJson()));
@@ -371,6 +379,7 @@ class SyncQueueService {
           clientPreviewArea: run.clientPreviewArea,
           clientPreviewXp: run.clientPreviewXp,
           motionWindows: run.motionWindows,
+          stepCount: run.stepCount,
         );
 
         AppLogger.info(

@@ -198,6 +198,7 @@ void main() {
                   onPressed: () {
                     MapToolsSheet.show(
                       context: context,
+                      isDemoMode: true,
                       onOpenPacer: () => pacerOpened = true,
                       onOpenGoals: () {},
                       onOpenRoutePlanner: () {},

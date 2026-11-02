@@ -173,7 +173,6 @@ class ProfileStatCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (onTap != null) {
-          AppMotion.selectionTick();
           onTap!();
         }
       },

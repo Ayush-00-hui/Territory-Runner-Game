@@ -7,7 +7,6 @@ import '../../routing/route_service.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/theme/app_spacing.dart';
 import '../../../ui/theme/app_text.dart';
-import '../../../ui/motion/motion.dart';
 
 /// Preset area target configuration
 class AreaPreset {
@@ -22,7 +21,7 @@ class AreaPreset {
   });
 }
 
-/// Tactical Explore Claim Planner Modal Sheet.
+/// Explore Claim Planner Modal Sheet.
 /// Allows runners to select target territory area (presets or slider),
 /// previews the route (real-road OSRM loop or offline synthetic loop),
 /// calculates net new unowned area via Clipper2, and starts the run with active guidance.
@@ -148,7 +147,6 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
   }
 
   void _selectPreset(double area) {
-    AppMotion.lightTick();
     setState(() => _targetAreaSqM = area);
     _debounceTimer?.cancel();
     _generateRoute(area);
@@ -417,7 +415,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
               ),
             ),
 
-          // Tactical Route Telemetry Grid
+          // Route Metrics Grid
           Container(
             padding: const EdgeInsets.all(AppSpacing.s16),
             decoration: BoxDecoration(
@@ -429,7 +427,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
               children: [
                 Row(
                   children: [
-                    _buildTelemetryTile(
+                    _buildMetricTile(
                       label: 'Est. distance',
                       value: route != null
                           ? '${route.totalDistanceKm.toStringAsFixed(2)} km'
@@ -438,7 +436,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                       color: AppColors.textPrimary,
                     ),
                     const SizedBox(width: 12),
-                    _buildTelemetryTile(
+                    _buildMetricTile(
                       label: 'Est. duration',
                       value: route != null
                           ? '~${route.estimatedDurationMinutes} min'
@@ -451,7 +449,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    _buildTelemetryTile(
+                    _buildMetricTile(
                       label: 'Est. new area',
                       value: route != null
                           ? '+${route.estimatedNewTerritoryAreaSqM.toStringAsFixed(0)} m²'
@@ -466,7 +464,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                           : null,
                     ),
                     const SizedBox(width: 12),
-                    _buildTelemetryTile(
+                    _buildMetricTile(
                       label: 'Projected XP',
                       value: '+$projectedXp XP',
                       icon: Icons.bolt_rounded,
@@ -486,7 +484,6 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
             child: ElevatedButton(
               onPressed: route != null
                   ? () {
-                      AppMotion.mediumTick();
                       Navigator.of(context).maybePop();
                       widget.onStartRun(route);
                     }
@@ -524,7 +521,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
     );
   }
 
-  Widget _buildTelemetryTile({
+  Widget _buildMetricTile({
     required String label,
     required String value,
     required IconData icon,

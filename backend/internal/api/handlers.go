@@ -217,7 +217,7 @@ func (a *API) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 		u = &store.User{
 			ID:           uid,
 			Username:     "Runner_" + uid[:min(6, len(uid))],
-			Faction:      "Cyber Vanguard",
+			Faction:      "",
 			TotalAreaSqm: 0.0,
 			XP:           0,
 			Level:        1,
@@ -368,6 +368,7 @@ func (a *API) HandleUpdatePrivacyZones(w http.ResponseWriter, r *http.Request) {
 type SubmitRunRequest struct {
 	IdempotencyKey  string                   `json:"idempotency_key"`
 	ActivityType    string                   `json:"activity_type,omitempty"`
+	StepCount       *int                     `json:"step_count,omitempty"`
 	Points          []geo.TrackPoint         `json:"points"`
 	DurationSeconds int                      `json:"duration_seconds"`
 	DistanceMeters  float64                  `json:"distance_meters"`
@@ -523,6 +524,7 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		UserID:             uid,
 		IdempotencyKey:     req.IdempotencyKey,
 		ActivityType:       activityType,
+		StepCount:          req.StepCount,
 		DurationSeconds:    req.DurationSeconds,
 		DistanceMeters:     req.DistanceMeters,
 		AnomalyScore:       anomalyRes.Score,
@@ -724,7 +726,7 @@ func (a *API) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := "Runner_" + uid[:min(6, len(uid))]
-	faction := "Cyber Vanguard"
+	faction := ""
 	if u, err := a.store.GetUser(r.Context(), uid); err == nil && u != nil {
 		username = u.Username
 		faction = u.Faction

@@ -55,7 +55,6 @@ class SyncChip extends StatelessWidget {
               label: 'Cloud Sync: $text',
               child: GestureDetector(
                 onTap: () {
-                  AppMotion.selectionTick();
                   queue.syncPendingRuns();
                   AppToast.show(
                     context,

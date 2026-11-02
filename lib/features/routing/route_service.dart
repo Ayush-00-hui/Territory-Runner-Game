@@ -72,7 +72,7 @@ class RouteService {
 
   /// Proposes a closed running loop matching [targetAreaSqM] from [currentLocation].
   /// Uses OSRM pedestrian routing if online, or synthetic geodesic loop if offline.
-  /// Computes net new area by subtracting existing sovereign land via Clipper2.
+  /// Computes net new area by subtracting existing player territory via Clipper2.
   Future<SuggestedRoute> suggestRouteForTargetArea({
     required LatLng currentLocation,
     required double targetAreaSqM,

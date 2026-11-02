@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
 
 /// Bottom sheet presenting secondary tools during an active or idle run:
-/// - Virtual Pacer
+/// - Virtual Pacer (Demo mode)
 /// - Run Goals
 /// - Route Suggestions
 /// - AMOLED Low-Power Display
@@ -19,6 +20,7 @@ class MapToolsSheet extends StatelessWidget {
   final String? activePacerLabel;
   final String? activeGoalLabel;
   final bool isAmoledActive;
+  final bool? isDemoMode;
 
   const MapToolsSheet({
     super.key,
@@ -31,6 +33,7 @@ class MapToolsSheet extends StatelessWidget {
     this.activePacerLabel,
     this.activeGoalLabel,
     this.isAmoledActive = false,
+    this.isDemoMode,
   });
 
   static Future<void> show({
@@ -44,6 +47,7 @@ class MapToolsSheet extends StatelessWidget {
     String? activePacerLabel,
     String? activeGoalLabel,
     bool isAmoledActive = false,
+    bool? isDemoMode,
   }) {
     return AppSheet.show(
       context: context,
@@ -75,27 +79,32 @@ class MapToolsSheet extends StatelessWidget {
         activePacerLabel: activePacerLabel,
         activeGoalLabel: activeGoalLabel,
         isAmoledActive: isAmoledActive,
+        isDemoMode: isDemoMode,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final showDemoControls = isDemoMode ?? AppPreferences().isDemoModeEnabled;
+
     return AppSheet(
       title: 'Run tools',
       subtitle: 'Pacer, goals, route guidance and utilities',
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // 1. Virtual Pacer
-          _ToolTile(
-            icon: Icons.speed_rounded,
-            title: 'Virtual pacer',
-            subtitle: activePacerLabel ?? 'Select target split pace',
-            accentColor: AppColors.accent,
-            onTap: onOpenPacer,
-          ),
-          const SizedBox(height: AppSpacing.s8),
+          // 1. Virtual Pacer (Demo mode only)
+          if (showDemoControls) ...[
+            _ToolTile(
+              icon: Icons.speed_rounded,
+              title: 'Virtual pacer',
+              subtitle: activePacerLabel ?? 'Select target split pace & test lab',
+              accentColor: AppColors.accent,
+              onTap: onOpenPacer,
+            ),
+            const SizedBox(height: AppSpacing.s8),
+          ],
 
           // 2. Run Goals
           _ToolTile(
@@ -178,7 +187,6 @@ class _ToolTile extends StatelessWidget {
       label: '$title: $subtitle',
       child: InkWell(
         onTap: () {
-          AppMotion.lightTick();
           onTap();
         },
         borderRadius: AppRadius.br16,

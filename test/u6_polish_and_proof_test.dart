@@ -288,7 +288,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        final themePills = ['Athletic Dark', 'Vanguard', 'Stealth'];
+        final themePills = ['Athletic Dark', 'High Contrast', 'Stealth'];
         for (final pill in themePills) {
           final pillFinder = find.bySemanticsLabel('Theme: $pill');
           expect(pillFinder, findsOneWidget);

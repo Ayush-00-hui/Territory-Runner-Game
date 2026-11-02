@@ -36,13 +36,10 @@ class _SosShieldButtonState extends State<SosShieldButton>
             final progress = _controller.value;
             if (progress >= 0.75 && _lastTickMilestone < 3) {
               _lastTickMilestone = 3;
-              AppMotion.lightTick();
             } else if (progress >= 0.50 && _lastTickMilestone < 2) {
               _lastTickMilestone = 2;
-              AppMotion.lightTick();
             } else if (progress >= 0.25 && _lastTickMilestone < 1) {
               _lastTickMilestone = 1;
-              AppMotion.lightTick();
             }
           })
           ..addStatusListener((status) {
@@ -66,7 +63,6 @@ class _SosShieldButtonState extends State<SosShieldButton>
     _completed = false;
     _lastTickMilestone = 0;
     _holdStartTime = DateTime.now();
-    AppMotion.lightTick();
     _controller.forward();
   }
 

@@ -99,7 +99,7 @@ func (s *PostgresStore) GetRunsByUser(ctx context.Context, userID string, limit 
 		limit = 20
 	}
 	query := `
-		SELECT id, user_id, idempotency_key, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
+		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), step_count, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
 		FROM runs
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -115,7 +115,7 @@ func (s *PostgresStore) GetRunsByUser(ctx context.Context, userID string, limit 
 	for rows.Next() {
 		var r Run
 		if err := rows.Scan(
-			&r.ID, &r.UserID, &r.IdempotencyKey, &r.DurationSeconds, &r.DistanceMeters,
+			&r.ID, &r.UserID, &r.IdempotencyKey, &r.ActivityType, &r.StepCount, &r.DurationSeconds, &r.DistanceMeters,
 			&r.AreaClaimed, &r.AnomalyScore, &r.AnomalyReasons, &r.Status, &r.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -128,13 +128,13 @@ func (s *PostgresStore) GetRunsByUser(ctx context.Context, userID string, limit 
 // GetRunByIdempotencyKey fetches an existing run by idempotency key.
 func (s *PostgresStore) GetRunByIdempotencyKey(ctx context.Context, key string) (*Run, error) {
 	query := `
-		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
+		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), step_count, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
 		FROM runs
 		WHERE idempotency_key = $1;
 	`
 	var r Run
 	err := s.pool.QueryRow(ctx, query, key).Scan(
-		&r.ID, &r.UserID, &r.IdempotencyKey, &r.ActivityType, &r.DurationSeconds, &r.DistanceMeters,
+		&r.ID, &r.UserID, &r.IdempotencyKey, &r.ActivityType, &r.StepCount, &r.DurationSeconds, &r.DistanceMeters,
 		&r.AreaClaimed, &r.AnomalyScore, &r.AnomalyReasons, &r.Status, &r.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -212,7 +212,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		territoryID := fmt.Sprintf("poly_%s_territory", existing.UserID)
 		_ = tx.QueryRow(ctx, "SELECT ST_AsGeoJSON(geom) FROM territories WHERE id = $1;", territoryID).Scan(&geojson)
 
-		xpAwarded := int(math.Max(100, math.Round(existing.AreaClaimed/20.0)))
+		xpAwarded := 0
+		if existing.AreaClaimed >= MinCaptureFloorSqm {
+			xpAwarded = int(math.Max(5, math.Round(existing.AreaClaimed/20.0)))
+		}
 		return &CaptureResult{
 			RunID:              existing.ID,
 			IdempotencyKey:     existing.IdempotencyKey,
@@ -335,7 +338,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 				// Only verified motion runs receive high-value weak-territory 1.5x bonus
 				effectiveXpArea += weakBonusArea
 			}
-			xpAwarded = int(math.Max(100, math.Round(effectiveXpArea/20.0)))
+			xpAwarded = int(math.Max(5, math.Round(effectiveXpArea/20.0)))
 		} else {
 			areaClaimed = 0.0
 			xpAwarded = 0
@@ -369,8 +372,8 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	}
 
 	insertRunQuery := `
-		INSERT INTO runs (id, user_id, idempotency_key, activity_type, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, path, status, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CASE WHEN $10::text IS NOT NULL THEN ST_GeomFromText($10, 4326) ELSE NULL END, $11, $12);
+		INSERT INTO runs (id, user_id, idempotency_key, activity_type, step_count, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, path, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $11::text IS NOT NULL THEN ST_GeomFromText($11, 4326) ELSE NULL END, $12, $13);
 	`
 	anomalyReasons := run.AnomalyReasons
 	if anomalyReasons == nil {
@@ -386,7 +389,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	}
 
 	if _, err := tx.Exec(ctx, insertRunQuery,
-		run.ID, run.UserID, run.IdempotencyKey, activityType, run.DurationSeconds, run.DistanceMeters,
+		run.ID, run.UserID, run.IdempotencyKey, activityType, run.StepCount, run.DurationSeconds, run.DistanceMeters,
 		areaClaimed, run.AnomalyScore, anomalyReasons, pathWKT, status, createdAt,
 	); err != nil {
 		return nil, fmt.Errorf("failed to insert run: %w", err)
@@ -404,6 +407,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		RunID:              run.ID,
 		IdempotencyKey:     run.IdempotencyKey,
 		ActivityType:       activityType,
+		StepCount:          run.StepCount,
 		Status:             run.Status,
 		VerificationStatus: run.VerificationStatus,
 		AnomalyScore:       run.AnomalyScore,
@@ -636,11 +640,7 @@ func (s *PostgresStore) GetFactionStandings(ctx context.Context) (*FactionStandi
 	}
 	defer rows.Close()
 
-	canonicalFactions := map[string]FactionStanding{
-		"Cyber Vanguard": {Faction: "Cyber Vanguard", TotalAreaSqm: 0, MemberCount: 0},
-		"Neon Syndicate": {Faction: "Neon Syndicate", TotalAreaSqm: 0, MemberCount: 0},
-		"Solaris Nomads": {Faction: "Solaris Nomads", TotalAreaSqm: 0, MemberCount: 0},
-	}
+	factions := make(map[string]FactionStanding)
 
 	var totalGlobalArea float64
 	for rows.Next() {
@@ -650,7 +650,7 @@ func (s *PostgresStore) GetFactionStandings(ctx context.Context) (*FactionStandi
 		if err := rows.Scan(&faction, &area, &members); err != nil {
 			return nil, fmt.Errorf("failed to scan faction row: %w", err)
 		}
-		canonicalFactions[faction] = FactionStanding{
+		factions[faction] = FactionStanding{
 			Faction:      faction,
 			TotalAreaSqm: area,
 			MemberCount:  members,
@@ -659,11 +659,11 @@ func (s *PostgresStore) GetFactionStandings(ctx context.Context) (*FactionStandi
 	}
 
 	var standings []FactionStanding
-	for _, standing := range canonicalFactions {
+	for _, standing := range factions {
 		if totalGlobalArea > 0 {
 			standing.Percentage = math.Round((standing.TotalAreaSqm/totalGlobalArea)*1000.0) / 10.0
 		} else {
-			standing.Percentage = 33.3
+			standing.Percentage = 0.0
 		}
 		standings = append(standings, standing)
 	}

@@ -41,17 +41,18 @@ export 'controllers/map_run_controller.dart';
 export 'widgets/summary_sheet.dart';
 
 /// Helper to estimate steps from distance based on exercise activity type.
-int estimateSteps(
+/// Returns null for cycling where step counts are not applicable.
+int? estimateSteps(
   double distanceKm, [
   ExerciseActivityType activity = ExerciseActivityType.running,
 ]) {
-  if (activity == ExerciseActivityType.cycling) return 0;
+  if (activity == ExerciseActivityType.cycling) return null;
   final meters = distanceKm * 1000.0;
   if (activity == ExerciseActivityType.walking) return (meters / 0.75).round();
   return (meters / 1.05).round();
 }
 
-/// Pure Layout Map Screen displaying real-time runner tracks and claimed sectors.
+/// Pure Layout Map Screen displaying real-time runner tracks and claimed territories.
 class MapScreen extends StatefulWidget {
   final bool isActive;
 
@@ -202,7 +203,6 @@ class _MapScreenState extends State<MapScreen> {
         );
       },
       onToggleAmoled: () {
-        AppMotion.mediumTick();
         BatterySaverService().setAmoledHudActive(true);
       },
       onOpenOfflineMaps: () => showOfflineMapsSheet(context),
@@ -319,7 +319,7 @@ class _MapScreenState extends State<MapScreen> {
                 },
               ),
 
-              // 4. Strava-Grade Live Telemetry HUD
+              // 4. Strava-Grade Live Metrics HUD
               Positioned(
                 left: 16,
                 right: 16,

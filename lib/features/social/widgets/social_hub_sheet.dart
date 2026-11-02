@@ -145,7 +145,7 @@ class _SocialHubViewState extends State<SocialHubView> {
       }
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Network offline: displaying cached syndicates';
+        _errorMessage = 'Network offline: displaying cached squads';
       });
     }
   }

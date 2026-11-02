@@ -41,7 +41,6 @@ class _PrimaryButtonState extends State<PrimaryButton> {
 
   void _handleTapDown(TapDownDetails _) {
     if (widget.onPressed == null || widget.isLoading) return;
-    AppMotion.selectionTick();
     setState(() => _isPressed = true);
   }
 

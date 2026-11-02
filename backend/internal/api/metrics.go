@@ -23,7 +23,7 @@ type metricKey struct {
 	status string
 }
 
-// MetricsCollector tracks HTTP and WebSocket runtime telemetry for Prometheus scraping.
+// MetricsCollector tracks HTTP and WebSocket runtime metrics for Prometheus scraping.
 type MetricsCollector struct {
 	mu                   sync.RWMutex
 	buckets              []float64
@@ -72,7 +72,7 @@ func (mc *MetricsCollector) Record(method, path string, statusCode int, duration
 	}
 }
 
-// WritePrometheus serializes telemetry in standard Prometheus text format.
+// WritePrometheus serializes metrics in standard Prometheus text format.
 func (mc *MetricsCollector) WritePrometheus(w io.Writer, activeWs int) error {
 	mc.mu.RLock()
 	defer mc.mu.RUnlock()
