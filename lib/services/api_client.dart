@@ -37,7 +37,17 @@ class ApiException implements Exception {
 
 /// Service managing communication with the Go backend server.
 class ApiClient {
-  static final ApiClient _instance = ApiClient._internal();
+  static ApiClient _instance = ApiClient._internal();
+
+  /// Injects a test mock instance for widget testing.
+  static void setMockInstance(ApiClient client) {
+    _instance = client;
+  }
+
+  /// Resets the singleton instance back to default.
+  static void resetMockInstance() {
+    _instance = ApiClient._internal();
+  }
 
   final http.Client _httpClient;
   final FirebaseService _firebaseService;
@@ -526,7 +536,18 @@ class ApiClient {
       () => _httpClient.put(uri, headers: headers, body: body),
     );
 
-    return response.statusCode == 200;
+    if (response.statusCode == 200) {
+      return true;
+    }
+
+    final errorBody = _parseError(response.body);
+    final detail = errorBody['detail'] as String?;
+    final errCode = errorBody['error'] as String?;
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: (errCode != null && errCode.isNotEmpty) ? errCode : 'UNKNOWN',
+      message: (detail != null && detail.isNotEmpty) ? detail : '',
+    );
   }
 
   /// Fetches confirmed friends list (GET /v1/friends)

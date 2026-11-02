@@ -2,6 +2,7 @@ import '../../../models/faction_standing.dart';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/team_validation.dart';
 import '../../gameplay/territory_service.dart';
 import '../../../models/runner_profile.dart';
 import '../../../services/api_client.dart';
@@ -143,6 +144,8 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
   final TextEditingController _customTeamController = TextEditingController();
   List<FactionStanding> _serverTeams = [];
   bool _isLoading = true;
+  bool _isSubmitting = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -181,17 +184,54 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
 
   Future<void> _setTeam(String teamName) async {
     final trimmed = teamName.trim();
-    widget.profile.faction = trimmed;
-    await widget.territoryService.saveProfile(widget.profile);
-    ApiClient()
-        .updateUserFaction(widget.profile.faction)
-        .catchError((_) => false);
-    if (!mounted) return;
-    Navigator.pop(context);
-    widget.onUpdated();
-    AppToast.showGlobal(
-      trimmed.isEmpty ? 'Left team (Independent)' : 'Team set to $trimmed',
-    );
+    if (trimmed.isNotEmpty) {
+      final validationError = TeamNameValidator.validate(teamName);
+      if (validationError != null) {
+        setState(() => _errorMessage = validationError);
+        AppToast.showGlobal(validationError);
+        return;
+      }
+    }
+
+    setState(() {
+      _isSubmitting = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final sanitized = TeamNameValidator.sanitize(teamName);
+      try {
+        await ApiClient().updateUserFaction(sanitized);
+      } on ApiException catch (e) {
+        // If server responded with a meaningful rejection detail, surface it to runner
+        if (e.message.isNotEmpty && e.code != 'UNKNOWN') {
+          if (!mounted) return;
+          setState(() {
+            _isSubmitting = false;
+            _errorMessage = e.message;
+          });
+          AppToast.showGlobal(e.message);
+          return;
+        }
+      } catch (_) {
+        // Offline / network failure: allow local persistence for offline-first resilience
+      }
+
+      widget.profile.faction = sanitized;
+      await widget.territoryService.saveProfile(widget.profile);
+      if (!mounted) return;
+      Navigator.pop(context);
+      widget.onUpdated();
+      AppToast.showGlobal(
+        sanitized.isEmpty
+            ? 'Left team (Independent)'
+            : 'Team set to $sanitized',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   String _formatArea(double areaSqm) {
@@ -345,11 +385,18 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
         ),
         const SizedBox(height: AppSpacing.s8),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: TextField(
                 controller: _customTeamController,
                 maxLength: 24,
+                enabled: !_isSubmitting,
+                onChanged: (val) {
+                  if (_errorMessage != null) {
+                    setState(() => _errorMessage = null);
+                  }
+                },
                 style: AppText.bodyMedium.copyWith(
                   color: AppColors.textPrimary,
                   fontWeight: FontWeight.w600,
@@ -359,6 +406,13 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
                   hintStyle: const TextStyle(
                     color: AppColors.textMuted,
                     fontSize: 13,
+                  ),
+                  errorText: _errorMessage,
+                  errorMaxLines: 2,
+                  errorStyle: const TextStyle(
+                    color: AppColors.rival,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
                   ),
                   counterText: '',
                   filled: true,
@@ -382,6 +436,20 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
                       width: 1.5,
                     ),
                   ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: AppSpacing.br12,
+                    borderSide: const BorderSide(
+                      color: AppColors.rival,
+                      width: 1.0,
+                    ),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: AppSpacing.br12,
+                    borderSide: const BorderSide(
+                      color: AppColors.rival,
+                      width: 1.5,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -396,16 +464,32 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
                 ),
                 shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
               ),
-              onPressed: () {
-                final name = _customTeamController.text.trim();
-                if (name.isNotEmpty) {
-                  _setTeam(name);
-                }
-              },
-              child: const Text(
-                'Save',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
+              onPressed: _isSubmitting
+                  ? null
+                  : () {
+                      final name = _customTeamController.text.trim();
+                      if (name.isEmpty) {
+                        setState(
+                          () => _errorMessage = 'Team name cannot be empty',
+                        );
+                        AppToast.showGlobal('Team name cannot be empty');
+                        return;
+                      }
+                      _setTeam(name);
+                    },
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.bgDeep,
+                      ),
+                    )
+                  : const Text(
+                      'Save',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
             ),
           ],
         ),

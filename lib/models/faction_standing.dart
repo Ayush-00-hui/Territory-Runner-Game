@@ -1,3 +1,5 @@
+import '../core/utils/team_validation.dart';
+
 /// Model representing territory dominance by athletic team
 class FactionStanding {
   final String faction;
@@ -7,8 +9,7 @@ class FactionStanding {
 
   /// Returns clean display team name from raw/persisted value; empty if null/empty
   static String canonicalFaction(String? raw) {
-    if (raw == null || raw.trim().isEmpty) return '';
-    return raw.trim();
+    return TeamNameValidator.sanitize(raw);
   }
 
   const FactionStanding({

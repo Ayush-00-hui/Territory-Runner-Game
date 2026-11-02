@@ -40,6 +40,8 @@ type API struct {
 	metrics           *MetricsCollector
 	metricsToken      string
 	trustedProxies    *TrustedProxyChecker
+	teamDenyList      []string
+	teamLimiter       *RateLimiter
 }
 
 // Option configures API dependencies.
@@ -125,6 +127,25 @@ func WithTrustedProxies(proxies string) Option {
 		if a.coachLimiter != nil {
 			a.coachLimiter.SetTrustedProxies(proxies)
 		}
+		if a.teamLimiter != nil {
+			a.teamLimiter.SetTrustedProxies(proxies)
+		}
+	}
+}
+
+// WithTeamDenyList configures a custom deny-list of prohibited or abusive terms for team names.
+func WithTeamDenyList(denyList []string) Option {
+	return func(a *API) {
+		a.teamDenyList = denyList
+	}
+}
+
+// WithTeamLimiter configures a custom rate limiter for team/faction changes.
+func WithTeamLimiter(limiter *RateLimiter) Option {
+	return func(a *API) {
+		if limiter != nil {
+			a.teamLimiter = limiter
+		}
 	}
 }
 
@@ -156,7 +177,9 @@ func NewAPI(s store.Store, logger *slog.Logger, opts ...Option) *API {
 		runsLimiter: NewRateLimiter(0.5, 10),
 		// Coach rate limit: 5 burst, refill 0.2/sec (1 token per 5 sec)
 		coachLimiter: NewRateLimiter(0.2, 5),
-		metrics:      NewMetricsCollector(),
+		// Team change rate limit: 3 changes per day (capacity 3, refill rate 3/86400 per second)
+		teamLimiter: NewRateLimiter(3.0/86400.0, 3.0),
+		metrics:     NewMetricsCollector(),
 	}
 	for _, opt := range opts {
 		opt(a)
@@ -227,6 +250,8 @@ func (a *API) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 		if err := a.store.UpsertUser(r.Context(), u); err != nil {
 			a.logger.Error("failed to create user", "error", err, "uid", uid)
 		}
+	} else {
+		u.Faction = SanitizeTeamName(u.Faction)
 	}
 
 	writeJSON(w, http.StatusOK, u)
@@ -675,6 +700,10 @@ func (a *API) HandleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for i := range lb {
+		lb[i].Faction = SanitizeTeamName(lb[i].Faction)
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"leaderboard": lb,
 	})
@@ -729,7 +758,7 @@ func (a *API) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	faction := ""
 	if u, err := a.store.GetUser(r.Context(), uid); err == nil && u != nil {
 		username = u.Username
-		faction = u.Faction
+		faction = SanitizeTeamName(u.Faction)
 	}
 
 	if settings, err := a.store.GetUserSettings(r.Context(), uid); err == nil && settings != nil {
@@ -869,7 +898,14 @@ func (a *API) HandleGetCurrentLeague(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for i := range standings {
+		standings[i].Faction = SanitizeTeamName(standings[i].Faction)
+	}
+
 	user, _ := a.store.GetUser(r.Context(), uid)
+	if user != nil {
+		user.Faction = SanitizeTeamName(user.Faction)
+	}
 	result := league.CalculateStandings(uid, standings, now, user)
 
 	writeJSON(w, http.StatusOK, result)
@@ -882,6 +918,17 @@ func (a *API) HandleGetFactionStandings(w http.ResponseWriter, r *http.Request) 
 		a.logger.Error("failed to get faction standings", "error", err)
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve faction standings")
 		return
+	}
+	if standings != nil {
+		validStandings := make([]store.FactionStanding, 0, len(standings.Standings))
+		for _, s := range standings.Standings {
+			clean := SanitizeTeamName(s.Faction)
+			if clean != "" {
+				s.Faction = clean
+				validStandings = append(validStandings, s)
+			}
+		}
+		standings.Standings = validStandings
 	}
 	writeJSON(w, http.StatusOK, standings)
 }
@@ -905,21 +952,55 @@ func (a *API) HandleUpdateUserFaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req.Faction = strings.TrimSpace(req.Faction)
-	if req.Faction == "" {
-		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Faction name cannot be empty")
+	valResult, err := ValidateTeamName(req.Faction, a.teamDenyList)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_TEAM_NAME", err.Error())
 		return
 	}
 
-	if err := a.store.UpdateUserFaction(r.Context(), uid, req.Faction); err != nil {
-		a.logger.Error("failed to update user faction", "error", err, "uid", uid, "faction", req.Faction)
+	cleanedName := valResult.DisplayName
+
+	// Check existing stored user faction to avoid penalizing no-op updates
+	currentUser, _ := a.store.GetUser(r.Context(), uid)
+	if currentUser != nil && SanitizeTeamName(currentUser.Faction) == cleanedName {
+		writeJSON(w, http.StatusOK, map[string]string{
+			"status":  "ok",
+			"faction": cleanedName,
+		})
+		return
+	}
+
+	// Rate-limit team changes per user (3 changes per day by default)
+	if a.teamLimiter != nil {
+		key := "usr:" + uid
+		allowed, retryAfter := a.teamLimiter.Allow(key)
+		if !allowed {
+			w.Header().Set("Retry-After", strconv.Itoa(retryAfter))
+			writeJSON(w, http.StatusTooManyRequests, map[string]interface{}{
+				"error":       "RATE_LIMIT_EXCEEDED",
+				"detail":      "Team change rate limit exceeded. You can only change teams 3 times per day.",
+				"retry_after": retryAfter,
+			})
+			return
+		}
+	}
+
+	if err := a.store.UpdateUserFaction(r.Context(), uid, cleanedName); err != nil {
+		a.logger.Error("failed to update user faction", "error", err, "uid", uid)
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update user faction")
 		return
 	}
 
+	oldTeam := ""
+	if currentUser != nil {
+		oldTeam = SanitizeTeamName(currentUser.Faction)
+	}
+	// Log team change at INFO level without personal data (no UID, username, email, IP, or GPS)
+	a.logger.Info("user team changed", "old_team", oldTeam, "new_team", cleanedName)
+
 	writeJSON(w, http.StatusOK, map[string]string{
 		"status":  "ok",
-		"faction": req.Faction,
+		"faction": cleanedName,
 	})
 }
 
@@ -958,6 +1039,9 @@ func (a *API) HandleGetFriends(w http.ResponseWriter, r *http.Request) {
 	}
 	if friends == nil {
 		friends = []store.FriendUser{}
+	}
+	for i := range friends {
+		friends[i].Faction = SanitizeTeamName(friends[i].Faction)
 	}
 
 	writeJSON(w, http.StatusOK, friends)
