@@ -3,12 +3,15 @@
   "valid_traces_count": 0,
   "rejected_traces_count": 0,
   "distinct_users": [],
+  "user_counts": {},
   "modality_counts": {},
+  "placement_counts": {},
+  "rejected_traces_details": [],
   "traces_with_valid_motion": 0,
   "min_threshold_met": false,
   "cadence_model_enabled": false,
   "min_required_traces": 30,
   "min_required_users": 3,
   "status_message": "THRESHOLD UNMET: traces 0/30, users 0/3, traces with motion 0/30. Cadence model MUST stay DISABLED. Anti-cheat pipeline evaluates GPS-only.",
-  "timestamp_utc": "2026-11-01T06:57:53.954006+00:00"
+  "timestamp_utc": "2026-11-02T06:32:06.892096+00:00"
 }

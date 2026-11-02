@@ -14,7 +14,7 @@ func clearEnv(t *testing.T) {
 		"PORT", "DATABASE_URL", "AUTH_MODE", "ENV", "FIREBASE_PROJECT_ID",
 		"GEMINI_API_KEY", "GEMINI_MODEL", "ALLOWED_ORIGINS", "ALLOW_ANY_ORIGIN",
 		"MAX_POINTS_PER_RUN", "MAX_RUN_DURATION_SECONDS", "RUN_MIGRATIONS",
-		"METRICS_TOKEN", "TRUSTED_PROXIES",
+		"METRICS_TOKEN", "TRUSTED_PROXIES", "ENABLE_CADENCE_MODEL", "ENABLE_ML_TIER2",
 	}
 	for _, v := range vars {
 		os.Unsetenv(v)
@@ -139,4 +139,31 @@ func TestConfig_DevelopmentDefaults(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 	assert.Equal(t, []string{"*"}, cfg.AllowedOrigins)
+}
+
+func TestConfig_EnableCadenceModel_DefaultsToFalse(t *testing.T) {
+	clearEnv(t)
+	defer clearEnv(t)
+
+	os.Setenv("ENV", "development")
+	os.Setenv("AUTH_MODE", "dev")
+
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	assert.False(t, cfg.EnableCadenceModel, "ENABLE_CADENCE_MODEL must default to false (default OFF)")
+}
+
+func TestConfig_EnableCadenceModel_FlagActivation(t *testing.T) {
+	clearEnv(t)
+	defer clearEnv(t)
+
+	os.Setenv("ENV", "development")
+	os.Setenv("AUTH_MODE", "dev")
+	os.Setenv("ENABLE_CADENCE_MODEL", "true")
+
+	cfg, err := config.Load()
+	require.NoError(t, err)
+	require.NotNil(t, cfg)
+	assert.True(t, cfg.EnableCadenceModel, "ENABLE_CADENCE_MODEL=true must activate flag")
 }

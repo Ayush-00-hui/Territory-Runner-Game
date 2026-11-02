@@ -65,6 +65,7 @@ The app exports session traces matching this structure:
   "session_id": "member1_20261026_073000_run",
   "user_id": "member1",
   "transport_mode": "run",
+  "phone_placement": "pocket",
   "recorded_at": "2026-10-26T07:30:00Z",
   "duration_seconds": 920,
   "distance_meters": 2450.5,

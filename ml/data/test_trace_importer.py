@@ -48,6 +48,7 @@ class TestAppTraceImporter(unittest.TestCase):
         session_id: str = "sess_001",
         user_id: str = "user_a",
         transport_mode: str = "run",
+        phone_placement: str = "pocket",
         num_points: int = 35,
         start_lat: float = 28.545,
         start_lon: float = 77.192,
@@ -75,6 +76,7 @@ class TestAppTraceImporter(unittest.TestCase):
             "session_id": session_id,
             "user_id": user_id,
             "transport_mode": transport_mode,
+            "phone_placement": phone_placement,
             "recorded_at": "2026-11-01T10:00:00Z",
             "duration_seconds": int(num_points * dt),
             "distance_meters": 100.0,
@@ -195,10 +197,45 @@ class TestAppTraceImporter(unittest.TestCase):
         self.assertTrue(audit.min_threshold_met)
         self.assertIn("VALIDATED", audit.status_message)
 
+    def test_phone_placement_validation_and_reporting(self):
+        # Create traces with pocket, hand, and bag placements
+        self._create_mock_trace_file("t_pocket.json", session_id="s_p", user_id="u1", phone_placement="pocket")
+        self._create_mock_trace_file("t_hand.json", session_id="s_h", user_id="u1", phone_placement="hand")
+        self._create_mock_trace_file("t_bag.json", session_id="s_b", user_id="u2", phone_placement="bag")
+
+        pts, motion, audit = import_all_team_traces(self.test_dir)
+        self.assertEqual(audit.valid_traces_count, 3)
+        self.assertEqual(audit.user_counts, {"u1": 2, "u2": 1})
+        self.assertEqual(audit.placement_counts, {"pocket": 1, "hand": 1, "bag": 1})
+
+    def test_suspicious_phone_placement_rejected(self):
+        fpath = self._create_mock_trace_file("suspicious_placement.json", phone_placement="drone_mount")
+        res, pts, motion = validate_single_trace(fpath)
+        self.assertFalse(res.is_valid)
+        self.assertTrue(any("Invalid or suspicious phone_placement" in e for e in res.errors))
+
+    def test_null_island_coordinates_rejected(self):
+        fpath = self._create_mock_trace_file("null_island.json", start_lat=0.0, start_lon=0.0, dx=0.0)
+        res, pts, motion = validate_single_trace(fpath)
+        self.assertFalse(res.is_valid)
+        self.assertTrue(any("Null Island" in e for e in res.errors))
+
+    def test_duplicate_session_id_rejected(self):
+        self._create_mock_trace_file("trace_1.json", session_id="duplicate_sess", user_id="u1")
+        self._create_mock_trace_file("trace_2.json", session_id="duplicate_sess", user_id="u2")
+
+        pts, motion, audit = import_all_team_traces(self.test_dir)
+        self.assertEqual(audit.valid_traces_count, 1)
+        self.assertEqual(audit.rejected_traces_count, 1)
+        self.assertTrue(any("Duplicate session_id" in d["errors"][0] for d in audit.rejected_traces_details))
+
     def test_real_repo_app_traces_dir_has_zero_fabricated_traces(self):
         repo_traces_dir = "ml/data/app_traces"
         pts, motion, audit = import_all_team_traces(repo_traces_dir)
         self.assertEqual(audit.valid_traces_count, 0, "No traces should be fabricated in ml/data/app_traces/")
+        self.assertEqual(audit.user_counts, {})
+        self.assertEqual(audit.placement_counts, {})
+        self.assertEqual(audit.modality_counts, {})
         self.assertFalse(audit.cadence_model_enabled)
 
 

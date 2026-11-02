@@ -183,3 +183,26 @@ Both runtime targets enforce cryptographic asset authentication prior to parsing
 | :--- | :--- | :--- | :--- |
 | **Anti-Cheat Trees** | `assets/models/anomaly_detector_trees.json` | `46c87109b1e730a4da6c84b76f6b15261774be826e3f9d96bc1e07f650d9b265` | Fallback to Tier 1 physical rules. Tier 2 is bypassed safely. |
 | **Pace/Distance Trees** | `assets/models/pace_distance_trees.json` | `a15a9b98ff37803e49e2908f515e02422716a504eb2ec59ea79dfa9ca46ce7ea` | Fallback to deterministic athletic level tables. |
+
+---
+
+## 10. Operational Constraints & Real-World Generalization Boundaries
+
+### 10.1 Empirical Data Provenance & Volume
+- **Public GNSS Benchmark (GeoLife 1.3)**: 127,655 evaluated sliding windows across 13 labeled users (2008–2012).
+- **Team In-App Trace Dataset (`ml/data/app_traces/`)**: **0 validated traces** across **0 users** (precondition threshold: $\ge 30$ valid traces across $\ge 3$ users with motion). Status manifest confirms `min_threshold_met: false`.
+- **Active Real Features**: 22 / 22 GPS kinematic features. Zero accelerometer cadence features synthesized or injected into training.
+
+### 10.2 Small Sample Size & Geographic Conditioning
+1. **Participant Diversity Ceiling (13 Users)**: All cross-validation benchmarks were derived from 13 participants. This limited cohort does not represent global biometric diversity, age distributions, stride lengths, or running mechanics.
+2. **Local Environmental Conditions**: The GeoLife dataset was collected almost exclusively within the Beijing metropolitan area in China between 2008 and 2012. Environmental factors such as regional satellite geometry, local urban layout, high-density public transit, and legacy GPS logger hardware do not reflect contemporary global conditions or modern smartphone GNSS chipsets (e.g. dual-frequency L1/L5 GNSS, Galileo, BeiDou).
+
+### 10.3 Adversarial Threat Boundary (Not Tested Against a Motivated Attacker)
+1. **Synthetic Adversarial Suite Only**: Detection metrics on adversarial vectors were measured strictly against automated scripts (`ml/data/generate_spoofs.py`). These scripts test sensitivity to specific parameter thresholds (e.g. median $\Delta t > 5\text{s}$, static velocity fields), but **do not evaluate robustness against a motivated human attacker** who actively inspects the open-source code, calculates feature gradients, or generates kinematically plausible trajectory splines.
+2. **Complete Replay Blindspot (0.0% Detection)**: Geographic offset replay attacks (replaying a genuine workout recorded elsewhere into a target territory) produce **0.0% detection** across all ML models because the underlying kinematic physics remain authentic. Mitigating this attack requires transport-layer nonces, cellular network verification, or multi-user cross-verification.
+
+### 10.4 Safe Production Rollout Controls
+- **Cadence Model Environment Flag**: Enabled strictly via `ENABLE_CADENCE_MODEL=true` (or `ENABLE_ML_TIER2=true`), defaulting to `false` (OFF).
+- **Cryptographic Verification**: Models are authenticated via SHA-256 before loading. Any integrity failure triggers immediate, silent fallback to deterministic physical rules without service interruption.
+- **Graceful Sensorless Degradation**: Runs without validated motion windows are categorized as `unverified_motion` (territory captured, but competitive multipliers and duel progress are restricted).
+- **Known False Positives**: Phones carried in heavily cushioned backpacks with foam damping, or mounted on baby strollers pushed at speeds $> 6\text{ km/h}$, suppress vibration energy and trigger the vehicle stillness heuristic after 30 seconds. In these conditions, athletes are classified as `unverified_motion` or flagged for physical review.

@@ -62,6 +62,7 @@ func main() {
 		"env", cfg.Env,
 		"auth_mode", cfg.AuthMode,
 		"port", cfg.Port,
+		"enable_cadence_model", cfg.EnableCadenceModel,
 	)
 
 	// Context for DB setup and graceful shutdown
@@ -129,6 +130,7 @@ func main() {
 		api.WithLimits(cfg.MaxPointsPerRun, cfg.MaxRunDurationSec),
 		api.WithMetricsToken(cfg.MetricsToken),
 		api.WithTrustedProxies(cfg.TrustedProxies),
+		api.WithCadenceModel(cfg.EnableCadenceModel),
 	)
 	router := api.SetupRouter(apiHandler, authenticator, cfg.AllowedOrigins...)
 

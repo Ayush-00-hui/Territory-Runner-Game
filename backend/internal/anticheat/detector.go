@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -109,13 +110,14 @@ var DefaultActivityLimits = map[string]ActivityLimits{
 
 // Config stores calibrated statistical baselines and deterministic thresholds.
 type Config struct {
-	MaxHumanSpeedKmh float64
-	MaxTeleportSpeed float64
-	AnomalyThreshold float64
-	EnableMLTier2    bool
-	Means            [5]float64
-	Stds             [5]float64
-	Weights          [5]float64
+	MaxHumanSpeedKmh   float64
+	MaxTeleportSpeed   float64
+	AnomalyThreshold   float64
+	EnableMLTier2      bool
+	EnableCadenceModel bool
+	Means              [5]float64
+	Stds               [5]float64
+	Weights            [5]float64
 }
 
 // DefaultConfig loads calibrated baseline statistics and thresholds dynamically
@@ -126,13 +128,22 @@ func DefaultConfig() Config {
 		panic(fmt.Sprintf("anticheat: failed to parse embedded model.json: %v", err))
 	}
 
+	// Tier 2 ML cadence model is disabled by default until the threshold of real team traces
+	// (min 30 validated traces) is met, preventing false positives from leaked synthetic cadence.
+	// Can be enabled explicitly via environment flag ENABLE_CADENCE_MODEL=true or Config{EnableCadenceModel: true}.
+	enableCadence := false
+	if v := os.Getenv("ENABLE_CADENCE_MODEL"); strings.ToLower(v) == "true" || v == "1" {
+		enableCadence = true
+	} else if v := os.Getenv("ENABLE_ML_TIER2"); strings.ToLower(v) == "true" || v == "1" {
+		enableCadence = true
+	}
+
 	cfg := Config{
-		AnomalyThreshold: m.AnomalyThreshold,
-		MaxHumanSpeedKmh: m.HardRules.MaxHumanSpeedKmh,
-		MaxTeleportSpeed: m.HardRules.MaxTeleportSpeed,
-		// Tier 2 ML cadence model is disabled by default until the threshold of real team traces
-		// (min 30 validated traces) is met, preventing false positives from leaked synthetic cadence.
-		EnableMLTier2: false,
+		AnomalyThreshold:   m.AnomalyThreshold,
+		MaxHumanSpeedKmh:   m.HardRules.MaxHumanSpeedKmh,
+		MaxTeleportSpeed:   m.HardRules.MaxTeleportSpeed,
+		EnableMLTier2:      enableCadence,
+		EnableCadenceModel: enableCadence,
 	}
 	if cfg.MaxHumanSpeedKmh <= 0 {
 		cfg.MaxHumanSpeedKmh = 25.0
@@ -707,9 +718,10 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 	// 10. Tier 2: Production LightGBM Machine Learning Ensemble Model
 	// Only evaluated if:
 	// - Tier 1 hard physics rules did not already trigger a high-severity rejection (score >= 50.0)
-	// - ML Tier 2 is enabled by feature flag
+	// - Cadence ML model is enabled by feature flag (EnableCadenceModel or EnableMLTier2; default OFF)
 	// - Motion windows are present and passed server-side sanity checks
-	if d.cfg.EnableMLTier2 && d.mlEnsemble != nil && len(points) >= 3 && motionWindowsValid {
+	cadenceModelActive := d.cfg.EnableCadenceModel || d.cfg.EnableMLTier2
+	if cadenceModelActive && d.mlEnsemble != nil && len(points) >= 3 && motionWindowsValid {
 		if maxScore < 50.0 {
 			f25 := Extract25Features(points, motionWindows)
 			isMLAnomaly, mlProb := d.mlEnsemble.Predict(f25)
