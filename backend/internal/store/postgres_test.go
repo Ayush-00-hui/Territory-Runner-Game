@@ -45,6 +45,7 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000012_add_run_step_count.down.sql",
 		"000011_add_territory_last_decayed_at.down.sql",
 		"000010_add_user_settings.down.sql",
 		"000009_add_duel_activity_type.down.sql",
@@ -77,6 +78,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000009_add_duel_activity_type.up.sql",
 		"000010_add_user_settings.up.sql",
 		"000011_add_territory_last_decayed_at.up.sql",
+		"000012_add_run_step_count.up.sql",
 	}
 
 	for _, uf := range upFiles {
@@ -324,6 +326,48 @@ func TestMigration_000011_AddLastDecayedAt(t *testing.T) {
 	`).Scan(&colCount)
 	require.NoError(t, err)
 	assert.Equal(t, 1, colCount, "last_decayed_at column must exist after re-applying up")
+}
+
+// 2c. Migration 000012: runs.step_count column up and down
+func TestMigration_000012_AddRunStepCount(t *testing.T) {
+	_, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	up12, err := readMigration("000012_add_run_step_count.up.sql")
+	require.NoError(t, err)
+	down12, err := readMigration("000012_add_run_step_count.down.sql")
+	require.NoError(t, err)
+
+	// Since setupTestStore already runs all migrations up to 12, verify column exists
+	var colCount int
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'runs' AND column_name = 'step_count';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, colCount, "step_count column must exist in runs initially")
+
+	// Revert 000012 down
+	_, err = pool.Exec(ctx, down12)
+	require.NoError(t, err, "000012 down should apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'runs' AND column_name = 'step_count';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, colCount, "step_count column must be removed after down")
+
+	// Re-apply 000012 up so subsequent tests have the column
+	_, err = pool.Exec(ctx, up12)
+	require.NoError(t, err, "000012 up should re-apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'runs' AND column_name = 'step_count';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, colCount, "step_count column must exist after re-applying up")
 }
 
 // 3. Loop capture with PostGIS ST_PolygonFromText / ST_MakeValid
