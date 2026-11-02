@@ -23,18 +23,15 @@ class MapViewport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (controller.currentLocation == null) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.accent),
-      );
-    }
+    final LatLng center =
+        controller.currentLocation ?? const LatLng(51.5074, -0.1278);
 
     return RepaintBoundary(
       child: FlutterMap(
         mapController: mapController,
         options: MapOptions(
-          initialCenter: controller.currentLocation!,
-          initialZoom: 17.0,
+          initialCenter: center,
+          initialZoom: controller.currentLocation != null ? 17.0 : 15.0,
           backgroundColor: AppColors.bgDeep,
           interactionOptions: const InteractionOptions(
             flags: InteractiveFlag.all & ~InteractiveFlag.rotate,

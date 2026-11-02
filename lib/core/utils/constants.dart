@@ -6,16 +6,33 @@ class AppConstants {
       'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
   static const String defaultOsmAttribution = '© OpenStreetMap contributors';
 
+  // CARTO basemap templates (OpenStreetMap-based, raster 2x for retina clarity)
+  static const String cartoVoyagerUrlTemplate =
+      'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png';
+  static const String cartoVoyagerAttribution =
+      '© OpenStreetMap contributors, © CARTO';
+
+  static const String cartoPositronUrlTemplate =
+      'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}@2x.png';
+  static const String cartoPositronAttribution =
+      '© OpenStreetMap contributors, © CARTO';
+
+  static const String cartoDarkMatterUrlTemplate =
+      'https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png';
+  static const String cartoDarkMatterAttribution =
+      '© OpenStreetMap contributors, © CARTO';
+
   /// Tile URL template configurable via --dart-define=TILE_URL_TEMPLATE=...
+  /// Defaults to CARTO Voyager for crisp high-visibility outdoor cartography.
   static const String tileUrlTemplate = String.fromEnvironment(
     'TILE_URL_TEMPLATE',
-    defaultValue: defaultOsmUrlTemplate,
+    defaultValue: cartoVoyagerUrlTemplate,
   );
 
   /// Attribution string configurable via --dart-define=TILE_ATTRIBUTION=...
   static const String tileAttribution = String.fromEnvironment(
     'TILE_ATTRIBUTION',
-    defaultValue: defaultOsmAttribution,
+    defaultValue: cartoVoyagerAttribution,
   );
 
   /// Tile service API key configurable via --dart-define=TILE_API_KEY=... or MAPBOX_API_KEY

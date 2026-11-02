@@ -17,20 +17,23 @@ import 'package:territory_runner/ui/ui.dart';
 
 void main() {
   group('Territory Runner Design System Tokens', () {
-    test('AppColors token palette definitions (Graphite + Bone + Moss)', () {
-      expect(AppColors.bgDeep, const Color(0xFF0D0E0C));
-      expect(AppColors.surface, const Color(0xFF141512));
-      expect(AppColors.accent, const Color(0xFFA3C586));
-      expect(AppColors.mine, const Color(0xFFA3C586));
-      expect(AppColors.rival, const Color(0xFF86A5D3));
-      expect(AppColors.warning, const Color(0xFFD9A441));
-      expect(AppColors.info, const Color(0xFF9AA4B2));
-      expect(AppColors.error, const Color(0xFFE0716B));
-      expect(AppColors.success, const Color(0xFFA3C586));
-      expect(AppColors.gold, const Color(0xFFCDAE6A));
-      expect(AppColors.silver, const Color(0xFFB5B6B0));
-      expect(AppColors.bronze, const Color(0xFFB0825A));
-    });
+    test(
+      'AppColors token palette definitions (Athletic High-Contrast Palette)',
+      () {
+        expect(AppColors.bgDeep, const Color(0xFF0A0C10));
+        expect(AppColors.surface, const Color(0xFF161922));
+        expect(AppColors.accent, const Color(0xFF00F59B));
+        expect(AppColors.mine, const Color(0xFF00F59B));
+        expect(AppColors.rival, const Color(0xFFFF385C));
+        expect(AppColors.warning, const Color(0xFFFFB800));
+        expect(AppColors.info, const Color(0xFF00C6FF));
+        expect(AppColors.error, const Color(0xFFFF385C));
+        expect(AppColors.success, const Color(0xFF00F59B));
+        expect(AppColors.gold, const Color(0xFFFFD700));
+        expect(AppColors.silver, const Color(0xFFCBD5E1));
+        expect(AppColors.bronze, const Color(0xFFCD7F32));
+      },
+    );
 
     test('AppSpacing scale and radii consistency', () {
       expect(AppSpacing.s4, 4.0);

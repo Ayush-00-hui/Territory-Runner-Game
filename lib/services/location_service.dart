@@ -60,6 +60,7 @@ class LocationService {
   VirtualPacerMode get pacerMode => _pacerMode;
   GpsTrackingMode get currentTrackingMode => _currentTrackingMode;
   double get simHeading => _simHeading;
+  Position? get lastValidPosition => _lastValidPosition;
 
   /// Checks local storage for first-time permission grant
   Future<bool> isFirstTimePermissionRequest() async {
@@ -120,9 +121,19 @@ class LocationService {
     }
 
     try {
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null &&
+          isValidFix(lastPos, _lastValidPosition, maxAccuracyMeters: 65.0)) {
+        _lastValidPosition = lastPos;
+        return lastPos;
+      }
+    } catch (_) {}
+
+    try {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.bestForNavigation,
+          timeLimit: Duration(seconds: 5),
         ),
       );
       if (isValidFix(pos, _lastValidPosition)) {
@@ -131,6 +142,9 @@ class LocationService {
       }
       return _lastValidPosition ?? pos;
     } catch (e) {
+      if (_lastValidPosition != null) {
+        return _lastValidPosition;
+      }
       isSimulationMode = true;
       return _generateSimulatedPosition();
     }
@@ -145,9 +159,13 @@ class LocationService {
     Position? lastPos, {
     bool isZeroG = false,
     ExerciseActivityType exerciseActivity = ExerciseActivityType.running,
+    double maxAccuracyMeters = 30.0,
   }) {
-    // 1. Accuracy dilution gate
-    if (newPos.accuracy > 30.0) {
+    // 1. Accuracy dilution gate: allow initial coarse fix up to 50m to prevent locking delays
+    final effectiveMax = lastPos == null
+        ? math.max(maxAccuracyMeters, 50.0)
+        : maxAccuracyMeters;
+    if (newPos.accuracy > effectiveMax) {
       return false;
     }
 
@@ -356,6 +374,46 @@ class LocationService {
 
     _simulationTimer?.cancel();
     _simulationTimer = null;
+  }
+
+  /// Asynchronously pre-warms GNSS and queries last known position
+  /// so map and runner location lock instantly without cold-start delay.
+  Future<void> warmUpLocation() async {
+    if (_pacerMode != VirtualPacerMode.none || isSimulationMode) {
+      if (_lastValidPosition == null) {
+        final sim = _generateSimulatedPosition();
+        _lastValidPosition = sim;
+        _locationController.add(sim);
+      }
+      return;
+    }
+
+    try {
+      // 1. Instant cache hit: Last Known Position from device OS (<50ms)
+      final lastPos = await Geolocator.getLastKnownPosition();
+      if (lastPos != null &&
+          isValidFix(lastPos, _lastValidPosition, maxAccuracyMeters: 65.0)) {
+        _lastValidPosition = lastPos;
+        _locationController.add(lastPos);
+      }
+    } catch (_) {}
+
+    try {
+      // 2. Pre-warm hardware GNSS with a fast high-accuracy one-shot fix
+      final hasPermission = await requestPermission();
+      if (hasPermission && !isSimulationMode) {
+        final pos = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            timeLimit: Duration(seconds: 4),
+          ),
+        );
+        if (isValidFix(pos, _lastValidPosition, maxAccuracyMeters: 50.0)) {
+          _lastValidPosition = pos;
+          _locationController.add(pos);
+        }
+      }
+    } catch (_) {}
   }
 
   void setVirtualPacer(VirtualPacerMode mode) {

@@ -268,6 +268,12 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     liveLocationNotifier.value = latLng;
 
     if (_isRunActive && !_isAutoPaused) {
+      // Coarse fix (> 30m): update visual position but preserve polygon anti-cheat accuracy
+      if (pos.accuracy > 30.0 && _runCoordinates.isNotEmpty) {
+        _updateTelemetryMetrics();
+        return;
+      }
+
       if (_runCoordinates.isNotEmpty) {
         const dist = Distance();
         final deltaMeters = dist(_runCoordinates.last, latLng);

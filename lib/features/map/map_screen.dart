@@ -135,6 +135,8 @@ class _MapScreenState extends State<MapScreen> {
         } catch (_) {}
       }
     });
+
+    LocationService().warmUpLocation();
   }
 
   void _refreshTerritoryCache() {

@@ -15,7 +15,7 @@ import '../../gameplay/polygon_enclosure_engine.dart';
 class MapLayers {
   MapLayers._();
 
-  /// Dark-mode global map tile layer with offline disk caching and configurable tile provider
+  /// High-visibility global map tile layer with offline disk caching and CARTO Voyager by default
   static TileLayer buildTileLayer() {
     final String urlTemplate;
     final Map<String, String> additionalOptions = {};
@@ -25,17 +25,14 @@ class MapLayers {
       additionalOptions['apiKey'] = AppConstants.tileApiKey;
     }
 
-    if (AppConstants.tileUrlTemplate != AppConstants.defaultOsmUrlTemplate) {
+    if (AppConstants.tileUrlTemplate != AppConstants.cartoVoyagerUrlTemplate &&
+        AppConstants.tileUrlTemplate != AppConstants.defaultOsmUrlTemplate) {
       urlTemplate = AppConstants.tileUrlTemplate;
     } else if (AppConstants.tileApiKey.isNotEmpty) {
       urlTemplate = 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}';
     } else {
-      urlTemplate = AppConstants.defaultOsmUrlTemplate;
+      urlTemplate = AppConstants.tileUrlTemplate;
     }
-
-    final bool isMapboxDark = urlTemplate.contains(
-      'mapbox.com/styles/v1/mapbox/dark-v11',
-    );
 
     return TileLayer(
       urlTemplate: urlTemplate,
@@ -45,40 +42,6 @@ class MapLayers {
       tileProvider: OfflineFirstTileProvider(
         headers: {'User-Agent': AppConstants.userAgent},
       ),
-      tileBuilder: (context, tileWidget, tile) {
-        if (isMapboxDark) {
-          return tileWidget;
-        }
-        // Luminance-based dark map pipeline:
-        // 1. Grayscale via luma: (0.2126 R + 0.7152 G + 0.0722 B)
-        // 2. Invert & contrast compression with chromatic water separation
-        // 3. Warm graphite tint: land ~#161618, water ~#111114, roads ~#0A090C, labels ~#7E8079
-        return ColorFiltered(
-          colorFilter: const ColorFilter.matrix(<double>[
-            0.2884,
-            -0.4065,
-            -0.4503,
-            0.0,
-            155.0,
-            0.3002,
-            -0.4180,
-            -0.4630,
-            0.0,
-            158.0,
-            0.2566,
-            -0.3899,
-            -0.4019,
-            0.0,
-            149.0,
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-            0.0,
-          ]),
-          child: tileWidget,
-        );
-      },
     );
   }
 

@@ -77,7 +77,8 @@ class RunHudMetricsCard extends StatelessWidget {
                         Text(
                           isRunActive ? distanceKm.toStringAsFixed(2) : '0.00',
                           style: AppText.statHero.copyWith(
-                            fontSize: 32,
+                            fontSize: 34,
+                            fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -124,6 +125,8 @@ class RunHudMetricsCard extends StatelessWidget {
                             )
                           : '00:00',
                       style: AppText.timer.copyWith(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -170,7 +173,8 @@ class RunHudMetricsCard extends StatelessWidget {
                     child: Text(
                       isRunActive ? splitPace : "--'--\"",
                       style: AppText.statHero.copyWith(
-                        fontSize: 26,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -216,6 +220,7 @@ class RunHudMetricsCard extends StatelessWidget {
                           '${currentSpeedKmh.toStringAsFixed(1)} km/h',
                           style: AppText.bodyBold.copyWith(
                             fontSize: 11,
+                            fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -245,6 +250,7 @@ class RunHudMetricsCard extends StatelessWidget {
                           ),
                           style: AppText.bodyBold.copyWith(
                             fontSize: 11,
+                            fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -276,6 +282,7 @@ class RunHudMetricsCard extends StatelessWidget {
                               : '±${satelliteAccuracyMeters.toStringAsFixed(0)}m',
                           style: AppText.bodySmall.copyWith(
                             fontSize: 11,
+                            fontWeight: FontWeight.w700,
                             color: satelliteAccuracyMeters <= 10.0
                                 ? AppColors.textSecondary
                                 : (satelliteAccuracyMeters <= 30.0
@@ -309,6 +316,7 @@ class RunHudMetricsCard extends StatelessWidget {
                               '~${_formatSteps(stepCount!)} steps (est.)',
                               style: AppText.bodyBold.copyWith(
                                 fontSize: 11,
+                                fontWeight: FontWeight.w700,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],
@@ -338,6 +346,7 @@ class RunHudMetricsCard extends StatelessWidget {
                           '$territoriesClaimed claimed',
                           style: AppText.bodyBold.copyWith(
                             fontSize: 11,
+                            fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),

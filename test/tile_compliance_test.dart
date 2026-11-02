@@ -14,14 +14,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Tile Compliance & OpenStreetMap Policy', () {
-    test('AppConstants defaults enforce OSM compliance', () {
+    test('AppConstants defaults enforce OSM compliance with CARTO Voyager', () {
       expect(
         AppConstants.tileUrlTemplate,
-        equals('https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+        equals(AppConstants.cartoVoyagerUrlTemplate),
       );
       expect(
         AppConstants.tileAttribution,
-        equals('© OpenStreetMap contributors'),
+        equals(AppConstants.cartoVoyagerAttribution),
       );
       expect(AppConstants.allowTilePrefetch, isFalse);
       expect(AppConstants.minTileCacheDays, equals(7));
@@ -138,7 +138,7 @@ void main() {
           ),
         );
         expect(find.text('Map Data & Attribution'), findsOneWidget);
-        expect(find.text('© OpenStreetMap contributors'), findsOneWidget);
+        expect(find.text(AppConstants.cartoVoyagerAttribution), findsOneWidget);
       },
     );
   });
