@@ -14,14 +14,16 @@
 ```
 
 **Real-Time Server-Authoritative Location-Based Athletic Fitness Platform**  
-*Enclose arbitrary closed-loop GPS territory polygons on a calm, high-contrast tactical map. Defend land from rivals, climb weekly competitive league tiers, and receive tactical AI coaching.*
+*Enclose arbitrary closed-loop GPS territory polygons on a crisp, high-visibility tactical map. Defend land from rivals, climb weekly competitive league tiers, and receive tactical AI coaching.*
 
 <br>
 
 [![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game)
-[![Tests Passing](https://img.shields.io/badge/Flutter_Test_Suites-58%20Passing-4FD1A5.svg?style=flat-square&logo=flutter&logoColor=white)](test/)
-[![Go Tests](https://img.shields.io/badge/Go_Test_Suites-17%20Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-459%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
+[![Go Tests](https://img.shields.io/badge/Go_Tests-11%20Packages_Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
+[![Cartography](https://img.shields.io/badge/Cartography-CARTO_Retina_@2x-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
+[![Theme Palette](https://img.shields.io/badge/Theme-Obsidian_Volt_Coral-00F59B.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
 [![Encrypted Storage](https://img.shields.io/badge/Storage-Hive_AES--256-blueviolet.svg?style=flat-square&logo=keybase&logoColor=white)](lib/services/hive_encryption_service.dart)
 [![Threat Model](https://img.shields.io/badge/Security-STRIDE_Threat_Model-critical.svg?style=flat-square&logo=shield&logoColor=white)](docs/THREAT_MODEL.md)
 [![AIML Anti-Cheat](https://img.shields.io/badge/AIML_AntiCheat-LightGBM_Ensemble-9C27B0.svg?style=flat-square&logo=scikitlearn&logoColor=white)](docs/AIML_EVALUATION.md)
@@ -63,15 +65,15 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 │ 🎮 Level 2: Gameplay Mechanics & Athlete Experience                                    │
 │    └─ Organic loop enclosure | Tri-modality calibration | Dynamic decay | AI Coach     │
 │ 📱 Level 3: Mobile Client Engineering & Offline Resiliency (Flutter)                   │
-│    └─ Foreground background GPS | Crash recovery box | FIFO sync queue | AMOLED saver │
+│    └─ Foreground background GPS | Instant GNSS warm-up | CARTO basemaps | AMOLED saver │
 │ 🖥️ Level 4: Backend Engineering & Distributed Spatial Systems (Go + PostGIS)           │
-│    └─ pg_advisory_xact_lock | PostGIS pipeline | Clipper2 parity | WebSocket Hub      │
+│    └─ pg_advisory_xact_lock | PostGIS pipeline | Team validation | WebSocket Hub       │
 │ 🔒 Level 5: Cryptography, Privacy & Zero-Trust Security                                │
 │    └─ Firebase RS256 JWT verifier | Dual-layer privacy zones | Anti-abuse duels        │
 │ 🤖 Level 6: Machine Learning & Anti-Cheat Pipeline (LightGBM)                          │
-│    └─ Tier 1 deterministic gate | Tier 2 25-feature kinematic ensemble | Quantiles    │
+│    └─ Tier 1 deterministic gate | Safe cadence rollout | 22-feature ensemble           │
 │ 🏆 Level 7: Master Level (Testing, Audits, Verification & Production Ops)             │
-│    └─ 434 Flutter + 201 Go tests | WCAG AA dark HUD | Viva defense cheatsheet          │
+│    └─ 459 Flutter + 11 Go package suites | WCAG AA Obsidian HUD | Viva defense cheatsheet │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -132,7 +134,8 @@ Conversely, first-generation location-based games (Ingress, Pokémon GO, Turf) c
 | **Anti-Cheat Validation** | Post-hoc manual flag reviews | Basic speed thresholds | **Tier 1 Kinematic Gate + Tier 2 LightGBM 25-feature ML ensemble** |
 | **Privacy Safeguards** | Client-only map blur | None | **Dual-layer: client redaction + server-side geodesic suppression in WebSockets** |
 | **Rival Alerts** | None | Delayed batch emails | **Real-time WebSocket alerts + FCM HTTP v1 background push** |
-| **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Calm, high-contrast Ink + Pacer Blue (`#090B0F`, `#4C8DFF`)** |
+| **Map Cartography** | Standard map SDK | Low-detail raster / custom vector | **Crisp CARTO Voyager, Positron & Dark Matter retina basemaps (`@2x.png`, native clarity, OSM compliant)** |
+| **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Athletic, high-contrast Aerospace Obsidian + Cyber Volt + Hyper Coral (`#0A0C10`, `#00F59B`, `#FF385C`)** |
 
 ---
 
@@ -141,7 +144,8 @@ Conversely, first-generation location-based games (Ingress, Pokémon GO, Turf) c
 ```mermaid
 graph TD
     subgraph Client ["Flutter Mobile Client (Offline-First & Background Hardened)"]
-        UI[Tactical Map HUD & Design System]
+        UI[Tactical Map HUD & Obsidian Design System]
+        GNSSPreWarm[Instant GNSS Warm-up & Last Known Position]
         ForegroundService[Foreground Location Service & Sticky Notification]
         WakeLockMgr[Wakelock Keep-Alive Manager]
         CrashBox[(Hive Crash Recovery Box)]
@@ -154,6 +158,7 @@ graph TD
         LeagueView[Weekly League View & Percentile HUD]
         
         ForegroundService --> SignalFilter
+        GNSSPreWarm --> ForegroundService
         WakeLockMgr --> ForegroundService
         SignalFilter --> CrashBox
         SignalFilter --> LocalEngine
@@ -169,6 +174,7 @@ graph TD
         ChiRouter[Chi HTTP Router]
         MiddlewareStack[RequestID, Logger, RateLimiter, BodyLimit, CORS Whitelist]
         AuthVerifier[Firebase Auth RS256 JWT Verifier]
+        TeamValidator[Unicode NFKC Team Name Validator & Rate Limiter]
         AntiCheat[Kinematic Anomaly & Spoofing Mitigation]
         GoGeoEngine[Go Geo Enclosure Engine & Shoelace]
         AdvisoryLock[Transaction-Scoped Spatial Advisory Lock]
@@ -205,7 +211,7 @@ graph TD
         Gemini[Google Gemini 2.5 Flash API]
         FCMService[Firebase Cloud Messaging HTTP v1 API]
         GoogleOAuth[Google OAuth2 Token Service]
-        TileServer[ArcGIS World Dark Basemap]
+        TileServer[CARTO Open-Source Retina Basemaps (Voyager, Positron, Dark Matter)]
     end
 
     ApiClient -->|HTTP REST /v1| ChiRouter
@@ -483,6 +489,19 @@ Athletes can plan territory routes before leaving home:
 
 ---
 
+### 8. Server-Authoritative Faction & Team Validation (`PUT /v1/me/faction`)
+
+Team names appear publicly on real-time presence radar, leaderboards, and push alerts. The backend serves as the single source of truth for validation, normalization, and abuse defense:
+- **Canonical Content Rules:** Trims input, collapses repeated internal spaces, enforces 3 to 24 Unicode characters, and restricts characters strictly to letters, digits, spaces, hyphens, and underscores.
+- **Zero-Tolerance Exploit Filtering:** Rejects control characters, newlines, HTML/script tags, URLs, and invisible/homoglyph spaces (`\u200B`, `\u00A0`).
+- **Reserved Word Deny-List:** Blocks impersonation of administrative identities (`admin`, `support`, `moderator`, `official`, `staff`, `system`, `null`, `undefined`).
+- **NFKC Normalization & Canonical Comparison:** Normalizes with Unicode NFKC and case-folding so `"Team A"` and `"team  a"` resolve identically, eliminating squatting and confusion.
+- **Abuse Rate-Limiting:** Enforces a rolling ceiling of **3 faction changes per 24 hours per athlete**, logging all modifications at `INFO` level without sensitive PII leakage.
+- **Legacy Resiliency:** Existing database records with legacy invalid formats are mapped safely to empty (no faction) upon read, preventing crashes or deserialization errors.
+- **Mirrored Client Feedback:** The Flutter profile dialog mirrors identical validation rules for immediate real-time feedback with matching error diagnostics.
+
+---
+
 <a id="level-3"></a><a id="-level-3-mobile-client-engineering--offline-resiliency-flutter"></a>
 ## 📱 Level 3: Mobile Client Engineering & Offline Resiliency (Flutter)
 
@@ -555,30 +574,60 @@ Drain: ~18-24% per hour                         Drain: ~5-7% per hour (60-80% Po
 
 ---
 
-### 6. Athletic Minimal Design System (Ink + Pacer Blue)
+### 6. Instant GPS Acquisition, Asynchronous Pre-Warming & Viewport Unblocking
 
-Built exclusively for outdoor athletic performance, direct sunlight readability, OLED battery conservation, and thumb-driven one-handed operation.
+In outdoor fitness tracking, cold-start satellite acquisition typically delays tracking by 15–45 seconds while waiting for low horizontal dilution ($\le 30\text{ m}$). Territory Runner eliminates launch delays through a multi-stage acquisition architecture:
+- **Unblocked Map Viewport:** Removed full-screen loading spinners from [map_viewport.dart](lib/features/map/widgets/map_viewport.dart). The map mounts immediately at the runner's last known sector, pre-rendering tiles and territories in parallel.
+- **Asynchronous GNSS Pre-warming (`warmUpLocation`):** On screen mount (`MapScreen._initMapState()`), [location_service.dart](lib/services/location_service.dart) instantly queries the hardware OS `getLastKnownPosition()` cache (<50ms response) to lock camera follow and pre-warms the GNSS radio before the user presses "Start".
+- **Two-Tier Accuracy Gate:**
+  - *Initial Fix Gate:* Allows coarse fixes up to $\le 50\text{ m}$ when `lastPos == null` to immediately establish the runner marker and map center.
+  - *Active Tracking Gate:* Strictly enforces high-precision $\le 30\text{ m}$ horizontal dilution for path vertex recording and polygon closure calculations.
+- **Visual vs. Recording Separation:** In [map_run_controller.dart](lib/features/map/controllers/map_run_controller.dart), coarse fixes (> 30m) update the live position marker and camera follow so athletes are never left blind, but distance and territory accumulation wait for high satellite accuracy ($\le 30\text{ m}$).
+
+---
+
+### 7. Athletic High-Contrast Design System (Aerospace Obsidian + Cyber Volt + Hyper Coral)
+
+Engineered specifically for outdoor athletic glanceability at arm's length, direct sunlight contrast, OLED battery conservation, and thumb-driven ergonomics.
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                        AppColors                       │
-├────────────┬────────────┬─────────────┬────────────────┤
-│   bgDeep   │  surface   │   accent    │     rival      │
-│  #090B0F   │  #12151B   │   #4C8DFF   │    #FF7A59     │
-└────────────┴────────────┴─────────────┴────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                ATHLETIC COLOR TOKENS                                   │
+├─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬──────────────────┤
+│   bgDeep    │   surface   │   accent    │    rival    │   warning   │   textPrimary    │
+│   #0A0C10   │   #161922   │   #00F59B   │   #FF385C   │   #FFB800   │     #F8FAFC      │
+│  Obsidian   │  Elevated   │  Cyber Volt │ Hyper Coral │ Solar Amber │ Slate White 17:1 │
+└─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴──────────────────┘
 ```
 
-- **Dark-Only Surface Hierarchy:**
-  - `bgDeep` (`#090B0F`): Deepest OLED carbon canvas ([app_colors.dart](lib/ui/theme/app_colors.dart)).
-  - `surface` (`#12151B`): Primary card, sheet, and navigation surface.
-  - `surface2` (`#1C222D`): Secondary nested containers and chips.
-  - `accent` (`#4C8DFF`): Crisp Pacer Blue — single focal primary action.
-  - `rival` (`#FF7A59`): Coral — contested territory and threat indicators.
-  - `success` (`#4FD1A5`): Emerald — loop closure confirmation.
-- **Zero Raw Colors Policy:** Verified by automated regression test `no_raw_colors_test.dart`; zero arbitrary `Color(0x...)` or `Colors.*` exist in UI code.
-- **Tabular Figures:** All numeric displays (pace, distance, timer, area, rank) enforce `FontFeature.tabularFigures()`, guaranteeing zero horizontal digit jitter during movement.
-- **Dynamic Collision-Free HUD Tracking:** Floating controls are measured via `MeasureSize` listeners. Bottom offsets calculate dynamically as `pad.bottom + 12 + hudHeight + 12`, eliminating hardcoded magic numbers and overlay collisions.
-- **Unified Obsidian Pills (`AppToast`):** 100% of raw Material `SnackBar` calls are replaced with canonical [app_toast.dart](lib/ui/widgets/app_toast.dart) obsidian pills.
+- **Athletic Palette Tokens ([app_colors.dart](lib/ui/theme/app_colors.dart)):**
+  - `bgDeep` (`#0A0C10`): Deep Aerospace Obsidian Black canvas.
+  - `surface` (`#161922`) & `surface2` (`#1E2330`): Matte dark elevated surfaces.
+  - `border` (`#283040`): Tactical structural divider borders.
+  - `textPrimary` (`#F8FAFC`): Slate White with 17:1 AAA contrast against obsidian.
+  - `textSecondary` (`#94A3B8`) & `textMuted` (`#64748B`): Crisp slate information hierarchy.
+  - `accent` & `mine` (`#00F59B`): High-energy Cyber Volt / Neon Lime for sovereign territory and primary actions.
+  - `rival` (`#FF385C`): Hyper Coral / Crimson Ember for contested territory and threats.
+  - `warning` (`#FFB800`): Solar Amber for anomaly alerts and auto-pause states.
+  - `info` (`#00C6FF`): Electric Cobalt for guidance and metrics.
+  - `territoryMineFill` (`#3800F59B`): 22% Cyber Volt glow for sovereign claimed land.
+  - `territoryRivalFill` (`#33FF385C`): 20% Hyper Coral glow for rival territory.
+- **Tabular Figures & Glanceable Typography:** In [run_hud_metrics_card.dart](lib/features/map/widgets/run_hud_metrics_card.dart), distance (34sp), moving time (32sp), and split pace (28sp) are formatted with bold weights (`FontWeight.w700`) and tabular figures (`FontFeature.tabularFigures()`), eliminating horizontal digit jitter while running.
+- **Cyber Volt Enclosure Pulse:** [run_hud_closure_bar.dart](lib/features/map/widgets/run_hud_closure_bar.dart) features a smooth ticker-driven Cyber Volt glow animation that energetically pulses when loop closure proximity exceeds 80%.
+- **Safety Thumb-Zone Hold-To-Finish:** Accidental-tap protected 3-second hold-to-finish button [hold_to_finish_button.dart](lib/features/map/widgets/hold_to_finish_button.dart) anchored directly in the bottom thumb zone.
+- **Zero Raw Colors Policy:** Verified by automated regression tests; all UI components resolve via canonical semantic design tokens.
+
+---
+
+### 8. Crisp Open-Source CARTO Retina Cartography
+
+Standard mobile map tiles often suffer from inverted dark matrix filters that blur pedestrian paths or washed-out low-contrast graphics. Territory Runner implements high-clarity open-source cartography:
+- **Native Clarity:** Completely removed the dark inverted color matrix filter (`ColorFilter.matrix`), restoring full native sharpness and street legibility.
+- **CARTO Retina Basemaps (`@2x.png`):** Integrates free, open-source, OpenStreetMap-based CARTO raster basemaps requiring zero proprietary API keys:
+  - **CARTO Voyager (Default):** Crisp white streets, mint-green public parks, and visible pedestrian footpaths designed specifically for outdoor running legibility.
+  - **CARTO Positron:** Ultra-clean high-visibility light basemap for bright direct sunlight.
+  - **CARTO Dark Matter:** Deep stealth night basemap for dark workouts.
+- **OSM Usage Policy Compliance:** Configures discrete offline disk caching ([constants.dart](lib/core/utils/constants.dart), 7-day TTL), user-agent identification (`com.territoryrunner.app`), and prefetch locks.
 
 ---
 
@@ -916,6 +965,16 @@ Trained via forward temporal splitting (earliest 75% sessions train, latest 25% 
 
 ---
 
+### 4. Real-Trace Cadence Validation & Safe Rollout
+
+- **Collection Hygiene Validator (`import_app_traces.py`):** Audits imported mobile traces against strict data integrity requirements across multiple users, diverse activities (walking, running, cycling, motorized transit), and phone placements (pocket, hand, bag).
+- **Leave-One-User-Out Cross-Validation (LOUO-CV):** Evaluates real cadence and kinematic sensor models strictly across held-out real users to guarantee zero identity leakage.
+- **Safe Rollout Guardrail (`ENABLE_CADENCE_MODEL`):** Model inference is gated by the `ENABLE_CADENCE_MODEL` environment variable (defaults to `OFF`).
+- **Cryptographic SHA-256 Checksum Verification:** Model assets are verified with SHA-256 integrity checks on startup; any mismatch immediately falls back to Tier 1 deterministic physical rules.
+- **Unverified Motion State:** Runs logged without validated motion telemetry preserve the `unverified_motion` status—territory area is awarded, but duel challenge progression and the $1.5\times$ weak-territory capture bonus remain restricted.
+
+---
+
 <a id="level-7"></a><a id="-level-7-master-level-testing-verification--production-ops"></a>
 ## 🏆 Level 7: Master Level (Testing, Verification & Production Ops)
 
@@ -929,12 +988,12 @@ Territory Runner enforces strict automated testing across all client and backend
 ├─────────────────────────┬──────────────┬───────────────┤
 │ Domain                  │ Tests        │ Status        │
 ├─────────────────────────┼──────────────┼───────────────┤
-│ Flutter Client (lib/)   │ 434 tests    │ ALL PASS      │
-│ Go Backend (backend/)   │ 201 tests    │ ALL PASS      │
+│ Flutter Client (lib/)   │ 459 tests    │ ALL PASS      │
+│ Go Backend (backend/)   │ 11 packages  │ ALL PASS      │
 │ Integration Test Flow   │ E2E Run Sync │ ALL PASS      │
 │ Shared Golden Parity    │ 7 fixtures   │ <0.5% diff    │
 │ Static Code Analysis    │ 0 issues     │ 100% CLEAN    │
-│ Code Formatting         │ 211 files    │ 100% CLEAN    │
+│ Code Formatting         │ 218 files    │ 100% CLEAN    │
 │ Cross-Language Parity   │ 200 Windows  │ 0 Mismatches  │
 │ AIML Anomaly Detector   │ Tier 1 + 2   │ 0.27 µs inf   │
 │ Total Test Coverage     │ Client+Serv  │ 100% PASS     │
@@ -947,7 +1006,7 @@ Territory Runner enforces strict automated testing across all client and backend
 # 1. Static Analysis (Zero Warnings / Errors)
 flutter analyze
 
-# 2. Run All Flutter Unit and Widget Tests (434 tests)
+# 2. Run All Flutter Unit and Widget Tests (459 tests)
 flutter test
 
 # 3. Run End-to-End Offline Sync Integration Test
