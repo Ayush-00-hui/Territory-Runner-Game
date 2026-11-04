@@ -132,7 +132,7 @@ class _RunHudState extends State<RunHud> {
               if (widget.isAutoPaused && widget.isRunActive) ...[
                 Semantics(
                   liveRegion: true,
-                  label: 'Run tracking auto-paused. Moving speed dropped below 1.8 kilometers per hour.',
+                  label: 'Run tracking auto-paused. Moving speed dropped below 2.5 kilometers per hour.',
                   child: Container(
                     margin: const EdgeInsets.only(bottom: AppSpacing.s10),
                     padding: const EdgeInsets.symmetric(
@@ -154,7 +154,7 @@ class _RunHudState extends State<RunHud> {
                         ),
                         SizedBox(width: AppSpacing.s6),
                         Text(
-                          'Auto-paused • Speed < 1.8 km/h',
+                          'Auto-paused • Speed < 2.5 km/h',
                           style: TextStyle(
                             color: AppColors.warning,
                             fontWeight: FontWeight.w700,

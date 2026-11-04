@@ -154,22 +154,23 @@ void main() {
       );
     });
 
-    test('AutoPauseEngine handles hysteresis correctly', () {
+    test('AutoPauseEngine handles hysteresis correctly with 2.5 km/h threshold', () {
       final engine = AutoPauseEngine();
       expect(engine.isAutoPaused, isFalse);
       expect(engine.consecutiveStationarySeconds, equals(0));
 
-      // Active running at 9.0 km/h: remains running
+      // Active running at 9.0 km/h: arms initial movement and remains running
       expect(engine.tick(9.0), equals(AutoPauseTransition.none));
       expect(engine.isAutoPaused, isFalse);
+      expect(engine.hasInitialMovement, isTrue);
 
-      // Drops below 1.8 km/h: tick 1 (count = 1)
-      expect(engine.tick(1.2), equals(AutoPauseTransition.none));
+      // Drops below 2.5 km/h: tick 1 (count = 1)
+      expect(engine.tick(2.1), equals(AutoPauseTransition.none));
       expect(engine.isAutoPaused, isFalse);
       expect(engine.consecutiveStationarySeconds, equals(1));
 
-      // Drops below 1.8 km/h: tick 2 (count = 2)
-      expect(engine.tick(0.8), equals(AutoPauseTransition.none));
+      // Drops below 2.5 km/h: tick 2 (count = 2)
+      expect(engine.tick(1.8), equals(AutoPauseTransition.none));
       expect(engine.isAutoPaused, isFalse);
       expect(engine.consecutiveStationarySeconds, equals(2));
 
@@ -178,19 +179,19 @@ void main() {
       expect(engine.isAutoPaused, isFalse);
       expect(engine.consecutiveStationarySeconds, equals(0));
 
-      // Now stays stationary for 3 continuous seconds:
+      // Now stays stationary for 3 continuous seconds below 2.5 km/h:
       expect(engine.tick(0.5), equals(AutoPauseTransition.none));
       expect(engine.tick(0.2), equals(AutoPauseTransition.none));
       // 3rd second: triggers pause transition
       expect(engine.tick(0.0), equals(AutoPauseTransition.paused));
       expect(engine.isAutoPaused, isTrue);
 
-      // While paused: speed of 2.2 km/h (> 1.8 but < 3.0 resume threshold) must stay paused
-      expect(engine.tick(2.2), equals(AutoPauseTransition.none));
+      // While paused: speed of 2.7 km/h (> 2.5 ceiling but < 3.0 resume threshold) must stay paused (hysteresis)
+      expect(engine.tick(2.7), equals(AutoPauseTransition.none));
       expect(engine.isAutoPaused, isTrue);
 
-      // Speed reaches 3.5 km/h (>= 3.0 km/h floor): triggers resume transition
-      expect(engine.tick(3.5), equals(AutoPauseTransition.resumed));
+      // Speed reaches 3.0 km/h (>= 3.0 km/h floor): triggers resume transition
+      expect(engine.tick(3.0), equals(AutoPauseTransition.resumed));
       expect(engine.isAutoPaused, isFalse);
       expect(engine.consecutiveStationarySeconds, equals(0));
 
@@ -198,6 +199,35 @@ void main() {
       engine.reset();
       expect(engine.isAutoPaused, isFalse);
       expect(engine.consecutiveStationarySeconds, equals(0));
+      expect(engine.hasInitialMovement, isFalse);
+    });
+
+    test('AutoPauseEngine suppresses auto-pause at run start until initial movement is established', () {
+      final engine = AutoPauseEngine();
+      expect(engine.hasInitialMovement, isFalse);
+      expect(engine.isAutoPaused, isFalse);
+
+      // At start line, runner is stationary (0.0 km/h or < 2.5 km/h): must NEVER pause
+      for (int i = 0; i < 15; i++) {
+        expect(engine.tick(0.0), equals(AutoPauseTransition.none));
+        expect(engine.isAutoPaused, isFalse);
+        expect(engine.consecutiveStationarySeconds, equals(0));
+      }
+
+      // Athlete starts moving and crosses 2.5 km/h: arms initial movement
+      expect(engine.tick(2.8), equals(AutoPauseTransition.none));
+      expect(engine.hasInitialMovement, isTrue);
+
+      // Now if athlete stops mid-run below 2.5 km/h for 3 seconds: pauses as expected
+      expect(engine.tick(1.5), equals(AutoPauseTransition.none));
+      expect(engine.tick(1.0), equals(AutoPauseTransition.none));
+      expect(engine.tick(0.0), equals(AutoPauseTransition.paused));
+      expect(engine.isAutoPaused, isTrue);
+
+      // Force resume on coordinate displacement unpauses immediately
+      engine.forceResume();
+      expect(engine.isAutoPaused, isFalse);
+      expect(engine.hasInitialMovement, isTrue);
     });
 
     test('TileCacheService slippy coordinate math & paths', () {

@@ -21,6 +21,7 @@ import 'map_rival_simulation_mixin.dart';
 
 /// Decoupled, headless execution controller for an active or idle run.
 class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
+  static const int startupGraceSeconds = 10;
   final LocationService _locationService;
   final PolygonEnclosureEngine _polygonEngine;
   final AutoPauseEngine _autoPauseEngine;
@@ -186,6 +187,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
     _isRunActive = true;
     _isAutoPaused = false;
+    _currentSpeedKmh = 0.0;
     _territoriesClaimedThisRun = 0;
     _accumulatedRunPreviewArea = 0.0;
     _accumulatedRunPreviewXp = 0;
@@ -246,7 +248,25 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   void processPosition(Position pos) {
     final now = pos.timestamp;
     _satelliteAccuracyMeters = pos.accuracy;
-    _currentSpeedKmh = pos.speed * 3.6;
+    final double rawSpeedKmh = (pos.speed > 0) ? pos.speed * 3.6 : 0.0;
+    if (rawSpeedKmh > 0) {
+      _currentSpeedKmh = rawSpeedKmh;
+    } else if (_lastGpsFixTime != null && _recentPositions.isNotEmpty) {
+      final dt = now.difference(_lastGpsFixTime!).inMilliseconds / 1000.0;
+      if (dt > 0.3 && dt < 10.0) {
+        final dMeters = Geolocator.distanceBetween(
+          _recentPositions.last.latitude,
+          _recentPositions.last.longitude,
+          pos.latitude,
+          pos.longitude,
+        );
+        _currentSpeedKmh = (dMeters / dt) * 3.6;
+      } else {
+        _currentSpeedKmh = 0.0;
+      }
+    } else {
+      _currentSpeedKmh = 0.0;
+    }
 
     if (_lastGpsFixTime != null &&
         GpsQualityService.isSignalGap(_lastGpsFixTime!, now)) {
@@ -267,6 +287,21 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _currentLocation = latLng;
     liveLocationNotifier.value = latLng;
 
+    if (_isRunActive && _isAutoPaused && _currentLocation != null) {
+      final dMeters = Geolocator.distanceBetween(
+        _currentLocation!.latitude,
+        _currentLocation!.longitude,
+        latLng.latitude,
+        latLng.longitude,
+      );
+      if (dMeters >= 3.0 && _currentSpeedKmh >= AutoPauseEngine.pauseSpeedCeilingKmh) {
+        _isAutoPaused = false;
+        _autoPauseEngine.forceResume();
+        _locationService.setTrackingMode(GpsTrackingMode.activeRun);
+        telemetryNotifier.setAutoPaused(false);
+      }
+    }
+
     if (_isRunActive && !_isAutoPaused) {
       // Coarse fix (> 30m): update visual position but preserve polygon anti-cheat accuracy
       if (pos.accuracy > 30.0 && _runCoordinates.isNotEmpty) {
@@ -281,6 +316,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
           _runDistanceKm += (deltaMeters / 1000.0);
           _runCoordinates.add(latLng);
           _recentPositions.add(pos);
+          _autoPauseEngine.markMovement();
           runPathUpdateNotifier.value++;
 
           if (_polygonEngine.currentPath.length >= 3) {
@@ -310,6 +346,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
         _runCoordinates.add(latLng);
         _recentPositions.add(pos);
         _polygonEngine.addPosition(latLng);
+        _autoPauseEngine.markMovement();
         runPathUpdateNotifier.value++;
       }
     }
@@ -339,7 +376,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       if (!_isRunActive) return;
       _elapsedDurationSeconds++;
 
-      final transition = _autoPauseEngine.tick(_currentSpeedKmh);
+      final transition = (_elapsedDurationSeconds <= startupGraceSeconds)
+          ? AutoPauseTransition.none
+          : _autoPauseEngine.tick(_currentSpeedKmh);
       if (transition == AutoPauseTransition.paused) {
         _isAutoPaused = true;
         _locationService.setTrackingMode(GpsTrackingMode.paused);

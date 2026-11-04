@@ -20,7 +20,7 @@
 
 [![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-459%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-465%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Tests-11%20Packages_Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
 [![Cartography](https://img.shields.io/badge/Cartography-CARTO_Retina_@2x-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
 [![Theme Palette](https://img.shields.io/badge/Theme-Obsidian_Volt_Coral-00F59B.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
@@ -73,7 +73,7 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 │ 🤖 Level 6: Machine Learning & Anti-Cheat Pipeline (LightGBM)                          │
 │    └─ Tier 1 deterministic gate | Safe cadence rollout | 22-feature ensemble           │
 │ 🏆 Level 7: Master Level (Testing, Audits, Verification & Production Ops)             │
-│    └─ 459 Flutter + 11 Go package suites | WCAG AA Obsidian HUD | Viva defense cheatsheet │
+│    └─ 465 Flutter + 11 Go package suites | WCAG AA Obsidian HUD | Viva defense cheatsheet │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -988,7 +988,7 @@ Territory Runner enforces strict automated testing across all client and backend
 ├─────────────────────────┬──────────────┬───────────────┤
 │ Domain                  │ Tests        │ Status        │
 ├─────────────────────────┼──────────────┼───────────────┤
-│ Flutter Client (lib/)   │ 459 tests    │ ALL PASS      │
+│ Flutter Client (lib/)   │ 465 tests    │ ALL PASS      │
 │ Go Backend (backend/)   │ 11 packages  │ ALL PASS      │
 │ Integration Test Flow   │ E2E Run Sync │ ALL PASS      │
 │ Shared Golden Parity    │ 7 fixtures   │ <0.5% diff    │
@@ -1006,7 +1006,7 @@ Territory Runner enforces strict automated testing across all client and backend
 # 1. Static Analysis (Zero Warnings / Errors)
 flutter analyze
 
-# 2. Run All Flutter Unit and Widget Tests (459 tests)
+# 2. Run All Flutter Unit and Widget Tests (465 tests)
 flutter test
 
 # 3. Run End-to-End Offline Sync Integration Test
