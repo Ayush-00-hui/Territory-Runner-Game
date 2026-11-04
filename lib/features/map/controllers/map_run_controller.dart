@@ -294,7 +294,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
         latLng.latitude,
         latLng.longitude,
       );
-      if (dMeters >= 3.0 && _currentSpeedKmh >= AutoPauseEngine.pauseSpeedCeilingKmh) {
+      if (dMeters >= 3.0 &&
+          _currentSpeedKmh >= AutoPauseEngine.pauseSpeedCeilingKmh) {
         _isAutoPaused = false;
         _autoPauseEngine.forceResume();
         _locationService.setTrackingMode(GpsTrackingMode.activeRun);
