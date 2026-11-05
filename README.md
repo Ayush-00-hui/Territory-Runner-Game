@@ -65,7 +65,7 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 │ 🎮 Level 2: Gameplay Mechanics & Athlete Experience                                    │
 │    └─ Organic loop enclosure | Tri-modality calibration | Dynamic decay | AI Coach     │
 │ 📱 Level 3: Mobile Client Engineering & Offline Resiliency (Flutter)                   │
-│    └─ Foreground background GPS | Instant GNSS warm-up | CARTO basemaps | AMOLED saver │
+│    └─ Instant GNSS warm-up | Auto-pause hysteresis | CARTO basemaps | AMOLED saver     │
 │ 🖥️ Level 4: Backend Engineering & Distributed Spatial Systems (Go + PostGIS)           │
 │    └─ pg_advisory_xact_lock | PostGIS pipeline | Team validation | WebSocket Hub       │
 │ 🔒 Level 5: Cryptography, Privacy & Zero-Trust Security                                │
@@ -631,7 +631,18 @@ Standard mobile map tiles often suffer from inverted dark matrix filters that bl
 
 ---
 
-### 7. Modular Architecture & Provider Separation (< 400 Lines)
+### 9. Athletic Auto-Pause Engine & Start-Line Pause Suppression
+
+In outdoor running tracking, naive auto-pause triggers frequently stall runs during the first few seconds of a session or flap erratically during pedestrian stops. Territory Runner implements an athletic auto-pause engine with hysteresis and start-line suppression:
+- **Calibrated Speed Thresholds:** The auto-pause ceiling triggers when athlete speed drops below **$< 2.5\text{ km/h}$** for 3 consecutive seconds ([auto_pause_engine.dart](lib/services/auto_pause_engine.dart)). Hysteresis requires speed to reach or exceed **$\ge 3.0\text{ km/h}$** to resume, preventing jitter while jogging or walking.
+- **Start-Line Initial Movement Gate (`_hasInitialMovement`):** When athletes tap "Start Run", they are stationary ($0.0\text{ km/h}$) while putting the phone in an armband or waiting at a crosswalk. `AutoPauseEngine` remains unarmed until the runner crosses $2.5\text{ km/h}$ or accumulates active GPS coordinate displacement ($\ge 2.0\text{ m}$), eliminating premature auto-pauses at the start of a run.
+- **10-Second Startup Grace Window:** In [map_run_controller.dart](lib/features/map/controllers/map_run_controller.dart), `startupGraceSeconds = 10` suppresses all pause transitions during the initial 10 seconds of a session.
+- **Immediate Displacement Fast-Resume:** If auto-paused at a red light, detecting $\ge 3.0\text{ m}$ of coordinate displacement immediately calls `forceResume()` and shifts GPS back to active tracking mode ($1\text{ s}$ interval, $2\text{ m}$ filter).
+- **GNSS Doppler Fallback Calculation:** If hardware reports $0.0\text{ km/h}$ or uncalibrated velocity despite physical movement, speed is computed dynamically from consecutive GPS fix displacement ($\Delta d / \Delta t$).
+
+---
+
+### 10. Modular Architecture & Provider Separation (< 400 Lines)
 
 To ensure high maintainability, zero state spaghetti, and complete testability, all monolithic UI screens have been decomposed into single-responsibility layout orchestrators and isolated sub-components strictly under 400 lines:
 
@@ -993,7 +1004,7 @@ Territory Runner enforces strict automated testing across all client and backend
 │ Integration Test Flow   │ E2E Run Sync │ ALL PASS      │
 │ Shared Golden Parity    │ 7 fixtures   │ <0.5% diff    │
 │ Static Code Analysis    │ 0 issues     │ 100% CLEAN    │
-│ Code Formatting         │ 218 files    │ 100% CLEAN    │
+│ Code Formatting         │ 220 files    │ 100% CLEAN    │
 │ Cross-Language Parity   │ 200 Windows  │ 0 Mismatches  │
 │ AIML Anomaly Detector   │ Tier 1 + 2   │ 0.27 µs inf   │
 │ Total Test Coverage     │ Client+Serv  │ 100% PASS     │
