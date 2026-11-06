@@ -44,7 +44,8 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
           const SectionHeader(
             title: 'Amber Red + Off-White + Yellow Palette',
             overline: 'COLOR SYSTEM',
-            subtitle: 'Athletic, high-energy conquest tokens with WCAG AAA readability',
+            subtitle:
+                'Athletic, high-energy design tokens with WCAG AAA readability',
           ),
           const SizedBox(height: AppSpacing.s8),
           _buildColorGrid([
