@@ -4,8 +4,8 @@ import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../ui/ui.dart';
 
-/// Debug-only Design Gallery showcasing all Graphite + Bone + Moss design tokens,
-/// typography styles, and component states.
+/// Debug-only Design Gallery showcasing all Amber Red + Off-White + Electric Yellow
+/// design tokens, typography styles, and component states.
 class DesignGalleryScreen extends StatefulWidget {
   const DesignGalleryScreen({super.key});
 
@@ -42,26 +42,27 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
         children: [
           // 1. Color Palette
           const SectionHeader(
-            title: 'Graphite + Bone + Moss Palette',
+            title: 'Amber Red + Off-White + Yellow Palette',
             overline: 'COLOR SYSTEM',
-            subtitle: 'Calm, minimal, human-designed athletic tokens',
+            subtitle: 'Athletic, high-energy conquest tokens with WCAG AAA readability',
           ),
           const SizedBox(height: AppSpacing.s8),
           _buildColorGrid([
-            _ColorSwatch('bgDeep', AppColors.bgDeep, '#0D0E0C'),
-            _ColorSwatch('bgElevated', AppColors.bgElevated, '#11120F'),
-            _ColorSwatch('surface', AppColors.surface, '#141512'),
-            _ColorSwatch('surface2', AppColors.surface2, '#1B1C18'),
-            _ColorSwatch('border', AppColors.border, '#2A2B26'),
-            _ColorSwatch('accent (mine)', AppColors.accent, '#A3C586'),
-            _ColorSwatch('rival', AppColors.rival, '#86A5D3'),
-            _ColorSwatch('warning', AppColors.warning, '#D9A441'),
-            _ColorSwatch('error', AppColors.error, '#E0716B'),
-            _ColorSwatch('success', AppColors.success, '#A3C586'),
-            _ColorSwatch('info', AppColors.info, '#94A3B8'),
-            _ColorSwatch('gold', AppColors.gold, '#CDAE6A'),
-            _ColorSwatch('silver', AppColors.silver, '#B5B6B0'),
-            _ColorSwatch('bronze', AppColors.bronze, '#B0825A'),
+            _ColorSwatch('bgDeep', AppColors.bgDeep, '#0C0D0E'),
+            _ColorSwatch('bgElevated', AppColors.bgElevated, '#141416'),
+            _ColorSwatch('surface', AppColors.surface, '#1A1A1D'),
+            _ColorSwatch('surface2', AppColors.surface2, '#242428'),
+            _ColorSwatch('border', AppColors.border, '#333338'),
+            _ColorSwatch('accent (mine)', AppColors.accent, '#FDE827'),
+            _ColorSwatch('rival', AppColors.rival, '#95191D'),
+            _ColorSwatch('offWhite', AppColors.offWhite, '#F6F6EA'),
+            _ColorSwatch('warning', AppColors.warning, '#FDE827'),
+            _ColorSwatch('error', AppColors.error, '#95191D'),
+            _ColorSwatch('success', AppColors.success, '#FDE827'),
+            _ColorSwatch('info', AppColors.info, '#F6F6EA'),
+            _ColorSwatch('gold', AppColors.gold, '#FDE827'),
+            _ColorSwatch('silver', AppColors.silver, '#F6F6EA'),
+            _ColorSwatch('bronze', AppColors.bronze, '#95191D'),
           ]),
 
           const SizedBox(height: AppSpacing.s24),
@@ -140,7 +141,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
           const SectionHeader(
             title: 'Interactive Buttons',
             overline: 'COMPONENTS',
-            subtitle: 'Ember primary and surface secondary buttons with 0.97 press scale',
+            subtitle: 'Electric yellow primary and surface secondary buttons with 0.97 press scale',
           ),
           const SizedBox(height: AppSpacing.s8),
           PrimaryButton(

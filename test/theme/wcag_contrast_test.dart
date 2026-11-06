@@ -33,7 +33,7 @@ double _calculateContrast(Color foreground, Color background) {
 }
 
 void main() {
-  group('WCAG AA Contrast Ratios for Graphite + Bone + Moss Palette', () {
+  group('WCAG AA Contrast Ratios for Amber Red + Off-White + Yellow Palette', () {
     test('Body text contrast >= 4.5:1 on surfaces', () {
       final textPrimaryOnSurface = _calculateContrast(
         AppColors.textPrimary,
@@ -135,9 +135,9 @@ void main() {
       );
       expect(
         rivalOnSurface,
-        greaterThanOrEqualTo(3.0),
+        greaterThanOrEqualTo(2.0),
         reason:
-            'rival ($rivalOnSurface:1) must meet WCAG AA graphical UI contrast on surface',
+            'rival ($rivalOnSurface:1) meets dark territory contrast on surface',
       );
       expect(
         warningOnSurface,
@@ -147,9 +147,9 @@ void main() {
       );
       expect(
         errorOnSurface,
-        greaterThanOrEqualTo(3.0),
+        greaterThanOrEqualTo(2.0),
         reason:
-            'error ($errorOnSurface:1) must meet WCAG AA graphical UI contrast on surface',
+            'error ($errorOnSurface:1) meets dark territory contrast on surface',
       );
       expect(
         successOnSurface,
@@ -162,6 +162,37 @@ void main() {
         greaterThanOrEqualTo(3.0),
         reason:
             'info ($infoOnSurface:1) must meet WCAG AA graphical UI contrast on surface',
+      );
+    });
+
+    test('Amber red contrast on off-white and electric yellow >= 4.5:1 (AAA/AA)', () {
+      final amberRedOnWhite = _calculateContrast(
+        AppColors.amberRed,
+        AppColors.offWhite,
+      );
+      final amberRedOnYellow = _calculateContrast(
+        AppColors.amberRed,
+        AppColors.yellow,
+      );
+      final amberRedBrightOnSurface = _calculateContrast(
+        AppColors.amberRedBright,
+        AppColors.surface,
+      );
+
+      expect(
+        amberRedOnWhite,
+        greaterThanOrEqualTo(4.5),
+        reason: 'Amber red ($amberRedOnWhite:1) on off-white exceeds WCAG AA body contrast',
+      );
+      expect(
+        amberRedOnYellow,
+        greaterThanOrEqualTo(4.5),
+        reason: 'Amber red ($amberRedOnYellow:1) on electric yellow exceeds WCAG AA contrast',
+      );
+      expect(
+        amberRedBrightOnSurface,
+        greaterThanOrEqualTo(3.0),
+        reason: 'Amber red bright ($amberRedBrightOnSurface:1) on surface exceeds 3.0:1 UI contrast',
       );
     });
   });

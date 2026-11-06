@@ -6,7 +6,7 @@ import 'app_text.dart';
 import '../motion/motion.dart';
 
 /// Territory Runner Design System: Global ThemeData Configuration
-/// Dark-only theme ("Charcoal + Ember").
+/// Dark-only theme (Amber Red + Off-White + Electric Yellow).
 class AppTheme {
   AppTheme._();
 
@@ -25,13 +25,13 @@ class AppTheme {
         onPrimary: AppColors.onAccent,
         primaryContainer: AppColors.accentContainer,
         secondary: AppColors.rival,
-        onSecondary: AppColors.bgDeep,
+        onSecondary: AppColors.offWhite,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
         surfaceContainer: AppColors.surface2,
         surfaceContainerHigh: AppColors.bgElevated,
         error: AppColors.error,
-        onError: AppColors.bgDeep,
+        onError: AppColors.offWhite,
         outline: AppColors.border,
         outlineVariant: AppColors.borderSubtle,
         scrim: AppColors.scrim,
