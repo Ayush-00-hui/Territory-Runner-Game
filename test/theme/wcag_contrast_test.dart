@@ -182,17 +182,20 @@ void main() {
       expect(
         amberRedOnWhite,
         greaterThanOrEqualTo(4.5),
-        reason: 'Amber red ($amberRedOnWhite:1) on off-white exceeds WCAG AA body contrast',
+        reason:
+            'Amber red ($amberRedOnWhite:1) on off-white exceeds WCAG AA body contrast',
       );
       expect(
         amberRedOnYellow,
         greaterThanOrEqualTo(4.5),
-        reason: 'Amber red ($amberRedOnYellow:1) on electric yellow exceeds WCAG AA contrast',
+        reason:
+            'Amber red ($amberRedOnYellow:1) on electric yellow exceeds WCAG AA contrast',
       );
       expect(
         amberRedBrightOnSurface,
         greaterThanOrEqualTo(3.0),
-        reason: 'Amber red bright ($amberRedBrightOnSurface:1) on surface exceeds 3.0:1 UI contrast',
+        reason:
+            'Amber red bright ($amberRedBrightOnSurface:1) on surface exceeds 3.0:1 UI contrast',
       );
     });
   });
