@@ -24,14 +24,14 @@ class AppTheme {
         primary: AppColors.accent,
         onPrimary: AppColors.onAccent,
         primaryContainer: AppColors.accentContainer,
-        secondary: AppColors.rival,
-        onSecondary: AppColors.offWhite,
+        secondary: AppColors.offWhite,
+        onSecondary: AppColors.bgDeep,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
         surfaceContainer: AppColors.surface2,
         surfaceContainerHigh: AppColors.bgElevated,
         error: AppColors.error,
-        onError: AppColors.offWhite,
+        onError: AppColors.onAccent,
         outline: AppColors.border,
         outlineVariant: AppColors.borderSubtle,
         scrim: AppColors.scrim,
@@ -70,6 +70,53 @@ class AppTheme {
           systemNavigationBarColor: AppColors.bgDeep,
           systemNavigationBarIconBrightness: Brightness.light,
         ),
+      ),
+
+      // Buttons Theme (Electric Yellow CTA & Off-White secondary details)
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.accent,
+          foregroundColor: AppColors.onAccent,
+          elevation: 2,
+          shadowColor: AppColors.accent.withValues(alpha: 0.4),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: AppText.button,
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.offWhite,
+          side: const BorderSide(color: AppColors.offWhite, width: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: AppText.button,
+        ),
+      ),
+
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.accent,
+          textStyle: AppText.button,
+        ),
+      ),
+
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.onAccent,
+        elevation: 4,
+      ),
+
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.bgElevated,
+        selectedItemColor: AppColors.accent,
+        unselectedItemColor: AppColors.textSecondary,
+        elevation: 0,
       ),
 
       // Card Theme (1px hairline border, no colored shadow)

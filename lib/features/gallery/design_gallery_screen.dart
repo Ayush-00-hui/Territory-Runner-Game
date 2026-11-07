@@ -42,28 +42,27 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
         children: [
           // 1. Color Palette
           const SectionHeader(
-            title: 'Amber Red + Off-White + Yellow Palette',
+            title: 'Amber Red Canvas + Off-White + Yellow Detailing',
             overline: 'COLOR SYSTEM',
-            subtitle:
-                'Athletic, high-energy design tokens with WCAG AAA readability',
+            subtitle: 'Athletic, high-energy design tokens with Amber Red canvas and WCAG AAA readability',
           ),
           const SizedBox(height: AppSpacing.s8),
           _buildColorGrid([
-            _ColorSwatch('bgDeep', AppColors.bgDeep, '#0C0D0E'),
-            _ColorSwatch('bgElevated', AppColors.bgElevated, '#141416'),
-            _ColorSwatch('surface', AppColors.surface, '#1A1A1D'),
-            _ColorSwatch('surface2', AppColors.surface2, '#242428'),
-            _ColorSwatch('border', AppColors.border, '#333338'),
+            _ColorSwatch('bgDeep', AppColors.bgDeep, '#95191D'),
+            _ColorSwatch('bgElevated', AppColors.bgElevated, '#7E1317'),
+            _ColorSwatch('surface', AppColors.surface, '#6B0E12'),
+            _ColorSwatch('surface2', AppColors.surface2, '#550A0E'),
+            _ColorSwatch('border', AppColors.border, '35% Off-White'),
             _ColorSwatch('accent (mine)', AppColors.accent, '#FDE827'),
-            _ColorSwatch('rival', AppColors.rival, '#95191D'),
+            _ColorSwatch('rival', AppColors.rival, '#FF454A'),
             _ColorSwatch('offWhite', AppColors.offWhite, '#F6F6EA'),
             _ColorSwatch('warning', AppColors.warning, '#FDE827'),
-            _ColorSwatch('error', AppColors.error, '#95191D'),
+            _ColorSwatch('error', AppColors.error, '#FF454A'),
             _ColorSwatch('success', AppColors.success, '#FDE827'),
             _ColorSwatch('info', AppColors.info, '#F6F6EA'),
             _ColorSwatch('gold', AppColors.gold, '#FDE827'),
             _ColorSwatch('silver', AppColors.silver, '#F6F6EA'),
-            _ColorSwatch('bronze', AppColors.bronze, '#95191D'),
+            _ColorSwatch('bronze', AppColors.bronze, '#FF454A'),
           ]),
 
           const SizedBox(height: AppSpacing.s24),

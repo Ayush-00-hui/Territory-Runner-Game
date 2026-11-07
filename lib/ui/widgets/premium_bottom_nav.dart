@@ -64,13 +64,17 @@ class PremiumBottomNav extends StatelessWidget {
                 Icon(
                   icon,
                   size: 20.0,
-                  color: isSelected ? AppColors.accent : AppColors.textMuted,
+                  color: isSelected
+                      ? AppColors.accent
+                      : AppColors.textSecondary,
                 ),
                 const SizedBox(height: 3),
                 Text(
                   label,
                   style: AppText.caption.copyWith(
-                    color: isSelected ? AppColors.accent : AppColors.textMuted,
+                    color: isSelected
+                        ? AppColors.accent
+                        : AppColors.textSecondary,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     fontSize: 10,
                   ),
@@ -133,8 +137,8 @@ class PremiumBottomNav extends StatelessWidget {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.onAccent.withValues(alpha: 0.4),
-                            blurRadius: 4,
+                            color: AppColors.accent.withValues(alpha: 0.45),
+                            blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
                         ],

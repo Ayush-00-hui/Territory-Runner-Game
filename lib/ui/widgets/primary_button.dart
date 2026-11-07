@@ -113,6 +113,15 @@ class _PrimaryButtonState extends State<PrimaryButton> {
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: AppRadius.br12,
+                boxShadow: (enabled && !widget.isOutlined)
+                    ? [
+                        BoxShadow(
+                          color: widget.backgroundColor.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
                 border: Border.all(
                   color: _isFocused
                       ? AppColors.textPrimary

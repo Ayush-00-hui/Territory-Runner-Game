@@ -55,9 +55,7 @@ class _SecondaryButtonState extends State<SecondaryButton> {
 
     final Color bgColor = enabled ? AppColors.surface2 : AppColors.surface;
     final Color fgColor = enabled ? AppColors.textPrimary : AppColors.textMuted;
-    final Color borderColor = _isFocused
-        ? AppColors.accent
-        : AppColors.borderSubtle;
+    final Color borderColor = _isFocused ? AppColors.accent : AppColors.border;
 
     Widget content = Row(
       mainAxisSize: widget.isFullWidth ? MainAxisSize.max : MainAxisSize.min,
