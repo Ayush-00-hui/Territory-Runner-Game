@@ -5,12 +5,14 @@ import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
+import '../../profile/widgets/calorie_factors_sheet.dart';
 
 /// Interactive skippable route replay card with territory art for SummarySheet.
 class SummaryRouteReplay extends StatelessWidget {
   final List<LatLng> routePoints;
   final double effectiveArea;
   final int calories;
+  final String? calorieRange;
   final AnimationController replayController;
 
   const SummaryRouteReplay({
@@ -18,6 +20,7 @@ class SummaryRouteReplay extends StatelessWidget {
     required this.routePoints,
     required this.effectiveArea,
     required this.calories,
+    this.calorieRange,
     required this.replayController,
   });
 
@@ -74,23 +77,37 @@ class SummaryRouteReplay extends StatelessWidget {
               Positioned(
                 bottom: 8,
                 left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.bgDeep.withValues(alpha: 0.85),
-                    borderRadius: AppSpacing.br8,
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: Text(
-                    'Claimed: ${_formatArea(effectiveArea)} • ${AppPreferences().formatCalories(calories)}',
-                    style: AppText.label.copyWith(
-                      color: AppColors.accent,
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w700,
-                      fontFeatures: const [FontFeature.tabularFigures()],
+                child: GestureDetector(
+                  onTap: () => CalorieFactorsSheet.show(context: context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgDeep.withValues(alpha: 0.85),
+                      borderRadius: AppSpacing.br8,
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Claimed: ${_formatArea(effectiveArea)} • ${calorieRange ?? AppPreferences().formatCalories(calories)}',
+                          style: AppText.label.copyWith(
+                            color: AppColors.accent,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            fontFeatures: const [FontFeature.tabularFigures()],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s4),
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 11,
+                          color: AppColors.textMuted,
+                        ),
+                      ],
                     ),
                   ),
                 ),

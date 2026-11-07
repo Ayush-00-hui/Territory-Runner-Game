@@ -15,6 +15,7 @@ class RunHudMetricsCard extends StatelessWidget {
   final double currentSpeedKmh;
   final double satelliteAccuracyMeters;
   final int? stepCount;
+  final bool isStepCountEstimated;
   final int territoriesClaimed;
   final VoidCallback onToggleExpanded;
 
@@ -30,6 +31,7 @@ class RunHudMetricsCard extends StatelessWidget {
     required this.currentSpeedKmh,
     required this.satelliteAccuracyMeters,
     this.stepCount,
+    this.isStepCountEstimated = true,
     required this.territoriesClaimed,
     required this.onToggleExpanded,
   });
@@ -246,6 +248,14 @@ class RunHudMetricsCard extends StatelessWidget {
                           AppPreferences().formatCalories(
                             AppPreferences().estimateCalories(
                               distanceKm: distanceKm,
+                              durationMinutes: movingSeconds > 0
+                                  ? movingSeconds / 60.0
+                                  : (elapsedSeconds > 0
+                                        ? elapsedSeconds / 60.0
+                                        : null),
+                              speedKmh: currentSpeedKmh > 0
+                                  ? currentSpeedKmh
+                                  : null,
                             ),
                           ),
                           style: AppText.bodyBold.copyWith(
@@ -302,7 +312,7 @@ class RunHudMetricsCard extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.center,
                       child: Semantics(
-                        label: 'estimated',
+                        label: isStepCountEstimated ? 'estimated' : 'measured',
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -313,7 +323,9 @@ class RunHudMetricsCard extends StatelessWidget {
                             ),
                             const SizedBox(width: AppSpacing.s4),
                             Text(
-                              '~${_formatSteps(stepCount!)} steps (est.)',
+                              isStepCountEstimated
+                                  ? '~${_formatSteps(stepCount!)} steps (est.)'
+                                  : '${_formatSteps(stepCount!)} steps',
                               style: AppText.bodyBold.copyWith(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,

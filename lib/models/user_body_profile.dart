@@ -74,13 +74,18 @@ class UserBodyProfile {
   });
 
   /// Factory producing the standard reference adult (70 kg, 170 cm, neutral gender, age 30).
-  factory UserBodyProfile.referenceAdult() {
+  factory UserBodyProfile.referenceAdult({
+    double? weightKg,
+    double? heightCm,
+    Gender? gender,
+    int? ageYears,
+  }) {
     final currentYear = DateTime.now().year;
     return UserBodyProfile(
-      weightKg: defaultWeightKg,
-      heightCm: defaultHeightCm,
-      gender: defaultGender,
-      birthYear: currentYear - defaultAge,
+      weightKg: weightKg ?? defaultWeightKg,
+      heightCm: heightCm ?? defaultHeightCm,
+      gender: gender ?? defaultGender,
+      birthYear: currentYear - (ageYears ?? defaultAge),
       isCustomized: false,
       skippedRunCount: 0,
       reminderDismissed: false,

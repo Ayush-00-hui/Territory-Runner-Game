@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/ui.dart';
 
-/// Collapsible extended metrics drawer revealing average pace, moving time, and active area.
+/// Collapsible extended metrics drawer revealing average pace, moving time, active area,
+/// elevation gain, current incline/grade, and cadence.
 class RunHudExpandedDrawer extends StatelessWidget {
   final bool isExpanded;
   final double distanceKm;
   final int elapsedSeconds;
   final int movingSeconds;
   final double currentAreaSqm;
+  final double grade;
+  final double elevationGainMeters;
+  final double cadenceSpm;
+  final double? strideLengthMeters;
 
   const RunHudExpandedDrawer({
     super.key,
@@ -17,6 +22,10 @@ class RunHudExpandedDrawer extends StatelessWidget {
     required this.elapsedSeconds,
     required this.movingSeconds,
     required this.currentAreaSqm,
+    this.grade = 0.0,
+    this.elevationGainMeters = 0.0,
+    this.cadenceSpm = 0.0,
+    this.strideLengthMeters,
   });
 
   String _formatDuration(int totalSeconds) {
@@ -40,6 +49,10 @@ class RunHudExpandedDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final gradePct = grade * 100.0;
+    final gradeString =
+        '${gradePct > 0 ? '+' : ''}${gradePct.toStringAsFixed(1)}%';
+
     return AnimatedCrossFade(
       firstChild: const SizedBox.shrink(),
       secondChild: isExpanded
@@ -52,82 +65,179 @@ class RunHudExpandedDrawer extends StatelessWidget {
                   borderRadius: AppSpacing.br14,
                   border: Border.all(color: AppColors.borderSubtle),
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Avg pace', style: AppText.labelSmall),
-                          const SizedBox(height: 2),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              _calculateAvgPace(
-                                distanceKm,
-                                movingSeconds > 0
-                                    ? movingSeconds
-                                    : elapsedSeconds,
+                    // Row 1: Avg pace | Moving time | Active area
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Avg pace', style: AppText.labelSmall),
+                              const SizedBox(height: 2),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  _calculateAvgPace(
+                                    distanceKm,
+                                    movingSeconds > 0
+                                        ? movingSeconds
+                                        : elapsedSeconds,
+                                  ),
+                                  style: AppText.bodyBold.copyWith(
+                                    fontSize: 12,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              style: AppText.bodyBold.copyWith(
-                                fontSize: 12,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: AppSpacing.s6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Moving time',
+                                style: AppText.labelSmall,
+                              ),
+                              const SizedBox(height: 2),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  _formatDuration(movingSeconds),
+                                  style: AppText.bodyBold.copyWith(
+                                    fontSize: 12,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Text(
+                                'Active area',
+                                style: AppText.labelSmall,
+                              ),
+                              const SizedBox(height: 2),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  currentAreaSqm > 0
+                                      ? '${(currentAreaSqm / 10000).toStringAsFixed(1)} ha'
+                                      : '0.0 ha',
+                                  style: AppText.bodyBold.copyWith(
+                                    fontSize: 12,
+                                    color: AppColors.accent,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: AppSpacing.s6),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          const Text('Moving time', style: AppText.labelSmall),
-                          const SizedBox(height: 2),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: Text(
-                              _formatDuration(movingSeconds),
-                              style: AppText.bodyBold.copyWith(
-                                fontSize: 12,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
+
+                    const SizedBox(height: AppSpacing.s8),
+                    const Divider(color: AppColors.borderSubtle, height: 1),
+                    const SizedBox(height: AppSpacing.s8),
+
+                    // Row 2: Elev Gain | Grade | Cadence / Stride
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Elev gain',
+                                style: AppText.labelSmall,
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.s6),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          const Text('Active area', style: AppText.labelSmall),
-                          const SizedBox(height: 2),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerRight,
-                            child: Text(
-                              currentAreaSqm > 0
-                                  ? '${(currentAreaSqm / 10000).toStringAsFixed(1)} ha'
-                                  : '0.0 ha',
-                              style: AppText.bodyBold.copyWith(
-                                fontSize: 12,
-                                color: AppColors.accent,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
+                              const SizedBox(height: 2),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  '+${elevationGainMeters.toStringAsFixed(0)} m',
+                                  style: AppText.bodyBold.copyWith(
+                                    fontSize: 12,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: AppSpacing.s6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Text('Grade', style: AppText.labelSmall),
+                              const SizedBox(height: 2),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  gradeString,
+                                  style: AppText.bodyBold.copyWith(
+                                    fontSize: 12,
+                                    color: grade.abs() >= 0.05
+                                        ? AppColors.warning
+                                        : AppColors.textPrimary,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.s6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Text('Cadence', style: AppText.labelSmall),
+                              const SizedBox(height: 2),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  cadenceSpm > 0
+                                      ? '${cadenceSpm.toStringAsFixed(0)} spm'
+                                      : '-- spm',
+                                  style: AppText.bodyBold.copyWith(
+                                    fontSize: 12,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -19,6 +19,7 @@ import '../../gallery/design_gallery_screen.dart';
 import '../../gameplay/territory_service.dart';
 import '../../onboarding/onboarding_screen.dart';
 import 'body_details_sheet.dart';
+import 'calorie_factors_sheet.dart';
 import 'emergency_contact_dialog.dart';
 import 'live_visibility_sheet.dart';
 import 'offline_maps_sheet.dart';
@@ -585,6 +586,54 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                   size: 20,
                 ),
                 onTap: () => _showBodyDetailsSheet(context),
+              );
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ValueListenableBuilder<double?>(
+            valueListenable: AppPreferences().watchCalorieFactorNotifier,
+            builder: (context, factor, _) {
+              final isCalibrated = factor != null;
+              final sessionCount =
+                  AppPreferences().watchCalibrationSessionCount;
+              final subtitle = isCalibrated
+                  ? 'Calibrated (${factor.toStringAsFixed(2)}x factor active)'
+                  : (sessionCount > 0
+                        ? '$sessionCount / 3 calibration runs recorded'
+                        : 'Compare with Apple Watch, Garmin, or Coros');
+
+              return ListTile(
+                dense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s16,
+                  vertical: 2,
+                ),
+                leading: const Icon(
+                  Icons.watch_rounded,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
+                title: Text(
+                  'Watch calorie calibration',
+                  style: AppText.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                subtitle: Text(
+                  subtitle,
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textMuted,
+                  size: 20,
+                ),
+                onTap: () => CalorieFactorsSheet.show(context: context),
               );
             },
           ),

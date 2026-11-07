@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:sensors_plus/sensors_plus.dart';
@@ -51,13 +52,15 @@ class _AccelSample {
 }
 
 /// Samples the device accelerometer at ~25 Hz during active runs and extracts
-/// cadence and motion energy features across 10-second tumbling windows.
+/// cadence and motion energy features across 10-second tumbling windows, while
+/// providing real-time online step detection and continuous cadence estimation.
 ///
 /// Cadence Algorithm:
 /// - Target Band: 1.0 Hz - 3.5 Hz (60 - 210 Steps Per Minute).
 /// - 3-point smoothing filter on linear acceleration magnitude.
 /// - Adaptive threshold peak detection with minimum refractory period (0.285s = 1/3.5 Hz).
-/// - Cadence confidence estimated from step regularity (coefficient of variation of inter-step intervals)
+/// - Online step counting with phone in pocket, hand, or armband.
+/// - Cadence confidence estimated from step regularity (CV of inter-step intervals)
 ///   and signal-to-noise motion energy ratio.
 class MotionSensorService {
   static const String _tag = 'MotionSensorService';
@@ -70,24 +73,81 @@ class MotionSensorService {
   static const double minPeakIntervalSec = 1.0 / maxCadenceHz; // ~0.285s
   static const double maxPeakIntervalSec = 1.0 / minCadenceHz; // 1.0s
 
+  static MotionSensorService? _instance;
+
+  /// Singleton access for app execution, with factory support for mock injection in tests.
+  factory MotionSensorService({Stream<UserAccelerometerEvent>? customStream}) {
+    if (customStream != null) {
+      return MotionSensorService._internal(customStream: customStream);
+    }
+    return _instance ??= MotionSensorService._internal();
+  }
+
+  MotionSensorService._internal({this.customStream});
+
   StreamSubscription<UserAccelerometerEvent>? _subscription;
   final Stream<UserAccelerometerEvent>? customStream;
 
+  // Windowed Batch State (for Anti-Cheat & Sync Queue)
   final List<MotionWindow> _completedWindows = [];
   final List<_AccelSample> _currentSamples = [];
-
   DateTime? _windowStartTime;
   double _lastSampleTimeSec = 0.0;
   bool _isRunning = false;
 
-  MotionSensorService({this.customStream});
+  // Real-Time Online Step & Cadence State
+  int _liveStepCount = 0;
+  double _currentCadenceSpm = 0.0;
+  double _currentCadenceConfidence = 0.0;
+  double _currentMotionEnergy = 0.0;
+  double _lastStepTimeSec = -1.0;
+  final List<double> _recentStepIntervals = [];
+
+  // Running magnitude statistics for online dynamic threshold
+  double _runningMeanMag = 0.0;
+  double _runningVarMag = 0.0;
+  final List<_AccelSample> _onlineSmoothingBuffer = [];
 
   /// Returns unmodifiable list of completed 10-second motion windows.
   List<MotionWindow> get windows => List.unmodifiable(_completedWindows);
 
+  /// Total steps detected in real-time by accelerometer since run started.
+  int get liveStepCount => _liveStepCount;
+
+  /// Live instantaneous/short-window cadence in steps per minute.
+  double get currentCadenceSpm => _currentCadenceSpm;
+
+  /// Live confidence score [0.0 - 1.0] of step regularity and motion strength.
+  double get currentCadenceConfidence => _currentCadenceConfidence;
+
+  /// Live motion energy (mean squared linear acceleration).
+  double get currentMotionEnergy => _currentMotionEnergy;
+
+  /// Returns whether step detection is currently deemed an estimate due to
+  /// low confidence (< 0.40) or low motion energy (< 0.15).
+  bool get isStepCountEstimated {
+    if (_liveStepCount == 0) return true;
+    if (_currentCadenceConfidence < 0.40) return true;
+    if (_currentMotionEnergy < 0.15) return true;
+    return false;
+  }
+
+  /// Computes stride length in meters: speed (m/s) / cadence (steps/s).
+  ///
+  /// Returns null if stationary or cadence is below walking threshold.
+  /// Clamped to plausible physiological range: [0.4m, 2.2m].
+  double? computeStrideLength(double speedKmh) {
+    if (_currentCadenceSpm < 40.0 || speedKmh < 1.0) return null;
+    final speedMs = speedKmh / 3.6;
+    final stepsPerSec = _currentCadenceSpm / 60.0;
+    if (stepsPerSec <= 0) return null;
+    final stride = speedMs / stepsPerSec;
+    return stride.clamp(0.4, 2.2);
+  }
+
   /// Average cadence in steps per minute across all completed windows.
   double get averageCadenceSpm {
-    if (_completedWindows.isEmpty) return 0.0;
+    if (_completedWindows.isEmpty) return _currentCadenceSpm;
     final sum = _completedWindows.fold<double>(
       0.0,
       (acc, w) => acc + w.cadenceSpm,
@@ -97,7 +157,7 @@ class MotionSensorService {
 
   /// Average motion energy across all completed windows.
   double get averageMotionEnergy {
-    if (_completedWindows.isEmpty) return 0.0;
+    if (_completedWindows.isEmpty) return _currentMotionEnergy;
     final sum = _completedWindows.fold<double>(
       0.0,
       (acc, w) => acc + w.motionEnergy,
@@ -107,7 +167,7 @@ class MotionSensorService {
 
   /// Average cadence confidence across all completed windows.
   double get averageCadenceConfidence {
-    if (_completedWindows.isEmpty) return 0.0;
+    if (_completedWindows.isEmpty) return _currentCadenceConfidence;
     final sum = _completedWindows.fold<double>(
       0.0,
       (acc, w) => acc + w.cadenceConfidence,
@@ -123,8 +183,26 @@ class MotionSensorService {
     _isRunning = true;
     _completedWindows.clear();
     _currentSamples.clear();
+    _onlineSmoothingBuffer.clear();
+    _recentStepIntervals.clear();
+    _liveStepCount = 0;
+    _currentCadenceSpm = 0.0;
+    _currentCadenceConfidence = 0.0;
+    _currentMotionEnergy = 0.0;
+    _runningMeanMag = 0.0;
+    _runningVarMag = 0.0;
+    _lastStepTimeSec = -1.0;
     _windowStartTime = DateTime.now();
     _lastSampleTimeSec = 0.0;
+
+    if (customStream == null &&
+        Platform.environment.containsKey('FLUTTER_TEST')) {
+      AppLogger.info(
+        'Motion sensor cadence service idle in test environment without mock stream',
+        tag: _tag,
+      );
+      return;
+    }
 
     try {
       final stream =
@@ -159,36 +237,111 @@ class MotionSensorService {
     final now = DateTime.now();
     _windowStartTime ??= now;
 
-    // Magnitude of linear acceleration (gravity removed by sensor fusion)
-    final mag = math.sqrt(
-      event.x * event.x + event.y * event.y + event.z * event.z,
-    );
-
     // Compute relative timestamp in seconds
     final elapsedSec =
         now.difference(_windowStartTime!).inMilliseconds / 1000.0;
-    _currentSamples.add(_AccelSample(elapsedSec, mag));
-    _lastSampleTimeSec = elapsedSec;
 
-    // When current tumbling window reaches 10 seconds, flush and compute window features
-    if (elapsedSec >= windowDurationSec) {
-      _flushCurrentWindow(now);
-      _windowStartTime = now;
-      _lastSampleTimeSec = 0.0;
-    }
+    _processSample(elapsedSec, event.x, event.y, event.z, now);
   }
 
   /// Manually add samples (useful for tests and synthetic trace ingestion).
   void addRawSample(double timestampSec, double x, double y, double z) {
+    _windowStartTime ??= DateTime.now();
+    _processSample(timestampSec, x, y, z, DateTime.now());
+  }
+
+  /// Unified sample processing pipeline for both live streams and test replay.
+  void _processSample(
+    double timestampSec,
+    double x,
+    double y,
+    double z,
+    DateTime now,
+  ) {
     final mag = math.sqrt(x * x + y * y + z * z);
     _currentSamples.add(_AccelSample(timestampSec, mag));
     _lastSampleTimeSec = timestampSec;
 
-    _windowStartTime ??= DateTime.now();
+    // 1. Online dynamic threshold statistics (exponential moving averages)
+    const alpha = 0.05;
+    final diff = mag - _runningMeanMag;
+    _runningMeanMag += alpha * diff;
+    _runningVarMag = (1.0 - alpha) * (_runningVarMag + alpha * diff * diff);
+    final stdMag = math.sqrt(_runningVarMag);
+    _currentMotionEnergy =
+        (1.0 - alpha) * _currentMotionEnergy + alpha * (mag * mag);
 
+    // 2. Online 3-point smoothing buffer
+    _onlineSmoothingBuffer.add(_AccelSample(timestampSec, mag));
+    if (_onlineSmoothingBuffer.length > 3) {
+      _onlineSmoothingBuffer.removeAt(0);
+    }
+
+    if (_onlineSmoothingBuffer.length == 3) {
+      final sPrev = _onlineSmoothingBuffer[0].magnitude;
+      final sCurr = _onlineSmoothingBuffer[1].magnitude;
+      final sNext = _onlineSmoothingBuffer[2].magnitude;
+      final tCurr = _onlineSmoothingBuffer[1].timestampSec;
+
+      // Centered 3-point smoothed magnitude
+      final smoothedCurr = (sPrev + 2.0 * sCurr + sNext) / 4.0;
+      final threshold = _runningMeanMag + math.max(0.20, 0.35 * stdMag);
+
+      // Local peak condition: sCurr is higher than neighbors and exceeds adaptive threshold
+      if (smoothedCurr >= threshold && sCurr > sPrev && sCurr >= sNext) {
+        if (_lastStepTimeSec < 0 ||
+            (tCurr - _lastStepTimeSec) >= minPeakIntervalSec) {
+          _liveStepCount++;
+
+          if (_lastStepTimeSec >= 0) {
+            final interval = tCurr - _lastStepTimeSec;
+            if (interval >= minPeakIntervalSec &&
+                interval <= maxPeakIntervalSec) {
+              _recentStepIntervals.add(interval);
+              if (_recentStepIntervals.length > 6) {
+                _recentStepIntervals.removeAt(0);
+              }
+
+              // Update online cadence from median interval
+              final sorted = List<double>.from(_recentStepIntervals)..sort();
+              final medianIv = sorted[sorted.length ~/ 2];
+              if (medianIv > 0) {
+                _currentCadenceSpm = (60.0 / medianIv).clamp(40.0, 240.0);
+              }
+
+              // Confidence from CV of inter-step intervals
+              final meanIv =
+                  _recentStepIntervals.reduce((a, b) => a + b) /
+                  _recentStepIntervals.length;
+              double sumSqDiff = 0.0;
+              for (final iv in _recentStepIntervals) {
+                sumSqDiff += (iv - meanIv) * (iv - meanIv);
+              }
+              final stdIv = math.sqrt(sumSqDiff / _recentStepIntervals.length);
+              final cv = meanIv > 0 ? (stdIv / meanIv) : 1.0;
+
+              final regularity = (1.0 - (cv / 0.35)).clamp(0.0, 1.0);
+              final energyScore = (_currentMotionEnergy / 1.5).clamp(0.0, 1.0);
+              _currentCadenceConfidence = (regularity * 0.7 + energyScore * 0.3)
+                  .clamp(0.0, 1.0);
+            }
+          }
+          _lastStepTimeSec = tCurr;
+        }
+      }
+    }
+
+    // 3. Cadence decay: if no step detected for > 2.0 seconds, decay cadence to 0
+    if (_lastStepTimeSec >= 0 && (timestampSec - _lastStepTimeSec) > 2.0) {
+      _currentCadenceSpm = 0.0;
+      _currentCadenceConfidence = 0.0;
+    }
+
+    // 4. Batch Tumbling Window Flush (every 10s or 250 samples)
     if (_currentSamples.length >= 250 || timestampSec >= windowDurationSec) {
-      _flushCurrentWindow(DateTime.now());
-      _windowStartTime = DateTime.now();
+      _flushCurrentWindow(now);
+      _windowStartTime = now;
+      _lastSampleTimeSec = 0.0;
     }
   }
 
@@ -204,8 +357,9 @@ class MotionSensorService {
       _flushCurrentWindow(DateTime.now());
     }
     _currentSamples.clear();
+    _onlineSmoothingBuffer.clear();
     AppLogger.info(
-      'Motion sensor stopped. Total analysis windows computed: ${_completedWindows.length}',
+      'Motion sensor stopped. Steps: $_liveStepCount, windows: ${_completedWindows.length}',
       tag: _tag,
     );
   }
@@ -215,7 +369,14 @@ class MotionSensorService {
     stop();
     _completedWindows.clear();
     _currentSamples.clear();
+    _onlineSmoothingBuffer.clear();
+    _recentStepIntervals.clear();
     _windowStartTime = null;
+    _liveStepCount = 0;
+    _currentCadenceSpm = 0.0;
+    _currentCadenceConfidence = 0.0;
+    _currentMotionEnergy = 0.0;
+    _lastStepTimeSec = -1.0;
   }
 
   /// Analyzes the accumulated samples in the window, derives cadence, energy,
@@ -257,7 +418,6 @@ class MotionSensorService {
     }
 
     // 3. Peak Detection in 1.0 - 3.5 Hz band
-    // Adaptive noise threshold: require peak to exceed at least 0.35 * std or 0.25 m/s²
     double varianceSum = 0.0;
     for (int i = 0; i < n; i++) {
       varianceSum += smoothed[i] * smoothed[i];
@@ -288,7 +448,6 @@ class MotionSensorService {
     double cadenceConfidence = 0.0;
 
     if (peakTimes.length >= 2 && motionEnergy >= 0.15) {
-      // Calculate inter-peak intervals (seconds per step)
       final intervals = <double>[];
       for (int i = 1; i < peakTimes.length; i++) {
         final dt = peakTimes[i] - peakTimes[i - 1];
@@ -298,14 +457,12 @@ class MotionSensorService {
       }
 
       if (intervals.isNotEmpty) {
-        // Median interval for robust cadence estimation
         intervals.sort();
         final medianInterval = intervals[intervals.length ~/ 2];
         if (medianInterval > 0) {
           cadenceSpm = (60.0 / medianInterval).clamp(0.0, 240.0);
         }
 
-        // Regularity confidence: coefficient of variation of valid step intervals
         double sumInterval = 0.0;
         for (final iv in intervals) {
           sumInterval += iv;
@@ -319,7 +476,6 @@ class MotionSensorService {
         final stdInterval = math.sqrt(sumSqDiff / intervals.length);
         final cv = meanInterval > 0 ? (stdInterval / meanInterval) : 1.0;
 
-        // Regular athletic running has CV < 0.15. Random vibrations have CV > 0.40.
         final regularityScore = (1.0 - (cv / 0.35)).clamp(0.0, 1.0);
         final energyScore = (motionEnergy / 1.5).clamp(0.0, 1.0);
         final validStepRatio = (intervals.length / peakTimes.length).clamp(

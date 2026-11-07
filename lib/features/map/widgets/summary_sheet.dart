@@ -197,6 +197,15 @@ class _SummarySheetState extends State<SummarySheet>
     final maxHeight = MediaQuery.sizeOf(context).height * 0.90;
     final calories = AppPreferences().estimateCalories(
       distanceKm: widget.distanceKm,
+      durationMinutes: widget.durationSeconds > 0
+          ? widget.durationSeconds / 60.0
+          : null,
+    );
+    final calorieRange = AppPreferences().estimateAndFormatCalorieRange(
+      distanceKm: widget.distanceKm,
+      durationMinutes: widget.durationSeconds > 0
+          ? widget.durationSeconds / 60.0
+          : null,
     );
 
     return ConstrainedBox(
@@ -238,6 +247,7 @@ class _SummarySheetState extends State<SummarySheet>
               routePoints: effectivePoints,
               effectiveArea: effectiveArea,
               calories: calories,
+              calorieRange: calorieRange,
               replayController: _replayController,
             ),
 

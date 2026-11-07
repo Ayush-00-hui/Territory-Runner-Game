@@ -6,6 +6,8 @@ import 'package:vibration/vibration.dart';
 
 import '../models/user_body_profile.dart';
 import '../ui/ui.dart';
+import 'calorie_engine_service.dart';
+import 'calorie_model_engine.dart';
 
 /// Supported distance and area measurement systems
 enum DistanceUnit { metric, imperial }
@@ -30,6 +32,10 @@ class AppPreferences {
   static const String _prefBodyProfileKey = 'pref_user_body_profile_v1';
   static const String _prefHasSkippedBodyDetailsKey =
       'pref_has_skipped_body_details';
+  static const String _prefWatchCalorieFactorKey =
+      'pref_watch_calorie_factor_v1';
+  static const String _prefWatchCalorieSessionsKey =
+      'pref_watch_calorie_sessions_v1';
 
   bool _isHapticsEnabled = true;
   DistanceUnit _unit = DistanceUnit.metric;
@@ -42,6 +48,8 @@ class AppPreferences {
   double? _bodyWeightKg;
   UserBodyProfile? _bodyProfile;
   bool _hasSkippedBodyDetails = false;
+  double? _watchCalorieFactor;
+  List<Map<String, double>> _watchCalibrationSessions = [];
   bool _isInitialized = false;
 
   final ValueNotifier<bool> leftHandedModeNotifier = ValueNotifier<bool>(false);
@@ -55,6 +63,8 @@ class AppPreferences {
   );
   final ValueNotifier<UserBodyProfile?> bodyProfileNotifier =
       ValueNotifier<UserBodyProfile?>(null);
+  final ValueNotifier<double?> watchCalorieFactorNotifier =
+      ValueNotifier<double?>(null);
 
   bool get isHapticsEnabled => _isHapticsEnabled;
   DistanceUnit get unit => _unit;
@@ -68,6 +78,11 @@ class AppPreferences {
   UserBodyProfile? get bodyProfile => _bodyProfile;
   bool get hasBodyProfile => _bodyProfile != null && _bodyProfile!.isCustomized;
   bool get hasSkippedBodyDetails => _hasSkippedBodyDetails;
+  double? get watchCalorieFactor => _watchCalorieFactor;
+  int get watchCalibrationSessionCount => _watchCalibrationSessions.length;
+  bool get isWatchCalibrationActive => _watchCalorieFactor != null;
+  List<Map<String, double>> get watchCalibrationSessions =>
+      List.unmodifiable(_watchCalibrationSessions);
   bool get isInitialized => _isInitialized;
 
   AppPreferences._internal() {
@@ -135,6 +150,28 @@ class AppPreferences {
         );
       }
       bodyProfileNotifier.value = _bodyProfile;
+
+      // Watch calorie calibration loading
+      _watchCalorieFactor = prefs.getDouble(_prefWatchCalorieFactorKey);
+      watchCalorieFactorNotifier.value = _watchCalorieFactor;
+      final rawSessions = prefs.getString(_prefWatchCalorieSessionsKey);
+      if (rawSessions != null && rawSessions.isNotEmpty) {
+        try {
+          final list = jsonDecode(rawSessions) as List;
+          _watchCalibrationSessions = list
+              .map(
+                (e) => Map<String, double>.from(
+                  (e as Map).map(
+                    (k, v) => MapEntry(k.toString(), (v as num).toDouble()),
+                  ),
+                ),
+              )
+              .toList();
+        } catch (_) {}
+      }
+
+      // Initialize ML surrogate calorie engine in background
+      CalorieModelEngine().loadProductionModel().ignore();
 
       _isInitialized = true;
     } catch (e) {
@@ -306,11 +343,65 @@ class AppPreferences {
     bodyProfileNotifier.value = null;
     bodyWeightKgNotifier.value = null;
 
+    await resetWatchCalibration();
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_prefBodyProfileKey);
       await prefs.remove(_prefBodyWeightKgKey);
       await prefs.remove(_prefHasSkippedBodyDetailsKey);
+    } catch (_) {}
+  }
+
+  /// Records a comparison session between user's trusted watch calories and app estimate.
+  ///
+  /// After at least 3 sessions, computes a bounded multiplicative factor [0.8, 1.2]
+  /// using the median ratio of watch calories / model calories.
+  Future<void> recordWatchCalibrationSession({
+    required double userWatchKcal,
+    required double modelEstimatedKcal,
+  }) async {
+    if (userWatchKcal <= 0 || modelEstimatedKcal <= 0) return;
+    final ratio = userWatchKcal / modelEstimatedKcal;
+    _watchCalibrationSessions.add({
+      'user': userWatchKcal,
+      'model': modelEstimatedKcal,
+      'ratio': ratio,
+    });
+    if (_watchCalibrationSessions.length > 10) {
+      _watchCalibrationSessions.removeAt(0);
+    }
+
+    if (_watchCalibrationSessions.length >= 3) {
+      final ratios = _watchCalibrationSessions.map((s) => s['ratio']!).toList()
+        ..sort();
+      final medianRatio = ratios[ratios.length ~/ 2];
+      _watchCalorieFactor = medianRatio.clamp(0.8, 1.2);
+      watchCalorieFactorNotifier.value = _watchCalorieFactor;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _prefWatchCalorieSessionsKey,
+        jsonEncode(_watchCalibrationSessions),
+      );
+      if (_watchCalorieFactor != null) {
+        await prefs.setDouble(_prefWatchCalorieFactorKey, _watchCalorieFactor!);
+      }
+    } catch (_) {}
+  }
+
+  /// Clears watch calibration data and returns to default uncalibrated state.
+  Future<void> resetWatchCalibration() async {
+    _watchCalorieFactor = null;
+    _watchCalibrationSessions.clear();
+    watchCalorieFactorNotifier.value = null;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefWatchCalorieFactorKey);
+      await prefs.remove(_prefWatchCalorieSessionsKey);
     } catch (_) {}
   }
 
@@ -372,50 +463,176 @@ class AppPreferences {
 
   /// Estimates gross energy expenditure in kilocalories (kcal).
   ///
-  /// Uses the documented ACSM / Margaria metabolic formula:
+  /// By default, utilizes the primary physiological engine ([PhysiologicalCalorieEngine])
+  /// combining ACSM locomotion equations, Minetti et al. slope polynomials,
+  /// Mifflin-St Jeor resting energy, and cycling power dynamics.
+  ///
+  /// Set [useLegacyFlat] to true to compute against the historical flat-factor baseline:
   ///   Calories (kcal) = Distance (km) * Body Weight (kg) * Factor
-  ///
-  /// Activity factors (kcal / kg / km):
-  /// - Running: 1.036 (Margaria et al. 1963, "Energy cost of running in humans")
-  /// - Walking: 0.73 (American College of Sports Medicine metabolic equation)
-  /// - Cycling: 0.40 (ACSM outdoor cycling metabolic guidelines)
-  ///
-  /// If [customWeightKg] is not provided, uses [_bodyProfile?.weightKg] or
-  /// [_bodyWeightKg] if configured, otherwise defaults to reference weight 70.0 kg.
   int estimateCalories({
     required double distanceKm,
     double? customWeightKg,
     String activityType = 'running',
+    double grade = 0.0,
+    double? durationMinutes,
+    double? speedKmh,
+    bool? useLegacyFlat,
   }) {
     if (distanceKm <= 0) return 0;
     final weight =
         customWeightKg ?? _bodyProfile?.weightKg ?? _bodyWeightKg ?? 70.0;
-    final double factor;
-    switch (activityType.toLowerCase()) {
-      case 'walking':
-      case 'walk':
-        factor = 0.73;
-        break;
-      case 'cycling':
-      case 'cycle':
-      case 'bike':
-      case 'biking':
-        factor = 0.40;
-        break;
-      case 'running':
-      case 'run':
-      default:
-        factor = 1.036;
-        break;
+
+    final shouldUseLegacy =
+        useLegacyFlat ??
+        (durationMinutes == null && speedKmh == null && grade == 0.0);
+
+    if (shouldUseLegacy) {
+      final double factor;
+      switch (activityType.toLowerCase()) {
+        case 'walking':
+        case 'walk':
+          factor = 0.73;
+          break;
+        case 'cycling':
+        case 'cycle':
+        case 'bike':
+        case 'biking':
+          factor = 0.40;
+          break;
+        case 'running':
+        case 'run':
+        default:
+          factor = 1.036;
+          break;
+      }
+      return (distanceKm * weight * factor).round();
     }
-    return (distanceKm * weight * factor).round();
+
+    final result = estimatePhysiologicalCalories(
+      distanceKm: distanceKm,
+      customWeightKg: weight,
+      activityType: activityType,
+      grade: grade,
+      durationMinutes: durationMinutes,
+      speedKmh: speedKmh,
+    );
+    double gross = result.grossKcal;
+    if (_watchCalorieFactor != null) {
+      gross *= _watchCalorieFactor!;
+    }
+    return gross.round();
+  }
+
+  /// Predicts energy expenditure with P10/P50/P90 quantile intervals
+  /// using the on-device ML surrogate model (with analytical fallback).
+  CalorieQuantileResult estimateQuantileCalories({
+    required double distanceKm,
+    double? customWeightKg,
+    String activityType = 'running',
+    double grade = 0.0,
+    double cadenceSpm = 0.0,
+    double? durationMinutes,
+    double? speedKmh,
+  }) {
+    final weight =
+        customWeightKg ?? _bodyProfile?.weightKg ?? _bodyWeightKg ?? 70.0;
+    final durSec = (durationMinutes ?? 0.0) * 60.0;
+    final spd =
+        speedKmh ??
+        (durationMinutes != null && durationMinutes > 0
+            ? (distanceKm / (durationMinutes / 60.0))
+            : 0.0);
+
+    return CalorieModelEngine().estimateSegment(
+      distanceKm: distanceKm,
+      durationSeconds: durSec,
+      speedKmh: spd,
+      grade: grade,
+      cadenceSpm: cadenceSpm,
+      activityType: activityType,
+      profile: _bodyProfile ?? UserBodyProfile.referenceAdult(weightKg: weight),
+      watchCalibrationFactor: _watchCalorieFactor,
+    );
+  }
+
+  /// Estimates and formats calorie estimate with an uncertainty range for post-run summary sheets.
+  String estimateAndFormatCalorieRange({
+    required double distanceKm,
+    double? durationMinutes,
+    double? speedKmh,
+    double grade = 0.0,
+    double cadenceSpm = 0.0,
+    String activityType = 'running',
+  }) {
+    final quant = estimateQuantileCalories(
+      distanceKm: distanceKm,
+      durationMinutes: durationMinutes,
+      speedKmh: speedKmh,
+      grade: grade,
+      cadenceSpm: cadenceSpm,
+      activityType: activityType,
+    );
+    return quant.displayRange;
+  }
+
+  /// Full physiological calculation returning gross/net calories, burn rate, and METs.
+  CalorieEstimateResult estimatePhysiologicalCalories({
+    required double distanceKm,
+    double? customWeightKg,
+    String activityType = 'running',
+    double grade = 0.0,
+    double? durationMinutes,
+    double? speedKmh,
+  }) {
+    final weight =
+        customWeightKg ?? _bodyProfile?.weightKg ?? _bodyWeightKg ?? 70.0;
+
+    double defaultSpeed;
+    final act = activityType.toLowerCase();
+    if (act == 'walking' || act == 'walk') {
+      defaultSpeed = 5.0;
+    } else if (act == 'cycling' ||
+        act == 'cycle' ||
+        act == 'bike' ||
+        act == 'biking') {
+      defaultSpeed = 20.0;
+    } else {
+      defaultSpeed = 10.0;
+    }
+
+    final spd =
+        speedKmh ??
+        (durationMinutes != null && durationMinutes > 0
+            ? (distanceKm / (durationMinutes / 60.0))
+            : defaultSpeed);
+    final durSec = (durationMinutes != null)
+        ? durationMinutes * 60.0
+        : (distanceKm > 0 ? (distanceKm / spd) * 3600.0 : 0.0);
+
+    final profile =
+        _bodyProfile ?? UserBodyProfile.referenceAdult(weightKg: weight);
+
+    return PhysiologicalCalorieEngine.estimateSegment(
+      distanceKm: distanceKm,
+      durationSeconds: durSec,
+      speedKmh: spd,
+      grade: grade,
+      activityType: activityType,
+      profile: profile,
+    );
   }
 
   /// Formats estimated calories with the required "(est.)" label.
-  /// Example: "~363 kcal (est.)" or "+~363 kcal (est.)" if [withPrefixPlus] is true.
+  /// Example: "~376 kcal (est.)" or "+~376 kcal (est.)" if [withPrefixPlus] is true.
   String formatCalories(int calories, {bool withPrefixPlus = false}) {
     final prefix = withPrefixPlus ? '+~' : '~';
     return '$prefix$calories kcal (est.)';
+  }
+
+  /// Formats an estimated calorie range.
+  /// Example: "~350–395 kcal (est.)"
+  String formatCalorieRange(int minKcal, int maxKcal) {
+    return '~$minKcal–$maxKcal kcal (est.)';
   }
 
   // --- UNIT CONVERSION & FORMATTING HELPERS ---

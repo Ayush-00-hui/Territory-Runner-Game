@@ -1,0 +1,96 @@
+{
+  "test_vectors": [
+    {
+      "description": "Stationary Reference Adult",
+      "features": {
+        "body_mass_kg": 70.0,
+        "speed_kmh": 0.0,
+        "grade": 0.0,
+        "cadence_spm": 0.0,
+        "climb_rate_m_min": 0.0
+      },
+      "expected_p10": 1.2765318238255998,
+      "expected_p50": 2.3915122662474255,
+      "expected_p90": 2.815243094564487
+    },
+    {
+      "description": "ACSM Level Walk 5 km/h",
+      "features": {
+        "body_mass_kg": 70.0,
+        "speed_kmh": 5.0,
+        "grade": 0.0,
+        "cadence_spm": 115.0,
+        "climb_rate_m_min": 0.0
+      },
+      "expected_p10": 1.460914401589623,
+      "expected_p50": 2.736942899604847,
+      "expected_p90": 3.221877515359846
+    },
+    {
+      "description": "ACSM Moderate Run 10 km/h",
+      "features": {
+        "body_mass_kg": 70.0,
+        "speed_kmh": 10.0,
+        "grade": 0.0,
+        "cadence_spm": 165.0,
+        "climb_rate_m_min": 0.0
+      },
+      "expected_p10": 6.587935008556632,
+      "expected_p50": 12.342134436561054,
+      "expected_p90": 14.52892767271311
+    },
+    {
+      "description": "ACSM Uphill Run 10 km/h (+5%)",
+      "features": {
+        "body_mass_kg": 70.0,
+        "speed_kmh": 10.0,
+        "grade": 0.05,
+        "cadence_spm": 165.0,
+        "climb_rate_m_min": 8.333333333333334
+      },
+      "expected_p10": 8.041503366094933,
+      "expected_p50": 15.065314926072213,
+      "expected_p90": 17.734604338707623
+    },
+    {
+      "description": "Minetti Steep Climb 8 km/h (+10%)",
+      "features": {
+        "body_mass_kg": 70.0,
+        "speed_kmh": 8.0,
+        "grade": 0.1,
+        "cadence_spm": 160.0,
+        "climb_rate_m_min": 13.333333333333334
+      },
+      "expected_p10": 7.708456591491963,
+      "expected_p50": 14.441370084407255,
+      "expected_p90": 17.00010824948511
+    },
+    {
+      "description": "Heavy Runner Level 90 kg",
+      "features": {
+        "body_mass_kg": 90.0,
+        "speed_kmh": 10.0,
+        "grade": 0.0,
+        "cadence_spm": 160.0,
+        "climb_rate_m_min": 0.0
+      },
+      "expected_p10": 8.550954580758072,
+      "expected_p50": 16.01974379825676,
+      "expected_p90": 18.8581399900161
+    },
+    {
+      "description": "Light Runner Level 55 kg",
+      "features": {
+        "body_mass_kg": 55.0,
+        "speed_kmh": 10.0,
+        "grade": 0.0,
+        "cadence_spm": 170.0,
+        "climb_rate_m_min": 0.0
+      },
+      "expected_p10": 5.7107424557321735,
+      "expected_p50": 10.698762363271333,
+      "expected_p90": 12.594381090441741
+    }
+  ],
+  "trees_sha256": "6ef0429cf529b8267a635631ffec9e3bab027423f1376519739eda47071037e4"
+}

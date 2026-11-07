@@ -114,8 +114,9 @@ void main() {
           ),
         );
 
-        // 5.0 km * 70 kg * 1.036 = 363 kcal
-        expect(find.text('~363 kcal (est.)'), findsOneWidget);
+        // With 1450s duration and 12 km/h speed, ACSM physiological model computes:
+        // VO2 = 0.2 * 200 + 3.5 = 43.5 mL/kg/min => 14.80 kcal/min * 24.167 min = 358 kcal
+        expect(find.text('~358 kcal (est.)'), findsOneWidget);
       },
     );
 
@@ -145,10 +146,14 @@ void main() {
     );
 
     testWidgets(
-      'Settings list allows configuring and resetting optional body weight',
+      'Settings list allows configuring and resetting optional body details',
       (tester) async {
+        tester.view.physicalSize = const Size(800, 1100);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
         final prefs = AppPreferences();
-        prefs.setMockBodyWeight(null);
+        await prefs.clearBodyProfile();
 
         await tester.pumpWidget(
           MaterialApp(
@@ -165,46 +170,48 @@ void main() {
           ),
         );
 
-        final weightTile = find.text('Body weight (optional)');
-        expect(weightTile, findsOneWidget);
-        await tester.ensureVisible(weightTile);
+        final detailsTile = find.text('Body details');
+        expect(detailsTile, findsOneWidget);
+        await tester.ensureVisible(detailsTile);
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Default: 70.0 kg (not set) • Tap to customize'),
+          find.text('Default: 70 kg, 170 cm (not set) • Tap to customize'),
           findsOneWidget,
         );
 
-        // Open dialog
-        await tester.tap(weightTile);
+        // Open sheet
+        await tester.tap(detailsTile);
         await tester.pumpAndSettle();
 
-        expect(find.byType(TextField), findsOneWidget);
-        await tester.enterText(find.byType(TextField), '68.5');
+        expect(find.byType(TextField), findsWidgets);
+        await tester.enterText(find.byType(TextField).at(0), '68.5');
+        await tester.enterText(find.byType(TextField).at(1), '175');
         await tester.pumpAndSettle();
 
-        final saveButton = find.text('Save weight');
+        final saveButton = find.text('Save details');
+        expect(saveButton, findsOneWidget);
         await tester.tap(saveButton);
         await tester.pumpAndSettle();
 
         expect(prefs.bodyWeightKg, 68.5);
-        expect(
-          find.text('68.5 kg • Used for calorie estimates'),
-          findsOneWidget,
-        );
+        expect(prefs.bodyProfile, isNotNull);
+        expect(prefs.bodyProfile!.weightKg, 68.5);
 
-        // Re-open dialog and reset
-        await tester.tap(weightTile);
+        // Re-open sheet and remove
+        await tester.tap(detailsTile);
         await tester.pumpAndSettle();
 
-        final resetButton = find.text('Reset to standard default (70 kg)');
-        expect(resetButton, findsOneWidget);
-        await tester.tap(resetButton);
+        final removeButton = find.text('Remove my body details');
+        expect(removeButton, findsOneWidget);
+        await tester.ensureVisible(removeButton);
+        await tester.pumpAndSettle();
+        await tester.tap(removeButton);
         await tester.pumpAndSettle();
 
-        expect(prefs.bodyWeightKg, isNull);
+        expect(prefs.bodyProfile, isNull);
         expect(
-          find.text('Default: 70.0 kg (not set) • Tap to customize'),
+          find.text('Default: 70 kg, 170 cm (not set) • Tap to customize'),
           findsOneWidget,
         );
       },
