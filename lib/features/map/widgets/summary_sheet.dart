@@ -214,7 +214,6 @@ class _SummarySheetState extends State<SummarySheet>
           : null,
       elevationGainMeters: widget.elevationGainMeters,
     );
-    final calorieRange = quantile.displayRange;
     final activeWeightKg = AppPreferences().bodyWeightKg ?? 70.0;
 
     return ConstrainedBox(
