@@ -135,6 +135,7 @@ Conversely, first-generation location-based games (Ingress, Pokémon GO, Turf) c
 | **Privacy Safeguards** | Client-only map blur | None | **Dual-layer: client redaction + server-side geodesic suppression in WebSockets** |
 | **Rival Alerts** | None | Delayed batch emails | **Real-time WebSocket alerts + FCM HTTP v1 background push** |
 | **Map Cartography** | Standard map SDK | Low-detail raster / custom vector | **Crisp CARTO Voyager, Positron & Dark Matter retina basemaps (`@2x.png`, native clarity, OSM compliant)** |
+| **Auto-Pause Engine** | Basic threshold, pauses at start line | None (battery drain) | **Athletic hysteresis ($< 2.5 \to \ge 3.0\text{ km/h}$) + start-line suppression gate + 10s grace window** |
 | **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Athletic, high-contrast Aerospace Obsidian + Cyber Volt + Hyper Coral (`#0A0C10`, `#00F59B`, `#FF385C`)** |
 
 ---
@@ -614,7 +615,7 @@ Engineered specifically for outdoor athletic glanceability at arm's length, dire
   - `territoryRivalFill` (`#33FF385C`): 20% Hyper Coral glow for rival territory.
 - **Tabular Figures & Glanceable Typography:** In [run_hud_metrics_card.dart](lib/features/map/widgets/run_hud_metrics_card.dart), distance (34sp), moving time (32sp), and split pace (28sp) are formatted with bold weights (`FontWeight.w700`) and tabular figures (`FontFeature.tabularFigures()`), eliminating horizontal digit jitter while running.
 - **Cyber Volt Enclosure Pulse:** [run_hud_closure_bar.dart](lib/features/map/widgets/run_hud_closure_bar.dart) features a smooth ticker-driven Cyber Volt glow animation that energetically pulses when loop closure proximity exceeds 80%.
-- **Safety Thumb-Zone Hold-To-Finish:** Accidental-tap protected 3-second hold-to-finish button [hold_to_finish_button.dart](lib/features/map/widgets/hold_to_finish_button.dart) anchored directly in the bottom thumb zone.
+- **Safety Thumb-Zone Hold-To-Finish:** Accidental-tap protected 1.4-second press-and-hold button [hold_to_finish_button.dart](lib/features/map/widgets/hold_to_finish_button.dart) with tactile haptic tick milestones at 33% and 66% and heavy burst on completion, anchored directly in the bottom thumb zone.
 - **Zero Raw Colors Policy:** Verified by automated regression tests; all UI components resolve via canonical semantic design tokens.
 
 ---
@@ -1072,6 +1073,9 @@ See **[Production Deployment Specification](docs/DEPLOYMENT.md)** for Docker mul
 | **How does Singleflight prevent WebSocket deadlocks?** | Decouples connection snapshotting from database I/O by releasing the mutex before querying friendships. `singleflight.Group` coalesces concurrent cache misses per sender into a single DB query, eliminating cache stampedes. |
 | **Why FCM HTTP v1 instead of legacy server keys?** | Legacy FCM server keys are deprecated by Google and represent permanent credentials. FCM HTTP v1 requires short-lived (60 min) OAuth2 tokens signed with RS256 assertions using service account keys. |
 | **Why zero-interpolation on GPS signal dropouts?** | Signal dropouts $>15\text{s}$ segment the active buffer. Dead-reckoning across urban canyons risks hallucinating paths through impassable buildings or private property; resetting ensures every polygon represents physically verified movement. |
+| **Why auto-pause at $< 2.5\text{ km/h}$ with hysteresis instead of instant pausing?** | GPS multi-path jitter and runner arm swing while walking/waiting at curbs cause instant speed fluctuations. Hysteresis ($< 2.5\text{ km/h}$ ceiling for 3s to pause, $\ge 3.0\text{ km/h}$ floor to resume) eliminates flapping. The initial movement gate (`_hasInitialMovement`) and 10s startup grace window prevent premature pausing at the start line. |
+| **Why CARTO retina basemaps over inverted dark OSM matrices?** | Inverting standard OpenStreetMap tiles via color matrices blurs pedestrian footpaths and parks while creating unreadable street labels in bright sunlight. CARTO Voyager `@2x` provides native clarity, crisp pedestrian paths, mint-green open spaces, and full OSM compliance with zero proprietary API key lock-in. |
+| **Why server-authoritative team name validation with Unicode NFKC?** | Prevents homoglyph spoofing, zero-width space squatting (`\u200B`), and administrative impersonation. Normalizing with NFKC and enforcing a 3/day modification rate limit protects social radar feeds without leaking PII. |
 
 > For the complete 335-line comprehensive defense covering all questions, see **[Viva Examiner Defense Dossier](docs/VIVA.md)**.
 
