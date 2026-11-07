@@ -4,7 +4,7 @@ import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
 
 /// Primary Distance, Time, Pace and Secondary Metrics Card for RunHud.
-class RunHudMetricsCard extends StatelessWidget {
+class RunHudMetricsCard extends StatefulWidget {
   final bool isRunActive;
   final bool isAutoPaused;
   final double distanceKm;
@@ -35,6 +35,36 @@ class RunHudMetricsCard extends StatelessWidget {
     required this.territoriesClaimed,
     required this.onToggleExpanded,
   });
+
+  @override
+  State<RunHudMetricsCard> createState() => _RunHudMetricsCardState();
+}
+
+class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
+  int _cachedCalories = 0;
+  int _lastCalculatedSec = -1;
+
+  int _getThrottledCalories() {
+    final effectiveSec = widget.movingSeconds > 0
+        ? widget.movingSeconds
+        : widget.elapsedSeconds;
+    // Update every 5 seconds, when not yet calculated, or when run is not active
+    if (_lastCalculatedSec < 0 ||
+        (effectiveSec - _lastCalculatedSec).abs() >= 5 ||
+        !widget.isRunActive) {
+      _lastCalculatedSec = effectiveSec;
+      _cachedCalories = AppPreferences().estimateCalories(
+        distanceKm: widget.distanceKm,
+        durationMinutes: widget.movingSeconds > 0
+            ? widget.movingSeconds / 60.0
+            : (widget.elapsedSeconds > 0
+                  ? widget.elapsedSeconds / 60.0
+                  : null),
+        speedKmh: widget.currentSpeedKmh > 0 ? widget.currentSpeedKmh : null,
+      );
+    }
+    return _cachedCalories;
+  }
 
   String _formatDuration(int totalSeconds) {
     final int hours = totalSeconds ~/ 3600;
@@ -77,7 +107,9 @@ class RunHudMetricsCard extends StatelessWidget {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          isRunActive ? distanceKm.toStringAsFixed(2) : '0.00',
+                          widget.isRunActive
+                              ? widget.distanceKm.toStringAsFixed(2)
+                              : '0.00',
                           style: AppText.statHero.copyWith(
                             fontSize: 34,
                             fontWeight: FontWeight.w700,
@@ -102,7 +134,7 @@ class RunHudMetricsCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text('Time', style: AppText.labelSmall),
-                      if (isRunActive && !isAutoPaused) ...[
+                      if (widget.isRunActive && !widget.isAutoPaused) ...[
                         const SizedBox(width: AppSpacing.s4),
                         Container(
                           width: 6,
@@ -119,11 +151,11 @@ class RunHudMetricsCard extends StatelessWidget {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      isRunActive
+                      widget.isRunActive
                           ? _formatDuration(
-                              movingSeconds > 0
-                                  ? movingSeconds
-                                  : elapsedSeconds,
+                              widget.movingSeconds > 0
+                                  ? widget.movingSeconds
+                                  : widget.elapsedSeconds,
                             )
                           : '00:00',
                       style: AppText.timer.copyWith(
@@ -146,7 +178,7 @@ class RunHudMetricsCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Text('Pace', style: AppText.labelSmall),
-                      if (targetPace != null) ...[
+                      if (widget.targetPace != null) ...[
                         const SizedBox(width: 4),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -158,7 +190,7 @@ class RunHudMetricsCard extends StatelessWidget {
                             borderRadius: AppSpacing.br8,
                           ),
                           child: Text(
-                            'P: $targetPace',
+                            'P: ${widget.targetPace}',
                             style: AppText.labelSmall.copyWith(
                               color: AppColors.info,
                               fontSize: 8.5,
@@ -173,7 +205,7 @@ class RunHudMetricsCard extends StatelessWidget {
                     fit: BoxFit.scaleDown,
                     alignment: Alignment.centerRight,
                     child: Text(
-                      isRunActive ? splitPace : "--'--\"",
+                      widget.isRunActive ? widget.splitPace : "--'--\"",
                       style: AppText.statHero.copyWith(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
@@ -191,7 +223,7 @@ class RunHudMetricsCard extends StatelessWidget {
 
         // Secondary Metrics Row (Tap to expand/collapse extended metrics)
         GestureDetector(
-          onTap: onToggleExpanded,
+          onTap: widget.onToggleExpanded,
           behavior: HitTestBehavior.opaque,
           child: Container(
             padding: const EdgeInsets.symmetric(
@@ -219,7 +251,7 @@ class RunHudMetricsCard extends StatelessWidget {
                         ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
-                          '${currentSpeedKmh.toStringAsFixed(1)} km/h',
+                          '${widget.currentSpeedKmh.toStringAsFixed(1)} km/h',
                           style: AppText.bodyBold.copyWith(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -246,17 +278,7 @@ class RunHudMetricsCard extends StatelessWidget {
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           AppPreferences().formatCalories(
-                            AppPreferences().estimateCalories(
-                              distanceKm: distanceKm,
-                              durationMinutes: movingSeconds > 0
-                                  ? movingSeconds / 60.0
-                                  : (elapsedSeconds > 0
-                                        ? elapsedSeconds / 60.0
-                                        : null),
-                              speedKmh: currentSpeedKmh > 0
-                                  ? currentSpeedKmh
-                                  : null,
-                            ),
+                            _getThrottledCalories(),
                           ),
                           style: AppText.bodyBold.copyWith(
                             fontSize: 11,
@@ -278,24 +300,24 @@ class RunHudMetricsCard extends StatelessWidget {
                       children: [
                         Icon(
                           Icons.satellite_alt_rounded,
-                          color: satelliteAccuracyMeters <= 10.0
+                          color: widget.satelliteAccuracyMeters <= 10.0
                               ? AppColors.accent
-                              : (satelliteAccuracyMeters <= 30.0
+                              : (widget.satelliteAccuracyMeters <= 30.0
                                     ? AppColors.warning
                                     : AppColors.rival),
                           size: 14,
                         ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
-                          satelliteAccuracyMeters > 50.0
+                          widget.satelliteAccuracyMeters > 50.0
                               ? 'No GPS'
-                              : '±${satelliteAccuracyMeters.toStringAsFixed(0)}m',
+                              : '±${widget.satelliteAccuracyMeters.toStringAsFixed(0)}m',
                           style: AppText.bodySmall.copyWith(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
-                            color: satelliteAccuracyMeters <= 10.0
+                            color: widget.satelliteAccuracyMeters <= 10.0
                                 ? AppColors.textSecondary
-                                : (satelliteAccuracyMeters <= 30.0
+                                : (widget.satelliteAccuracyMeters <= 30.0
                                       ? AppColors.warning
                                       : AppColors.rival),
                             fontFeatures: const [FontFeature.tabularFigures()],
@@ -305,14 +327,16 @@ class RunHudMetricsCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (stepCount != null) ...[
+                if (widget.stepCount != null) ...[
                   const SizedBox(width: AppSpacing.s4),
                   Expanded(
                     child: FittedBox(
                       fit: BoxFit.scaleDown,
                       alignment: Alignment.center,
                       child: Semantics(
-                        label: isStepCountEstimated ? 'estimated' : 'measured',
+                        label: widget.isStepCountEstimated
+                            ? 'estimated'
+                            : 'measured',
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -323,9 +347,9 @@ class RunHudMetricsCard extends StatelessWidget {
                             ),
                             const SizedBox(width: AppSpacing.s4),
                             Text(
-                              isStepCountEstimated
-                                  ? '~${_formatSteps(stepCount!)} steps (est.)'
-                                  : '${_formatSteps(stepCount!)} steps',
+                              widget.isStepCountEstimated
+                                  ? '~${_formatSteps(widget.stepCount!)} steps (est.)'
+                                  : '${_formatSteps(widget.stepCount!)} steps',
                               style: AppText.bodyBold.copyWith(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -355,7 +379,7 @@ class RunHudMetricsCard extends StatelessWidget {
                         ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
-                          '$territoriesClaimed claimed',
+                          '${widget.territoriesClaimed} claimed',
                           style: AppText.bodyBold.copyWith(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,

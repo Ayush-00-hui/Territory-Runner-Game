@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -412,5 +413,64 @@ void main() {
         contains('Server adjusted -150.0 m²'),
       );
     });
+
+    test(
+      'QueuedRun stores estimatedCalories & calorieModelVersion locally in Hive and never sends them to ApiClient',
+      () async {
+        late Map<String, dynamic> sentPayload;
+        final mockClient = MockClient((request) async {
+          sentPayload = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            '{"run_id":"run_privacy","idempotency_key":"test_privacy","area_claimed_sqm":1000.0}',
+            201,
+          );
+        });
+        final apiClient = ApiClient(
+          httpClient: mockClient,
+          baseUrl: 'http://mock',
+          maxRetries: 0,
+        );
+        final syncQueue = SyncQueueService(
+          apiClient: apiClient,
+          overrideBox: testBox,
+          overrideRejectedBox: testRejectedBox,
+        );
+
+        await syncQueue.enqueueRun(
+          idempotencyKey: 'test_privacy',
+          points: [const LatLng(51.5, -0.12)],
+          durationSeconds: 600,
+          distanceMeters: 2000.0,
+          clientPreviewArea: 1000.0,
+          clientPreviewXp: 100,
+          estimatedCalories: 142,
+          calorieModelVersion: '1.0.0',
+          autoSync: false,
+        );
+
+        // Verify local Hive storage contains calories and model version
+        final rawJson = testBox.get('test_privacy');
+        expect(rawJson, isNotNull);
+        final decoded = jsonDecode(rawJson!) as Map<String, dynamic>;
+        expect(decoded['estimatedCalories'], equals(142));
+        expect(decoded['calorieModelVersion'], equals('1.0.0'));
+
+        // Deserialization round-trip into QueuedRun
+        final queuedRun = QueuedRun.fromJson(decoded);
+        expect(queuedRun.estimatedCalories, equals(142));
+        expect(queuedRun.calorieModelVersion, equals('1.0.0'));
+
+        // Sync to backend and verify payload strictly omits calorie & health data
+        final success = await syncQueue.syncPendingRuns();
+        expect(success, isTrue);
+        expect(sentPayload.containsKey('calories'), isFalse);
+        expect(sentPayload.containsKey('estimatedCalories'), isFalse);
+        expect(sentPayload.containsKey('calorieModelVersion'), isFalse);
+        expect(sentPayload.containsKey('weight'), isFalse);
+        expect(sentPayload.containsKey('height'), isFalse);
+        expect(sentPayload.containsKey('gender'), isFalse);
+        expect(sentPayload.containsKey('age'), isFalse);
+      },
+    );
   });
 }

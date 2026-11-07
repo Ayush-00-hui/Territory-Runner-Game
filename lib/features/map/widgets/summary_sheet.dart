@@ -11,6 +11,7 @@ import '../../../ui/ui.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../history/widgets/run_share_card_modal.dart';
 import '../../profile/widgets/body_details_sheet.dart';
+import '../../profile/widgets/calorie_factors_sheet.dart';
 import 'summary_coach_card.dart';
 import 'summary_route_replay.dart';
 import 'summary_stats_grid.dart';
@@ -26,6 +27,7 @@ class SummarySheet extends StatefulWidget {
   final List<LatLng>? routePoints;
   final double? areaSqMeters;
   final String? rejectionReason;
+  final double elevationGainMeters;
 
   const SummarySheet({
     super.key,
@@ -37,6 +39,7 @@ class SummarySheet extends StatefulWidget {
     this.routePoints,
     this.areaSqMeters,
     this.rejectionReason,
+    this.elevationGainMeters = 0.0,
   });
 
   static Future<void> show({
@@ -49,6 +52,7 @@ class SummarySheet extends StatefulWidget {
     List<LatLng>? routePoints,
     double? areaSqMeters,
     String? rejectionReason,
+    double elevationGainMeters = 0.0,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -66,6 +70,7 @@ class SummarySheet extends StatefulWidget {
         routePoints: routePoints,
         areaSqMeters: areaSqMeters,
         rejectionReason: rejectionReason,
+        elevationGainMeters: elevationGainMeters,
       ),
     );
   }
@@ -200,13 +205,17 @@ class _SummarySheetState extends State<SummarySheet>
       durationMinutes: widget.durationSeconds > 0
           ? widget.durationSeconds / 60.0
           : null,
+      elevationGainMeters: widget.elevationGainMeters,
     );
-    final calorieRange = AppPreferences().estimateAndFormatCalorieRange(
+    final quantile = AppPreferences().estimateQuantileCalories(
       distanceKm: widget.distanceKm,
       durationMinutes: widget.durationSeconds > 0
           ? widget.durationSeconds / 60.0
           : null,
+      elevationGainMeters: widget.elevationGainMeters,
     );
+    final calorieRange = quantile.displayRange;
+    final activeWeightKg = AppPreferences().bodyWeightKg ?? 70.0;
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -247,8 +256,92 @@ class _SummarySheetState extends State<SummarySheet>
               routePoints: effectivePoints,
               effectiveArea: effectiveArea,
               calories: calories,
-              calorieRange: calorieRange,
               replayController: _replayController,
+            ),
+
+            const SizedBox(height: AppSpacing.s14),
+
+            // 3b. Honest Calorie Range Card
+            AppCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s12,
+                vertical: AppSpacing.s10,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        color: AppColors.rival,
+                        size: 18,
+                      ),
+                      const SizedBox(width: AppSpacing.s8),
+                      Expanded(
+                        child: Text(
+                          AppPreferences().formatCalories(calories),
+                          style: AppText.headingSmall.copyWith(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            color: AppColors.textPrimary,
+                            fontFeatures: const [
+                              FontFeature.tabularFigures(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  Text(
+                    'Likely between ${quantile.p10Kcal.round()} and ${quantile.p90Kcal.round()} kcal',
+                    style: AppText.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s4),
+                  Text(
+                    'Based on ${activeWeightKg.toStringAsFixed(0)} kg, ${widget.distanceKm.toStringAsFixed(1)} km${widget.elevationGainMeters > 0 ? ", +${widget.elevationGainMeters.toStringAsFixed(0)} m climb" : ""}',
+                    style: AppText.labelSmall.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 10.5,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s6),
+                  InkWell(
+                    onTap: () => CalorieFactorsSheet.show(
+                      context: context,
+                      weightKg: activeWeightKg,
+                      distanceKm: widget.distanceKm,
+                      durationSeconds: widget.durationSeconds,
+                      elevationGainMeters: widget.elevationGainMeters,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'How we estimate this',
+                            style: AppText.labelSmall.copyWith(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          size: 13,
+                          color: AppColors.accent,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             if (_shouldShowBodyReminder) ...[

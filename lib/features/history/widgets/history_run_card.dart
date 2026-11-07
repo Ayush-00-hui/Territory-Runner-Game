@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../../models/territory.dart';
+import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
+import '../../profile/widgets/calorie_factors_sheet.dart';
 import 'run_share_card_modal.dart';
 
 class HistoryRunCard extends StatelessWidget {
@@ -66,6 +68,14 @@ class HistoryRunCard extends StatelessWidget {
         ? '${(territory.areaSqMeters / 1000000.0).toStringAsFixed(3)} km²'
         : '${territory.areaSqMeters.toStringAsFixed(0)} m²';
     final estimatedKm = _estimateDistanceKm(territory.polygon);
+    final estimatedCalories = AppPreferences().estimateCalories(
+      distanceKm: estimatedKm,
+      durationMinutes: estimatedKm > 0 ? (estimatedKm * 5.5) : null,
+    );
+    final quantile = AppPreferences().estimateQuantileCalories(
+      distanceKm: estimatedKm,
+      durationMinutes: estimatedKm > 0 ? (estimatedKm * 5.5) : null,
+    );
 
     showModalBottomSheet(
       context: context,
@@ -158,6 +168,52 @@ class HistoryRunCard extends StatelessWidget {
                       ),
                       const Divider(color: AppColors.borderSubtle, height: 16),
                       _metricRow(
+                        'Calories',
+                        '${AppPreferences().formatCalories(estimatedCalories)} (${quantile.displayRange})',
+                      ),
+                      const Divider(color: AppColors.borderSubtle, height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Calorie model',
+                            style: AppText.label.copyWith(
+                              color: AppColors.textMuted,
+                              fontSize: 11,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              CalorieFactorsSheet.show(
+                                context: context,
+                                distanceKm: estimatedKm,
+                                durationSeconds: (estimatedKm * 330).round(),
+                              );
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'How we estimate this',
+                                  style: AppText.labelSmall.copyWith(
+                                    color: AppColors.accent,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.info_outline_rounded,
+                                  size: 13,
+                                  color: AppColors.accent,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(color: AppColors.borderSubtle, height: 16),
+                      _metricRow(
                         'Polygon coordinates',
                         '${territory.polygon.length} GPS points',
                       ),
@@ -241,12 +297,16 @@ class HistoryRunCard extends StatelessWidget {
             fontSize: 11,
           ),
         ),
-        Text(
-          value,
-          style: AppText.bodyBold.copyWith(
-            color: AppColors.textPrimary,
-            fontSize: 13,
-            fontFeatures: const [FontFeature.tabularFigures()],
+        const SizedBox(width: AppSpacing.s8),
+        Flexible(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: AppText.bodyBold.copyWith(
+              color: AppColors.textPrimary,
+              fontSize: 13,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ],
@@ -259,6 +319,7 @@ class HistoryRunCard extends StatelessWidget {
         ? '${(territory.areaSqMeters / 1000000.0).toStringAsFixed(2)} km²'
         : '${territory.areaSqMeters.toStringAsFixed(0)} m²';
     final estimatedKm = _estimateDistanceKm(territory.polygon);
+    final cardCalories = AppPreferences().estimateCalories(distanceKm: estimatedKm);
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s12),
@@ -363,7 +424,7 @@ class HistoryRunCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${estimatedKm.toStringAsFixed(2)} km • ${territory.polygon.length} pts',
+                            '${estimatedKm.toStringAsFixed(2)} km • ${AppPreferences().formatCalories(cardCalories)}',
                             style: AppText.bodySmall.copyWith(
                               color: AppColors.textSecondary,
                               fontSize: 11,

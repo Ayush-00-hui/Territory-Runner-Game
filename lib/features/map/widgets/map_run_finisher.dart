@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../services/app_preferences.dart';
+import '../../../services/calorie_model_engine.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/motion_sensor_service.dart';
 import '../../../services/sync_queue.dart';
@@ -27,12 +28,21 @@ void handleFinishRun({
   final finalArea = summary['areaSqm'] as double;
   final finalXp = summary['xp'] as int;
   final finalStepCount = summary['stepCount'] as int?;
+  final elevationGain = (summary['elevationGainMeters'] as num?)?.toDouble() ?? 0.0;
   final points = summary['points'] as List<LatLng>;
 
   TerritoryService().defendTerritory(FirebaseService().currentUserId);
   TerritoryService().addRunDistance(finalDistance);
   AppPreferences().recordCompletedRunForBodyProfile();
   onTerritoriesUpdated();
+
+  final calories = AppPreferences().estimateCalories(
+    distanceKm: finalDistance,
+    durationMinutes: finalSeconds > 0 ? finalSeconds / 60.0 : null,
+    activityType: controller.selectedActivity.id,
+    elevationGainMeters: elevationGain,
+  );
+  final modelVersion = CalorieModelEngine().modelVersion;
 
   if (points.length >= 3) {
     SyncQueueService().enqueueRun(
@@ -44,6 +54,8 @@ void handleFinishRun({
       clientPreviewXp: finalXp,
       motionWindows: motionWindows,
       stepCount: finalStepCount,
+      estimatedCalories: calories,
+      calorieModelVersion: modelVersion,
     );
   }
 
@@ -56,5 +68,6 @@ void handleFinishRun({
     coachService: LLMCoachService(),
     routePoints: points,
     areaSqMeters: finalArea > 0 ? finalArea : null,
+    elevationGainMeters: elevationGain,
   );
 }

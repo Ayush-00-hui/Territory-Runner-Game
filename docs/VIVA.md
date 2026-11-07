@@ -366,4 +366,77 @@ Evaluation is strictly grounded in 127,655 kinematic windows from 13 public GeoL
    - Athletic typography with Inter tabular figures (`FontFeature.tabularFigures()`) eliminates timer and distance stat jitter.
    - Complete `Semantics` coverage on all action buttons and HUD overlays, minimum $48\text{px}$ touch targets, responsive layouts tested down to $320\text{px}$ narrow devices, and `AppMotion` respecting user reduced motion preferences.
 
+---
+
+## 9. Calorie & Physiological Energy Expenditure Engine (Viva Defense)
+
+### Q9.1: Why is your Calorie Engine described as a "Machine Learning Surrogate" rather than claiming direct ground-truth accuracy?
+**Examiner Defense Rationale (2-3 lines):**
+True ground-truth metabolic expenditure requires breath-by-breath indirect calorimetry gas exchange masks ($\text{VO}_2/\text{VCO}_2$), which cannot be collected during smartphone GPS workouts. Rather than making unsubstantiated claims of "discovering new truth", our ML model is an explainable, noise-resilient surrogate trained against peer-reviewed physiological baselines (ACSM + Minetti + Mifflin-St Jeor), explicitly trained to absorb mobile GPS Doppler jitter and barometric altitude noise.
+
+**Deep Defense:**
+- Many commercial fitness apps claim "advanced proprietary AI accuracy" without open validation datasets. In Territory Runner, we maintain strict academic honesty:
+  1. Without open, multi-subject metabolic cart logs paired with raw mobile accelerometer and barometer streams, claiming empirical ground-truth accuracy is scientifically dishonest.
+  2. The surrogate LightGBM model learns the non-linear interaction between kinematic speed, grade, and body mass from the ACSM and Minetti equations, but is trained on noisy mobile sensor kinematics.
+  3. Its real-world value is **computational efficiency and noise invariance**: running in $< 15\ \mu\text{s}$ in pure Dart while absorbing GPS altitude chatter that would otherwise cause wild oscillations in analytical derivative calculations.
+
+---
+
+### Q9.2: Why are monotone constraints (`monotone_constraints = [1, 1, 1, 0, 1]`) mathematically mandatory for energy prediction?
+**Defense:**
+- Unconstrained gradient boosted decision trees or neural networks can easily overfit local training noise, resulting in nonsensical non-monotonic anomalies (e.g. predicting that an 85 kg runner burns *fewer* calories than an 80 kg runner at the same speed, or that running uphill on a 5% slope burns *fewer* calories than flat ground).
+- In athletic tracking, such inversions completely destroy user trust.
+- By configuring `monotone_constraints = [+1, +1, +1, 0, +1]` for `[body_mass_kg, speed_kmh, grade, cadence_spm, climb_rate_m_min]`:
+  - $\frac{\partial \hat{y}}{\partial M} \ge 0$: A heavier athlete never burns less energy than a lighter athlete under identical kinematics.
+  - $\frac{\partial \hat{y}}{\partial v} \ge 0$: Running faster never decreases energy burn rate per minute.
+  - $\frac{\partial \hat{y}}{\partial G} \ge 0$: Increasing uphill incline never decreases energy cost.
+  - $\frac{\partial \hat{y}}{\partial \text{climb}} \ge 0$: Greater vertical ascension rate monotonically elevates calorie expenditure.
+
+---
+
+### Q9.3: How does your elevation pipeline tame notorious smartphone GPS altitude noise?
+**Defense:**
+- GPS vertical altitude precision is geometrically 2–3x worse than horizontal latitude/longitude due to satellite constellation geometry (Dilution of Precision, VDOP).
+- Raw differencing of GPS altitude produces massive false elevation gain (e.g. an athlete running on a dead-flat track accumulating 200m of phantom climb).
+- Territory Runner employs a multi-stage noise rejection pipeline in [`ElevationGradePipeline`](lib/services/elevation_incline_service.dart):
+  1. **Accuracy Filtering**: Rejects fixes with horizontal accuracy $> 30\text{ m}$ or vertical velocity $> 15\text{ m/s}$ (impossible vertical jumps).
+  2. **Rolling Median Filter**: 5-sample rolling median rejects non-Gaussian outlier spikes.
+  3. **1D Kalman Filter**: Fuses process covariance ($Q = 0.04$) with sensor accuracy variance ($R = \sigma_{\text{acc}}^2$) for smooth altitude tracking.
+  4. **Spatial Incline Distance Window**: Grade is computed strictly over a horizontal displacement window $\ge 25\text{ m}$ ($\text{grade} = \frac{\Delta h}{\Delta d_{\text{horizontal}}}$), eliminating division by near-zero micro-displacements.
+  5. **Incline Clamping**: Grade is clamped to $[-20\%, +20\%]$ based on biomechanical locomotion limits.
+  6. **Hysteresis Climb Accumulator**: Cumulative elevation gain requires an altitude ascension reversal $> 3.0\text{ m}$ before accumulating, completely suppressing flat-ground GPS jitter.
+
+---
+
+### Q9.4: What is the physiological difference between Gross and Net energy expenditure, and how do you handle paused time?
+**Defense:**
+- **Net Energy ($EE_{\text{net}}$)**: Energy burned *strictly due to physical movement*, excluding resting metabolism ($EE_{\text{net}} = EE_{\text{gross}} - RMR$).
+- **Gross Energy ($EE_{\text{gross}}$)**: Total physiological energy burned by the organism, combining locomotor work and basal resting metabolic rate ($RMR$). Commercial sports watches (Garmin, Apple Watch, Strava) report gross energy to users.
+- **Treatment of Paused Time**:
+  - When a runner stops at a traffic signal or auto-pause triggers ($v < 0.5\text{ km/h}$), locomotor cost is immediately zeroed ($0.0\text{ kcal/min}$).
+  - Only basal resting energy ($RMR_{\text{min}} = \frac{RMR_{\text{Mifflin}}}{1440} \approx 1.0\text{–}1.2\text{ kcal/min}$) accumulates while stationary.
+  - This prevents stopped athletes from accumulating locomotor calories while resting at a red light.
+
+---
+
+### Q9.5: How do you handle personal health data privacy under India's DPDP Act, 2023?
+**Defense:**
+- Under India's Digital Personal Data Protection (DPDP) Act, 2023, physical health indicators (weight, height, age, biological sex) require explicit notice, consent, and purpose limitation.
+- Territory Runner implements **zero-knowledge local processing**:
+  1. **Zero Server Upload**: Body details and calculated calories are stored exclusively in local device storage (`SharedPreferences` and local Hive database). They are never transmitted over API requests, WebSockets, crash reports, or telemetry.
+  2. **Non-Blocking First-Run Sheet**: Users are presented with a transparent notice: *"Used on this phone to estimate calories. It is never uploaded."*
+  3. **Graceful Skip**: Users can tap "Skip for now", which defaults to an unidentifiable reference adult (70 kg, 170 cm, 30 years, neutral sex offset $s = -78$).
+  4. **Right to Erasure**: Users can tap "Remove my body details" at any time from Settings or initiate full local data wipe upon account deletion.
+
+---
+
+### Q9.6: How does personal watch calibration work, and why is the multiplier bounded to $[0.8, 1.2]$?
+**Defense:**
+- Different wrist wearables (Apple Watch, Garmin, Polar) use varying internal optical heart-rate algorithms. To allow users to calibrate Territory Runner to match their existing watch:
+  - The user enters manual calorie readings from at least 3 completed workouts.
+  - The system calculates the median ratio: $k_{\text{calib}} = \text{median}\left(\frac{\text{Cal}_{\text{watch}}}{\text{Cal}_{\text{model}}}\right)$.
+  - We use the **median** rather than the mean to provide robust immunity against single-session data entry typos.
+  - The resulting multiplier is clamped to $[0.8, 1.2]$ ($\pm 20\%$). This prevents unrealistic distortions (e.g. accidental $10\times$ entry) and ensures the calibrated estimate stays anchored within physiologically plausible human bioenergetic boundaries.
+
+
 
