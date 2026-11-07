@@ -23,7 +23,7 @@
 [![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-465%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Tests-11%20Packages_Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
 [![Cartography](https://img.shields.io/badge/Cartography-CARTO_Retina_@2x-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
-[![Theme Palette](https://img.shields.io/badge/Theme-Obsidian_Volt_Coral-00F59B.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
+[![Theme Palette](https://img.shields.io/badge/Theme-Electric_Blue_&_Mustard_Yellow-2D9CDB.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
 [![Encrypted Storage](https://img.shields.io/badge/Storage-Hive_AES--256-blueviolet.svg?style=flat-square&logo=keybase&logoColor=white)](lib/services/hive_encryption_service.dart)
 [![Threat Model](https://img.shields.io/badge/Security-STRIDE_Threat_Model-critical.svg?style=flat-square&logo=shield&logoColor=white)](docs/THREAT_MODEL.md)
 [![AIML Anti-Cheat](https://img.shields.io/badge/AIML_AntiCheat-LightGBM_Ensemble-9C27B0.svg?style=flat-square&logo=scikitlearn&logoColor=white)](docs/AIML_EVALUATION.md)
@@ -73,7 +73,7 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 │ 🤖 Level 6: Machine Learning & Anti-Cheat Pipeline (LightGBM)                          │
 │    └─ Tier 1 deterministic gate | Safe cadence rollout | 22-feature ensemble           │
 │ 🏆 Level 7: Master Level (Testing, Audits, Verification & Production Ops)             │
-│    └─ 465 Flutter + 11 Go package suites | WCAG AA Obsidian HUD | Viva defense cheatsheet │
+│    └─ 465 Flutter + 11 Go package suites | WCAG AAA Athletic HUD | Viva defense cheatsheet │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -136,7 +136,7 @@ Conversely, first-generation location-based games (Ingress, Pokémon GO, Turf) c
 | **Rival Alerts** | None | Delayed batch emails | **Real-time WebSocket alerts + FCM HTTP v1 background push** |
 | **Map Cartography** | Standard map SDK | Low-detail raster / custom vector | **Crisp CARTO Voyager, Positron & Dark Matter retina basemaps (`@2x.png`, native clarity, OSM compliant)** |
 | **Auto-Pause Engine** | Basic threshold, pauses at start line | None (battery drain) | **Athletic hysteresis ($< 2.5 \to \ge 3.0\text{ km/h}$) + start-line suppression gate + 10s grace window** |
-| **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Athletic, high-contrast Aerospace Obsidian + Cyber Volt + Hyper Coral (`#0A0C10`, `#00F59B`, `#FF385C`)** |
+| **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Athletic High-Contrast Electric Blue + Mustard Yellow + Dark Graphite (`#2D9CDB`, `#F2C94C`, `#121417`)** |
 
 ---
 
@@ -587,7 +587,7 @@ In outdoor fitness tracking, cold-start satellite acquisition typically delays t
 
 ---
 
-### 7. Athletic High-Contrast Design System (Aerospace Obsidian + Cyber Volt + Hyper Coral)
+### 7. Athletic High-Contrast Design System (Electric Blue + Mustard Yellow + Dark Graphite)
 
 Engineered specifically for outdoor athletic glanceability at arm's length, direct sunlight contrast, OLED battery conservation, and thumb-driven ergonomics.
 
@@ -595,26 +595,27 @@ Engineered specifically for outdoor athletic glanceability at arm's length, dire
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                ATHLETIC COLOR TOKENS                                   │
 ├─────────────┬─────────────┬─────────────┬─────────────┬─────────────┬──────────────────┤
-│   bgDeep    │   surface   │   accent    │    rival    │   warning   │   textPrimary    │
-│   #0A0C10   │   #161922   │   #00F59B   │   #FF385C   │   #FFB800   │     #F8FAFC      │
-│  Obsidian   │  Elevated   │  Cyber Volt │ Hyper Coral │ Solar Amber │ Slate White 17:1 │
+│   bgDeep    │   surface   │   primary   │   accent    │    rival    │   textPrimary    │
+│   #0C0E11   │   #121417   │   #2D9CDB   │   #F2C94C   │   #EB5757   │     #F4F6F8      │
+│  Obsidian   │Dark Graphite│Electric Blue│MustardYellow│  Coral Red  │ Ice White 17.1:1 │
 └─────────────┴─────────────┴─────────────┴─────────────┴─────────────┴──────────────────┘
 ```
 
 - **Athletic Palette Tokens ([app_colors.dart](lib/ui/theme/app_colors.dart)):**
-  - `bgDeep` (`#0A0C10`): Deep Aerospace Obsidian Black canvas.
-  - `surface` (`#161922`) & `surface2` (`#1E2330`): Matte dark elevated surfaces.
-  - `border` (`#283040`): Tactical structural divider borders.
-  - `textPrimary` (`#F8FAFC`): Slate White with 17:1 AAA contrast against obsidian.
-  - `textSecondary` (`#94A3B8`) & `textMuted` (`#64748B`): Crisp slate information hierarchy.
-  - `accent` & `mine` (`#00F59B`): High-energy Cyber Volt / Neon Lime for sovereign territory and primary actions.
-  - `rival` (`#FF385C`): Hyper Coral / Crimson Ember for contested territory and threats.
-  - `warning` (`#FFB800`): Solar Amber for anomaly alerts and auto-pause states.
-  - `info` (`#00C6FF`): Electric Cobalt for guidance and metrics.
-  - `territoryMineFill` (`#3800F59B`): 22% Cyber Volt glow for sovereign claimed land.
-  - `territoryRivalFill` (`#33FF385C`): 20% Hyper Coral glow for rival territory.
+  - `bgDeep` (`#0C0E11`): Deep Obsidian Graphite Base Canvas.
+  - `surface` (`#121417`) & `surface2` (`#1C2025`): Matte Dark Graphite elevated surfaces and cards.
+  - `primary` & `mine` (`#2D9CDB`): Vibrant Electric Blue for sovereign territory and primary actions.
+  - `accent` & `warning` (`#F2C94C`): Mustard Yellow for milestone trophies, goal badges, and auto-pause warnings.
+  - `rival` & `error` (`#EB5757`): Coral Red for contested territory and threats.
+  - `success` (`#27AE60`): Athletic Mint Emerald for loop enclosure confirmation and personal bests.
+  - `border` (`#2A2F37`): Clean graphite structural divider borders.
+  - `textPrimary` (`#F4F6F8`): Ice White with 17.1:1 AAA contrast against dark graphite.
+  - `textSecondary` (`#A0AAB5`): Slate Titanium (8.0:1 AAA contrast) for auxiliary metrics.
+  - `textMuted` (`#6B7684`): Muted Graphite (4.0:1 AA contrast) for inactive labels.
+  - `territoryMineFill` (`#3D2D9CDB`): 24% Electric Blue glow with solid `#2D9CDB` border.
+  - `territoryRivalFill` (`#38EB5757`): 22% Coral Red glow with solid `#EB5757` border.
 - **Tabular Figures & Glanceable Typography:** In [run_hud_metrics_card.dart](lib/features/map/widgets/run_hud_metrics_card.dart), distance (34sp), moving time (32sp), and split pace (28sp) are formatted with bold weights (`FontWeight.w700`) and tabular figures (`FontFeature.tabularFigures()`), eliminating horizontal digit jitter while running.
-- **Cyber Volt Enclosure Pulse:** [run_hud_closure_bar.dart](lib/features/map/widgets/run_hud_closure_bar.dart) features a smooth ticker-driven Cyber Volt glow animation that energetically pulses when loop closure proximity exceeds 80%.
+- **Enclosure Pulse:** [run_hud_closure_bar.dart](lib/features/map/widgets/run_hud_closure_bar.dart) features a smooth ticker-driven energetic glow animation that pulses when loop closure proximity exceeds 80%.
 - **Safety Thumb-Zone Hold-To-Finish:** Accidental-tap protected 1.4-second press-and-hold button [hold_to_finish_button.dart](lib/features/map/widgets/hold_to_finish_button.dart) with tactile haptic tick milestones at 33% and 66% and heavy burst on completion, anchored directly in the bottom thumb zone.
 - **Zero Raw Colors Policy:** Verified by automated regression tests; all UI components resolve via canonical semantic design tokens.
 
