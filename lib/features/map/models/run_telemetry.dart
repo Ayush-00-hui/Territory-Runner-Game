@@ -16,6 +16,15 @@ class RunTelemetry {
   final bool isAutoPaused;
   final RunGoal? activeGoal;
 
+  // Phase 2 Sensing Pipeline Fields
+  final double grade;
+  final double elevationGainMeters;
+  final double cadenceSpm;
+  final double? strideLengthMeters;
+  final int? stepCount;
+  final bool isStepCountEstimated;
+  final double? currentAltitudeMeters;
+
   const RunTelemetry({
     this.distanceKm = 0.0,
     this.elapsedSeconds = 0,
@@ -30,6 +39,13 @@ class RunTelemetry {
     this.isRunActive = false,
     this.isAutoPaused = false,
     this.activeGoal,
+    this.grade = 0.0,
+    this.elevationGainMeters = 0.0,
+    this.cadenceSpm = 0.0,
+    this.strideLengthMeters,
+    this.stepCount,
+    this.isStepCountEstimated = true,
+    this.currentAltitudeMeters,
   });
 
   RunTelemetry copyWith({
@@ -47,6 +63,14 @@ class RunTelemetry {
     bool? isAutoPaused,
     RunGoal? activeGoal,
     bool clearClosure = false,
+    double? grade,
+    double? elevationGainMeters,
+    double? cadenceSpm,
+    double? strideLengthMeters,
+    bool clearStrideLength = false,
+    int? stepCount,
+    bool? isStepCountEstimated,
+    double? currentAltitudeMeters,
   }) {
     return RunTelemetry(
       distanceKm: distanceKm ?? this.distanceKm,
@@ -67,6 +91,16 @@ class RunTelemetry {
       isRunActive: isRunActive ?? this.isRunActive,
       isAutoPaused: isAutoPaused ?? this.isAutoPaused,
       activeGoal: activeGoal ?? this.activeGoal,
+      grade: grade ?? this.grade,
+      elevationGainMeters: elevationGainMeters ?? this.elevationGainMeters,
+      cadenceSpm: cadenceSpm ?? this.cadenceSpm,
+      strideLengthMeters: clearStrideLength
+          ? null
+          : (strideLengthMeters ?? this.strideLengthMeters),
+      stepCount: stepCount ?? this.stepCount,
+      isStepCountEstimated: isStepCountEstimated ?? this.isStepCountEstimated,
+      currentAltitudeMeters:
+          currentAltitudeMeters ?? this.currentAltitudeMeters,
     );
   }
 }

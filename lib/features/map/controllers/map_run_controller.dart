@@ -9,9 +9,12 @@ import '../../../models/activity_type.dart';
 import '../../../models/run_goal.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/auto_pause_engine.dart';
+import '../../../services/elevation_incline_service.dart';
 import '../../../services/gps_quality_service.dart';
 import '../../../services/location_service.dart';
+import '../../../services/motion_sensor_service.dart';
 import '../../../services/run_recovery_service.dart';
+import '../../../services/speed_smoothing_service.dart';
 import '../../gameplay/polygon_enclosure_engine.dart';
 import '../../gameplay/territory_service.dart';
 import '../../routing/route_service.dart';
@@ -28,6 +31,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   final RunRecoveryService _runRecoveryService;
   final AppPreferences _appPrefs;
   final TerritoryService _territoryService;
+  final SpeedSmoothingPipeline _speedPipeline;
+  final ElevationGradePipeline _elevationPipeline;
+  final MotionSensorService _motionSensorService;
 
   // Real-time Notifiers
   final RunTelemetryNotifier telemetryNotifier = RunTelemetryNotifier();
@@ -80,12 +86,18 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     RunRecoveryService? runRecoveryService,
     AppPreferences? appPrefs,
     TerritoryService? territoryService,
+    SpeedSmoothingPipeline? speedPipeline,
+    ElevationGradePipeline? elevationPipeline,
+    MotionSensorService? motionSensorService,
   }) : _locationService = locationService ?? LocationService(),
        _polygonEngine = polygonEngine ?? PolygonEnclosureEngine(),
        _autoPauseEngine = autoPauseEngine ?? AutoPauseEngine(),
        _runRecoveryService = runRecoveryService ?? RunRecoveryService(),
        _appPrefs = appPrefs ?? AppPreferences(),
-       _territoryService = territoryService ?? TerritoryService();
+       _territoryService = territoryService ?? TerritoryService(),
+       _speedPipeline = speedPipeline ?? SpeedSmoothingPipeline(),
+       _elevationPipeline = elevationPipeline ?? ElevationGradePipeline(),
+       _motionSensorService = motionSensorService ?? MotionSensorService();
 
   // Getters
   bool get isRunActive => _isRunActive;
@@ -111,13 +123,36 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   List<Position> get recentPositions => List.unmodifiable(_recentPositions);
   ExerciseActivityType get selectedActivity => _selectedActivity;
 
+  ElevationGradePipeline get elevationPipeline => _elevationPipeline;
+  SpeedSmoothingPipeline get speedPipeline => _speedPipeline;
+  MotionSensorService get motionSensorService => _motionSensorService;
+  double get currentGrade => _elevationPipeline.currentGrade;
+  double get cumulativeElevationGainMeters =>
+      _elevationPipeline.cumulativeGainMeters;
+  double get currentCadenceSpm => _motionSensorService.currentCadenceSpm;
+  double? get currentStrideLengthMeters =>
+      _motionSensorService.computeStrideLength(_currentSpeedKmh);
+
   int? get stepCount {
     if (_selectedActivity == ExerciseActivityType.cycling) return null;
+    if (_motionSensorService.liveStepCount > 0 &&
+        !_motionSensorService.isStepCountEstimated) {
+      return _motionSensorService.liveStepCount;
+    }
     final meters = _runDistanceKm * 1000.0;
     return (_selectedActivity == ExerciseActivityType.walking
             ? meters / 0.75
             : meters / 1.05)
         .round();
+  }
+
+  bool get isStepCountEstimated {
+    if (_selectedActivity == ExerciseActivityType.cycling) return true;
+    if (_motionSensorService.liveStepCount > 0 &&
+        !_motionSensorService.isStepCountEstimated) {
+      return false;
+    }
+    return true;
   }
 
   void setGoal(RunGoal goal) {
@@ -179,6 +214,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
     telemetryNotifier.reset();
     telemetryNotifier.setRunActive(true);
+    _speedPipeline.reset();
+    _elevationPipeline.reset();
+    _motionSensorService.start();
     _locationService.setTrackingMode(
       GpsTrackingMode.activeRun,
       liveStatusText: "${_selectedActivity.displayName} in progress...",
@@ -207,6 +245,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   Map<String, dynamic> stopRun() {
     _runTimer?.cancel();
     WakelockPlus.disable();
+    _motionSensorService.stop();
     _runRecoveryService.clearRecovery();
     _autoPauseEngine.reset();
     _locationService.setTrackingMode(GpsTrackingMode.idle);
@@ -231,6 +270,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       'areaSqm': finalArea,
       'xp': finalXp,
       'stepCount': stepCount,
+      'isStepCountEstimated': isStepCountEstimated,
+      'elevationGainMeters': _elevationPipeline.cumulativeGainMeters,
+      'averageCadenceSpm': _motionSensorService.averageCadenceSpm,
       'points': List<LatLng>.from(_runCoordinates),
     };
   }
@@ -248,25 +290,18 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   void processPosition(Position pos) {
     final now = pos.timestamp;
     _satelliteAccuracyMeters = pos.accuracy;
-    final double rawSpeedKmh = (pos.speed > 0) ? pos.speed * 3.6 : 0.0;
-    if (rawSpeedKmh > 0) {
-      _currentSpeedKmh = rawSpeedKmh;
-    } else if (_lastGpsFixTime != null && _recentPositions.isNotEmpty) {
-      final dt = now.difference(_lastGpsFixTime!).inMilliseconds / 1000.0;
-      if (dt > 0.3 && dt < 10.0) {
-        final dMeters = Geolocator.distanceBetween(
-          _recentPositions.last.latitude,
-          _recentPositions.last.longitude,
-          pos.latitude,
-          pos.longitude,
-        );
-        _currentSpeedKmh = (dMeters / dt) * 3.6;
-      } else {
-        _currentSpeedKmh = 0.0;
-      }
-    } else {
-      _currentSpeedKmh = 0.0;
-    }
+
+    // Smoothed speed using offline sensing pipeline
+    _currentSpeedKmh = _speedPipeline.processPosition(
+      pos,
+      isAutoPaused: _isAutoPaused,
+    );
+
+    // Elevation, grade, and cumulative gain via pipeline
+    _elevationPipeline.processPosition(
+      pos,
+      accumulatedDistanceMeters: _runDistanceKm * 1000.0,
+    );
 
     if (_lastGpsFixTime != null &&
         GpsQualityService.isSignalGap(_lastGpsFixTime!, now)) {
@@ -441,6 +476,15 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       distanceToClosure: _distanceToClosureMeters,
       proximityToClosure: _proximityToClosure,
       currentAreaSqm: _accumulatedRunPreviewArea,
+      grade: _elevationPipeline.currentGrade,
+      elevationGainMeters: _elevationPipeline.cumulativeGainMeters,
+      cadenceSpm: _motionSensorService.currentCadenceSpm,
+      strideLengthMeters: _motionSensorService.computeStrideLength(
+        _currentSpeedKmh,
+      ),
+      stepCount: stepCount,
+      isStepCountEstimated: isStepCountEstimated,
+      currentAltitudeMeters: _elevationPipeline.smoothedAltitude,
     );
   }
 
@@ -483,6 +527,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   @override
   void dispose() {
     _runTimer?.cancel();
+    _elevationPipeline.dispose();
+    _motionSensorService.stop();
     disposeRivalSimulation();
     telemetryNotifier.dispose();
     liveLocationNotifier.dispose();

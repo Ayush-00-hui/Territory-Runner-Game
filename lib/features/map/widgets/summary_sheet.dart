@@ -10,6 +10,7 @@ import '../../../services/gallery_saver_service.dart';
 import '../../../ui/ui.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../history/widgets/run_share_card_modal.dart';
+import '../../profile/widgets/body_details_sheet.dart';
 import 'summary_coach_card.dart';
 import 'summary_route_replay.dart';
 import 'summary_stats_grid.dart';
@@ -78,6 +79,17 @@ class _SummarySheetState extends State<SummarySheet>
   late final AnimationController _countUpController;
   late final Animation<double> _countUpAnimation;
   late final AnimationController _replayController;
+  bool _reminderManuallyDismissed = false;
+
+  bool get _shouldShowBodyReminder {
+    if (_reminderManuallyDismissed) return false;
+    final prefs = AppPreferences();
+    if (prefs.hasBodyProfile) return false;
+    final profile = prefs.bodyProfile;
+    if (profile == null) return false;
+    if (profile.reminderDismissed) return false;
+    return profile.skippedRunCount >= 3;
+  }
 
   @override
   void initState() {
@@ -185,6 +197,15 @@ class _SummarySheetState extends State<SummarySheet>
     final maxHeight = MediaQuery.sizeOf(context).height * 0.90;
     final calories = AppPreferences().estimateCalories(
       distanceKm: widget.distanceKm,
+      durationMinutes: widget.durationSeconds > 0
+          ? widget.durationSeconds / 60.0
+          : null,
+    );
+    final calorieRange = AppPreferences().estimateAndFormatCalorieRange(
+      distanceKm: widget.distanceKm,
+      durationMinutes: widget.durationSeconds > 0
+          ? widget.durationSeconds / 60.0
+          : null,
     );
 
     return ConstrainedBox(
@@ -226,8 +247,89 @@ class _SummarySheetState extends State<SummarySheet>
               routePoints: effectivePoints,
               effectiveArea: effectiveArea,
               calories: calories,
+              calorieRange: calorieRange,
               replayController: _replayController,
             ),
+
+            if (_shouldShowBodyReminder) ...[
+              const SizedBox(height: AppSpacing.s14),
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.tune_rounded,
+                          size: 18,
+                          color: AppColors.accent,
+                        ),
+                        const SizedBox(width: AppSpacing.s8),
+                        Expanded(
+                          child: Text(
+                            'Personalize calorie estimates',
+                            style: AppText.labelMedium.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            AppPreferences().dismissBodyDetailsReminder();
+                            setState(() => _reminderManuallyDismissed = true);
+                          },
+                          child: const Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.s6),
+                    Text(
+                      'Calorie burn is currently calculated for a standard 70 kg reference adult. Add your body details on this phone for personalized estimates.',
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s10),
+                    Row(
+                      children: [
+                        SecondaryButton(
+                          label: 'Set details',
+                          icon: Icons.person_outline_rounded,
+                          isFullWidth: false,
+                          height: 38,
+                          onPressed: () {
+                            BodyDetailsSheet.show(
+                              context: context,
+                              onSaved: () {
+                                if (mounted) setState(() {});
+                              },
+                            );
+                          },
+                        ),
+                        const SizedBox(width: AppSpacing.s8),
+                        TextButton(
+                          onPressed: () {
+                            AppPreferences().dismissBodyDetailsReminder();
+                            setState(() => _reminderManuallyDismissed = true);
+                          },
+                          child: Text(
+                            'Keep average adult',
+                            style: AppText.labelMedium.copyWith(
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             const SizedBox(height: AppSpacing.s14),
 

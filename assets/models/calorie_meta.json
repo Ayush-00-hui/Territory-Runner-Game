@@ -1,0 +1,136 @@
+{
+  "model_version": "1.0.0",
+  "sha256_trees": "6ef0429cf529b8267a635631ffec9e3bab027423f1376519739eda47071037e4",
+  "features": [
+    "body_mass_kg",
+    "speed_kmh",
+    "grade",
+    "cadence_spm",
+    "climb_rate_m_min"
+  ],
+  "quantiles": [
+    "p10",
+    "p50",
+    "p90"
+  ],
+  "quantile_scales": {
+    "p10": 0.5337759884579785,
+    "p50": 1.0,
+    "p90": 1.1771811227135986
+  },
+  "metrics": {
+    "p50_mae_kcal_per_min": 1.3865610925901077,
+    "p50_mape_percent": 26.692717107237435,
+    "p50_bias_kcal_per_min": -0.04795200243044914,
+    "coverage_percent": 81.46039189415508,
+    "mean_interval_width_kcal_per_min": 7.31013988095917,
+    "legacy_flat_mae_kcal_per_min": 3.4858986079518846,
+    "legacy_flat_mape_percent": 50.41906466588814
+  },
+  "stratification": [
+    {
+      "category": "Speed Band",
+      "stratum": "Rest (0 km/h)",
+      "n": 315,
+      "surrogate_mae": 1.3698000460988515,
+      "legacy_mae": 0.0,
+      "improvement_pct": -13698.000460988516
+    },
+    {
+      "category": "Speed Band",
+      "stratum": "Walk (0.5 - 6.5 km/h)",
+      "n": 1761,
+      "surrogate_mae": 1.0059871084300822,
+      "legacy_mae": 2.578192923151583,
+      "improvement_pct": 60.980921970712586
+    },
+    {
+      "category": "Speed Band",
+      "stratum": "Jog (6.5 - 10 km/h)",
+      "n": 1389,
+      "surrogate_mae": 1.1048030836398155,
+      "legacy_mae": 3.507808727571064,
+      "improvement_pct": 68.50446619406122
+    },
+    {
+      "category": "Speed Band",
+      "stratum": "Run (10 - 15 km/h)",
+      "n": 1701,
+      "surrogate_mae": 1.5067952377117766,
+      "legacy_mae": 4.813320690683636,
+      "improvement_pct": 68.69530757366248
+    },
+    {
+      "category": "Speed Band",
+      "stratum": "Fast (> 15 km/h)",
+      "n": 805,
+      "surrogate_mae": 2.457758743932403,
+      "legacy_mae": 3.9929168111325386,
+      "improvement_pct": 38.4470335800637
+    },
+    {
+      "category": "Grade Band",
+      "stratum": "Steep Descent (< -6%)",
+      "n": 1447,
+      "surrogate_mae": 1.2309324365916836,
+      "legacy_mae": 4.692003553108569,
+      "improvement_pct": 73.76531320450172
+    },
+    {
+      "category": "Grade Band",
+      "stratum": "Mild Descent (-6% to -1%)",
+      "n": 1149,
+      "surrogate_mae": 1.2849710772880252,
+      "legacy_mae": 2.223149066162951,
+      "improvement_pct": 42.20040856253405
+    },
+    {
+      "category": "Grade Band",
+      "stratum": "Level (-1% to +1%)",
+      "n": 753,
+      "surrogate_mae": 1.362486511373694,
+      "legacy_mae": 0.4776495580605587,
+      "improvement_pct": -185.2481465503526
+    },
+    {
+      "category": "Grade Band",
+      "stratum": "Mild Ascent (+1% to +6%)",
+      "n": 1136,
+      "surrogate_mae": 1.5308945974559722,
+      "legacy_mae": 2.3328318207413368,
+      "improvement_pct": 34.376126738125585
+    },
+    {
+      "category": "Grade Band",
+      "stratum": "Steep Ascent (> +6%)",
+      "n": 1486,
+      "surrogate_mae": 1.5185172776103972,
+      "legacy_mae": 5.693678401163941,
+      "improvement_pct": 73.32976732054324
+    },
+    {
+      "category": "Body Mass Band",
+      "stratum": "Light (< 55 kg)",
+      "n": 833,
+      "surrogate_mae": 1.4399903462043282,
+      "legacy_mae": 2.2481732570390225,
+      "improvement_pct": 35.948426497125006
+    },
+    {
+      "category": "Body Mass Band",
+      "stratum": "Standard (55 - 85 kg)",
+      "n": 3836,
+      "surrogate_mae": 1.2069441393718265,
+      "legacy_mae": 3.4551133587867993,
+      "improvement_pct": 65.06788594063313
+    },
+    {
+      "category": "Body Mass Band",
+      "stratum": "Heavy (> 85 kg)",
+      "n": 1302,
+      "surrogate_mae": 1.8815718946520743,
+      "legacy_mae": 4.3684772816137,
+      "improvement_pct": 56.92842669523902
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../services/app_preferences.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/motion_sensor_service.dart';
 import '../../../services/sync_queue.dart';
@@ -30,6 +31,7 @@ void handleFinishRun({
 
   TerritoryService().defendTerritory(FirebaseService().currentUserId);
   TerritoryService().addRunDistance(finalDistance);
+  AppPreferences().recordCompletedRunForBodyProfile();
   onTerritoriesUpdated();
 
   if (points.length >= 3) {

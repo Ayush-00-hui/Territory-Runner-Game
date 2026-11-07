@@ -14,6 +14,7 @@
 | **Privacy Zones** | Center latitude/longitude, radius (50m–2000m), name, enabled state | Redaction of sensitive zones (e.g. home, office) from tracks and presence | Local `SharedPreferences` + PostgreSQL `privacy_zones` table |
 | **Motion Window Summaries** | 10s aggregate step cadence (`cadence_spm`), motion energy (`motion_energy`), confidence (`cadence_confidence`) | Anti-cheat physical locomotor validation (detecting vehicular stillness) | Ephemeral in-memory (device) & PostgreSQL `runs` payload |
 | **Tactical Safety Data** | Emergency contact name, SMS number, SOS distress events | Emergency dialing and SMS dispatch via device intents | Device-local `SharedPreferences` only (never sent to server) |
+| **Physical Body Metrics** | Body mass (weight), height, biological sex/gender, birth year / age | Physiological metabolic energy calculation (kcal burn estimation) | Device-local `SharedPreferences` only (never uploaded or transmitted) |
 
 ---
 
@@ -150,4 +151,23 @@ Each 10-second window also includes:
    - Never uploading time-series waveforms.
 2. **Mathematical Irreversibility**: A 10-second window aggregates approximately 250 individual 3D acceleration vectors into two aggregate numbers (cadence SPM and motion energy). It is mathematically impossible to reconstruct device orientation, hand tremors, user gestures, or physical environments from these window scalars.
 3. **Graceful Degradation & Backward Compatibility**: If motion sensor permissions are unavailable or hardware sensors fail, the `motion_windows` field is simply omitted (`null` / empty). The backend detector falls back gracefully to pure spatial GPS kinematics, ensuring full backward compatibility.
+
+---
+
+## 10. Physical Body Metrics & Physiological Energy Privacy (India DPDP Act & GDPR)
+
+Under the Digital Personal Data Protection (DPDP) Act, 2023 (India) and the General Data Protection Regulation (GDPR, EU), physical body measurements (weight, height, biological sex/gender, birth year / age) constitute sensitive personal health data. Territory Runner treats this data with strict zero-knowledge architecture:
+
+1. **Strict On-Device Processing**:
+   - Physical body metrics are stored exclusively in local `SharedPreferences` on the user's mobile device (`pref_user_body_profile_v1`).
+   - Body profile details are **NEVER** transmitted over the network to the backend server, API clients, WebSocket channels, push notification payloads, crash reporting pipelines, or analytics tools.
+2. **Plain-Language Notice & Free Consent**:
+   - Before a user's first run, an upfront notice states: *"Used on this phone to estimate calories. It is never uploaded."*
+   - Users may choose **Skip for now** at any time. When skipped, energy computations use a standard reference adult (70 kg, 170 cm, neutral gender, age 30), and all values are clearly marked as estimates for an average adult. Runs are never blocked.
+3. **Right to Erasure & Instant Revocation**:
+   - Users can remove their body metrics at any time via **Profile > Settings > Body details > Remove my body details**.
+   - Initiating "Delete account & data" or clearing local application data permanently erases the body profile from device storage.
+4. **Data Portability**:
+   - When exporting local data via **Profile > Settings > Export run data > Export local profile & data (JSON)**, the exported JSON package includes the local body profile alongside territorial geometries.
+
 

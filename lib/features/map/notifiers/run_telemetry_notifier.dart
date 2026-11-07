@@ -28,6 +28,14 @@ class RunTelemetryNotifier extends ValueNotifier<RunTelemetry> {
     double? distanceToClosure,
     double? proximityToClosure,
     double? currentAreaSqm,
+    double? grade,
+    double? elevationGainMeters,
+    double? cadenceSpm,
+    double? strideLengthMeters,
+    bool clearStrideLength = false,
+    int? stepCount,
+    bool? isStepCountEstimated,
+    double? currentAltitudeMeters,
   }) {
     value = value.copyWith(
       currentSpeedKmh: speedKmh,
@@ -38,6 +46,14 @@ class RunTelemetryNotifier extends ValueNotifier<RunTelemetry> {
       proximityToClosure: proximityToClosure,
       currentAreaSqm: currentAreaSqm,
       clearClosure: distanceToClosure == null,
+      grade: grade,
+      elevationGainMeters: elevationGainMeters,
+      cadenceSpm: cadenceSpm,
+      strideLengthMeters: strideLengthMeters,
+      clearStrideLength: clearStrideLength,
+      stepCount: stepCount,
+      isStepCountEstimated: isStepCountEstimated,
+      currentAltitudeMeters: currentAltitudeMeters,
     );
   }
 

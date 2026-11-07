@@ -20,6 +20,11 @@ class RunHud extends StatefulWidget {
   final double satelliteAccuracyMeters;
   final int territoriesClaimed;
   final int? stepCount;
+  final bool isStepCountEstimated;
+  final double grade;
+  final double elevationGainMeters;
+  final double cadenceSpm;
+  final double? strideLengthMeters;
   final double? distanceToClosureMeters;
   final double? proximityToClosure;
   final String? targetPace;
@@ -45,6 +50,11 @@ class RunHud extends StatefulWidget {
     required this.satelliteAccuracyMeters,
     required this.territoriesClaimed,
     this.stepCount,
+    this.isStepCountEstimated = true,
+    this.grade = 0.0,
+    this.elevationGainMeters = 0.0,
+    this.cadenceSpm = 0.0,
+    this.strideLengthMeters,
     this.distanceToClosureMeters,
     this.proximityToClosure,
     this.targetPace,
@@ -242,6 +252,7 @@ class _RunHudState extends State<RunHud> {
                 currentSpeedKmh: widget.currentSpeedKmh,
                 satelliteAccuracyMeters: widget.satelliteAccuracyMeters,
                 stepCount: widget.stepCount,
+                isStepCountEstimated: widget.isStepCountEstimated,
                 territoriesClaimed: widget.territoriesClaimed,
                 onToggleExpanded: _toggleExpanded,
               ),
@@ -253,6 +264,10 @@ class _RunHudState extends State<RunHud> {
                 elapsedSeconds: widget.elapsedSeconds,
                 movingSeconds: widget.movingSeconds,
                 currentAreaSqm: widget.currentAreaSqm,
+                grade: widget.grade,
+                elevationGainMeters: widget.elevationGainMeters,
+                cadenceSpm: widget.cadenceSpm,
+                strideLengthMeters: widget.strideLengthMeters,
               ),
 
               const SizedBox(height: AppSpacing.s14),
