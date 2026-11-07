@@ -23,16 +23,16 @@ class AppConstants {
       '© OpenStreetMap contributors, © CARTO';
 
   /// Tile URL template configurable via --dart-define=TILE_URL_TEMPLATE=...
-  /// Defaults to CARTO Voyager for crisp high-visibility outdoor cartography.
+  /// Defaults to standard OpenStreetMap tiles (unwatermarked, free, open).
   static const String tileUrlTemplate = String.fromEnvironment(
     'TILE_URL_TEMPLATE',
-    defaultValue: cartoVoyagerUrlTemplate,
+    defaultValue: defaultOsmUrlTemplate,
   );
 
   /// Attribution string configurable via --dart-define=TILE_ATTRIBUTION=...
   static const String tileAttribution = String.fromEnvironment(
     'TILE_ATTRIBUTION',
-    defaultValue: cartoVoyagerAttribution,
+    defaultValue: defaultOsmAttribution,
   );
 
   /// Tile service API key configurable via --dart-define=TILE_API_KEY=... or MAPBOX_API_KEY

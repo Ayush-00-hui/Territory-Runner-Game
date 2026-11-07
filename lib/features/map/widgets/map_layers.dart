@@ -15,9 +15,9 @@ import '../../gameplay/polygon_enclosure_engine.dart';
 class MapLayers {
   MapLayers._();
 
-  /// High-visibility global map tile layer with offline disk caching and CARTO Voyager by default
+  /// High-visibility global map tile layer with offline disk caching and OpenStreetMap by default
   static TileLayer buildTileLayer() {
-    final String urlTemplate;
+    String urlTemplate;
     final Map<String, String> additionalOptions = {};
 
     if (AppConstants.tileApiKey.isNotEmpty) {
@@ -27,11 +27,27 @@ class MapLayers {
 
     if (AppConstants.tileUrlTemplate != AppConstants.cartoVoyagerUrlTemplate &&
         AppConstants.tileUrlTemplate != AppConstants.defaultOsmUrlTemplate) {
+      // User explicitly configured a custom TILE_URL_TEMPLATE
       urlTemplate = AppConstants.tileUrlTemplate;
     } else if (AppConstants.tileApiKey.isNotEmpty) {
-      urlTemplate = 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}';
+      if (AppConstants.tileApiKey.startsWith('pk.') ||
+          AppConstants.mapApiKey.isNotEmpty) {
+        urlTemplate = 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}';
+      } else {
+        urlTemplate = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key={apiKey}';
+      }
     } else {
       urlTemplate = AppConstants.tileUrlTemplate;
+    }
+
+    // If CARTO template is used with an API key, ensure key parameter is present
+    if (urlTemplate.contains('cartocdn.com') &&
+        AppConstants.tileApiKey.isNotEmpty &&
+        !urlTemplate.contains('{apiKey}') &&
+        !urlTemplate.contains('key=')) {
+      urlTemplate = urlTemplate.contains('?')
+          ? '$urlTemplate&key={apiKey}'
+          : '$urlTemplate?key={apiKey}';
     }
 
     return TileLayer(

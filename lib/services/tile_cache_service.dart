@@ -8,6 +8,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/logging/app_logger.dart';
 import '../core/utils/constants.dart';
@@ -21,10 +22,55 @@ class TileCacheService {
   TileCacheService._internal();
 
   static Directory? _cacheDir;
+  static bool _hasCheckedInvalidation = false;
+
+  /// Preference key tracking the tile URL template associated with currently cached tiles
+  static const String prefCachedTileUrlKey = 'pref_cached_tile_url_template_v2';
 
   @visibleForTesting
   void setCacheDirectoryForTesting(Directory dir) {
     _cacheDir = dir;
+  }
+
+  @visibleForTesting
+  static void resetInvalidationCheckForTesting() {
+    _hasCheckedInvalidation = false;
+  }
+
+  /// Automatically purges stale cached tiles if the active tile URL template has changed
+  /// (e.g. invalidating old watermarked CARTO tiles and switching to clean OpenStreetMap).
+  Future<void> _checkInvalidationIfNeeded(Directory dir) async {
+    if (_hasCheckedInvalidation) return;
+    _hasCheckedInvalidation = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await checkInvalidation(dir, prefs);
+    } catch (e) {
+      AppLogger.warning(
+        'Tile cache invalidation check skipped: $e',
+        tag: 'TileCacheService',
+      );
+    }
+  }
+
+  @visibleForTesting
+  Future<void> checkInvalidation(Directory dir, SharedPreferences prefs) async {
+    final String? lastUrl = prefs.getString(prefCachedTileUrlKey);
+    if (lastUrl != AppConstants.tileUrlTemplate) {
+      if (await dir.exists()) {
+        final entities = dir.listSync();
+        for (final entity in entities) {
+          try {
+            entity.deleteSync(recursive: true);
+          } catch (_) {}
+        }
+      }
+      await prefs.setString(prefCachedTileUrlKey, AppConstants.tileUrlTemplate);
+      AppLogger.info(
+        'Purged offline tile cache due to tile template change ($lastUrl -> ${AppConstants.tileUrlTemplate})',
+        tag: 'TileCacheService',
+      );
+    }
   }
 
   Future<Directory> _getCacheDirectory() async {
@@ -49,6 +95,9 @@ class TileCacheService {
         await dir.create(recursive: true);
       }
       _cacheDir = dir;
+      if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+        await _checkInvalidationIfNeeded(dir);
+      }
       return dir;
     } catch (_) {
       final dir = Directory('${Directory.systemTemp.path}/offline_tiles');
@@ -56,6 +105,9 @@ class TileCacheService {
         await dir.create(recursive: true);
       }
       _cacheDir = dir;
+      if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+        await _checkInvalidationIfNeeded(dir);
+      }
       return dir;
     }
   }

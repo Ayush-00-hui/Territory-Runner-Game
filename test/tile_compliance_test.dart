@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:territory_runner/core/utils/constants.dart';
 import 'package:territory_runner/services/tile_cache_service.dart';
 import 'package:territory_runner/features/map/widgets/map_layers.dart';
@@ -14,14 +15,14 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Tile Compliance & OpenStreetMap Policy', () {
-    test('AppConstants defaults enforce OSM compliance with CARTO Voyager', () {
+    test('AppConstants defaults enforce OSM compliance with OpenStreetMap standard', () {
       expect(
         AppConstants.tileUrlTemplate,
-        equals(AppConstants.cartoVoyagerUrlTemplate),
+        equals(AppConstants.defaultOsmUrlTemplate),
       );
       expect(
         AppConstants.tileAttribution,
-        equals(AppConstants.cartoVoyagerAttribution),
+        equals(AppConstants.defaultOsmAttribution),
       );
       expect(AppConstants.allowTilePrefetch, isFalse);
       expect(AppConstants.minTileCacheDays, equals(7));
@@ -76,6 +77,42 @@ void main() {
         }
       }
     });
+
+    test(
+      'TileCacheService checkInvalidation purges tiles when template changes',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          TileCacheService.prefCachedTileUrlKey:
+              AppConstants.cartoVoyagerUrlTemplate,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final tempDir = await Directory.systemTemp.createTemp(
+          'tile_invalidation_test_',
+        );
+
+        try {
+          final dummyTile = File('${tempDir.path}/15/10/20.png');
+          await dummyTile.parent.create(recursive: true);
+          await dummyTile.writeAsBytes([1, 2, 3]);
+          expect(await dummyTile.exists(), isTrue);
+
+          final service = TileCacheService();
+          await service.checkInvalidation(tempDir, prefs);
+
+          // Cached files should be wiped
+          expect(await dummyTile.exists(), isFalse);
+          // Preference should be updated to active AppConstants.tileUrlTemplate
+          expect(
+            prefs.getString(TileCacheService.prefCachedTileUrlKey),
+            equals(AppConstants.tileUrlTemplate),
+          );
+        } finally {
+          if (await tempDir.exists()) {
+            await tempDir.delete(recursive: true);
+          }
+        }
+      },
+    );
 
     test('MapLayers.buildTileLayer constructs compliant TileLayer', () {
       final layer = MapLayers.buildTileLayer();
@@ -138,7 +175,7 @@ void main() {
           ),
         );
         expect(find.text('Map Data & Attribution'), findsOneWidget);
-        expect(find.text(AppConstants.cartoVoyagerAttribution), findsOneWidget);
+        expect(find.text(AppConstants.defaultOsmAttribution), findsOneWidget);
       },
     );
   });

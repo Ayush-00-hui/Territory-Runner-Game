@@ -20,9 +20,9 @@
 
 [![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-465%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-514%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Tests-11%20Packages_Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
-[![Cartography](https://img.shields.io/badge/Cartography-CARTO_Retina_@2x-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
+[![Cartography](https://img.shields.io/badge/Cartography-OpenStreetMap_Standard-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
 [![Theme Palette](https://img.shields.io/badge/Theme-Electric_Blue_&_Mustard_Yellow-2D9CDB.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
 [![Encrypted Storage](https://img.shields.io/badge/Storage-Hive_AES--256-blueviolet.svg?style=flat-square&logo=keybase&logoColor=white)](lib/services/hive_encryption_service.dart)
 [![Threat Model](https://img.shields.io/badge/Security-STRIDE_Threat_Model-critical.svg?style=flat-square&logo=shield&logoColor=white)](docs/THREAT_MODEL.md)
@@ -65,7 +65,7 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 │ 🎮 Level 2: Gameplay Mechanics & Athlete Experience                                    │
 │    └─ Organic loop enclosure | Tri-modality calibration | Dynamic decay | AI Coach     │
 │ 📱 Level 3: Mobile Client Engineering & Offline Resiliency (Flutter)                   │
-│    └─ Instant GNSS warm-up | Auto-pause hysteresis | CARTO basemaps | AMOLED saver     │
+│    └─ Instant GNSS warm-up | Auto-pause hysteresis | OpenStreetMap basemaps | AMOLED saver     │
 │ 🖥️ Level 4: Backend Engineering & Distributed Spatial Systems (Go + PostGIS)           │
 │    └─ pg_advisory_xact_lock | PostGIS pipeline | Team validation | WebSocket Hub       │
 │ 🔒 Level 5: Cryptography, Privacy & Zero-Trust Security                                │
@@ -135,7 +135,7 @@ Conversely, first-generation location-based games (Ingress, Pokémon GO, Turf) c
 | **Anti-Cheat Validation** | Post-hoc manual flag reviews | Basic speed thresholds | **Tier 1 Kinematic Gate + Tier 2 LightGBM 25-feature ML ensemble** |
 | **Privacy Safeguards** | Client-only map blur | None | **Dual-layer: client redaction + server-side geodesic suppression in WebSockets** |
 | **Rival Alerts** | None | Delayed batch emails | **Real-time WebSocket alerts + FCM HTTP v1 background push** |
-| **Map Cartography** | Standard map SDK | Low-detail raster / custom vector | **Crisp CARTO Voyager, Positron & Dark Matter retina basemaps (`@2x.png`, native clarity, OSM compliant)** |
+| **Map Cartography** | Standard map SDK | Low-detail raster / custom vector | **OpenStreetMap standard basemaps (clean, unwatermarked, keyless) with optional CARTO/Mapbox layers** |
 | **Auto-Pause Engine** | Basic threshold, pauses at start line | None (battery drain) | **Athletic hysteresis ($< 2.5 \to \ge 3.0\text{ km/h}$) + start-line suppression gate + 10s grace window** |
 | **Visual Aesthetic** | Cluttered social feed | Neon, gamified arcade glare | **Athletic High-Contrast Electric Blue + Mustard Yellow + Dark Graphite (`#2D9CDB`, `#F2C94C`, `#121417`)** |
 
@@ -213,7 +213,7 @@ graph TD
         Gemini[Google Gemini 2.5 Flash API]
         FCMService[Firebase Cloud Messaging HTTP v1 API]
         GoogleOAuth[Google OAuth2 Token Service]
-        TileServer[CARTO Open-Source Retina Basemaps (Voyager, Positron, Dark Matter)]
+        TileServer[OpenStreetMap / CARTO Basemap Tile Servers]
     end
 
     ApiClient -->|HTTP REST /v1| ChiRouter
@@ -639,14 +639,13 @@ Engineered specifically for outdoor athletic glanceability at arm's length, dire
 
 ---
 
-### 8. Crisp Open-Source CARTO Retina Cartography
+### 8. High-Visibility OpenStreetMap Cartography & Offline Caching
 
 Standard mobile map tiles often suffer from inverted dark matrix filters that blur pedestrian paths or washed-out low-contrast graphics. Territory Runner implements high-clarity open-source cartography:
-- **Native Clarity:** Completely removed the dark inverted color matrix filter (`ColorFilter.matrix`), restoring full native sharpness and street legibility.
-- **CARTO Retina Basemaps (`@2x.png`):** Integrates free, open-source, OpenStreetMap-based CARTO raster basemaps requiring zero proprietary API keys:
-  - **CARTO Voyager (Default):** Crisp white streets, mint-green public parks, and visible pedestrian footpaths designed specifically for outdoor running legibility.
-  - **CARTO Positron:** Ultra-clean high-visibility light basemap for bright direct sunlight.
-  - **CARTO Dark Matter:** Deep stealth night basemap for dark workouts.
+- **Native Clarity:** Uninverted, high-contrast map rendering, restoring full native sharpness and street legibility.
+- **OpenStreetMap Standard Basemap (Default):** Free, open, unwatermarked basemap tiles (`https://tile.openstreetmap.org/{z}/{x}/{y}.png`) requiring zero proprietary API keys or external lock-in.
+- **Optional CARTO & Mapbox Support:** Supports CARTO raster retina basemaps (Voyager, Positron, Dark Matter) or Mapbox styles via `--dart-define=TILE_API_KEY=...` or `TILE_URL_TEMPLATE=...`.
+- **Automatic Cache Invalidation:** `TileCacheService` automatically purges disk cache if the configured tile template changes, preventing stale or watermarked tiles from persisting.
 - **OSM Usage Policy Compliance:** Configures discrete offline disk caching ([constants.dart](lib/core/utils/constants.dart), 7-day TTL), user-agent identification (`com.territoryrunner.app`), and prefetch locks.
 
 ---
@@ -1093,7 +1092,7 @@ See **[Production Deployment Specification](docs/DEPLOYMENT.md)** for Docker mul
 | **Why FCM HTTP v1 instead of legacy server keys?** | Legacy FCM server keys are deprecated by Google and represent permanent credentials. FCM HTTP v1 requires short-lived (60 min) OAuth2 tokens signed with RS256 assertions using service account keys. |
 | **Why zero-interpolation on GPS signal dropouts?** | Signal dropouts $>15\text{s}$ segment the active buffer. Dead-reckoning across urban canyons risks hallucinating paths through impassable buildings or private property; resetting ensures every polygon represents physically verified movement. |
 | **Why auto-pause at $< 2.5\text{ km/h}$ with hysteresis instead of instant pausing?** | GPS multi-path jitter and runner arm swing while walking/waiting at curbs cause instant speed fluctuations. Hysteresis ($< 2.5\text{ km/h}$ ceiling for 3s to pause, $\ge 3.0\text{ km/h}$ floor to resume) eliminates flapping. The initial movement gate (`_hasInitialMovement`) and 10s startup grace window prevent premature pausing at the start line. |
-| **Why CARTO retina basemaps over inverted dark OSM matrices?** | Inverting standard OpenStreetMap tiles via color matrices blurs pedestrian footpaths and parks while creating unreadable street labels in bright sunlight. CARTO Voyager `@2x` provides native clarity, crisp pedestrian paths, mint-green open spaces, and full OSM compliance with zero proprietary API key lock-in. |
+| **Why OpenStreetMap standard tiles by default?** | Standard OpenStreetMap tiles are open, unwatermarked, highly legible, and completely free of proprietary API keys or sudden policy enforcement locks. When an API key is configured, CARTO Voyager retina basemaps or Mapbox styles can be activated seamlessly. |
 | **Why server-authoritative team name validation with Unicode NFKC?** | Prevents homoglyph spoofing, zero-width space squatting (`\u200B`), and administrative impersonation. Normalizing with NFKC and enforcing a 3/day modification rate limit protects social radar feeds without leaking PII. |
 
 > For the complete 335-line comprehensive defense covering all questions, see **[Viva Examiner Defense Dossier](docs/VIVA.md)**.
