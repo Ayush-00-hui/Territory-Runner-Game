@@ -28,7 +28,8 @@ void handleFinishRun({
   final finalArea = summary['areaSqm'] as double;
   final finalXp = summary['xp'] as int;
   final finalStepCount = summary['stepCount'] as int?;
-  final elevationGain = (summary['elevationGainMeters'] as num?)?.toDouble() ?? 0.0;
+  final elevationGain =
+      (summary['elevationGainMeters'] as num?)?.toDouble() ?? 0.0;
   final points = summary['points'] as List<LatLng>;
 
   TerritoryService().defendTerritory(FirebaseService().currentUserId);

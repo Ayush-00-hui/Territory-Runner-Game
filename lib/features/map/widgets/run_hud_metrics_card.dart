@@ -57,9 +57,7 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
         distanceKm: widget.distanceKm,
         durationMinutes: widget.movingSeconds > 0
             ? widget.movingSeconds / 60.0
-            : (widget.elapsedSeconds > 0
-                  ? widget.elapsedSeconds / 60.0
-                  : null),
+            : (widget.elapsedSeconds > 0 ? widget.elapsedSeconds / 60.0 : null),
         speedKmh: widget.currentSpeedKmh > 0 ? widget.currentSpeedKmh : null,
       );
     }

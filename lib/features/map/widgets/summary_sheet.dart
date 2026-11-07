@@ -284,9 +284,7 @@ class _SummarySheetState extends State<SummarySheet>
                             fontWeight: FontWeight.w700,
                             fontSize: 16,
                             color: AppColors.textPrimary,
-                            fontFeatures: const [
-                              FontFeature.tabularFigures(),
-                            ],
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
                       ),

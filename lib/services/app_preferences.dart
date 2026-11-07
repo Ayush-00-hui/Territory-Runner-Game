@@ -483,7 +483,8 @@ class AppPreferences {
     final weight =
         customWeightKg ?? _bodyProfile?.weightKg ?? _bodyWeightKg ?? 70.0;
 
-    final effectiveGrade = (elevationGainMeters != null && grade == 0.0 && distanceKm > 0)
+    final effectiveGrade =
+        (elevationGainMeters != null && grade == 0.0 && distanceKm > 0)
         ? (elevationGainMeters / (distanceKm * 1000.0)).clamp(-0.20, 0.20)
         : grade;
 
@@ -548,7 +549,8 @@ class AppPreferences {
         (durationMinutes != null && durationMinutes > 0
             ? (distanceKm / (durationMinutes / 60.0))
             : 0.0);
-    final effectiveGrade = (elevationGainMeters != null && grade == 0.0 && distanceKm > 0)
+    final effectiveGrade =
+        (elevationGainMeters != null && grade == 0.0 && distanceKm > 0)
         ? (elevationGainMeters / (distanceKm * 1000.0)).clamp(-0.20, 0.20)
         : grade;
 

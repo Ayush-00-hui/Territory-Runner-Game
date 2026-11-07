@@ -319,7 +319,9 @@ class HistoryRunCard extends StatelessWidget {
         ? '${(territory.areaSqMeters / 1000000.0).toStringAsFixed(2)} km²'
         : '${territory.areaSqMeters.toStringAsFixed(0)} m²';
     final estimatedKm = _estimateDistanceKm(territory.polygon);
-    final cardCalories = AppPreferences().estimateCalories(distanceKm: estimatedKm);
+    final cardCalories = AppPreferences().estimateCalories(
+      distanceKm: estimatedKm,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s12),

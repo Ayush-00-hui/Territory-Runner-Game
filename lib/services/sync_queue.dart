@@ -62,8 +62,7 @@ class QueuedRun {
     'retryCount': retryCount,
     if (stepCount != null) 'stepCount': stepCount,
     if (estimatedCalories != null) 'estimatedCalories': estimatedCalories,
-    if (calorieModelVersion != null)
-      'calorieModelVersion': calorieModelVersion,
+    if (calorieModelVersion != null) 'calorieModelVersion': calorieModelVersion,
     if (motionWindows != null && motionWindows!.isNotEmpty)
       'motionWindows': motionWindows!.map((w) => w.toJson()).toList(),
   };
