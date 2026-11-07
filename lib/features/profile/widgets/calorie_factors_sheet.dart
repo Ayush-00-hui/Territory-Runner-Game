@@ -1,18 +1,45 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/app_preferences.dart';
+import '../../../services/calorie_model_engine.dart';
 import '../../../ui/ui.dart';
 
 /// Modal bottom sheet explaining physiological calorie calculation factors
 /// and offering transparent personal smartwatch calibration.
 class CalorieFactorsSheet extends StatefulWidget {
-  const CalorieFactorsSheet({super.key});
+  final double? weightKg;
+  final double? distanceKm;
+  final int? durationSeconds;
+  final double? elevationGainMeters;
+  final int? stepCount;
+
+  const CalorieFactorsSheet({
+    super.key,
+    this.weightKg,
+    this.distanceKm,
+    this.durationSeconds,
+    this.elevationGainMeters,
+    this.stepCount,
+  });
 
   /// Displays the calorie information and calibration sheet modally.
-  static Future<void> show({required BuildContext context}) {
+  static Future<void> show({
+    required BuildContext context,
+    double? weightKg,
+    double? distanceKm,
+    int? durationSeconds,
+    double? elevationGainMeters,
+    int? stepCount,
+  }) {
     return AppSheet.show(
       context: context,
-      builder: (ctx) => const CalorieFactorsSheet(),
+      builder: (ctx) => CalorieFactorsSheet(
+        weightKg: weightKg,
+        distanceKm: distanceKm,
+        durationSeconds: durationSeconds,
+        elevationGainMeters: elevationGainMeters,
+        stepCount: stepCount,
+      ),
     );
   }
 
@@ -111,6 +138,41 @@ class _CalorieFactorsSheetState extends State<CalorieFactorsSheet> {
                 color: AppColors.textSecondary,
               ),
             ),
+            if (widget.distanceKm != null) ...[
+              const SizedBox(height: AppSpacing.s12),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.s12),
+                decoration: BoxDecoration(
+                  color: AppColors.bgDeep,
+                  borderRadius: AppSpacing.br12,
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'This Run’s Inputs & Model Metadata',
+                      style: AppText.labelMedium.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s6),
+                    Text(
+                      '• Body Mass: ${(widget.weightKg ?? _appPrefs.bodyProfile?.weightKg ?? 70.0).toStringAsFixed(0)} kg\n'
+                      '• Distance & Moving Time: ${widget.distanceKm!.toStringAsFixed(2)} km in ${(widget.durationSeconds ?? 0) ~/ 60}m\n'
+                      '• Incline / Climb: +${(widget.elevationGainMeters ?? 0.0).toStringAsFixed(0)} m elevation gain\n'
+                      '• Engine Model: v${CalorieModelEngine().modelVersion} (Monotone Quantile Regressor)\n'
+                      '• Calibration: ${hasActiveFactor ? "${factor.toStringAsFixed(2)}x active" : "Uncalibrated (1.0x)"}',
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.textPrimary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.s16),
 
             // Factor explanation cards
@@ -299,7 +361,36 @@ class _CalorieFactorsSheetState extends State<CalorieFactorsSheet> {
               ),
             ],
 
-            const SizedBox(height: AppSpacing.s20),
+            const SizedBox(height: AppSpacing.s14),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s10),
+              decoration: BoxDecoration(
+                color: AppColors.bgDeep,
+                borderRadius: AppSpacing.br8,
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.info_outline_rounded,
+                    size: 15,
+                    color: AppColors.textMuted,
+                  ),
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      'Not medical advice: Calorie calculations are mathematical estimates intended for fitness tracking only. Paused time is strictly excluded from locomotor work.',
+                      style: AppText.bodySmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Got it'),

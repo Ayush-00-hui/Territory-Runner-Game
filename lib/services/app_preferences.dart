@@ -474,6 +474,7 @@ class AppPreferences {
     double? customWeightKg,
     String activityType = 'running',
     double grade = 0.0,
+    double? elevationGainMeters,
     double? durationMinutes,
     double? speedKmh,
     bool? useLegacyFlat,
@@ -482,9 +483,13 @@ class AppPreferences {
     final weight =
         customWeightKg ?? _bodyProfile?.weightKg ?? _bodyWeightKg ?? 70.0;
 
+    final effectiveGrade = (elevationGainMeters != null && grade == 0.0 && distanceKm > 0)
+        ? (elevationGainMeters / (distanceKm * 1000.0)).clamp(-0.20, 0.20)
+        : grade;
+
     final shouldUseLegacy =
         useLegacyFlat ??
-        (durationMinutes == null && speedKmh == null && grade == 0.0);
+        (durationMinutes == null && speedKmh == null && effectiveGrade == 0.0);
 
     if (shouldUseLegacy) {
       final double factor;
@@ -512,7 +517,7 @@ class AppPreferences {
       distanceKm: distanceKm,
       customWeightKg: weight,
       activityType: activityType,
-      grade: grade,
+      grade: effectiveGrade,
       durationMinutes: durationMinutes,
       speedKmh: speedKmh,
     );
@@ -530,6 +535,7 @@ class AppPreferences {
     double? customWeightKg,
     String activityType = 'running',
     double grade = 0.0,
+    double? elevationGainMeters,
     double cadenceSpm = 0.0,
     double? durationMinutes,
     double? speedKmh,
@@ -542,12 +548,15 @@ class AppPreferences {
         (durationMinutes != null && durationMinutes > 0
             ? (distanceKm / (durationMinutes / 60.0))
             : 0.0);
+    final effectiveGrade = (elevationGainMeters != null && grade == 0.0 && distanceKm > 0)
+        ? (elevationGainMeters / (distanceKm * 1000.0)).clamp(-0.20, 0.20)
+        : grade;
 
     return CalorieModelEngine().estimateSegment(
       distanceKm: distanceKm,
       durationSeconds: durSec,
       speedKmh: spd,
-      grade: grade,
+      grade: effectiveGrade,
       cadenceSpm: cadenceSpm,
       activityType: activityType,
       profile: _bodyProfile ?? UserBodyProfile.referenceAdult(weightKg: weight),
@@ -561,6 +570,7 @@ class AppPreferences {
     double? durationMinutes,
     double? speedKmh,
     double grade = 0.0,
+    double? elevationGainMeters,
     double cadenceSpm = 0.0,
     String activityType = 'running',
   }) {
@@ -569,6 +579,7 @@ class AppPreferences {
       durationMinutes: durationMinutes,
       speedKmh: speedKmh,
       grade: grade,
+      elevationGainMeters: elevationGainMeters,
       cadenceSpm: cadenceSpm,
       activityType: activityType,
     );

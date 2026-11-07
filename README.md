@@ -94,6 +94,7 @@ Every dimension of the platform's distributed systems, mathematics, security pos
 | **[Production Deployment Specification](docs/DEPLOYMENT.md)** | Multi-stage Docker containers, Render deployment, PostgreSQL 16 PostGIS tuning, and production Docker Compose stacks. | DevOps, SREs |
 | **[App Store & Play Store Readiness](docs/STORE_READINESS.md)** | Android 14 `FOREGROUND_SERVICE_LOCATION` compliance, iOS Background Modes, and privacy manifest audits. | Release Engineers, Mobile Leads |
 | **[UX Design System & WCAG AA Audit](docs/UX_CHECKLIST.md)** | High-contrast Ink + Pacer Blue design tokens, tabular typography rules, and automated contrast verification. | UI/UX Designers, Accessibility |
+| **[Calorie & Energy Expenditure Engine](docs/CALORIES.md)** | Peer-reviewed physiological energy expenditure (ACSM, Minetti, Mifflin-St Jeor), monotone-constrained ML surrogate, and zero-knowledge DPDP privacy. | Sports Scientists, ML Engineers, Athletes |
 | **[Privacy Policy & Geodata Architecture](docs/PRIVACY.md)** | Sensitive geodata collection, client-side redaction, server-enforced privacy exclusion zones, and complete account erasure. | Security Engineers, Privacy Officers, Athletes |
 | **[Audio, Fonts & Cartography Assets](docs/ASSETS.md)** | OpenStreetMap tile usage compliance, synthetic harmonic audio specs, and font licensing certifications. | Compliance, Cartographers, Designers |
 | **[College Defense Presentation Suite](docs/presentation/)** | 3-minute individual defense speeches (Ayush, Avinash, Gurudutt), 10-minute master team deck, and work breakdown matrices. | Faculty Reviewers, Candidates |
@@ -469,7 +470,24 @@ Athletes can plan territory routes before leaving home:
 
 ---
 
-### 6. Weekly Competitive League Engine
+### 6. Physiological Calorie & Energy Expenditure Engine
+
+Territory Runner replaces naive flat distance multipliers ($kcal = d \cdot M \cdot 1.036$) with a peer-reviewed biomechanical energy pipeline:
+
+1. **Multi-Factor Bioenergetics:** Energy calculation incorporates body mass, speed, horizontal grade/incline, and stride cadence. Uphill climbs increase energy consumption, heavier athletes burn proportionally more, and running faster expends more energy per minute.
+2. **Peer-Reviewed Physiology:**
+   - **ACSM Metabolic Equations (2021):** Validated oxygen consumption ($VO_2$) for walking ($3\text{--}6\text{ km/h}$) and running ($\ge 8\text{ km/h}$), converted at $4.86\text{ kcal / L } O_2$.
+   - **Minetti et al. (2002) Polynomial:** 5th-order empirical model for extreme gradients ($|G| > 6\%$, up to $\pm 20\%$) with eccentric muscle braking limits preventing negative energy burn.
+   - **Mifflin-St Jeor (1990) RMR:** Basal resting metabolic rate per minute, incorporating an unbiased neutral sex midpoint ($s = -78\text{ kcal/day}$) when gender is unstated.
+   - **Martin et al. (1998) Cycling Power Balance:** Direct physical modeling of rolling resistance, gravitational potential work, and aerodynamic drag with $22\%$ human metabolic efficiency.
+3. **Honest Estimation & Uncertainty Range:** Calories are presented honestly as estimates with a likely quantile range (e.g., `~410 kcal (est.) • likely between 370 and 450 kcal`), grounded in the "How we estimate this" explanation modal.
+4. **Monotone-Constrained LightGBM Surrogate:** On-device ML decision trees enforce non-decreasing monotonicity (`[+1, +1, +1, 0, +1]`) so predicted energy burn rate mathematically cannot drop as body mass, speed, or grade increases. Inferences run in pure Dart in $< 15\ \mu\text{s}$ with SHA-256 asset integrity validation.
+5. **Zero-Knowledge Privacy (India DPDP Act & GDPR):** Body details (weight, height, age, gender) and computed calories are strictly confined to local device storage (`SharedPreferences` & local sync queue). They are **never** uploaded to servers, analytics, or leaderboards.
+6. **Smartwatch Calibration:** Athletes can optionally calibrate against their wrist wearable (Apple Watch, Garmin) across 3+ runs, producing a median multiplier strictly bounded to $[0.8, 1.2]$.
+
+---
+
+### 7. Weekly Competitive League Engine
 
 - **Canonical UTC Reset:** All league divisions reset every **Monday at 00:00:00 UTC**:
   $$\text{ResetTimestamp} = \text{date\_trunc}('week', \text{NOW}() \text{ AT TIME ZONE } 'UTC') + 7\text{ days}$$
@@ -482,7 +500,7 @@ Athletes can plan territory routes before leaving home:
 
 ---
 
-### 7. Google Gemini AI Athletic Coach
+### 8. Google Gemini AI Athletic Coach
 
 - **Post-Run Debrief:** Calls Google Gemini 2.5 Flash (`POST /v1/coach/debrief`) to generate physiological workout debriefs analyzing cardiovascular effort, pace degradation, elevation profile, and tactical route suggestions.
 - **Zero Key Leakage:** Client never touches Google Gemini API keys; requests proxy through the Go backend.
@@ -490,7 +508,7 @@ Athletes can plan territory routes before leaving home:
 
 ---
 
-### 8. Server-Authoritative Faction & Team Validation (`PUT /v1/me/faction`)
+### 9. Server-Authoritative Faction & Team Validation (`PUT /v1/me/faction`)
 
 Team names appear publicly on real-time presence radar, leaderboards, and push alerts. The backend serves as the single source of truth for validation, normalization, and abuse defense:
 - **Canonical Content Rules:** Trims input, collapses repeated internal spaces, enforces 3 to 24 Unicode characters, and restricts characters strictly to letters, digits, spaces, hyphens, and underscores.

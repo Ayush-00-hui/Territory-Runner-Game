@@ -29,6 +29,8 @@ class QueuedRun {
   final int retryCount;
   final List<MotionWindow>? motionWindows;
   final int? stepCount;
+  final int? estimatedCalories;
+  final String? calorieModelVersion;
 
   QueuedRun({
     required this.idempotencyKey,
@@ -42,6 +44,8 @@ class QueuedRun {
     this.retryCount = 0,
     this.motionWindows,
     this.stepCount,
+    this.estimatedCalories,
+    this.calorieModelVersion,
   });
 
   Map<String, dynamic> toJson() => {
@@ -57,6 +61,9 @@ class QueuedRun {
     'createdAt': createdAt.toIso8601String(),
     'retryCount': retryCount,
     if (stepCount != null) 'stepCount': stepCount,
+    if (estimatedCalories != null) 'estimatedCalories': estimatedCalories,
+    if (calorieModelVersion != null)
+      'calorieModelVersion': calorieModelVersion,
     if (motionWindows != null && motionWindows!.isNotEmpty)
       'motionWindows': motionWindows!.map((w) => w.toJson()).toList(),
   };
@@ -87,6 +94,8 @@ class QueuedRun {
       retryCount: (json['retryCount'] as num?)?.toInt() ?? 0,
       motionWindows: motionWindows,
       stepCount: (json['stepCount'] as num?)?.toInt(),
+      estimatedCalories: (json['estimatedCalories'] as num?)?.toInt(),
+      calorieModelVersion: json['calorieModelVersion'] as String?,
     );
   }
 
@@ -95,6 +104,8 @@ class QueuedRun {
     String? activityType,
     List<MotionWindow>? motionWindows,
     int? stepCount,
+    int? estimatedCalories,
+    String? calorieModelVersion,
   }) {
     return QueuedRun(
       idempotencyKey: idempotencyKey,
@@ -108,6 +119,8 @@ class QueuedRun {
       retryCount: retryCount ?? this.retryCount,
       motionWindows: motionWindows ?? this.motionWindows,
       stepCount: stepCount ?? this.stepCount,
+      estimatedCalories: estimatedCalories ?? this.estimatedCalories,
+      calorieModelVersion: calorieModelVersion ?? this.calorieModelVersion,
     );
   }
 }
@@ -311,6 +324,8 @@ class SyncQueueService {
     String? idempotencyKey,
     List<MotionWindow>? motionWindows,
     int? stepCount,
+    int? estimatedCalories,
+    String? calorieModelVersion,
     bool autoSync = true,
   }) async {
     final box = await _getBox();
@@ -327,6 +342,8 @@ class SyncQueueService {
       createdAt: DateTime.now(),
       motionWindows: motionWindows,
       stepCount: stepCount,
+      estimatedCalories: estimatedCalories,
+      calorieModelVersion: calorieModelVersion,
     );
 
     await box.put(key, jsonEncode(item.toJson()));
