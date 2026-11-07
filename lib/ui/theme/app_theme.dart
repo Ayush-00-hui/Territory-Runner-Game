@@ -21,17 +21,18 @@ class AppTheme {
 
       // Color Scheme
       colorScheme: const ColorScheme.dark(
-        primary: AppColors.accent,
-        onPrimary: AppColors.onAccent,
-        primaryContainer: AppColors.accentContainer,
-        secondary: AppColors.offWhite,
-        onSecondary: AppColors.bgDeep,
+        primary: AppColors.primary,
+        onPrimary: AppColors.onPrimary,
+        primaryContainer: AppColors.primaryContainer,
+        secondary: AppColors.accent,
+        onSecondary: AppColors.onAccent,
+        secondaryContainer: AppColors.accentContainer,
         surface: AppColors.surface,
         onSurface: AppColors.textPrimary,
         surfaceContainer: AppColors.surface2,
         surfaceContainerHigh: AppColors.bgElevated,
         error: AppColors.error,
-        onError: AppColors.onAccent,
+        onError: AppColors.onPrimary,
         outline: AppColors.border,
         outlineVariant: AppColors.borderSubtle,
         scrim: AppColors.scrim,
@@ -72,13 +73,13 @@ class AppTheme {
         ),
       ),
 
-      // Buttons Theme (Electric Yellow CTA & Off-White secondary details)
+      // Buttons Theme (Electric Blue Primary CTA & Mustard Yellow Accent Details)
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
-          foregroundColor: AppColors.onAccent,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.onPrimary,
           elevation: 2,
-          shadowColor: AppColors.accent.withValues(alpha: 0.4),
+          shadowColor: AppColors.primary.withValues(alpha: 0.35),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
@@ -89,8 +90,8 @@ class AppTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.offWhite,
-          side: const BorderSide(color: AppColors.offWhite, width: 1.5),
+          foregroundColor: AppColors.primary,
+          side: const BorderSide(color: AppColors.primary, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
@@ -101,20 +102,20 @@ class AppTheme {
 
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.accent,
+          foregroundColor: AppColors.primary,
           textStyle: AppText.button,
         ),
       ),
 
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.accent,
-        foregroundColor: AppColors.onAccent,
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.onPrimary,
         elevation: 4,
       ),
 
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: AppColors.bgElevated,
-        selectedItemColor: AppColors.accent,
+        selectedItemColor: AppColors.primary,
         unselectedItemColor: AppColors.textSecondary,
         elevation: 0,
       ),
@@ -196,7 +197,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
-          borderSide: const BorderSide(color: AppColors.accent, width: 1.2),
+          borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.0),
@@ -208,13 +209,13 @@ class AppTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.onAccent;
+            return AppColors.onPrimary;
           }
           return AppColors.textMuted;
         }),
         trackColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return AppColors.accent;
+            return AppColors.primary;
           }
           return AppColors.surface2;
         }),
@@ -223,16 +224,16 @@ class AppTheme {
 
       // Slider Theme
       sliderTheme: const SliderThemeData(
-        activeTrackColor: AppColors.accent,
+        activeTrackColor: AppColors.primary,
         inactiveTrackColor: AppColors.surface2,
-        thumbColor: AppColors.accent,
-        overlayColor: AppColors.accentContainer,
+        thumbColor: AppColors.primary,
+        overlayColor: AppColors.primaryContainer,
         trackHeight: 4.0,
       ),
 
       // Progress Indicator Theme
       progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: AppColors.accent,
+        color: AppColors.primary,
         linearTrackColor: AppColors.surface2,
         circularTrackColor: AppColors.surface2,
       ),

@@ -1,95 +1,108 @@
 import 'package:flutter/material.dart';
 
 /// Territory Runner Design System: Color Palette & Semantic Tokens
-/// Athletic High-Contrast Palette: Amber Red (#95191D) Canvas + Off-White (#F6F6EA) + Electric Yellow (#FDE827)
+/// Athletic High-Contrast Palette: Primary #2D9CDB (Electric Blue) + Accent #F2C94C (Mustard Yellow) + Surface #121417 (Dark Graphite)
 class AppColors {
   AppColors._();
 
   // Core Palette Constants (Exact Requested Values)
-  static const Color amberRed = Color(
-    0xFF95191D,
-  ); // Primary Amber Red (#95191D)
-  static const Color amberRedBright = Color(
-    0xFFFF454A,
-  ); // Luminous Amber Red for radiant accents & contrast (3.5:1 on surface)
-  static const Color offWhite = Color(
-    0xFFF6F6EA,
-  ); // Primary Warm Off-White (#F6F6EA)
-  static const Color yellow = Color(
-    0xFFFDE827,
-  ); // Primary Electric Yellow (#FDE827)
+  static const Color electricBlue = Color(
+    0xFF2D9CDB,
+  ); // Primary: #2D9CDB (Electric Blue)
+  static const Color mustardYellow = Color(
+    0xFFF2C94C,
+  ); // Accent: #F2C94C (Mustard Yellow)
+  static const Color darkGraphite = Color(
+    0xFF121417,
+  ); // Surface: #121417 (Dark Graphite)
 
-  // Core Surfaces & Structure (Amber Red Canvas + Deep Velvet Garnet Surfaces)
-  static const Color bgDeep =
-      amberRed; // #95191D - Main Amber Red Canvas Background!
-  static const Color bgElevated = Color(
-    0xFF7E1317,
-  ); // Rich deep garnet velvet for nav/bars
-  static const Color surface = Color(
-    0xFF6B0E12,
-  ); // Deep rich velvety garnet card surface
-  static const Color surface2 = Color(
-    0xFF550A0E,
-  ); // Deep velvety ruby container & input fill
-  static const Color surfaceGlass = Color(
-    0xF26B0E12,
-  ); // 95% opacity frosted garnet HUD
-  static const Color border = Color(0x59F6F6EA); // Crisp Off-White @ 35%
-  static const Color borderSubtle = Color(0x33F6F6EA); // Crisp Off-White @ 20%
-  static const Color divider = Color(0x26F6F6EA); // Crisp Off-White @ 15%
-  static const Color scrim = Color(0x99000000); // #000000 @ 60%
-  static const Color disabled = Color(0xFF6D3B3E); // Muted wine disabled
-
-  // Typography Colors (Off-White & Warm Ivory, WCAG AAA contrast)
-  static const Color textPrimary =
-      offWhite; // 0xFFF6F6EA (7.9:1 AAA on bgDeep, 11.4:1 AAA on surface)
-  static const Color textSecondary = Color(
-    0xFFEADBDB,
-  ); // Warm Ivory (6.4:1 AA on bgDeep, 9.2:1 AAA on surface)
-  static const Color textMuted = Color(
-    0xFFCCAFAF,
-  ); // Muted Rosy Parchment (4.2:1 AA on bgDeep, 6.1:1 on surface)
-
-  // Brand & Semantic Accents
-  static const Color accent =
-      yellow; // Electric Yellow (#FDE827) - Eye-catchy CTA buttons & details
+  // Primary & Accent Brand Tokens
+  static const Color primary = electricBlue; // #2D9CDB (Electric Blue)
+  static const Color accent = mustardYellow; // #F2C94C (Mustard Yellow)
+  static const Color onPrimary = Color(
+    0xFF080B0E,
+  ); // Deep Obsidian Black (6.5:1 AA contrast on primary)
   static const Color onAccent = Color(
-    0xFF140708,
-  ); // Deep obsidian text (15.7:1 AAA contrast on yellow)
+    0xFF121417,
+  ); // Dark Graphite (11.5:1 AAA contrast on accent)
+  static const Color primaryContainer = Color(
+    0x332D9CDB,
+  ); // Electric Blue @ 20% glow
   static const Color accentContainer = Color(
-    0x33FDE827,
-  ); // Electric Yellow @ 20% glow
-  static const Color mine = yellow; // Player territory (Electric Yellow)
-  static const Color rival =
-      amberRedBright; // Rival territory & pacer markers (Luminous Red #FF454A)
+    0x33F2C94C,
+  ); // Mustard Yellow @ 20% glow
+
+  // Core Surfaces & Structure (Dark Graphite)
+  static const Color bgDeep = Color(
+    0xFF0C0E11,
+  ); // Deep Obsidian Graphite Base Canvas
+  static const Color bgElevated = Color(
+    0xFF181B20,
+  ); // Elevated Graphite for navigation & app bars
+  static const Color surface =
+      darkGraphite; // #121417 - Core Dark Graphite Surface Card
+  static const Color surface2 = Color(
+    0xFF1C2025,
+  ); // Secondary Surface for containers & inputs
+  static const Color surfaceGlass = Color(
+    0xF2121417,
+  ); // 95% opacity frosted Dark Graphite HUD
+  static const Color border = Color(0xFF2A2F37); // Clean Graphite Border
+  static const Color borderSubtle = Color(
+    0x26F4F6F8,
+  ); // Hairline Ice White @ 15%
+  static const Color divider = Color(0x14F4F6F8); // Hairline Ice White @ 8%
+  static const Color scrim = Color(0x99000000); // 60% Black
+  static const Color disabled = Color(0xFF3E4550); // Muted Slate Disabled
+
+  // Typography Colors (Ice White & Slate Titanium, WCAG AAA contrast)
+  static const Color textPrimary = Color(
+    0xFFF4F6F8,
+  ); // Ice White (17.1:1 AAA on surface)
+  static const Color textSecondary = Color(
+    0xFFA0AAB5,
+  ); // Slate Titanium (8.0:1 AAA on surface)
+  static const Color textMuted = Color(
+    0xFF6B7684,
+  ); // Muted Graphite (4.0:1 AA on surface)
+
+  // Map Territory Tokens
+  static const Color mine = primary; // Player territory (Electric Blue #2D9CDB)
+  static const Color rival = Color(
+    0xFFEB5757,
+  ); // Rival territory & pacer markers (Coral Red #EB5757)
 
   // Status & Metric Semantics
-  static const Color warning = yellow; // Solar Electric Yellow
-  static const Color error =
-      amberRedBright; // Luminous Red (#FF454A) for high contrast on Amber Red
-  static const Color info = offWhite; // Warm Off-White (#F6F6EA)
-  static const Color success = yellow; // Electric Yellow
+  static const Color warning = accent; // Mustard Yellow (#F2C94C)
+  static const Color error = Color(0xFFEB5757); // Coral Red (#EB5757)
+  static const Color info = primary; // Electric Blue (#2D9CDB)
+  static const Color success = Color(
+    0xFF27AE60,
+  ); // Athletic Mint Emerald (#27AE60)
 
   // Podium Trophy Accents
-  static const Color gold = yellow; // Electric Yellow (#FDE827)
-  static const Color silver = offWhite; // Warm Off-White (#F6F6EA)
-  static const Color bronze = amberRedBright; // Luminous Amber Red (#FF454A)
+  static const Color gold = accent; // Mustard Yellow (#F2C94C)
+  static const Color silver = Color(0xFFE0E6ED); // Silver Ice
+  static const Color bronze = Color(0xFFCD7F32); // Bronze Amber
 
   // Territory Map Render Fills & Borders
   static const Color territoryMineFill = Color(
-    0x3DFDE827,
-  ); // 24% Electric Yellow glow
-  static const Color territoryMineBorder = yellow; // Solid Electric Yellow
+    0x3D2D9CDB,
+  ); // 24% Electric Blue glow
+  static const Color territoryMineBorder = primary; // Solid Electric Blue
   static const Color territoryRivalFill = Color(
-    0x38FF454A,
-  ); // 22% Luminous Red glow
-  static const Color territoryRivalBorder =
-      amberRedBright; // Solid Luminous Red
+    0x38EB5757,
+  ); // 22% Coral Red glow
+  static const Color territoryRivalBorder = rival; // Solid Coral Red
 
-  // Legacy Aliases (Preserved for backwards compatibility, mapped to new palette)
+  // Aliases for backwards compatibility
+  static const Color amberRed = Color(0xFF95191D);
+  static const Color amberRedBright = Color(0xFFFF454A);
+  static const Color offWhite = textPrimary;
+  static const Color yellow = accent;
   static const Color accentSecondary = info;
-  static const Color secondary = yellow;
-  static const Color cyanThruster = accent;
+  static const Color secondary = accent;
+  static const Color cyanThruster = primary;
   static const Color positiveGreen = success;
   static const Color actionRed = error;
   static const Color amberStreak = warning;

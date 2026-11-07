@@ -56,7 +56,7 @@ class PremiumBottomNav extends StatelessWidget {
                   height: 2.0,
                   width: 20.0,
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.accent : Colors.transparent,
+                    color: isSelected ? AppColors.primary : Colors.transparent,
                     borderRadius: AppRadius.brFull,
                   ),
                 ),
@@ -65,7 +65,7 @@ class PremiumBottomNav extends StatelessWidget {
                   icon,
                   size: 20.0,
                   color: isSelected
-                      ? AppColors.accent
+                      ? AppColors.primary
                       : AppColors.textSecondary,
                 ),
                 const SizedBox(height: 3),
@@ -73,7 +73,7 @@ class PremiumBottomNav extends StatelessWidget {
                   label,
                   style: AppText.caption.copyWith(
                     color: isSelected
-                        ? AppColors.accent
+                        ? AppColors.primary
                         : AppColors.textSecondary,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     fontSize: 10,
@@ -133,11 +133,11 @@ class PremiumBottomNav extends StatelessWidget {
                       height: 48,
                       width: 48,
                       decoration: BoxDecoration(
-                        color: AppColors.accent,
+                        color: AppColors.primary,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.accent.withValues(alpha: 0.45),
+                            color: AppColors.primary.withValues(alpha: 0.45),
                             blurRadius: 10,
                             offset: const Offset(0, 2),
                           ),
@@ -148,7 +148,7 @@ class PremiumBottomNav extends StatelessWidget {
                           isRunActive
                               ? Icons.play_arrow_rounded
                               : Icons.directions_run_rounded,
-                          color: AppColors.onAccent,
+                          color: AppColors.onPrimary,
                           size: 26,
                         ),
                       ),

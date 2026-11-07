@@ -33,7 +33,7 @@ double _calculateContrast(Color foreground, Color background) {
 }
 
 void main() {
-  group('WCAG AA Contrast Ratios for Amber Red + Off-White + Yellow Palette', () {
+  group('WCAG AA Contrast Ratios for Electric Blue + Mustard Yellow + Dark Graphite Palette', () {
     test('Body text contrast >= 4.5:1 on surfaces', () {
       final textPrimaryOnSurface = _calculateContrast(
         AppColors.textPrimary,
@@ -165,37 +165,37 @@ void main() {
       );
     });
 
-    test('Amber red contrast on off-white and electric yellow >= 4.5:1 (AAA/AA)', () {
-      final amberRedOnWhite = _calculateContrast(
-        AppColors.amberRed,
-        AppColors.offWhite,
-      );
-      final amberRedOnYellow = _calculateContrast(
-        AppColors.amberRed,
-        AppColors.yellow,
-      );
-      final amberRedBrightOnSurface = _calculateContrast(
-        AppColors.amberRedBright,
+    test('Electric Blue and Mustard Yellow contrast >= 4.5:1 on Dark Graphite', () {
+      final primaryOnSurface = _calculateContrast(
+        AppColors.primary,
         AppColors.surface,
+      );
+      final accentOnSurface = _calculateContrast(
+        AppColors.accent,
+        AppColors.surface,
+      );
+      final onPrimaryOnPrimary = _calculateContrast(
+        AppColors.onPrimary,
+        AppColors.primary,
       );
 
       expect(
-        amberRedOnWhite,
+        primaryOnSurface,
         greaterThanOrEqualTo(4.5),
         reason:
-            'Amber red ($amberRedOnWhite:1) on off-white exceeds WCAG AA body contrast',
+            'Electric blue ($primaryOnSurface:1) on surface exceeds WCAG AA contrast',
       );
       expect(
-        amberRedOnYellow,
+        accentOnSurface,
         greaterThanOrEqualTo(4.5),
         reason:
-            'Amber red ($amberRedOnYellow:1) on electric yellow exceeds WCAG AA contrast',
+            'Mustard yellow ($accentOnSurface:1) on surface exceeds WCAG AA contrast',
       );
       expect(
-        amberRedBrightOnSurface,
-        greaterThanOrEqualTo(3.0),
+        onPrimaryOnPrimary,
+        greaterThanOrEqualTo(4.5),
         reason:
-            'Amber red bright ($amberRedBrightOnSurface:1) on surface exceeds 3.0:1 UI contrast',
+            'onPrimary ($onPrimaryOnPrimary:1) on primary exceeds 4.5:1 UI contrast',
       );
     });
   });

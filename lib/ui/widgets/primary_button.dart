@@ -25,8 +25,8 @@ class PrimaryButton extends StatefulWidget {
     this.icon,
     this.isLoading = false,
     this.isFullWidth = true,
-    this.backgroundColor = AppColors.accent,
-    this.foregroundColor = AppColors.onAccent,
+    this.backgroundColor = AppColors.primary,
+    this.foregroundColor = AppColors.onPrimary,
     this.height = 48.0,
     this.isOutlined = false,
   });
