@@ -35,6 +35,7 @@ import 'widgets/run_go_cue.dart';
 import 'widgets/run_goal_sheet.dart';
 import 'widgets/run_recovery_dialog.dart';
 import 'widgets/sos_beacon_sheet.dart';
+import '../profile/widgets/body_details_sheet.dart';
 import '../profile/widgets/offline_maps_sheet.dart';
 
 export 'controllers/map_run_controller.dart';
@@ -154,6 +155,29 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
+  void _startRunSequence(MapRunController controller) {
+    if (controller.isRunActive) return;
+    final prefs = AppPreferences();
+    if (!prefs.hasBodyProfile && !prefs.hasSkippedBodyDetails) {
+      BodyDetailsSheet.show(
+        context: context,
+        isFirstRun: true,
+        onSaved: () {
+          if (mounted && !controller.isRunActive) {
+            controller.startCountdown();
+          }
+        },
+        onSkipped: () {
+          if (mounted && !controller.isRunActive) {
+            controller.startCountdown();
+          }
+        },
+      );
+    } else {
+      controller.startCountdown();
+    }
+  }
+
   void _stopRun(MapRunController controller) {
     handleFinishRun(
       context: context,
@@ -199,7 +223,7 @@ class _MapScreenState extends State<MapScreen> {
           onStartRun: (route) {
             controller.setSuggestedRoute(route);
             if (!controller.isRunActive) {
-              controller.startCountdown();
+              _startRunSequence(controller);
             }
           },
         );
@@ -333,7 +357,7 @@ class _MapScreenState extends State<MapScreen> {
                     if (controller.isRunActive) {
                       _stopRun(controller);
                     } else {
-                      controller.startCountdown();
+                      _startRunSequence(controller);
                     }
                   },
                   onFinishRun: () => _stopRun(controller),

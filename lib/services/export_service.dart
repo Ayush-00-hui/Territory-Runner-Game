@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../models/territory.dart';
+import '../models/user_body_profile.dart';
 import 'motion_sensor_service.dart';
 import 'privacy_zone_service.dart';
 
@@ -273,6 +274,53 @@ class ExportService {
       ShareParams(
         files: [xFile],
         text: 'Territory Runner ML Field Trace: $cleanSession ($transportMode)',
+      ),
+    );
+
+    return file;
+  }
+
+  /// Generates a complete GDPR/DPDP compliant local data export in JSON format,
+  /// including local physical body details when present.
+  String generateUserDataExportJson({
+    required List<Territory> territories,
+    UserBodyProfile? bodyProfile,
+  }) {
+    final payload = <String, dynamic>{
+      'version': '1.0',
+      'generator': 'Territory Runner',
+      'exported_at': DateTime.now().toUtc().toIso8601String(),
+      'territories_count': territories.length,
+      'privacy_notice': 'Physical body metrics are stored locally on device only and never uploaded.',
+    };
+
+    if (bodyProfile != null) {
+      payload['body_profile'] = bodyProfile.toJson();
+    }
+
+    return const JsonEncoder.withIndent('  ').convert(payload);
+  }
+
+  /// Exports local user data and opens system share dialog.
+  Future<File> exportAndShareUserData({
+    required List<Territory> territories,
+    UserBodyProfile? bodyProfile,
+  }) async {
+    final jsonContent = generateUserDataExportJson(
+      territories: territories,
+      bodyProfile: bodyProfile,
+    );
+
+    final tempDir = await getTemporaryDirectory();
+    final fileName = 'user_data_${DateTime.now().millisecondsSinceEpoch}.json';
+    final file = File('${tempDir.path}/$fileName');
+    await file.writeAsString(jsonContent, flush: true);
+
+    final xFile = XFile(file.path, mimeType: 'application/json');
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [xFile],
+        text: 'Exported local data from Territory Runner',
       ),
     );
 

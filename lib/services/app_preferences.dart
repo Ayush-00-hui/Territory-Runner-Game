@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
+import '../models/user_body_profile.dart';
 import '../ui/ui.dart';
 
 /// Supported distance and area measurement systems
@@ -24,6 +27,9 @@ class AppPreferences {
   static const String _prefDemoModeUnlockedKey = 'pref_demo_mode_unlocked';
   static const String _prefDemoModeEnabledKey = 'pref_demo_mode_enabled';
   static const String _prefBodyWeightKgKey = 'pref_body_weight_kg';
+  static const String _prefBodyProfileKey = 'pref_user_body_profile_v1';
+  static const String _prefHasSkippedBodyDetailsKey =
+      'pref_has_skipped_body_details';
 
   bool _isHapticsEnabled = true;
   DistanceUnit _unit = DistanceUnit.metric;
@@ -34,6 +40,8 @@ class AppPreferences {
   bool _isDemoModeUnlocked = false;
   bool _isDemoModeEnabled = false;
   double? _bodyWeightKg;
+  UserBodyProfile? _bodyProfile;
+  bool _hasSkippedBodyDetails = false;
   bool _isInitialized = false;
 
   final ValueNotifier<bool> leftHandedModeNotifier = ValueNotifier<bool>(false);
@@ -45,6 +53,8 @@ class AppPreferences {
   final ValueNotifier<double?> bodyWeightKgNotifier = ValueNotifier<double?>(
     null,
   );
+  final ValueNotifier<UserBodyProfile?> bodyProfileNotifier =
+      ValueNotifier<UserBodyProfile?>(null);
 
   bool get isHapticsEnabled => _isHapticsEnabled;
   DistanceUnit get unit => _unit;
@@ -55,6 +65,9 @@ class AppPreferences {
   bool get isDemoModeUnlocked => _isDemoModeUnlocked;
   bool get isDemoModeEnabled => _isDemoModeEnabled;
   double? get bodyWeightKg => _bodyWeightKg;
+  UserBodyProfile? get bodyProfile => _bodyProfile;
+  bool get hasBodyProfile => _bodyProfile != null && _bodyProfile!.isCustomized;
+  bool get hasSkippedBodyDetails => _hasSkippedBodyDetails;
   bool get isInitialized => _isInitialized;
 
   AppPreferences._internal() {
@@ -84,6 +97,45 @@ class AppPreferences {
       demoModeNotifier.value = _isDemoModeEnabled;
       _bodyWeightKg = prefs.getDouble(_prefBodyWeightKgKey);
       bodyWeightKgNotifier.value = _bodyWeightKg;
+
+      _hasSkippedBodyDetails =
+          prefs.getBool(_prefHasSkippedBodyDetailsKey) ?? false;
+
+      // Body profile migration / loading
+      final rawProfile = prefs.getString(_prefBodyProfileKey);
+      if (rawProfile != null && rawProfile.isNotEmpty) {
+        try {
+          _bodyProfile = UserBodyProfile.fromJson(
+            jsonDecode(rawProfile) as Map<String, dynamic>,
+          );
+          if (_bodyProfile != null) {
+            _bodyWeightKg = _bodyProfile!.weightKg;
+            bodyWeightKgNotifier.value = _bodyWeightKg;
+          }
+        } catch (e) {
+          AppLogger.debug(
+            'Failed to parse body profile: $e',
+            tag: 'AppPreferences',
+          );
+        }
+      } else if (_bodyWeightKg != null && _bodyWeightKg! > 0) {
+        // Transparent migration: existing legacy bodyWeightKg migrated non-destructively
+        final currentYear = DateTime.now().year;
+        _bodyProfile = UserBodyProfile(
+          weightKg: _bodyWeightKg!,
+          heightCm: UserBodyProfile.defaultHeightCm,
+          gender: UserBodyProfile.defaultGender,
+          birthYear: currentYear - UserBodyProfile.defaultAge,
+          isCustomized: false,
+          isMigratedWeightOnly: true,
+        );
+        await prefs.setString(
+          _prefBodyProfileKey,
+          jsonEncode(_bodyProfile!.toJson()),
+        );
+      }
+      bodyProfileNotifier.value = _bodyProfile;
+
       _isInitialized = true;
     } catch (e) {
       AppLogger.debug('Init note: $e', tag: 'AppPreferences');
@@ -190,12 +242,24 @@ class AppPreferences {
   Future<void> setBodyWeightKg(double? weightKg) async {
     _bodyWeightKg = (weightKg != null && weightKg > 0) ? weightKg : null;
     bodyWeightKgNotifier.value = _bodyWeightKg;
+    if (_bodyProfile != null) {
+      if (_bodyWeightKg != null) {
+        _bodyProfile = _bodyProfile!.copyWith(weightKg: _bodyWeightKg!);
+      }
+      bodyProfileNotifier.value = _bodyProfile;
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       if (_bodyWeightKg != null) {
         await prefs.setDouble(_prefBodyWeightKgKey, _bodyWeightKg!);
       } else {
         await prefs.remove(_prefBodyWeightKgKey);
+      }
+      if (_bodyProfile != null) {
+        await prefs.setString(
+          _prefBodyProfileKey,
+          jsonEncode(_bodyProfile!.toJson()),
+        );
       }
     } catch (_) {}
   }
@@ -204,6 +268,104 @@ class AppPreferences {
   void setMockBodyWeight(double? weightKg) {
     _bodyWeightKg = (weightKg != null && weightKg > 0) ? weightKg : null;
     bodyWeightKgNotifier.value = _bodyWeightKg;
+    if (_bodyProfile != null && _bodyWeightKg != null) {
+      _bodyProfile = _bodyProfile!.copyWith(weightKg: _bodyWeightKg!);
+      bodyProfileNotifier.value = _bodyProfile;
+    }
+  }
+
+  /// Sets persistent customized body profile (stored locally on device only).
+  Future<void> setBodyProfile(UserBodyProfile? profile) async {
+    _bodyProfile = profile;
+    bodyProfileNotifier.value = _bodyProfile;
+    _bodyWeightKg = profile?.weightKg;
+    bodyWeightKgNotifier.value = _bodyWeightKg;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (_bodyProfile != null) {
+        await prefs.setString(
+          _prefBodyProfileKey,
+          jsonEncode(_bodyProfile!.toJson()),
+        );
+        if (_bodyWeightKg != null) {
+          await prefs.setDouble(_prefBodyWeightKgKey, _bodyWeightKg!);
+        }
+      } else {
+        await prefs.remove(_prefBodyProfileKey);
+        await prefs.remove(_prefBodyWeightKgKey);
+      }
+    } catch (_) {}
+  }
+
+  /// Permanently removes body details from device storage ("Remove my body details").
+  Future<void> clearBodyProfile() async {
+    _bodyProfile = null;
+    _bodyWeightKg = null;
+    _hasSkippedBodyDetails = false;
+    bodyProfileNotifier.value = null;
+    bodyWeightKgNotifier.value = null;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefBodyProfileKey);
+      await prefs.remove(_prefBodyWeightKgKey);
+      await prefs.remove(_prefHasSkippedBodyDetailsKey);
+    } catch (_) {}
+  }
+
+  /// Records user skipping the first-run body details prompt.
+  Future<void> setSkippedBodyDetails(bool skipped) async {
+    _hasSkippedBodyDetails = skipped;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefHasSkippedBodyDetailsKey, skipped);
+    } catch (_) {}
+  }
+
+  /// Records completed run for body profile reminder counter.
+  Future<void> recordCompletedRunForBodyProfile() async {
+    // If user already customized profile or dismissed reminder, no need to track
+    if (hasBodyProfile || (_bodyProfile?.reminderDismissed ?? false)) {
+      return;
+    }
+    final currentProfile = _bodyProfile ?? UserBodyProfile.referenceAdult();
+    final updated = currentProfile.copyWith(
+      skippedRunCount: currentProfile.skippedRunCount + 1,
+    );
+    _bodyProfile = updated;
+    bodyProfileNotifier.value = updated;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefBodyProfileKey, jsonEncode(updated.toJson()));
+    } catch (_) {}
+  }
+
+  /// Dismisses the one-time post-run reminder card permanently.
+  Future<void> dismissBodyDetailsReminder() async {
+    if (_bodyProfile == null) return;
+    final updated = _bodyProfile!.copyWith(reminderDismissed: true);
+    _bodyProfile = updated;
+    bodyProfileNotifier.value = updated;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefBodyProfileKey, jsonEncode(updated.toJson()));
+    } catch (_) {}
+  }
+
+  /// Injects mock body profile for testing.
+  void setMockBodyProfile(UserBodyProfile? profile) {
+    _bodyProfile = profile;
+    bodyProfileNotifier.value = _bodyProfile;
+    _bodyWeightKg = profile?.weightKg;
+    bodyWeightKgNotifier.value = _bodyWeightKg;
+  }
+
+  /// Resets internal initialization state for test harness setup.
+  void resetForTesting() {
+    _isInitialized = false;
   }
 
   // --- CALORIE ESTIMATION HELPERS ---
@@ -218,15 +380,16 @@ class AppPreferences {
   /// - Walking: 0.73 (American College of Sports Medicine metabolic equation)
   /// - Cycling: 0.40 (ACSM outdoor cycling metabolic guidelines)
   ///
-  /// If [customWeightKg] is not provided, uses [_bodyWeightKg] if configured,
-  /// otherwise defaults to a standard reference runner weight of 70.0 kg (~154.3 lbs).
+  /// If [customWeightKg] is not provided, uses [_bodyProfile?.weightKg] or
+  /// [_bodyWeightKg] if configured, otherwise defaults to reference weight 70.0 kg.
   int estimateCalories({
     required double distanceKm,
     double? customWeightKg,
     String activityType = 'running',
   }) {
     if (distanceKm <= 0) return 0;
-    final weight = customWeightKg ?? _bodyWeightKg ?? 70.0;
+    final weight =
+        customWeightKg ?? _bodyProfile?.weightKg ?? _bodyWeightKg ?? 70.0;
     final double factor;
     switch (activityType.toLowerCase()) {
       case 'walking':

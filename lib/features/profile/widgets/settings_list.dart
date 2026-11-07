@@ -1,28 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../gameplay/territory_service.dart';
+import '../../../core/utils/constants.dart';
+import '../../../models/runner_profile.dart';
+import '../../../models/territory.dart';
+import '../../../models/user_body_profile.dart';
+import '../../../services/api_client.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/battery_saver_service.dart';
+import '../../../services/export_service.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/user_settings_service.dart';
 import '../../../ui/ui.dart';
+import '../../gallery/design_gallery_screen.dart';
+import '../../gameplay/territory_service.dart';
+import '../../onboarding/onboarding_screen.dart';
+import 'body_details_sheet.dart';
 import 'emergency_contact_dialog.dart';
 import 'live_visibility_sheet.dart';
 import 'offline_maps_sheet.dart';
 import 'privacy_zones_sheet.dart';
-import '../../gallery/design_gallery_screen.dart';
-import '../../onboarding/onboarding_screen.dart';
-import '../../../core/utils/constants.dart';
-import '../../../services/user_settings_service.dart';
-import '../../../services/export_service.dart';
-
-import 'package:latlong2/latlong.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../../models/runner_profile.dart';
-import '../../../models/territory.dart';
-import '../../../services/api_client.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -136,111 +136,26 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 ),
               ],
             ),
+            const SizedBox(height: AppSpacing.s12),
+            SecondaryButton(
+              label: 'Export local profile & data (JSON)',
+              icon: Icons.file_download_outlined,
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await ExportService().exportAndShareUserData(
+                  territories: territories,
+                  bodyProfile: _appPrefs.bodyProfile,
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  void _showWeightPickerDialog(BuildContext context) {
-    final currentWeight = _appPrefs.bodyWeightKg;
-    final controller = TextEditingController(
-      text: currentWeight != null ? currentWeight.toStringAsFixed(1) : '',
-    );
-    String? errorText;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(sheetCtx).viewInsets.bottom,
-              ),
-              child: AppSheet(
-                title: 'Body weight (optional)',
-                subtitle:
-                    'Used solely for estimating calories burned during runs',
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'If not specified, calorie estimates use a reference runner weight of 70.0 kg (~154 lbs).',
-                      style: AppText.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s16),
-                    TextField(
-                      controller: controller,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      style: AppText.bodyLarge.copyWith(
-                        color: AppColors.textPrimary,
-                      ),
-                      decoration: InputDecoration(
-                        labelText: 'Weight (kg)',
-                        hintText: 'e.g. 68.5',
-                        errorText: errorText,
-                        suffixText: 'kg',
-                        border: OutlineInputBorder(
-                          borderRadius: AppSpacing.br12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s20),
-                    PrimaryButton(
-                      label: 'Save weight',
-                      onPressed: () {
-                        final text = controller.text.trim();
-                        if (text.isEmpty) {
-                          _appPrefs.setBodyWeightKg(null);
-                          setState(() {});
-                          Navigator.pop(sheetCtx);
-                          return;
-                        }
-                        final parsed = double.tryParse(text);
-                        if (parsed == null || parsed < 20.0 || parsed > 300.0) {
-                          setSheetState(() {
-                            errorText =
-                                'Enter a valid weight between 20 and 300 kg';
-                          });
-                          return;
-                        }
-                        _appPrefs.setBodyWeightKg(parsed);
-                        setState(() {});
-                        Navigator.pop(sheetCtx);
-                      },
-                    ),
-                    if (currentWeight != null) ...[
-                      const SizedBox(height: AppSpacing.s8),
-                      TextButton(
-                        onPressed: () {
-                          _appPrefs.setBodyWeightKg(null);
-                          setState(() {});
-                          Navigator.pop(sheetCtx);
-                        },
-                        child: Text(
-                          'Reset to standard default (70 kg)',
-                          style: AppText.labelMedium.copyWith(
-                            color: AppColors.textMuted,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+  void _showBodyDetailsSheet(BuildContext context) {
+    BodyDetailsSheet.show(context: context);
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
@@ -325,6 +240,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         await Hive.box<String>('rejected_runs_v1').clear();
       }
 
+      await _appPrefs.clearBodyProfile();
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
@@ -618,35 +534,59 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             ),
           ),
           const Divider(height: 1, color: AppColors.border),
-          ListTile(
-            leading: const Icon(
-              Icons.monitor_weight_outlined,
-              color: AppColors.accent,
-              size: 20,
-            ),
-            title: Text(
-              'Body weight (optional)',
-              style: AppText.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-            subtitle: Text(
-              _appPrefs.bodyWeightKg != null
-                  ? '${_appPrefs.bodyWeightKg!.toStringAsFixed(1)} kg • Used for calorie estimates'
-                  : 'Default: 70.0 kg (not set) • Tap to customize',
-              style: AppText.bodySmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-              ),
-            ),
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textMuted,
-              size: 20,
-            ),
-            onTap: () => _showWeightPickerDialog(context),
+          ValueListenableBuilder<UserBodyProfile?>(
+            valueListenable: _appPrefs.bodyProfileNotifier,
+            builder: (context, profile, _) {
+              final String subtitle;
+              if (profile != null && profile.isCustomized) {
+                final weightStr = _appPrefs.unit == DistanceUnit.imperial
+                    ? '${(profile.weightKg * 2.20462).toStringAsFixed(1)} lb'
+                    : '${profile.weightKg.toStringAsFixed(1)} kg';
+                final heightStr = _appPrefs.unit == DistanceUnit.imperial
+                    ? '${(profile.heightCm / 30.48).floor()}ft ${(profile.heightCm % 30.48 / 2.54).round()}in'
+                    : '${profile.heightCm.toStringAsFixed(0)} cm';
+                final ageStr = profile.ageYears != null
+                    ? ' • ${profile.ageYears}y'
+                    : '';
+                subtitle =
+                    '$weightStr • $heightStr • ${profile.gender.label}$ageStr';
+              } else if (profile != null && profile.isMigratedWeightOnly) {
+                subtitle =
+                    '${profile.weightKg.toStringAsFixed(1)} kg • Tap to complete profile';
+              } else {
+                subtitle =
+                    'Default: 70 kg, 170 cm (not set) • Tap to customize';
+              }
+
+              return ListTile(
+                leading: const Icon(
+                  Icons.monitor_weight_outlined,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
+                title: Text(
+                  'Body details',
+                  style: AppText.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                subtitle: Text(
+                  subtitle,
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textMuted,
+                  size: 20,
+                ),
+                onTap: () => _showBodyDetailsSheet(context),
+              );
+            },
           ),
         ]),
 
