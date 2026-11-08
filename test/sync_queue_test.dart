@@ -458,7 +458,7 @@ void main() {
       expect(queuedRun.estimatedCalories, equals(142));
       expect(queuedRun.calorieModelVersion, equals('1.0.0'));
 
-      // Sync to backend and verify payload strictly omits calorie & health data
+      // Sync to backend and verify payload strictly omits calorie, step & health data
       final success = await syncQueue.syncPendingRuns();
       expect(success, isTrue);
       expect(sentPayload.containsKey('calories'), isFalse);
@@ -468,6 +468,8 @@ void main() {
       expect(sentPayload.containsKey('height'), isFalse);
       expect(sentPayload.containsKey('gender'), isFalse);
       expect(sentPayload.containsKey('age'), isFalse);
+      expect(sentPayload.containsKey('step_count'), isFalse);
+      expect(sentPayload.containsKey('stepCount'), isFalse);
     });
   });
 }

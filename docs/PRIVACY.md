@@ -12,9 +12,9 @@
 | **Real-Time GPS Coordinates** | Latitude, longitude, altitude, accuracy, timestamp, speed | Live run tracking, anti-cheat validation, pacing metrics | Ephemeral in-memory (device) & WebSocket broadcast |
 | **Territory Polygons** | GeoJSON Polygon coordinates, bounded area ($m^2$), capture timestamp, owner ID | Core gameplay mechanics: claim, hold, contest, and display sovereign zones | PostgreSQL `territories` table (PostGIS geometry) |
 | **Privacy Zones** | Center latitude/longitude, radius (50m–2000m), name, enabled state | Redaction of sensitive zones (e.g. home, office) from tracks and presence | Local `SharedPreferences` + PostgreSQL `privacy_zones` table |
-| **Motion Window Summaries** | 10s aggregate step cadence (`cadence_spm`), motion energy (`motion_energy`), confidence (`cadence_confidence`) | Anti-cheat physical locomotor validation (detecting vehicular stillness) | Ephemeral in-memory (device) & PostgreSQL `runs` payload |
+| **Motion Window Summaries** | 10s aggregate locomotor cadence (`cadence_spm`), motion energy (`motion_energy`), confidence (`cadence_confidence`) | Anti-cheat physical locomotor validation (detecting vehicular stillness) | Ephemeral in-memory (device) & PostgreSQL `runs` payload |
 | **Tactical Safety Data** | Emergency contact name, SMS number, SOS distress events | Emergency dialing and SMS dispatch via device intents | Device-local `SharedPreferences` only (never sent to server) |
-| **Physical Body Metrics** | Body mass (weight), height, biological sex/gender, birth year / age | Physiological metabolic energy calculation (kcal burn estimation) | Device-local `SharedPreferences` only (never uploaded or transmitted) |
+| **Physical Body & Health Metrics** | Step count, body mass (weight), height, biological sex/gender, birth year / age, calorie estimates | Performance tracking & physiological metabolic energy calculation | Device-local storage only (`SharedPreferences` & encrypted Hive; never uploaded to server) |
 
 ---
 
