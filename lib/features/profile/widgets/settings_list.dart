@@ -265,6 +265,106 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // 0. APPEARANCE
+        _buildSectionTitle('Appearance'),
+        _buildSettingsGroup([
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.s12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.palette_outlined,
+                      color: AppColors.accent,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppSpacing.s12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Appearance',
+                            style: AppText.bodyMedium.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Dark (default), outdoor light high-contrast, or system',
+                            style: AppText.bodySmall.copyWith(
+                              color: AppColors.textMuted,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.s12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ThemeOptionButton(
+                        label: 'Dark',
+                        isSelected:
+                            _appPrefs.themePreference ==
+                            AppThemePreference.dark,
+                        onTap: () {
+                          setState(() {
+                            _appPrefs.setThemePreference(
+                              AppThemePreference.dark,
+                            );
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: _ThemeOptionButton(
+                        label: 'Light',
+                        isSelected:
+                            _appPrefs.themePreference ==
+                            AppThemePreference.light,
+                        onTap: () {
+                          setState(() {
+                            _appPrefs.setThemePreference(
+                              AppThemePreference.light,
+                            );
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: _ThemeOptionButton(
+                        label: 'System',
+                        isSelected:
+                            _appPrefs.themePreference ==
+                            AppThemePreference.system,
+                        onTap: () {
+                          setState(() {
+                            _appPrefs.setThemePreference(
+                              AppThemePreference.system,
+                            );
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ]),
+
+        const SizedBox(height: AppSpacing.s16),
+
         // 1. HAPTICS
         _buildSectionTitle('Haptics'),
         _buildSettingsGroup([
@@ -964,6 +1064,56 @@ class ProfileOptionTile extends StatelessWidget {
                   )
                 : null),
         onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _ThemeOptionButton extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _ThemeOptionButton({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: '$label theme',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.br12,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.accent.withValues(alpha: 0.15)
+                : AppColors.surface,
+            borderRadius: AppRadius.br12,
+            border: Border.all(
+              color: isSelected ? AppColors.accent : AppColors.border,
+              width: isSelected ? 1.5 : 1.0,
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: AppText.fontFamily,
+              color: isSelected ? AppColors.accent : AppColors.textPrimary,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+              fontSize: 11,
+            ),
+          ),
+        ),
       ),
     );
   }

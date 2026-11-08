@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vibration/vibration.dart';
 
@@ -11,6 +11,8 @@ import 'calorie_model_engine.dart';
 
 /// Supported distance and area measurement systems
 enum DistanceUnit { metric, imperial }
+
+enum AppThemePreference { dark, light, system }
 
 /// Global Application Preferences & Hardware Feedback Service
 ///
@@ -37,9 +39,11 @@ class AppPreferences {
       'pref_watch_calorie_factor_v1';
   static const String _prefWatchCalorieSessionsKey =
       'pref_watch_calorie_sessions_v1';
+  static const String _prefThemeModeKey = 'pref_theme_mode';
 
   bool _isHapticsEnabled = true;
   DistanceUnit _unit = DistanceUnit.metric;
+  AppThemePreference _themePreference = AppThemePreference.dark;
   bool _isLeftHandedMode = false;
   double? _dailyGoalKm;
   bool _isCountdownVoiceEnabled = true;
@@ -67,9 +71,23 @@ class AppPreferences {
       ValueNotifier<UserBodyProfile?>(null);
   final ValueNotifier<double?> watchCalorieFactorNotifier =
       ValueNotifier<double?>(null);
+  final ValueNotifier<AppThemePreference> themePreferenceNotifier =
+      ValueNotifier<AppThemePreference>(AppThemePreference.dark);
 
   bool get isHapticsEnabled => _isHapticsEnabled;
   DistanceUnit get unit => _unit;
+  AppThemePreference get themePreference => _themePreference;
+  ThemeMode get flutterThemeMode {
+    switch (_themePreference) {
+      case AppThemePreference.light:
+        return ThemeMode.light;
+      case AppThemePreference.system:
+        return ThemeMode.system;
+      case AppThemePreference.dark:
+        return ThemeMode.dark;
+    }
+  }
+
   bool get isLeftHandedMode => _isLeftHandedMode;
   double? get dailyGoalKm => _dailyGoalKm;
   bool get isCountdownVoiceEnabled => _isCountdownVoiceEnabled;
@@ -110,6 +128,12 @@ class AppPreferences {
       _unit = unitStr == 'imperial'
           ? DistanceUnit.imperial
           : DistanceUnit.metric;
+      final themeStr = prefs.getString(_prefThemeModeKey) ?? 'dark';
+      _themePreference = AppThemePreference.values.firstWhere(
+        (e) => e.name == themeStr,
+        orElse: () => AppThemePreference.dark,
+      );
+      themePreferenceNotifier.value = _themePreference;
       _isDemoModeUnlocked = prefs.getBool(_prefDemoModeUnlockedKey) ?? false;
       demoUnlockedNotifier.value = _isDemoModeUnlocked;
       _isDemoModeEnabled = prefs.getBool(_prefDemoModeEnabledKey) ?? false;
@@ -232,6 +256,16 @@ class AppPreferences {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefSoundEffectsKey, enabled);
+    } catch (_) {}
+  }
+
+  /// Updates runtime theme preference (Dark, Light, System)
+  Future<void> setThemePreference(AppThemePreference mode) async {
+    _themePreference = mode;
+    themePreferenceNotifier.value = mode;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefThemeModeKey, mode.name);
     } catch (_) {}
   }
 

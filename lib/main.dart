@@ -233,12 +233,19 @@ class _TerritoryAppState extends State<TerritoryApp> {
       );
     }
 
-    return MaterialApp(
-      scaffoldMessengerKey: AppToast.messengerKey,
-      title: 'Territory Runner',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
-      home: AppIntroGate(child: homeWidget),
+    return ValueListenableBuilder<AppThemePreference>(
+      valueListenable: AppPreferences().themePreferenceNotifier,
+      builder: (context, themePref, _) {
+        return MaterialApp(
+          scaffoldMessengerKey: AppToast.messengerKey,
+          title: 'Territory Runner',
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: AppPreferences().flutterThemeMode,
+          home: AppIntroGate(child: homeWidget),
+        );
+      },
     );
   }
 }
