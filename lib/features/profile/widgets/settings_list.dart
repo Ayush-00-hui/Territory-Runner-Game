@@ -442,6 +442,41 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             },
           ),
           const Divider(height: 1, color: AppColors.border),
+          ListenableBuilder(
+            listenable: UserSettingsService(),
+            builder: (context, _) {
+              final enabled = UserSettingsService().landReminders;
+              return SwitchListTile(
+                secondary: const Icon(
+                  Icons.shield_outlined,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
+                title: Text(
+                  'Land reminders',
+                  style: AppText.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+                subtitle: Text(
+                  'Notify when territory strength drops below 50% or 30%',
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+                activeThumbColor: AppColors.accent,
+                activeTrackColor: AppColors.accentContainer,
+                value: enabled,
+                onChanged: (val) {
+                  UserSettingsService().setLandReminders(val);
+                },
+              );
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
             icon: Icons.gps_fixed_rounded,
             title: 'Location & GPS',

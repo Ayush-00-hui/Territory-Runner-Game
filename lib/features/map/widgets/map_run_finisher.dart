@@ -10,6 +10,7 @@ import '../../../services/app_preferences.dart';
 import '../../../services/calorie_model_engine.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/motion_sensor_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../services/run_log_service.dart';
 import '../../../services/sync_queue.dart';
 import '../../coach/llm_coach_service.dart';
@@ -138,4 +139,11 @@ void handleFinishRun({
     areaSqMeters: finalArea > 0 ? finalArea : null,
     elevationGainMeters: elevationGain,
   );
+
+  // Opt-in flow: prompt for notification permissions only after capturing territory
+  if (finalTerritories > 0) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService().showPermissionPrimerIfNeeded(context);
+    });
+  }
 }

@@ -27,6 +27,9 @@ type Store interface {
 	// GetTerritoriesInBBox fetches all territories intersecting a geographic bounding box as GeoJSON.
 	GetTerritoriesInBBox(ctx context.Context, minLng, minLat, maxLng, maxLat float64) ([]Territory, error)
 
+	// GetAllTerritories returns all persisted territories in the system.
+	GetAllTerritories(ctx context.Context) ([]Territory, error)
+
 	// CaptureRunAndMutateTerritories atomically:
 	// 1. Obtains a transaction-scoped advisory lock to prevent concurrent spatial race conditions.
 	// 2. Unions the new loop polygon into the owner's MultiPolygon.
@@ -103,6 +106,19 @@ type Store interface {
 
 	// UpdateUserSettings updates user settings including live_visibility.
 	UpdateUserSettings(ctx context.Context, userID string, settings *UserSettings) error
+
+	// TryAcquireDecayLock attempts to acquire a cluster-wide advisory lock for the decay notification job.
+	// Returns true and an unlock function if acquired, or false if already held.
+	TryAcquireDecayLock(ctx context.Context) (bool, func(), error)
+
+	// GetRecentDecayNotifications returns decay notifications sent to ownerID since the specified time.
+	GetRecentDecayNotifications(ctx context.Context, ownerID string, since time.Time) ([]DecayNotification, error)
+
+	// HasDecayNotificationBeenSent checks if a notification for territoryID and threshold has been sent since the specified time.
+	HasDecayNotificationBeenSent(ctx context.Context, territoryID string, threshold int, since time.Time) (bool, error)
+
+	// RecordDecayNotification stores a recorded decay push notification for deduplication.
+	RecordDecayNotification(ctx context.Context, ownerID, territoryID string, threshold int, sentAt time.Time) error
 
 	// Ping checks database connectivity.
 	Ping(ctx context.Context) error

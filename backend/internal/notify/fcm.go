@@ -29,6 +29,8 @@ import (
 type Notifier interface {
 	SendTerritoryAlert(ctx context.Context, deviceToken, territoryID, rivalName string, areaLost float64) error
 	SendTerritoryAlertToUser(ctx context.Context, userID, territoryID, rivalName string, areaLost float64) error
+	SendLandWeakAlert(ctx context.Context, deviceToken, territoryID string, currentStrength float64) error
+	SendLandWeakAlertToUser(ctx context.Context, userID, territoryID string, currentStrength float64) error
 }
 
 // ServiceAccountKey matches standard Google Service Account JSON.
@@ -227,6 +229,42 @@ func BuildAlertPayload(deviceToken, territoryID, rivalName string, areaLost floa
 	}
 }
 
+// BuildLandWeakPayload constructs the FCM HTTP v1 payload for a decaying territory reminder.
+// ZERO geographic coordinates are included in compliance with privacy guidelines.
+func BuildLandWeakPayload(deviceToken, territoryID string, currentStrength float64) FCMMessage {
+	return FCMMessage{
+		Message: MessagePayload{
+			Token: deviceToken,
+			Notification: &FCMNotification{
+				Title: "Land reminder",
+				Body:  "One of your areas is getting weak. A short loop through it will restore it.",
+			},
+			Data: map[string]string{
+				"type":             "decay_warning",
+				"territory_id":     territoryID,
+				"current_strength": fmt.Sprintf("%.1f", currentStrength),
+			},
+			Android: &AndroidConfig{
+				Priority: "normal",
+				Notification: AndroidNotification{
+					ChannelID: "territory_decay_alerts",
+					Sound:     "default",
+				},
+			},
+			APNS: &APNSConfig{
+				Headers: map[string]string{
+					"apns-priority": "5",
+				},
+				Payload: APNSPayload{
+					Aps: ApsBody{
+						Sound: "default",
+					},
+				},
+			},
+		},
+	}
+}
+
 // SendTerritoryAlert dispatches an FCM v1 push notification to an individual device token.
 func (c *FCMClient) SendTerritoryAlert(ctx context.Context, deviceToken, territoryID, rivalName string, areaLost float64) error {
 	if !c.enabled {
@@ -304,6 +342,87 @@ func (c *FCMClient) SendTerritoryAlertToUser(ctx context.Context, userID, territ
 
 	if len(errs) > 0 && len(errs) == len(tokens) {
 		return fmt.Errorf("all %d device pushes failed: %s", len(tokens), strings.Join(errs, "; "))
+	}
+	return nil
+}
+
+// SendLandWeakAlert dispatches an FCM v1 push notification alerting an owner of weak territory.
+func (c *FCMClient) SendLandWeakAlert(ctx context.Context, deviceToken, territoryID string, currentStrength float64) error {
+	if !c.enabled {
+		return nil
+	}
+	if deviceToken == "" {
+		return errors.New("cannot send alert: device token is empty")
+	}
+
+	token, err := c.getAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to obtain OAuth2 token for FCM: %w", err)
+	}
+
+	payload := BuildLandWeakPayload(deviceToken, territoryID, currentStrength)
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to serialize FCM payload: %w", err)
+	}
+
+	baseURL := c.fcmBaseURL
+	if baseURL == "" {
+		baseURL = "https://fcm.googleapis.com"
+	}
+	endpoint := fmt.Sprintf("%s/v1/projects/%s/messages:send", baseURL, c.projectID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("FCM HTTP request error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("FCM server rejected push (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return nil
+}
+
+// SendLandWeakAlertToUser retrieves all registered device tokens for the owner and sends decay push alerts.
+func (c *FCMClient) SendLandWeakAlertToUser(ctx context.Context, userID, territoryID string, currentStrength float64) error {
+	if !c.enabled || c.store == nil {
+		return nil
+	}
+
+	logger := c.logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+
+	tokens, err := c.store.GetDeviceTokens(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("error querying device tokens for %s: %w", err, err)
+	}
+	if len(tokens) == 0 {
+		logger.Debug("no device tokens registered for runner", "user_id", userID)
+		return nil
+	}
+
+	var errs []string
+	for _, tok := range tokens {
+		if sendErr := c.SendLandWeakAlert(ctx, tok, territoryID, currentStrength); sendErr != nil {
+			logger.Warn("failed to deliver decay push to device token", "user_id", userID, "error", sendErr)
+			errs = append(errs, sendErr.Error())
+		}
+	}
+
+	if len(errs) > 0 && len(errs) == len(tokens) {
+		return fmt.Errorf("all %d decay device pushes failed: %s", len(tokens), strings.Join(errs, "; "))
 	}
 	return nil
 }
@@ -491,6 +610,28 @@ func (m *MockNotifier) SendTerritoryAlertToUser(ctx context.Context, userID, ter
 		TerritoryID: territoryID,
 		RivalName:   rivalName,
 		AreaLost:    areaLost,
+	})
+	return nil
+}
+
+func (m *MockNotifier) SendLandWeakAlert(ctx context.Context, deviceToken, territoryID string, currentStrength float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.SentAlerts = append(m.SentAlerts, SentAlertRecord{
+		DeviceToken: deviceToken,
+		TerritoryID: territoryID,
+		AreaLost:    currentStrength,
+	})
+	return nil
+}
+
+func (m *MockNotifier) SendLandWeakAlertToUser(ctx context.Context, userID, territoryID string, currentStrength float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.SentAlerts = append(m.SentAlerts, SentAlertRecord{
+		UserID:      userID,
+		TerritoryID: territoryID,
+		AreaLost:    currentStrength,
 	})
 	return nil
 }

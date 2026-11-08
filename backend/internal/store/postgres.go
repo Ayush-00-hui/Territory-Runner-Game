@@ -173,6 +173,32 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 	return list, nil
 }
 
+// GetAllTerritories returns all persisted territories in PostgreSQL.
+func (s *PostgresStore) GetAllTerritories(ctx context.Context) ([]Territory, error) {
+	query := `
+		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at), t.updated_at
+		FROM territories t
+		JOIN users u ON t.owner_id = u.id;
+	`
+	rows, err := s.pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("get all territories query failed: %w", err)
+	}
+	defer rows.Close()
+
+	now := time.Now().UTC()
+	var list []Territory
+	for rows.Next() {
+		var t Territory
+		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.LastDecayedAt, &t.UpdatedAt); err != nil {
+			return nil, err
+		}
+		t.Strength = t.EffectiveStrength(now)
+		list = append(list, t)
+	}
+	return list, nil
+}
+
 // CaptureRunAndMutateTerritories executes the entire spatial capture lifecycle in ONE atomic transaction.
 func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	ctx context.Context,
@@ -1262,35 +1288,138 @@ func (s *PostgresStore) SetPrivacyZones(ctx context.Context, userID string, zone
 	return nil
 }
 
-// GetUserSettings returns user settings defaulting live_visibility to 'off'.
+// GetUserSettings returns user settings defaulting live_visibility to 'off', timezone to 'UTC', and land_reminders to true.
 func (s *PostgresStore) GetUserSettings(ctx context.Context, userID string) (*UserSettings, error) {
-	var vis string
-	err := s.pool.QueryRow(ctx, `SELECT COALESCE(live_visibility, 'off') FROM users WHERE id = $1;`, userID).Scan(&vis)
+	var vis, tz string
+	var reminders bool
+	err := s.pool.QueryRow(ctx, `
+		SELECT 
+			COALESCE(live_visibility, 'off'),
+			COALESCE(timezone, 'UTC'),
+			COALESCE(land_reminders, true)
+		FROM users WHERE id = $1;
+	`, userID).Scan(&vis, &tz, &reminders)
 	if err != nil {
-		// User might not exist yet in users table, default to 'off'
-		return &UserSettings{LiveVisibility: "off"}, nil
+		// User might not exist yet in users table, default safely
+		return &UserSettings{LiveVisibility: "off", Timezone: "UTC", LandReminders: true}, nil
 	}
 	if vis == "" {
 		vis = "off"
 	}
-	return &UserSettings{LiveVisibility: vis}, nil
+	if tz == "" {
+		tz = "UTC"
+	}
+	return &UserSettings{LiveVisibility: vis, Timezone: tz, LandReminders: reminders}, nil
 }
 
 // UpdateUserSettings updates user settings, creating user row if absent.
 func (s *PostgresStore) UpdateUserSettings(ctx context.Context, userID string, settings *UserSettings) error {
 	vis := "off"
-	if settings != nil && settings.LiveVisibility != "" {
-		vis = settings.LiveVisibility
+	tz := "UTC"
+	reminders := true
+	if settings != nil {
+		if settings.LiveVisibility != "" {
+			vis = settings.LiveVisibility
+		}
+		if settings.Timezone != "" {
+			tz = settings.Timezone
+		}
+		reminders = settings.LandReminders
 	}
 
 	query := `
-		INSERT INTO users (id, username, live_visibility, updated_at)
-		VALUES ($1, $1, $2, NOW())
+		INSERT INTO users (id, username, live_visibility, timezone, land_reminders, updated_at)
+		VALUES ($1, $1, $2, $3, $4, NOW())
 		ON CONFLICT (id) DO UPDATE
-		SET live_visibility = EXCLUDED.live_visibility, updated_at = NOW();
+		SET live_visibility = EXCLUDED.live_visibility,
+		    timezone = EXCLUDED.timezone,
+		    land_reminders = EXCLUDED.land_reminders,
+		    updated_at = NOW();
 	`
-	if _, err := s.pool.Exec(ctx, query, userID, vis); err != nil {
+	if _, err := s.pool.Exec(ctx, query, userID, vis, tz, reminders); err != nil {
 		return fmt.Errorf("failed to update user settings: %w", err)
+	}
+	return nil
+}
+
+// DecayAdvisoryLockKey is the stable cluster-wide 32-bit key for guarding decay notifications.
+const DecayAdvisoryLockKey = 7429103
+
+// TryAcquireDecayLock attempts to acquire a cluster-wide Postgres advisory lock for the decay notification job.
+func (s *PostgresStore) TryAcquireDecayLock(ctx context.Context) (bool, func(), error) {
+	conn, err := s.pool.Acquire(ctx)
+	if err != nil {
+		return false, func() {}, fmt.Errorf("failed to acquire pgx connection for advisory lock: %w", err)
+	}
+
+	var acquired bool
+	err = conn.QueryRow(ctx, `SELECT pg_try_advisory_lock($1);`, DecayAdvisoryLockKey).Scan(&acquired)
+	if err != nil {
+		conn.Release()
+		return false, func() {}, fmt.Errorf("error attempting advisory lock: %w", err)
+	}
+
+	if !acquired {
+		conn.Release()
+		return false, func() {}, nil
+	}
+
+	unlock := func() {
+		defer conn.Release()
+		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock($1);`, DecayAdvisoryLockKey)
+	}
+	return true, unlock, nil
+}
+
+// GetRecentDecayNotifications returns decay notifications sent to ownerID since the specified time.
+func (s *PostgresStore) GetRecentDecayNotifications(ctx context.Context, ownerID string, since time.Time) ([]DecayNotification, error) {
+	query := `
+		SELECT id, owner_id, territory_id, threshold, sent_at
+		FROM decay_notifications
+		WHERE owner_id = $1 AND sent_at >= $2
+		ORDER BY sent_at DESC;
+	`
+	rows, err := s.pool.Query(ctx, query, ownerID, since)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query recent decay notifications: %w", err)
+	}
+	defer rows.Close()
+
+	var notifs []DecayNotification
+	for rows.Next() {
+		var n DecayNotification
+		if err := rows.Scan(&n.ID, &n.OwnerID, &n.TerritoryID, &n.Threshold, &n.SentAt); err != nil {
+			return nil, fmt.Errorf("failed to scan decay notification: %w", err)
+		}
+		notifs = append(notifs, n)
+	}
+	return notifs, rows.Err()
+}
+
+// HasDecayNotificationBeenSent checks if a notification for territoryID and threshold has been sent since the specified time.
+func (s *PostgresStore) HasDecayNotificationBeenSent(ctx context.Context, territoryID string, threshold int, since time.Time) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM decay_notifications
+			WHERE territory_id = $1 AND threshold = $2 AND sent_at >= $3
+		);
+	`
+	var exists bool
+	err := s.pool.QueryRow(ctx, query, territoryID, threshold, since).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check existing decay notification: %w", err)
+	}
+	return exists, nil
+}
+
+// RecordDecayNotification stores a recorded decay push notification for deduplication.
+func (s *PostgresStore) RecordDecayNotification(ctx context.Context, ownerID, territoryID string, threshold int, sentAt time.Time) error {
+	query := `
+		INSERT INTO decay_notifications (owner_id, territory_id, threshold, sent_at)
+		VALUES ($1, $2, $3, $4);
+	`
+	if _, err := s.pool.Exec(ctx, query, ownerID, territoryID, threshold, sentAt); err != nil {
+		return fmt.Errorf("failed to record decay notification: %w", err)
 	}
 	return nil
 }

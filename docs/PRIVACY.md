@@ -170,4 +170,23 @@ Under the Digital Personal Data Protection (DPDP) Act, 2023 (India) and the Gene
 4. **Data Portability**:
    - When exporting local data via **Profile > Settings > Export run data > Export local profile & data (JSON)**, the exported JSON package includes the local body profile alongside territorial geometries.
 
+---
+
+## 11. Push Notifications & Territory Decay Reminders
+
+1. **Zero Geographic Coordinates in Push Payloads**:
+   - Territory decay notifications dispatched via Firebase Cloud Messaging (FCM HTTP v1) contain only operational identifiers:
+     `{"type": "decay_warning", "territory_id": "<id>", "current_strength": "<val>"}`.
+   - Push notification payloads **never contain coordinates, bounding boxes, or runner GPS locations**. Tapping an alert opens the local map and resolves the territory geometry strictly from the local or authenticated map cache.
+2. **Quiet Hours & Non-Sensitive Timezone Setting**:
+   - Territory decay alerts are restricted strictly to waking daytime hours (**09:00 to 20:00** in the user's local time).
+   - To respect quiet hours across geographic regions, the mobile client syncs only a coarse, non-sensitive IANA timezone identifier (e.g., `Asia/Kolkata` or `America/New_York`) as part of operational user settings (`PUT /v1/me/settings`).
+3. **Frequency Caps & Opt-Out Control**:
+   - Reminders are capped at **maximum 1 push alert per owner per 24 hours** and **at most 3 alerts per owner per 7-day rolling window**.
+   - Athletes can opt out of decay push alerts at any time via **Profile > Settings > Land reminders** (default: ON after notification permission is granted).
+4. **Encrypted Local Run Logs**:
+   - Detailed per-run logs (sample points, elevation changes, pace history, and heart rate/cadence telemetry) reside exclusively on the runner's local device in an AES-256 encrypted Hive box (`run_log_v1`).
+   - Run logs are never uploaded to the server and are wiped completely when executing **Delete account & data**.
+
+
 

@@ -7,6 +7,7 @@ import '../../models/territory.dart';
 import '../../services/sync_queue.dart';
 import '../../ui/ui.dart';
 import 'widgets/home_header.dart';
+import 'widgets/needs_defending_row.dart';
 import 'widgets/offline_sync_banner.dart';
 import 'widgets/quick_launch_hero.dart';
 import 'widgets/recent_activity_feed.dart';
@@ -135,6 +136,9 @@ class HomeScreen extends StatelessWidget {
                         onStartRun: onStartRun,
                         isActive: isActive,
                       ),
+
+                      // Needs Defending Row (Appears when claimed land falls <= 50% strength)
+                      NeedsDefendingRow(territories: territories),
 
                       // Weekly Performance Summary Header & Card
                       const SectionHeader(title: 'Weekly summary'),

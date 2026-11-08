@@ -23,22 +23,26 @@ type MemoryStore struct {
 	deviceTokens map[string][]string
 	friendships  map[string]*Friendship
 	duels        map[string]*Duel
-	privacyZones map[string][]PrivacyZone
-	userSettings map[string]*UserSettings
+	privacyZones       map[string][]PrivacyZone
+	userSettings       map[string]*UserSettings
+	decayNotifications []*DecayNotification
+	decayLockMu        sync.Mutex
+	isDecayLocked      bool
 }
 
 // NewMemoryStore initializes an in-memory store.
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		users:        make(map[string]*User),
-		runs:         make(map[string]*Run),
-		runsByOrder:  make([]string, 0),
-		territories:  make(map[string]*Territory),
-		deviceTokens: make(map[string][]string),
-		friendships:  make(map[string]*Friendship),
-		duels:        make(map[string]*Duel),
-		privacyZones: make(map[string][]PrivacyZone),
-		userSettings: make(map[string]*UserSettings),
+		users:              make(map[string]*User),
+		runs:               make(map[string]*Run),
+		runsByOrder:        make([]string, 0),
+		territories:        make(map[string]*Territory),
+		deviceTokens:       make(map[string][]string),
+		friendships:        make(map[string]*Friendship),
+		duels:              make(map[string]*Duel),
+		privacyZones:       make(map[string][]PrivacyZone),
+		userSettings:       make(map[string]*UserSettings),
+		decayNotifications: make([]*DecayNotification, 0),
 	}
 }
 
@@ -148,6 +152,20 @@ func (m *MemoryStore) GetRunByIdempotencyKey(ctx context.Context, key string) (*
 }
 
 func (m *MemoryStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat, maxLng, maxLat float64) ([]Territory, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	now := time.Now().UTC()
+	var res []Territory
+	for _, t := range m.territories {
+		cpy := *t
+		cpy.Strength = cpy.EffectiveStrength(now)
+		res = append(res, cpy)
+	}
+	return res, nil
+}
+
+// GetAllTerritories returns all persisted territories in memory.
+func (m *MemoryStore) GetAllTerritories(ctx context.Context) ([]Territory, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	now := time.Now().UTC()
@@ -451,6 +469,15 @@ func (m *MemoryStore) SetTerritoryTimestampsForTest(id string, lastDefended, las
 	if t, exists := m.territories[id]; exists {
 		t.LastDefendedAt = lastDefended
 		t.LastDecayedAt = lastDecayed
+	}
+}
+
+// AddTerritoryForTest inserts or updates a territory directly for unit tests.
+func (m *MemoryStore) AddTerritoryForTest(t *Territory) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if t != nil {
+		m.territories[t.ID] = t
 	}
 }
 
@@ -1152,18 +1179,42 @@ func (m *MemoryStore) SetPrivacyZones(ctx context.Context, userID string, zones 
 	return nil
 }
 
-// GetUserSettings returns user settings defaulting live_visibility to 'off'.
+// GetUserSettings returns user settings defaulting live_visibility to 'off', timezone to 'UTC', and land_reminders to true.
 func (m *MemoryStore) GetUserSettings(ctx context.Context, userID string) (*UserSettings, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if s, ok := m.userSettings[userID]; ok && s != nil {
-		return &UserSettings{LiveVisibility: s.LiveVisibility}, nil
+		tz := s.Timezone
+		if tz == "" {
+			tz = "UTC"
+		}
+		return &UserSettings{
+			LiveVisibility: s.LiveVisibility,
+			Timezone:       tz,
+			LandReminders:  s.LandReminders,
+		}, nil
 	}
-	if u, ok := m.users[userID]; ok && u != nil && u.LiveVisibility != "" {
-		return &UserSettings{LiveVisibility: u.LiveVisibility}, nil
+	if u, ok := m.users[userID]; ok && u != nil {
+		vis := u.LiveVisibility
+		if vis == "" {
+			vis = "off"
+		}
+		tz := u.Timezone
+		if tz == "" {
+			tz = "UTC"
+		}
+		return &UserSettings{
+			LiveVisibility: vis,
+			Timezone:       tz,
+			LandReminders:  u.LandReminders,
+		}, nil
 	}
-	return &UserSettings{LiveVisibility: "off"}, nil
+	return &UserSettings{
+		LiveVisibility: "off",
+		Timezone:       "UTC",
+		LandReminders:  true,
+	}, nil
 }
 
 // UpdateUserSettings updates user settings.
@@ -1172,13 +1223,84 @@ func (m *MemoryStore) UpdateUserSettings(ctx context.Context, userID string, set
 	defer m.mu.Unlock()
 
 	vis := "off"
-	if settings != nil && settings.LiveVisibility != "" {
-		vis = settings.LiveVisibility
+	tz := "UTC"
+	reminders := true
+	if settings != nil {
+		if settings.LiveVisibility != "" {
+			vis = settings.LiveVisibility
+		}
+		if settings.Timezone != "" {
+			tz = settings.Timezone
+		}
+		reminders = settings.LandReminders
 	}
 
-	m.userSettings[userID] = &UserSettings{LiveVisibility: vis}
+	newSettings := &UserSettings{
+		LiveVisibility: vis,
+		Timezone:       tz,
+		LandReminders:  reminders,
+	}
+	m.userSettings[userID] = newSettings
 	if u, ok := m.users[userID]; ok && u != nil {
 		u.LiveVisibility = vis
+		u.Timezone = tz
+		u.LandReminders = reminders
 	}
+	return nil
+}
+
+// TryAcquireDecayLock attempts to acquire a mutex-based lock for decay notifications in memory.
+func (m *MemoryStore) TryAcquireDecayLock(ctx context.Context) (bool, func(), error) {
+	m.decayLockMu.Lock()
+	defer m.decayLockMu.Unlock()
+	if m.isDecayLocked {
+		return false, func() {}, nil
+	}
+	m.isDecayLocked = true
+	unlock := func() {
+		m.decayLockMu.Lock()
+		defer m.decayLockMu.Unlock()
+		m.isDecayLocked = false
+	}
+	return true, unlock, nil
+}
+
+// GetRecentDecayNotifications returns decay notifications sent to ownerID since the specified time.
+func (m *MemoryStore) GetRecentDecayNotifications(ctx context.Context, ownerID string, since time.Time) ([]DecayNotification, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var res []DecayNotification
+	for _, n := range m.decayNotifications {
+		if n.OwnerID == ownerID && !n.SentAt.Before(since) {
+			res = append(res, *n)
+		}
+	}
+	return res, nil
+}
+
+// HasDecayNotificationBeenSent checks if a notification for territoryID and threshold has been sent since the specified time.
+func (m *MemoryStore) HasDecayNotificationBeenSent(ctx context.Context, territoryID string, threshold int, since time.Time) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, n := range m.decayNotifications {
+		if n.TerritoryID == territoryID && n.Threshold == threshold && !n.SentAt.Before(since) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// RecordDecayNotification stores a recorded decay push notification for deduplication.
+func (m *MemoryStore) RecordDecayNotification(ctx context.Context, ownerID, territoryID string, threshold int, sentAt time.Time) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	notif := &DecayNotification{
+		ID:          int64(len(m.decayNotifications) + 1),
+		OwnerID:     ownerID,
+		TerritoryID: territoryID,
+		Threshold:   threshold,
+		SentAt:      sentAt,
+	}
+	m.decayNotifications = append(m.decayNotifications, notif)
 	return nil
 }

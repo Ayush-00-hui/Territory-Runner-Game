@@ -45,6 +45,7 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000013_add_land_reminders_and_decay_notifications.down.sql",
 		"000012_add_run_step_count.down.sql",
 		"000011_add_territory_last_decayed_at.down.sql",
 		"000010_add_user_settings.down.sql",
@@ -64,7 +65,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 			_, _ = pool.Exec(ctx, sql)
 		}
 	}
-	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS decay_notifications, duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
 
 	upFiles := []string{
 		"000001_init_schema.up.sql",
@@ -79,6 +80,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000010_add_user_settings.up.sql",
 		"000011_add_territory_last_decayed_at.up.sql",
 		"000012_add_run_step_count.up.sql",
+		"000013_add_land_reminders_and_decay_notifications.up.sql",
 	}
 
 	for _, uf := range upFiles {

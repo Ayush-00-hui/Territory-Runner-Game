@@ -55,13 +55,18 @@ class UserSettingsService extends ChangeNotifier {
   factory UserSettingsService() => _instance;
 
   static const String _prefLiveVisibilityKey = 'pref_live_visibility';
+  static const String _prefLandRemindersKey = 'pref_land_reminders';
 
   final ApiClient _apiClient;
   LiveVisibility _liveVisibility = LiveVisibility.off; // PROPOSED DEFAULT: off
+  bool _landReminders =
+      true; // PROPOSED DEFAULT: true (enabled after permission)
   bool _isInitialized = false;
 
   LiveVisibility get liveVisibility => _liveVisibility;
+  bool get landReminders => _landReminders;
   bool get isInitialized => _isInitialized;
+  String get localTimezone => DateTime.now().timeZoneName;
 
   UserSettingsService._internal({ApiClient? apiClient})
     : _apiClient = apiClient ?? ApiClient();
@@ -70,13 +75,19 @@ class UserSettingsService extends ChangeNotifier {
   UserSettingsService.custom({
     ApiClient? apiClient,
     LiveVisibility initial = LiveVisibility.off,
+    bool initialLandReminders = true,
+    this._isInitialized = true,
   }) : _apiClient = apiClient ?? ApiClient(),
        _liveVisibility = initial,
-       _isInitialized = true;
+       _landReminders = initialLandReminders;
 
   @visibleForTesting
-  void resetForTesting({LiveVisibility initial = LiveVisibility.off}) {
+  void resetForTesting({
+    LiveVisibility initial = LiveVisibility.off,
+    bool initialLandReminders = true,
+  }) {
     _liveVisibility = initial;
+    _landReminders = initialLandReminders;
     _isInitialized = false;
   }
 
@@ -87,6 +98,7 @@ class UserSettingsService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final stored = prefs.getString(_prefLiveVisibilityKey);
       _liveVisibility = LiveVisibility.fromString(stored);
+      _landReminders = prefs.getBool(_prefLandRemindersKey) ?? true;
       _isInitialized = true;
       notifyListeners();
 
@@ -98,7 +110,41 @@ class UserSettingsService extends ChangeNotifier {
         tag: 'UserSettingsService',
       );
       _liveVisibility = LiveVisibility.off;
+      _landReminders = true;
       _isInitialized = true;
+    }
+  }
+
+  /// Updates land reminders preference offline-first and syncs to backend
+  Future<void> setLandReminders(bool enabled) async {
+    _landReminders = enabled;
+    notifyListeners();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefLandRemindersKey, enabled);
+    } catch (e) {
+      AppLogger.warning(
+        'Failed to persist land reminders locally: $e',
+        tag: 'UserSettingsService',
+      );
+    }
+
+    try {
+      await _apiClient.updateSettings({
+        'land_reminders': enabled,
+        'timezone': localTimezone,
+      });
+      AppLogger.info(
+        'Updated land_reminders on server to $enabled ($localTimezone)',
+        tag: 'UserSettingsService',
+      );
+    } catch (e) {
+      // Offline-first: failure is non-fatal
+      AppLogger.warning(
+        'Failed to sync land_reminders to server (offline-first preserved): $e',
+        tag: 'UserSettingsService',
+      );
     }
   }
 
@@ -137,17 +183,36 @@ class UserSettingsService extends ChangeNotifier {
   /// Synchronizes settings with Go backend, preserving local values on network errors
   Future<void> syncWithServer() async {
     try {
+      // Push client timezone to server as non-sensitive operational setting
+      await _apiClient.updateSettings({
+        'timezone': localTimezone,
+        'land_reminders': _landReminders,
+      });
+
       final data = await _apiClient.getSettings();
-      if (data != null && data.containsKey('live_visibility')) {
-        final serverVis = LiveVisibility.fromString(
-          data['live_visibility'] as String?,
-        );
-        if (_liveVisibility != serverVis) {
-          _liveVisibility = serverVis;
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString(_prefLiveVisibilityKey, serverVis.toApiValue());
-          notifyListeners();
+      if (data != null) {
+        if (data.containsKey('live_visibility')) {
+          final serverVis = LiveVisibility.fromString(
+            data['live_visibility'] as String?,
+          );
+          if (_liveVisibility != serverVis) {
+            _liveVisibility = serverVis;
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(
+              _prefLiveVisibilityKey,
+              serverVis.toApiValue(),
+            );
+          }
         }
+        if (data.containsKey('land_reminders')) {
+          final serverReminders = data['land_reminders'] as bool?;
+          if (serverReminders != null && _landReminders != serverReminders) {
+            _landReminders = serverReminders;
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool(_prefLandRemindersKey, serverReminders);
+          }
+        }
+        notifyListeners();
       }
     } catch (e) {
       AppLogger.debug(

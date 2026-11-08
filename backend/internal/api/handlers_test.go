@@ -1637,7 +1637,25 @@ func TestGetAndSetUserSettings(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &settings))
 	assert.Equal(t, "nearby", settings.LiveVisibility)
 
-	// 3. Verify GET returns updated setting
+	// 3b. PUT /v1/me/settings with land_reminders and timezone
+	landRemindersOff := false
+	putBody2, _ := json.Marshal(api.UpdateSettingsRequest{
+		Timezone:      "Asia/Kolkata",
+		LandReminders: &landRemindersOff,
+	})
+	req = httptest.NewRequest(http.MethodPut, "/v1/me/settings", bytes.NewReader(putBody2))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "user_settings_test")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &settings))
+	assert.Equal(t, "nearby", settings.LiveVisibility)
+	assert.Equal(t, "Asia/Kolkata", settings.Timezone)
+	assert.False(t, settings.LandReminders)
+
+	// Verify GET returns all updated settings
 	req = httptest.NewRequest(http.MethodGet, "/v1/me/settings", nil)
 	req.Header.Set("X-Dev-User", "user_settings_test")
 	rec = httptest.NewRecorder()
@@ -1646,6 +1664,8 @@ func TestGetAndSetUserSettings(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &settings))
 	assert.Equal(t, "nearby", settings.LiveVisibility)
+	assert.Equal(t, "Asia/Kolkata", settings.Timezone)
+	assert.False(t, settings.LandReminders)
 
 	// 4. PUT with invalid value -> 400 Bad Request
 	badBody, _ := json.Marshal(map[string]string{"live_visibility": "global"})

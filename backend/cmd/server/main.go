@@ -103,6 +103,7 @@ func main() {
 	defer wsHub.Stop()
 
 	fcmNotifier := notify.NewFCMClient(dataStore, logger)
+	decayReminderEngine := notify.NewDecayReminderEngine(dataStore, fcmNotifier, logger)
 
 	// Periodic territory decay worker (runs hourly to decay inactive territory strength at 15.0%/day)
 	decayCtx, cancelDecay := context.WithCancel(context.Background())
@@ -117,6 +118,12 @@ func main() {
 			case <-ticker.C:
 				if err := dataStore.ApplyTerritoryDecay(decayCtx, 15.0); err != nil && !errors.Is(err, context.Canceled) {
 					logger.Warn("periodic territory decay encountered error", "error", err)
+				}
+				// Evaluate decaying territories and dispatch "Your land is getting weak" push reminders
+				if sent, err := decayReminderEngine.ProcessDecayAlerts(decayCtx, time.Now().UTC()); err != nil && !errors.Is(err, context.Canceled) {
+					logger.Warn("decay reminder notification worker encountered error", "error", err)
+				} else if sent > 0 {
+					logger.Info("decay reminder notification worker completed", "sent_count", sent)
 				}
 			}
 		}

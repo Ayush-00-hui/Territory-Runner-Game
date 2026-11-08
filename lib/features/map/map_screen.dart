@@ -13,6 +13,7 @@ import '../../services/app_preferences.dart';
 import '../../services/battery_saver_service.dart';
 import '../../services/firebase_service.dart';
 import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
 import '../../ui/ui.dart';
 import '../gameplay/territory_service.dart';
 import '../routing/route_service.dart';
@@ -80,6 +81,7 @@ class _MapScreenState extends State<MapScreen> {
 
   MapRunController? _localController;
   StreamSubscription<Position>? _positionSub;
+  StreamSubscription<String>? _territoryFocusSub;
   bool _showGoCue = false;
 
   MapRunController _resolveController() {
@@ -138,6 +140,47 @@ class _MapScreenState extends State<MapScreen> {
     });
 
     LocationService().warmUpLocation();
+
+    _territoryFocusSub = NotificationService().onAttackedTerritoryTapped.listen(
+      (territoryId) {
+        if (!mounted) return;
+        _focusOnTerritory(territoryId);
+      },
+    );
+  }
+
+  void _focusOnTerritory(String territoryId) {
+    _refreshTerritoryCache();
+    final territories = _territoriesNotifier.value;
+    Territory? target;
+    for (final t in territories) {
+      if (t.id == territoryId) {
+        target = t;
+        break;
+      }
+    }
+    // Fallback: if not found by id, pick weakest territory
+    if (target == null && territories.isNotEmpty) {
+      target = territories.reduce(
+        (a, b) =>
+            a.computeCurrentStrength() < b.computeCurrentStrength() ? a : b,
+      );
+    }
+    if (target != null && target.polygon.isNotEmpty) {
+      double sumLat = 0;
+      double sumLng = 0;
+      for (final p in target.polygon) {
+        sumLat += p.latitude;
+        sumLng += p.longitude;
+      }
+      final centroid = LatLng(
+        sumLat / target.polygon.length,
+        sumLng / target.polygon.length,
+      );
+      try {
+        _mapController.move(centroid, 17.0);
+      } catch (_) {}
+    }
   }
 
   void _refreshTerritoryCache() {
@@ -148,6 +191,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _positionSub?.cancel();
+    _territoryFocusSub?.cancel();
     _hudHeightNotifier.dispose();
     _territoriesNotifier.dispose();
     _keyboardFocusNode.dispose();

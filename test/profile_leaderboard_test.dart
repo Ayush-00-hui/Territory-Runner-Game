@@ -289,7 +289,7 @@ void main() {
 
         // Tap haptic switch
         final switchTiles = find.byType(Switch);
-        expect(switchTiles, findsNWidgets(5));
+        expect(switchTiles, findsNWidgets(6));
 
         await tester.tap(switchTiles.first);
         await tester.pumpAndSettle();

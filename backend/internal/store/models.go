@@ -26,6 +26,8 @@ type User struct {
 	Level          int       `json:"level"`
 	TotalRuns      int       `json:"total_runs"`
 	LiveVisibility string    `json:"live_visibility,omitempty"`
+	Timezone       string    `json:"timezone,omitempty"`
+	LandReminders  bool      `json:"land_reminders"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
@@ -249,4 +251,15 @@ type PrivacyZone struct {
 // UserSettings represents a user's privacy and operational preferences.
 type UserSettings struct {
 	LiveVisibility string `json:"live_visibility"`
+	Timezone       string `json:"timezone,omitempty"`
+	LandReminders  bool   `json:"land_reminders"`
+}
+
+// DecayNotification represents a recorded push notification alerting an owner of territory decay.
+type DecayNotification struct {
+	ID          int64     `json:"id"`
+	OwnerID     string    `json:"owner_id"`
+	TerritoryID string    `json:"territory_id"`
+	Threshold   int       `json:"threshold"` // 50 or 30 percent
+	SentAt      time.Time `json:"sent_at"`
 }

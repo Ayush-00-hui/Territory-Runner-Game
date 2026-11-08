@@ -274,7 +274,10 @@ class _MainScreenState extends State<MainScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService().showPermissionPrimerIfNeeded(context);
+      // Opt-in flow: only prompt for notifications if user has claimed territory
+      if (TerritoryService().getCapturedTerritories().isNotEmpty) {
+        NotificationService().showPermissionPrimerIfNeeded(context);
+      }
     });
   }
 

@@ -79,6 +79,13 @@ class NotificationService {
             icon: Icons.warning_amber_rounded,
             type: AppToastType.error,
           );
+        } else if (type == 'decay_warning') {
+          AppPreferences().triggerAttackHaptic();
+          AppToast.showGlobal(
+            'One of your areas is getting weak. A short loop will restore it.',
+            icon: Icons.shield_outlined,
+            type: AppToastType.warning,
+          );
         }
       });
 

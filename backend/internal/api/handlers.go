@@ -857,7 +857,9 @@ func (a *API) HandleGetSettings(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSettingsRequest defines payload for updating settings.
 type UpdateSettingsRequest struct {
-	LiveVisibility string `json:"live_visibility"`
+	LiveVisibility string `json:"live_visibility,omitempty"`
+	Timezone       string `json:"timezone,omitempty"`
+	LandReminders  *bool  `json:"land_reminders,omitempty"`
 }
 
 // HandleUpdateSettings handles PUT /v1/me/settings.
@@ -874,24 +876,47 @@ func (a *API) HandleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vis := strings.ToLower(strings.TrimSpace(req.LiveVisibility))
-	if vis != "off" && vis != "friends" && vis != "nearby" {
-		writeError(w, http.StatusBadRequest, "INVALID_SETTING", "live_visibility must be one of: off, friends, nearby")
-		return
+	existing, err := a.store.GetUserSettings(r.Context(), uid)
+	if err != nil || existing == nil {
+		existing = &store.UserSettings{
+			LiveVisibility: "off",
+			Timezone:       "UTC",
+			LandReminders:  true,
+		}
 	}
 
-	settings := &store.UserSettings{LiveVisibility: vis}
-	if err := a.store.UpdateUserSettings(r.Context(), uid, settings); err != nil {
+	if req.LiveVisibility != "" {
+		vis := strings.ToLower(strings.TrimSpace(req.LiveVisibility))
+		if vis != "off" && vis != "friends" && vis != "nearby" {
+			writeError(w, http.StatusBadRequest, "INVALID_SETTING", "live_visibility must be one of: off, friends, nearby")
+			return
+		}
+		existing.LiveVisibility = vis
+	}
+
+	if req.Timezone != "" {
+		tz := strings.TrimSpace(req.Timezone)
+		if len(tz) > 64 {
+			tz = tz[:64]
+		}
+		existing.Timezone = tz
+	}
+
+	if req.LandReminders != nil {
+		existing.LandReminders = *req.LandReminders
+	}
+
+	if err := a.store.UpdateUserSettings(r.Context(), uid, existing); err != nil {
 		a.logger.Error("failed to update user settings", "user_id", uid, "error", err)
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update user settings")
 		return
 	}
 
 	if a.wsHub != nil {
-		a.wsHub.UpdateUserVisibility(uid, vis)
+		a.wsHub.UpdateUserVisibility(uid, existing.LiveVisibility)
 	}
 
-	writeJSON(w, http.StatusOK, settings)
+	writeJSON(w, http.StatusOK, existing)
 }
 
 // HandleGetCurrentLeague handles GET /v1/league/current.
