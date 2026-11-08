@@ -82,6 +82,9 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final isLight = palette.isLight;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -95,7 +98,12 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Distance', style: AppText.labelSmall),
+                  Text(
+                    'Distance',
+                    style: AppText.labelSmall.copyWith(
+                      color: palette.textSecondary,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   FittedBox(
                     fit: BoxFit.scaleDown,
@@ -109,13 +117,22 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                               ? widget.distanceKm.toStringAsFixed(2)
                               : '0.00',
                           style: AppText.statHero.copyWith(
-                            fontSize: 34,
+                            fontSize: isLight ? 36 : 34,
                             fontWeight: FontWeight.w700,
+                            color: palette.textPrimary,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
                         const SizedBox(width: AppSpacing.s4),
-                        const Text('km', style: AppText.labelAccent),
+                        Text(
+                          'km',
+                          style: AppText.labelAccent.copyWith(
+                            color: palette.accent,
+                            fontWeight: isLight
+                                ? FontWeight.w700
+                                : FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -131,15 +148,20 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Time', style: AppText.labelSmall),
+                      Text(
+                        'Time',
+                        style: AppText.labelSmall.copyWith(
+                          color: palette.textSecondary,
+                        ),
+                      ),
                       if (widget.isRunActive && !widget.isAutoPaused) ...[
                         const SizedBox(width: AppSpacing.s4),
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: AppColors.accent,
+                            color: palette.accent,
                           ),
                         ),
                       ],
@@ -157,8 +179,9 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                             )
                           : '00:00',
                       style: AppText.timer.copyWith(
-                        fontSize: 32,
+                        fontSize: isLight ? 34 : 32,
                         fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -175,7 +198,12 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Pace', style: AppText.labelSmall),
+                      Text(
+                        'Pace',
+                        style: AppText.labelSmall.copyWith(
+                          color: palette.textSecondary,
+                        ),
+                      ),
                       if (widget.targetPace != null) ...[
                         const SizedBox(width: 4),
                         Container(
@@ -184,13 +212,13 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surface2,
+                            color: palette.surface2,
                             borderRadius: AppSpacing.br8,
                           ),
                           child: Text(
                             'P: ${widget.targetPace}',
                             style: AppText.labelSmall.copyWith(
-                              color: AppColors.info,
+                              color: palette.info,
                               fontSize: 8.5,
                             ),
                           ),
@@ -205,8 +233,9 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                     child: Text(
                       widget.isRunActive ? widget.splitPace : "--'--\"",
                       style: AppText.statHero.copyWith(
-                        fontSize: 28,
+                        fontSize: isLight ? 30 : 28,
                         fontWeight: FontWeight.w700,
+                        color: palette.textPrimary,
                         fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                     ),
@@ -229,9 +258,9 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
               vertical: AppSpacing.s8,
             ),
             decoration: BoxDecoration(
-              color: AppColors.surface2,
+              color: palette.surface2,
               borderRadius: AppSpacing.br14,
-              border: Border.all(color: AppColors.borderSubtle),
+              border: Border.all(color: palette.borderSubtle),
             ),
             child: Row(
               children: [
@@ -242,15 +271,16 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.speed_rounded,
-                          color: AppColors.info,
+                          color: palette.info,
                           size: 14,
                         ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           '${widget.currentSpeedKmh.toStringAsFixed(1)} km/h',
                           style: AppText.bodyBold.copyWith(
+                            color: palette.textPrimary,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
@@ -268,9 +298,9 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.local_fire_department_rounded,
-                          color: AppColors.rival,
+                          color: palette.rival,
                           size: 14,
                         ),
                         const SizedBox(width: AppSpacing.s4),
@@ -279,6 +309,7 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                             _getThrottledCalories(),
                           ),
                           style: AppText.bodyBold.copyWith(
+                            color: palette.textPrimary,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
@@ -299,10 +330,10 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                         Icon(
                           Icons.satellite_alt_rounded,
                           color: widget.satelliteAccuracyMeters <= 10.0
-                              ? AppColors.accent
+                              ? palette.accent
                               : (widget.satelliteAccuracyMeters <= 30.0
-                                    ? AppColors.warning
-                                    : AppColors.rival),
+                                    ? palette.warning
+                                    : palette.rival),
                           size: 14,
                         ),
                         const SizedBox(width: AppSpacing.s4),
@@ -314,10 +345,10 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: widget.satelliteAccuracyMeters <= 10.0
-                                ? AppColors.textSecondary
+                                ? palette.textSecondary
                                 : (widget.satelliteAccuracyMeters <= 30.0
-                                      ? AppColors.warning
-                                      : AppColors.rival),
+                                      ? palette.warning
+                                      : palette.rival),
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
@@ -338,9 +369,9 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.directions_walk_rounded,
-                              color: AppColors.accent,
+                              color: palette.accent,
                               size: 14,
                             ),
                             const SizedBox(width: AppSpacing.s4),
@@ -349,6 +380,7 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                                   ? '~${_formatSteps(widget.stepCount!)} steps (est.)'
                                   : '${_formatSteps(widget.stepCount!)} steps',
                               style: AppText.bodyBold.copyWith(
+                                color: palette.textPrimary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 fontFeatures: const [
@@ -370,15 +402,16 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.shield_outlined,
-                          color: AppColors.accent,
+                          color: palette.accent,
                           size: 14,
                         ),
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           '${widget.territoriesClaimed} claimed',
                           style: AppText.bodyBold.copyWith(
+                            color: palette.textPrimary,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],

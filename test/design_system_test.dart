@@ -25,10 +25,10 @@ void main() {
         expect(AppColors.primary, const Color(0xFF2D9CDB));
         expect(AppColors.accent, const Color(0xFFF2C94C));
         expect(AppColors.mine, const Color(0xFF2D9CDB));
-        expect(AppColors.rival, const Color(0xFFEB5757));
+        expect(AppColors.rival, const Color(0xFFFF6B6B));
         expect(AppColors.warning, const Color(0xFFF2C94C));
         expect(AppColors.info, const Color(0xFF2D9CDB));
-        expect(AppColors.error, const Color(0xFFEB5757));
+        expect(AppColors.error, const Color(0xFFE53935));
         expect(AppColors.success, const Color(0xFF27AE60));
         expect(AppColors.gold, const Color(0xFFF2C94C));
         expect(AppColors.silver, const Color(0xFFE0E6ED));

@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../ui/theme/app_colors.dart';
+import '../../../ui/theme/app_palette.dart';
 
 /// Neutral athletic marker with a dashed ring representing the historical ghost runner.
 /// Zero glow, tokens only, respects battery saver and reduced motion.
@@ -18,6 +18,7 @@ class GhostRunnerMarkerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     return Semantics(
       label: 'Ghost runner position',
       child: RepaintBoundary(
@@ -26,9 +27,10 @@ class GhostRunnerMarkerWidget extends StatelessWidget {
           height: 32,
           child: CustomPaint(
             painter: _GhostMarkerPainter(
-              ringColor: AppColors.textMuted.withValues(alpha: 0.85),
-              centerColor: AppColors.surface2,
-              borderColor: AppColors.textSecondary,
+              ringColor: palette.textMuted.withValues(alpha: 0.85),
+              centerColor: palette.surface2,
+              borderColor: palette.textSecondary,
+              pipColor: palette.textPrimary,
               isBatterySaver: isBatterySaverActive,
             ),
           ),
@@ -42,12 +44,14 @@ class _GhostMarkerPainter extends CustomPainter {
   final Color ringColor;
   final Color centerColor;
   final Color borderColor;
+  final Color pipColor;
   final bool isBatterySaver;
 
   _GhostMarkerPainter({
     required this.ringColor,
     required this.centerColor,
     required this.borderColor,
+    required this.pipColor,
     required this.isBatterySaver,
   });
 
@@ -98,7 +102,7 @@ class _GhostMarkerPainter extends CustomPainter {
 
     // 3. Crisp inner pip
     final pipPaint = Paint()
-      ..color = AppColors.textPrimary
+      ..color = pipColor
       ..style = PaintingStyle.fill;
     canvas.drawCircle(center, 2.0, pipPaint);
   }
@@ -108,6 +112,7 @@ class _GhostMarkerPainter extends CustomPainter {
     return oldDelegate.ringColor != ringColor ||
         oldDelegate.centerColor != centerColor ||
         oldDelegate.borderColor != borderColor ||
+        oldDelegate.pipColor != pipColor ||
         oldDelegate.isBatterySaver != isBatterySaver;
   }
 }

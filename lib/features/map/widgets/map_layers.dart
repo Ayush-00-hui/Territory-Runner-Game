@@ -8,6 +8,7 @@ import '../../../core/utils/constants.dart';
 import '../../../models/territory.dart';
 import '../../../models/ws_events.dart';
 import '../../../ui/theme/app_colors.dart';
+import '../../../ui/theme/app_palette.dart';
 import '../../../services/tile_cache_service.dart';
 import '../../gameplay/polygon_enclosure_engine.dart';
 import 'ghost_runner_marker.dart';
@@ -17,7 +18,7 @@ class MapLayers {
   MapLayers._();
 
   /// High-visibility global map tile layer with offline disk caching and OpenStreetMap by default
-  static TileLayer buildTileLayer() {
+  static TileLayer buildTileLayer({bool isLight = false}) {
     String urlTemplate;
     final Map<String, String> additionalOptions = {};
 
@@ -33,9 +34,13 @@ class MapLayers {
     } else if (AppConstants.tileApiKey.isNotEmpty) {
       if (AppConstants.tileApiKey.startsWith('pk.') ||
           AppConstants.mapApiKey.isNotEmpty) {
-        urlTemplate = 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}';
+        urlTemplate = isLight
+            ? 'https://api.mapbox.com/styles/v1/mapbox/light-v11/tiles/{z}/{x}/{y}?access_token={accessToken}'
+            : 'https://api.mapbox.com/styles/v1/mapbox/dark-v11/tiles/{z}/{x}/{y}?access_token={accessToken}';
       } else {
-        urlTemplate = 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key={apiKey}';
+        urlTemplate = isLight
+            ? 'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}@2x.png?key={apiKey}'
+            : 'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png?key={apiKey}';
       }
     } else {
       urlTemplate = AppConstants.tileUrlTemplate;
@@ -67,14 +72,15 @@ class MapLayers {
     List<Territory> territories, {
     String? highlightedTerritoryId,
     String? currentUserId,
+    AppPalette palette = AppPalette.dark,
   }) {
     final List<Polygon> polygons = [];
 
     for (final territory in territories) {
       final double currentStrength = territory.computeCurrentStrength();
-      // Strength shown as outline opacity (from 0.25 at 0% strength to 1.0 at 100%)
-      final double outlineAlpha = (0.25 + 0.75 * (currentStrength / 100.0))
-          .clamp(0.20, 1.0);
+      // Strength shown as outline opacity (from 0.35 at 0% strength to 1.0 at 100%)
+      final double outlineAlpha = (0.35 + 0.65 * (currentStrength / 100.0))
+          .clamp(0.30, 1.0);
       final bool isHighlighted = territory.id == highlightedTerritoryId;
       final bool isRival =
           territory.color == AppColors.rival ||
@@ -86,27 +92,31 @@ class MapLayers {
       final Color borderColor;
       final Color fillColor;
       final double strokeWidth;
+      final StrokePattern pattern;
 
       if (isHighlighted) {
-        borderColor = AppColors.gold;
-        fillColor = AppColors.gold.withValues(alpha: 0.35);
+        borderColor = palette.gold;
+        fillColor = palette.gold.withValues(alpha: 0.35);
         strokeWidth = 3.0;
+        pattern = const StrokePattern.solid();
       } else if (isRival) {
-        borderColor = AppColors.territoryRivalBorder.withValues(
+        borderColor = palette.territoryRivalBorder.withValues(
           alpha: outlineAlpha,
         );
-        fillColor = AppColors.territoryRivalFill.withValues(
-          alpha: (0.14 * (currentStrength / 100.0)).clamp(0.08, 0.20),
+        fillColor = palette.territoryRivalFill.withValues(
+          alpha: (0.16 * (currentStrength / 100.0)).clamp(0.10, 0.24),
         );
-        strokeWidth = 1.5;
+        strokeWidth = 2.0;
+        pattern = StrokePattern.dashed(segments: const [7.0, 4.0]);
       } else {
-        borderColor = AppColors.territoryMineBorder.withValues(
+        borderColor = palette.territoryMineBorder.withValues(
           alpha: outlineAlpha,
         );
-        fillColor = AppColors.territoryMineFill.withValues(
-          alpha: (0.16 * (currentStrength / 100.0)).clamp(0.10, 0.25),
+        fillColor = palette.territoryMineFill.withValues(
+          alpha: (0.18 * (currentStrength / 100.0)).clamp(0.12, 0.28),
         );
-        strokeWidth = 1.5;
+        strokeWidth = 2.0;
+        pattern = const StrokePattern.solid();
       }
 
       final shells = classifyRings(territory.polygons);
@@ -118,6 +128,7 @@ class MapLayers {
             color: fillColor,
             borderColor: borderColor,
             borderStrokeWidth: strokeWidth,
+            pattern: pattern,
           ),
         );
       }
@@ -231,7 +242,10 @@ class MapLayers {
   }
 
   /// Small athletic strength badges positioned at territory centroids
-  static MarkerLayer buildTerritoryBadgesLayer(List<Territory> territories) {
+  static MarkerLayer buildTerritoryBadgesLayer(
+    List<Territory> territories, {
+    AppPalette palette = AppPalette.dark,
+  }) {
     final List<Marker> badges = [];
 
     for (final territory in territories) {
@@ -241,8 +255,8 @@ class MapLayers {
       final isWeak = territory.isWeak();
 
       final Color badgeColor = isWeak
-          ? AppColors.rival
-          : (currentStrength >= 70 ? AppColors.mine : AppColors.warning);
+          ? palette.rival
+          : (currentStrength >= 70 ? palette.mine : palette.warning);
 
       badges.add(
         Marker(
@@ -252,7 +266,7 @@ class MapLayers {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
             decoration: BoxDecoration(
-              color: AppColors.surfaceGlass,
+              color: palette.surfaceGlass,
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                 color: badgeColor.withValues(alpha: 0.8),
@@ -271,11 +285,11 @@ class MapLayers {
                 const SizedBox(width: 3),
                 Text(
                   '${currentStrength.round()}%',
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: palette.textPrimary,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    fontFeatures: [FontFeature.tabularFigures()],
+                    fontFeatures: const [FontFeature.tabularFigures()],
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -308,6 +322,7 @@ class MapLayers {
     List<LatLng>? suggestedRouteCoordinates,
     Map<String, List<LatLng>>? rivalBreadcrumbs,
     Map<String, RunnerPresenceEvent>? activeRivalRunners,
+    AppPalette palette = AppPalette.dark,
   }) {
     return PolylineLayer(
       polylines: [
@@ -317,21 +332,25 @@ class MapLayers {
             if (entry.value.length >= 2)
               Polyline(
                 points: entry.value,
-                color: _resolveRivalColor(entry.key, activeRivalRunners),
+                color: _resolveRivalColor(
+                  entry.key,
+                  activeRivalRunners,
+                  palette: palette,
+                ),
                 strokeWidth: 2.0,
               ),
         // Local Runner Trail: Solid 2.5px Pacer Blue (accent), NO glow
         if (isRunActive && runCoordinates.length >= 2)
           Polyline(
             points: runCoordinates,
-            color: AppColors.accent,
+            color: palette.accent,
             strokeWidth: 2.5,
           ),
         // Enclosure Proximity Path
         if (currentEnclosurePath.length >= 2)
           Polyline(
             points: currentEnclosurePath,
-            color: AppColors.info,
+            color: palette.info,
             strokeWidth: 2.0,
           ),
         // AI Suggested Route: Clean 2.5px line, NO glow
@@ -339,7 +358,7 @@ class MapLayers {
             suggestedRouteCoordinates.length >= 2)
           Polyline(
             points: suggestedRouteCoordinates,
-            color: AppColors.accent.withValues(alpha: 0.6),
+            color: palette.accent.withValues(alpha: 0.6),
             strokeWidth: 2.5,
           ),
       ],
@@ -353,6 +372,7 @@ class MapLayers {
     LatLng? ghostLocation,
     bool isBatterySaverActive = false,
     bool isReducedMotion = false,
+    AppPalette palette = AppPalette.dark,
   }) {
     final List<Marker> markers = [];
 
@@ -384,16 +404,16 @@ class MapLayers {
               height: 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.accent,
-                border: Border.all(color: AppColors.bgDeep, width: 2.5),
+                color: palette.accent,
+                border: Border.all(color: palette.bgDeep, width: 2.5),
               ),
               child: Center(
                 child: Container(
                   width: 5,
                   height: 5,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppColors.onAccent,
+                    color: palette.onAccent,
                   ),
                 ),
               ),
@@ -405,7 +425,7 @@ class MapLayers {
 
     // Active Rival Runners broadcast over real-time WebSocket
     for (final rival in activeRivalRunners.values) {
-      final rivalColor = getFactionColor(rival.faction);
+      final rivalColor = getFactionColor(rival.faction, palette: palette);
       final speedKmh = rival.speed * 3.6;
 
       markers.add(
@@ -423,7 +443,7 @@ class MapLayers {
                   vertical: 2.5,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: palette.surface,
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: rivalColor.withValues(alpha: 0.6),
@@ -445,8 +465,8 @@ class MapLayers {
                     Flexible(
                       child: Text(
                         rival.username,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                        style: TextStyle(
+                          color: palette.textPrimary,
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
                         ),
@@ -488,29 +508,33 @@ class MapLayers {
   }
 
   /// Maps faction name to dedicated accent color
-  static Color getFactionColor(String faction) {
+  static Color getFactionColor(
+    String faction, {
+    AppPalette palette = AppPalette.dark,
+  }) {
     final lower = faction.toLowerCase();
     if (lower.contains('blue') ||
         lower.contains('cyan') ||
         lower.contains('contrast')) {
-      return AppColors.info;
+      return palette.info;
     }
     if (lower.contains('gold') ||
         lower.contains('amber') ||
         lower.contains('solar')) {
-      return AppColors.secondary;
+      return palette.gold;
     }
-    return AppColors.rival;
+    return palette.rival;
   }
 
   static Color _resolveRivalColor(
     String userId,
-    Map<String, RunnerPresenceEvent>? rivals,
-  ) {
+    Map<String, RunnerPresenceEvent>? rivals, {
+    AppPalette palette = AppPalette.dark,
+  }) {
     if (rivals != null && rivals.containsKey(userId)) {
-      return getFactionColor(rivals[userId]!.faction);
+      return getFactionColor(rivals[userId]!.faction, palette: palette);
     }
-    return AppColors.rival;
+    return palette.rival;
   }
 }
 

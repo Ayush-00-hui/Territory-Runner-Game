@@ -93,6 +93,7 @@ class _RunHudState extends State<RunHud> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final double proximity = (widget.proximityToClosure ?? 0.0).clamp(0.0, 1.0);
     final bool isNearClosure = proximity >= 0.75;
 
@@ -115,12 +116,12 @@ class _RunHudState extends State<RunHud> {
             AppSpacing.s14,
           ),
           decoration: BoxDecoration(
-            color: AppColors.surfaceGlass,
+            color: palette.surfaceGlass,
             borderRadius: AppSpacing.br28,
             border: Border.all(
               color: widget.isAutoPaused
-                  ? AppColors.warning.withValues(alpha: 0.6)
-                  : (isNearClosure ? AppColors.accent : AppColors.borderSubtle),
+                  ? palette.warning.withValues(alpha: 0.6)
+                  : (isNearClosure ? palette.accent : palette.borderSubtle),
               width: isNearClosure ? 1.5 : 1.0,
             ),
             boxShadow: AppElevation.floating,
@@ -139,7 +140,7 @@ class _RunHudState extends State<RunHud> {
                       width: 36,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: AppColors.borderSubtle,
+                        color: palette.borderSubtle,
                         borderRadius: AppSpacing.brFull,
                       ),
                     ),
@@ -159,23 +160,23 @@ class _RunHudState extends State<RunHud> {
                       vertical: AppSpacing.s4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.16),
+                      color: palette.warning.withValues(alpha: 0.16),
                       borderRadius: AppSpacing.brFull,
-                      border: Border.all(color: AppColors.warning, width: 1),
+                      border: Border.all(color: palette.warning, width: 1),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
                           Icons.pause_circle_filled_rounded,
-                          color: AppColors.warning,
+                          color: palette.warning,
                           size: 14,
                         ),
-                        SizedBox(width: AppSpacing.s6),
+                        const SizedBox(width: AppSpacing.s6),
                         Text(
                           'Auto-paused • Speed < 2.5 km/h',
                           style: TextStyle(
-                            color: AppColors.warning,
+                            color: palette.warning,
                             fontWeight: FontWeight.w700,
                             fontSize: 10,
                             letterSpacing: 0.3,
@@ -202,14 +203,11 @@ class _RunHudState extends State<RunHud> {
                       vertical: AppSpacing.s4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.surface2,
+                      color: palette.surface2,
                       borderRadius: AppSpacing.brFull,
-                      border: Border.all(
-                        color: AppColors.borderSubtle,
-                        width: 1,
-                      ),
+                      border: Border.all(color: palette.borderSubtle, width: 1),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         SizedBox(
@@ -217,14 +215,14 @@ class _RunHudState extends State<RunHud> {
                           height: 10,
                           child: CircularProgressIndicator(
                             strokeWidth: 1.5,
-                            color: AppColors.accent,
+                            color: palette.accent,
                           ),
                         ),
-                        SizedBox(width: AppSpacing.s6),
+                        const SizedBox(width: AppSpacing.s6),
                         Text(
                           'Finding GPS...',
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color: palette.textSecondary,
                             fontWeight: FontWeight.w600,
                             fontSize: 10,
                             letterSpacing: 0.3,
@@ -332,13 +330,14 @@ class _GhostHudChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final Color tint;
     if (telemetry.isOffRoute) {
-      tint = AppColors.warning;
+      tint = palette.warning;
     } else if (telemetry.isRunnerAhead) {
-      tint = AppColors.accent;
+      tint = palette.accent;
     } else {
-      tint = AppColors.textSecondary;
+      tint = palette.textSecondary;
     }
 
     final diffText = telemetry.statusText;
@@ -353,12 +352,12 @@ class _GhostHudChip extends StatelessWidget {
           vertical: AppSpacing.s4,
         ),
         decoration: BoxDecoration(
-          color: AppColors.surface2,
+          color: palette.surface2,
           borderRadius: AppSpacing.brFull,
           border: Border.all(
             color: telemetry.isOffRoute
-                ? AppColors.warning.withValues(alpha: 0.6)
-                : AppColors.borderSubtle,
+                ? palette.warning.withValues(alpha: 0.6)
+                : palette.borderSubtle,
             width: 1.0,
           ),
         ),

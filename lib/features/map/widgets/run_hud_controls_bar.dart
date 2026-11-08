@@ -32,6 +32,7 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final isReducedMotion = AppMotion.shouldReduceMotion(context);
     final isRunActive = widget.isRunActive;
     final isNearClosure = widget.isNearClosure;
@@ -84,13 +85,13 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                   ),
                   decoration: BoxDecoration(
                     color: isNearClosure
-                        ? AppColors.accent.withValues(alpha: 0.15)
-                        : AppColors.surface2,
+                        ? palette.accent.withValues(alpha: 0.15)
+                        : palette.surface2,
                     borderRadius: AppSpacing.br16,
                     border: Border.all(
                       color: isNearClosure
-                          ? AppColors.accent
-                          : AppColors.borderSubtle,
+                          ? palette.accent
+                          : palette.borderSubtle,
                       width: isNearClosure ? 1.5 : 1.0,
                     ),
                   ),
@@ -101,10 +102,10 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                       Icon(
                         Icons.sync_rounded,
                         color: isNearClosure
-                            ? AppColors.accent
+                            ? palette.accent
                             : (isRunActive
-                                  ? AppColors.textSecondary
-                                  : AppColors.textMuted),
+                                  ? palette.textSecondary
+                                  : palette.textMuted),
                         size: 16,
                       ),
                       const SizedBox(width: AppSpacing.s4),
@@ -113,10 +114,10 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                           'Close loop',
                           style: TextStyle(
                             color: isNearClosure
-                                ? AppColors.accent
+                                ? palette.accent
                                 : (isRunActive
-                                      ? AppColors.textPrimary
-                                      : AppColors.textMuted),
+                                      ? palette.textPrimary
+                                      : palette.textMuted),
                             fontWeight: FontWeight.w700,
                             fontSize: 11,
                           ),
@@ -150,16 +151,16 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
               child: Container(
                 height: 58,
                 width: 58,
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppColors.accent,
+                  color: palette.accent,
                 ),
                 child: Center(
                   child: Icon(
                     isRunActive
                         ? Icons.pause_rounded
                         : Icons.play_arrow_rounded,
-                    color: AppColors.onAccent,
+                    color: palette.onAccent,
                     size: 34,
                   ),
                 ),

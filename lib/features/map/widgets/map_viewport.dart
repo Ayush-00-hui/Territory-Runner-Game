@@ -23,6 +23,8 @@ class MapViewport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
+    final isLight = Theme.of(context).brightness == Brightness.light;
     final LatLng center =
         controller.currentLocation ?? const LatLng(51.5074, -0.1278);
 
@@ -32,24 +34,28 @@ class MapViewport extends StatelessWidget {
         options: MapOptions(
           initialCenter: center,
           initialZoom: controller.currentLocation != null ? 17.0 : 15.0,
-          backgroundColor: AppColors.bgDeep,
+          backgroundColor: palette.bgDeep,
           interactionOptions: const InteractionOptions(
             flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
           ),
         ),
         children: [
-          MapLayers.buildTileLayer(),
+          MapLayers.buildTileLayer(isLight: isLight),
           ValueListenableBuilder<List<Territory>>(
             valueListenable: territoriesNotifier,
             builder: (context, territories, _) => MapLayers.buildPolygonLayer(
               territories,
               highlightedTerritoryId: controller.highlightedTerritoryId,
+              palette: palette,
             ),
           ),
           ValueListenableBuilder<List<Territory>>(
             valueListenable: territoriesNotifier,
             builder: (context, territories, _) =>
-                MapLayers.buildTerritoryBadgesLayer(territories),
+                MapLayers.buildTerritoryBadgesLayer(
+                  territories,
+                  palette: palette,
+                ),
           ),
           ValueListenableBuilder<int>(
             valueListenable: controller.runPathUpdateNotifier,
@@ -61,6 +67,7 @@ class MapViewport extends StatelessWidget {
                   controller.activeSuggestedRoute?.polyline,
               rivalBreadcrumbs: controller.rivalBreadcrumbs,
               activeRivalRunners: controller.activeRivalRunners,
+              palette: palette,
             ),
           ),
           ValueListenableBuilder<LatLng?>(
@@ -74,6 +81,7 @@ class MapViewport extends StatelessWidget {
                 isBatterySaverActive: controller.isBatterySaverActive,
                 isReducedMotion:
                     MediaQuery.maybeOf(context)?.disableAnimations ?? false,
+                palette: palette,
               ),
             ),
           ),
