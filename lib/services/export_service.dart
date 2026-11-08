@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:latlong2/latlong.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../models/run_log_entry.dart';
 import '../models/territory.dart';
 import '../models/user_body_profile.dart';
 import 'motion_sensor_service.dart';
@@ -19,6 +21,36 @@ class ExportService {
   ExportService._internal();
 
   final PrivacyZoneService _privacyService = PrivacyZoneService();
+
+  /// Generates a valid GPX 1.1 XML string from an authentic [RunLogEntry],
+  /// populating `<ele>` (altitude) and `<time>` (timestamp) from individual samples.
+  String generateGpxFromRun(
+    RunLogEntry run, {
+    String? title,
+    bool applyPrivacyRedaction = true,
+  }) {
+    final coords = <LatLng>[];
+    final times = <DateTime>[];
+    final eles = <double>[];
+
+    for (final s in run.samples) {
+      coords.add(LatLng(s.lat, s.lng));
+      times.add(run.startedAt.add(Duration(milliseconds: s.timeOffsetMs)));
+      if (s.altitude != null) {
+        eles.add(s.altitude!);
+      }
+    }
+
+    return generateGpx(
+      runTitle:
+          title ??
+          'Territory Run - ${run.id.substring(0, math.min(8, run.id.length))}',
+      coordinates: coords,
+      timestamps: times,
+      elevations: eles.length == coords.length ? eles : null,
+      applyPrivacyRedaction: applyPrivacyRedaction,
+    );
+  }
 
   /// Generates a valid GPX 1.1 XML string from GPS points.
   /// When [applyPrivacyRedaction] is true, coordinates within active privacy zones are excluded.

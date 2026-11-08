@@ -259,12 +259,19 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     final finalArea = _accumulatedRunPreviewArea;
     final finalXp = _accumulatedRunPreviewXp;
 
+    final startTime = DateTime.now().subtract(
+      Duration(seconds: _elapsedDurationSeconds),
+    );
+    final endTime = DateTime.now();
+    final positionsCopy = List<Position>.from(_recentPositions);
+
     _isRunActive = false;
     MapScreenFeature.isRunActiveNotifier.value = false;
     notifyListeners();
 
     return {
       'durationSeconds': finalSeconds,
+      'totalDurationSeconds': _elapsedDurationSeconds,
       'distanceKm': finalDistance,
       'territories': finalTerritories,
       'areaSqm': finalArea,
@@ -273,7 +280,11 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       'isStepCountEstimated': isStepCountEstimated,
       'elevationGainMeters': _elevationPipeline.cumulativeGainMeters,
       'averageCadenceSpm': _motionSensorService.averageCadenceSpm,
+      'cadenceConfidence': _motionSensorService.averageCadenceConfidence,
       'points': List<LatLng>.from(_runCoordinates),
+      'positions': positionsCopy,
+      'startTime': startTime,
+      'endTime': endTime,
     };
   }
 

@@ -29,6 +29,7 @@ import 'services/gallery_saver_service.dart';
 import 'services/location_service.dart';
 import 'services/notification_service.dart';
 import 'services/privacy_zone_service.dart';
+import 'services/run_log_service.dart';
 import 'services/run_recovery_service.dart';
 import 'services/safety_service.dart';
 import 'services/sync_queue.dart';
@@ -94,6 +95,7 @@ void main() {
       await Hive.openBox<Territory>('territories_v3');
       await Hive.openBox<RunnerProfile>('profile');
       await RunRecoveryService().init();
+      await RunLogService().init();
 
       // Load package metadata
       unawaited(AppVersion.init());
@@ -106,6 +108,7 @@ void main() {
             Provider<TerritoryService>(create: (_) => TerritoryService()),
             Provider<ApiClient>(create: (_) => ApiClient()),
             Provider<RunRecoveryService>(create: (_) => RunRecoveryService()),
+            Provider<RunLogService>(create: (_) => RunLogService()),
             Provider<SyncQueueService>(create: (_) => SyncQueueService()),
             Provider<WebSocketService>(create: (_) => WebSocketService()),
             Provider<RouteService>(create: (_) => RouteService()),

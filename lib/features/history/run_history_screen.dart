@@ -1,13 +1,14 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:latlong2/latlong.dart';
 
-import '../gameplay/territory_service.dart';
+import '../../models/run_log_entry.dart';
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
+import '../../services/run_log_service.dart';
 import '../../ui/ui.dart';
+import '../gameplay/territory_service.dart';
 import 'widgets/history_run_card.dart';
 
 enum HistoryFilter { all, loops, claims, thisWeek, thisMonth }
@@ -17,11 +18,13 @@ typedef HistoryTimeFilter = HistoryFilter;
 enum HistorySortOption { newest, largestArea, longestDistance }
 
 class RunHistoryScreen extends StatefulWidget {
+  final List<RunLogEntry>? initialRuns;
   final List<Territory>? initialTerritories;
   final RunnerProfile? initialProfile;
 
   const RunHistoryScreen({
     super.key,
+    this.initialRuns,
     this.initialTerritories,
     this.initialProfile,
   });
@@ -32,6 +35,8 @@ class RunHistoryScreen extends StatefulWidget {
 
 class _RunHistoryScreenState extends State<RunHistoryScreen> {
   final TerritoryService _territoryService = TerritoryService();
+  final RunLogService _runLogService = RunLogService();
+
   HistoryFilter _timeFilter = HistoryFilter.all;
   HistorySortOption _sortOption = HistorySortOption.newest;
 
@@ -46,33 +51,32 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
     return meters / 1000.0;
   }
 
-  List<Territory> _filterAndSort(List<Territory> rawList) {
+  List<RunLogEntry> _filterAndSort(List<RunLogEntry> rawList) {
     final now = DateTime.now();
 
-    final filtered = rawList.where((t) {
+    final filtered = rawList.where((r) {
       switch (_timeFilter) {
         case HistoryFilter.all:
           return true;
         case HistoryFilter.loops:
-          return t.polygon.length >= 3;
+          return r.samples.length >= 3 && r.claimedAreaSqM > 0;
         case HistoryFilter.claims:
-          return t.areaSqMeters > 0;
+          return r.claimedAreaSqM > 0;
         case HistoryFilter.thisWeek:
-          return now.difference(t.capturedAt).inDays <= 7;
+          return now.difference(r.startedAt).inDays <= 7;
         case HistoryFilter.thisMonth:
-          return now.difference(t.capturedAt).inDays <= 30;
+          return now.difference(r.startedAt).inDays <= 30;
       }
     }).toList();
 
     filtered.sort((a, b) {
       switch (_sortOption) {
         case HistorySortOption.newest:
-          return b.capturedAt.compareTo(a.capturedAt);
+          return b.startedAt.compareTo(a.startedAt);
         case HistorySortOption.largestArea:
-          return b.areaSqMeters.compareTo(a.areaSqMeters);
+          return b.claimedAreaSqM.compareTo(a.claimedAreaSqM);
         case HistorySortOption.longestDistance:
-          return _estimateDistanceKm(b.polygon)
-              .compareTo(_estimateDistanceKm(a.polygon));
+          return b.distanceM.compareTo(a.distanceM);
       }
     });
 
@@ -108,13 +112,20 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
     }
   }
 
-  Map<String, List<Territory>> _groupByPeriod(List<Territory> items) {
-    final map = <String, List<Territory>>{};
-    for (final t in items) {
-      final key = _groupKeyForDate(t.capturedAt);
-      map.putIfAbsent(key, () => []).add(t);
+  Map<String, List<RunLogEntry>> _groupByPeriod(List<RunLogEntry> items) {
+    final map = <String, List<RunLogEntry>>{};
+    for (final r in items) {
+      final key = _groupKeyForDate(r.startedAt);
+      map.putIfAbsent(key, () => []).add(r);
     }
     return map;
+  }
+
+  String _formatPace(double? secondsPerKm) {
+    if (secondsPerKm == null || secondsPerKm <= 0) return '--';
+    final mins = (secondsPerKm / 60).floor();
+    final secs = (secondsPerKm % 60).round();
+    return '$mins\'${secs.toString().padLeft(2, '0')}"';
   }
 
   @override
@@ -142,58 +153,76 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
         ),
         centerTitle: true,
       ),
-      body: widget.initialProfile != null
-          ? _buildArchiveView(
-              widget.initialProfile!,
-              widget.initialTerritories ?? [],
-            )
-          : ValueListenableBuilder(
-              valueListenable: Hive.box<RunnerProfile>('profile').listenable(),
-              builder: (context, Box<RunnerProfile> profileBox, _) {
-                final profile = _territoryService.getProfile();
+      body: ValueListenableBuilder<List<RunLogEntry>>(
+        valueListenable: _runLogService.runsNotifier,
+        builder: (context, liveRuns, _) {
+          final profile =
+              widget.initialProfile ?? _territoryService.getProfile();
 
-                return ValueListenableBuilder(
-                  valueListenable: Hive.box<Territory>('territories_v3')
-                      .listenable(),
-                  builder: (context, Box<Territory> territoryBox, _) {
-                    final rawTerritories = _territoryService
-                        .getCapturedTerritoryObjects();
-                    return _buildArchiveView(profile, rawTerritories);
-                  },
-                );
-              },
-            ),
+          final List<RunLogEntry> effectiveRuns;
+          if (widget.initialRuns != null) {
+            effectiveRuns = widget.initialRuns!;
+          } else if (widget.initialTerritories != null &&
+              widget.initialTerritories!.isNotEmpty) {
+            effectiveRuns = widget.initialTerritories!.map((t) {
+              final distKm = _estimateDistanceKm(t.polygon);
+              return RunLogEntry(
+                id: t.id,
+                startedAt: t.capturedAt,
+                endedAt: t.capturedAt.add(
+                  Duration(seconds: (distKm * 330).round()),
+                ),
+                movingSeconds: (distKm * 330).round(),
+                totalSeconds: (distKm * 330).round(),
+                distanceM: distKm * 1000.0,
+                samples: t.polygon
+                    .asMap()
+                    .entries
+                    .map(
+                      (e) => RunSample(
+                        timeOffsetMs: e.key * 1000,
+                        lat: e.value.latitude,
+                        lng: e.value.longitude,
+                      ),
+                    )
+                    .toList(),
+                claimedAreaSqM: t.areaSqMeters,
+                xp: (t.areaSqMeters / 20.0).round(),
+              );
+            }).toList();
+          } else {
+            effectiveRuns = liveRuns;
+          }
+
+          return _buildArchiveView(profile, effectiveRuns);
+        },
+      ),
     );
   }
 
-  Widget _buildArchiveView(
-    RunnerProfile profile,
-    List<Territory> rawTerritories,
-  ) {
-    final territories = _filterAndSort(rawTerritories);
+  Widget _buildArchiveView(RunnerProfile profile, List<RunLogEntry> rawRuns) {
+    final runs = _filterAndSort(rawRuns);
+    final records = _runLogService.computePersonalRecords(
+      overrideRuns: rawRuns,
+    );
 
-    // Compute aggregate stats
+    // Compute aggregate stats from real runs
     double totalArea = 0.0;
-    double totalDist = 0.0;
-    for (final t in rawTerritories) {
-      totalArea += t.areaSqMeters;
-      totalDist += _estimateDistanceKm(t.polygon);
+    double totalDistM = 0.0;
+    for (final r in rawRuns) {
+      totalArea += r.claimedAreaSqM;
+      totalDistM += r.distanceM;
     }
+    final totalDistKm = totalDistM / 1000.0;
 
     final totalAreaFormatted = totalArea >= 10000
         ? '${(totalArea / 1000000.0).toStringAsFixed(2)} km²'
         : '${totalArea.toStringAsFixed(0)} m²';
 
-    // Compute personal records from real runs only (Phase D4)
-    final hasRuns = rawTerritories.isNotEmpty;
-    final double longestRunKm = hasRuns
-        ? rawTerritories
-              .map((t) => _estimateDistanceKm(t.polygon))
-              .fold<double>(0.0, math.max)
-        : 0.0;
-    final double biggestCaptureSqm = hasRuns
-        ? rawTerritories.map((t) => t.areaSqMeters).fold<double>(0.0, math.max)
-        : 0.0;
+    final hasRuns = rawRuns.isNotEmpty;
+    final double longestRunKm = records.longestRunDistanceM / 1000.0;
+    final double biggestCaptureSqm = records.biggestCaptureSqm;
+
     final String biggestCaptureFormatted = hasRuns && biggestCaptureSqm > 0
         ? (biggestCaptureSqm >= 10000
               ? '${(biggestCaptureSqm / 1000000.0).toStringAsFixed(2)} km²'
@@ -202,12 +231,17 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
     final String longestRunFormatted = hasRuns && longestRunKm > 0
         ? '${longestRunKm.toStringAsFixed(2)} km'
         : '--';
-    final String streakFormatted = profile.currentStreak > 0
-        ? '${profile.currentStreak}d'
+    final int effectiveStreak = math.max(
+      profile.currentStreak,
+      records.longestStreakDays,
+    );
+    final String streakFormatted = effectiveStreak > 0
+        ? '${effectiveStreak}d'
         : '--';
+    final String fastestKmFormatted = _formatPace(records.fastestKmPaceSeconds);
 
     final isNewestSort = _sortOption == HistorySortOption.newest;
-    final groupedRuns = isNewestSort ? _groupByPeriod(territories) : null;
+    final groupedRuns = isNewestSort ? _groupByPeriod(runs) : null;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -245,7 +279,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   Expanded(
                     child: _buildSummaryMetric(
                       'Territories',
-                      '${rawTerritories.length}',
+                      '${rawRuns.length}',
                       AppColors.textPrimary,
                     ),
                   ),
@@ -257,7 +291,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   Expanded(
                     child: _buildSummaryMetric(
                       'Total distance',
-                      '${totalDist.toStringAsFixed(1)} km',
+                      '${totalDistKm.toStringAsFixed(1)} km',
                       AppColors.textPrimary,
                     ),
                   ),
@@ -267,7 +301,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           ),
         ),
 
-        // Personal records section (Phase D4)
+        // Personal records section (Phase D4 & F0)
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
@@ -320,7 +354,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                       Expanded(
                         child: _buildSummaryMetric(
                           'Fastest km',
-                          '--',
+                          fastestKmFormatted,
                           AppColors.textPrimary,
                         ),
                       ),
@@ -365,12 +399,12 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           ),
         ),
 
-        // Sort selector row
+        // Sort Header
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.s16,
-              AppSpacing.s12,
+              AppSpacing.s14,
               AppSpacing.s16,
               AppSpacing.s8,
             ),
@@ -378,112 +412,126 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '${territories.length} runs',
+                  '${runs.length} ${runs.length == 1 ? 'session' : 'sessions'}',
                   style: AppText.labelSmall.copyWith(
                     color: AppColors.textMuted,
                     fontSize: 11,
-                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
                 PopupMenuButton<HistorySortOption>(
                   initialValue: _sortOption,
                   color: AppColors.bgElevated,
-                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
-                  onSelected: (opt) {
-                    setState(() => _sortOption = opt);
-                  },
-                  itemBuilder: (ctx) => [
+                  shape: RoundedRectangleBorder(
+                    borderRadius: AppSpacing.br14,
+                    side: const BorderSide(color: AppColors.borderSubtle),
+                  ),
+                  onSelected: (opt) => setState(() => _sortOption = opt),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _sortLabel(_sortOption),
+                        style: AppText.labelSmall.copyWith(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.sort_rounded,
+                        size: 14,
+                        color: AppColors.accent,
+                      ),
+                    ],
+                  ),
+                  itemBuilder: (context) => [
                     const PopupMenuItem(
                       value: HistorySortOption.newest,
-                      child: Text('Newest', style: AppText.bodyMedium),
+                      child: Text('Newest'),
                     ),
                     const PopupMenuItem(
                       value: HistorySortOption.largestArea,
-                      child: Text('Largest area', style: AppText.bodyMedium),
+                      child: Text('Largest area'),
                     ),
                     const PopupMenuItem(
                       value: HistorySortOption.longestDistance,
-                      child: Text(
-                        'Longest distance',
-                        style: AppText.bodyMedium,
-                      ),
+                      child: Text('Longest distance'),
                     ),
                   ],
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: AppSpacing.br8,
-                      border: Border.all(color: AppColors.borderSubtle),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.sort_rounded,
-                          size: 14,
-                          color: AppColors.accent,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _sortLabel(_sortOption),
-                          style: AppText.labelSmall.copyWith(
-                            color: AppColors.accent,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
           ),
         ),
 
-        // List of runs (or Empty state)
-        if (territories.isEmpty)
+        // If no runs exist, display calm empty state (Task F0)
+        if (runs.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.s24),
-                child: EmptyState(
-                  icon: Icons.history_toggle_off_rounded,
-                  title: 'No runs in range',
-                  message: 'Try changing your filters or start a new run to claim territory.',
-                  actionLabel: _timeFilter != HistoryFilter.all
-                      ? 'Reset filters'
-                      : 'Start a run',
-                  onAction: _timeFilter != HistoryFilter.all
-                      ? () => setState(() => _timeFilter = HistoryFilter.all)
-                      : () => Navigator.pop(context),
-                ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.s24,
+                vertical: AppSpacing.s48,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: const Icon(
+                      Icons.directions_run_rounded,
+                      color: AppColors.textMuted,
+                      size: 32,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s16),
+                  Text(
+                    'No runs in range',
+                    style: AppText.headingSmall.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.s6),
+                  Text(
+                    'Try changing your filters or start a new run to claim territory.',
+                    textAlign: TextAlign.center,
+                    style: AppText.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
               ),
             ),
           )
         else if (isNewestSort && groupedRuns != null)
-          // Grouped by week/month
           ...groupedRuns.entries.expand((entry) {
             return [
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.s20,
                     AppSpacing.s16,
-                    AppSpacing.s20,
-                    AppSpacing.s8,
+                    AppSpacing.s12,
+                    AppSpacing.s16,
+                    AppSpacing.s6,
                   ),
                   child: Text(
                     entry.key,
                     style: AppText.labelSmall.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
+                      fontSize: 11,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
@@ -492,11 +540,12 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
-                    final territory = entry.value[index];
+                    final run = entry.value[index];
                     return HistoryRunCard(
-                      territory: territory,
+                      run: run,
                       callsign: profile.username,
                       faction: profile.faction,
+                      onDelete: () => _runLogService.deleteRun(run.id),
                     );
                   }, childCount: entry.value.length),
                 ),
@@ -504,7 +553,6 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
             ];
           })
         else
-          // Flat sorted list
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.s16,
@@ -514,13 +562,14 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
             ),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate((context, index) {
-                final territory = territories[index];
+                final run = runs[index];
                 return HistoryRunCard(
-                  territory: territory,
+                  run: run,
                   callsign: profile.username,
                   faction: profile.faction,
+                  onDelete: () => _runLogService.deleteRun(run.id),
                 );
-              }, childCount: territories.length),
+              }, childCount: runs.length),
             ),
           ),
 

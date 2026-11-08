@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
+import '../../../models/run_log_entry.dart';
 import '../../../models/territory.dart';
 import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
@@ -10,18 +11,54 @@ import '../../profile/widgets/calorie_factors_sheet.dart';
 import 'run_share_card_modal.dart';
 
 class HistoryRunCard extends StatelessWidget {
-  final Territory territory;
+  final RunLogEntry? run;
+  final Territory? territory;
   final String callsign;
   final String faction;
   final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
   const HistoryRunCard({
     super.key,
-    required this.territory,
+    this.run,
+    this.territory,
     required this.callsign,
     required this.faction,
     this.onTap,
-  });
+    this.onDelete,
+  }) : assert(
+         run != null || territory != null,
+         'Either run or territory must be provided',
+       );
+
+  DateTime get _effectiveDate => run?.startedAt ?? territory!.capturedAt;
+
+  double get _effectiveDistanceKm => run != null
+      ? (run!.distanceM / 1000.0)
+      : _estimateDistanceKm(territory!.polygon);
+
+  int get _effectiveDurationSeconds =>
+      run?.movingSeconds ?? (_effectiveDistanceKm * 330).round();
+
+  double get _effectiveAreaSqm =>
+      run?.claimedAreaSqM ?? territory!.areaSqMeters;
+
+  List<LatLng> get _effectivePoints {
+    if (run != null) {
+      return run!.samples.map((s) => LatLng(s.lat, s.lng)).toList();
+    }
+    return territory!.polygon;
+  }
+
+  int get _effectiveCalories {
+    if (run?.calories != null) return run!.calories!;
+    return AppPreferences().estimateCalories(
+      distanceKm: _effectiveDistanceKm,
+      durationMinutes: _effectiveDurationSeconds > 0
+          ? _effectiveDurationSeconds / 60.0
+          : null,
+    );
+  }
 
   String _formatDate(DateTime dt) {
     final now = DateTime.now();
@@ -64,17 +101,16 @@ class HistoryRunCard extends StatelessWidget {
   }
 
   void _showDetailModal(BuildContext context) {
-    final areaDisplay = territory.areaSqMeters >= 10000
-        ? '${(territory.areaSqMeters / 1000000.0).toStringAsFixed(3)} km²'
-        : '${territory.areaSqMeters.toStringAsFixed(0)} m²';
-    final estimatedKm = _estimateDistanceKm(territory.polygon);
-    final estimatedCalories = AppPreferences().estimateCalories(
-      distanceKm: estimatedKm,
-      durationMinutes: estimatedKm > 0 ? (estimatedKm * 5.5) : null,
-    );
+    final areaDisplay = _effectiveAreaSqm >= 10000
+        ? '${(_effectiveAreaSqm / 1000000.0).toStringAsFixed(3)} km²'
+        : '${_effectiveAreaSqm.toStringAsFixed(0)} m²';
+    final distKm = _effectiveDistanceKm;
+    final estimatedCalories = _effectiveCalories;
     final quantile = AppPreferences().estimateQuantileCalories(
-      distanceKm: estimatedKm,
-      durationMinutes: estimatedKm > 0 ? (estimatedKm * 5.5) : null,
+      distanceKm: distKm,
+      durationMinutes: _effectiveDurationSeconds > 0
+          ? _effectiveDurationSeconds / 60.0
+          : null,
     );
 
     showModalBottomSheet(
@@ -119,11 +155,29 @@ class HistoryRunCard extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Text(
-                      _formatDate(territory.capturedAt),
-                      style: AppText.bodySmall.copyWith(
-                        color: AppColors.textMuted,
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (onDelete != null)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: AppColors.error,
+                              size: 20,
+                            ),
+                            tooltip: 'Delete run',
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _confirmDelete(context);
+                            },
+                          ),
+                        Text(
+                          _formatDate(_effectiveDate),
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -141,9 +195,7 @@ class HistoryRunCard extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: AppSpacing.br20,
                     child: CustomPaint(
-                      painter: _HistoryPolygonPainter(
-                        points: territory.polygon,
-                      ),
+                      painter: _HistoryPolygonPainter(points: _effectivePoints),
                     ),
                   ),
                 ),
@@ -162,10 +214,7 @@ class HistoryRunCard extends StatelessWidget {
                     children: [
                       _metricRow('Claimed territory', areaDisplay),
                       const Divider(color: AppColors.borderSubtle, height: 16),
-                      _metricRow(
-                        'Estimated distance',
-                        '${estimatedKm.toStringAsFixed(2)} km',
-                      ),
+                      _metricRow('Distance', '${distKm.toStringAsFixed(2)} km'),
                       const Divider(color: AppColors.borderSubtle, height: 16),
                       _metricRow(
                         'Calories',
@@ -186,8 +235,8 @@ class HistoryRunCard extends StatelessWidget {
                             onTap: () {
                               CalorieFactorsSheet.show(
                                 context: context,
-                                distanceKm: estimatedKm,
-                                durationSeconds: (estimatedKm * 330).round(),
+                                distanceKm: distKm,
+                                durationSeconds: _effectiveDurationSeconds,
                               );
                             },
                             child: Row(
@@ -214,15 +263,19 @@ class HistoryRunCard extends StatelessWidget {
                       ),
                       const Divider(color: AppColors.borderSubtle, height: 16),
                       _metricRow(
-                        'Polygon coordinates',
-                        '${territory.polygon.length} GPS points',
+                        'Track points',
+                        '${_effectivePoints.length} GPS points',
                       ),
                       const Divider(color: AppColors.borderSubtle, height: 16),
                       _metricRow(
                         'Verification',
-                        territory.isPendingReview
-                            ? 'Pending Review'
-                            : 'Verified territory ✓',
+                        (run != null
+                            ? (run!.syncStatus == 'synced'
+                                  ? 'Verified run ✓'
+                                  : 'Saved locally')
+                            : (territory?.isPendingReview == false
+                                  ? 'Verified territory ✓'
+                                  : 'Pending Review')),
                       ),
                     ],
                   ),
@@ -257,14 +310,13 @@ class HistoryRunCard extends StatelessWidget {
                           Navigator.pop(ctx);
                           RunShareCardModal.show(
                             context: context,
-                            distanceKm: estimatedKm,
-                            durationSeconds: (estimatedKm * 330)
-                                .round(), // Realistic pace proxy
-                            areaSqMeters: territory.areaSqMeters,
-                            points: territory.polygon,
+                            distanceKm: distKm,
+                            durationSeconds: _effectiveDurationSeconds,
+                            areaSqMeters: _effectiveAreaSqm,
+                            points: _effectivePoints,
                             callsign: callsign,
                             faction: faction,
-                            capturedAt: territory.capturedAt,
+                            capturedAt: _effectiveDate,
                           );
                         },
                       ),
@@ -283,6 +335,51 @@ class HistoryRunCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppSpacing.br16,
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: Text(
+          'Delete run?',
+          style: AppText.headingSmall.copyWith(
+            color: AppColors.textPrimary,
+            fontSize: 16,
+          ),
+        ),
+        content: Text(
+          'This will permanently remove this run from your local history.',
+          style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'Cancel',
+              style: AppText.label.copyWith(color: AppColors.textMuted),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: AppColors.textPrimary,
+              shape: RoundedRectangleBorder(borderRadius: AppRadius.brFull),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              onDelete?.call();
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -315,13 +412,11 @@ class HistoryRunCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final areaDisplay = territory.areaSqMeters >= 10000
-        ? '${(territory.areaSqMeters / 1000000.0).toStringAsFixed(2)} km²'
-        : '${territory.areaSqMeters.toStringAsFixed(0)} m²';
-    final estimatedKm = _estimateDistanceKm(territory.polygon);
-    final cardCalories = AppPreferences().estimateCalories(
-      distanceKm: estimatedKm,
-    );
+    final areaDisplay = _effectiveAreaSqm >= 10000
+        ? '${(_effectiveAreaSqm / 1000000.0).toStringAsFixed(2)} km²'
+        : '${_effectiveAreaSqm.toStringAsFixed(0)} m²';
+    final distKm = _effectiveDistanceKm;
+    final cardCalories = _effectiveCalories;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s12),
@@ -358,9 +453,7 @@ class HistoryRunCard extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: AppSpacing.br14,
                     child: CustomPaint(
-                      painter: _HistoryPolygonPainter(
-                        points: territory.polygon,
-                      ),
+                      painter: _HistoryPolygonPainter(points: _effectivePoints),
                     ),
                   ),
                 ),
@@ -376,7 +469,11 @@ class HistoryRunCard extends StatelessWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              'Closed loop',
+                              run != null
+                                  ? (run!.claimedAreaSqM > 0
+                                        ? 'Closed loop'
+                                        : '${run!.activityType.toUpperCase()} RUN')
+                                  : 'Closed loop',
                               overflow: TextOverflow.ellipsis,
                               style: AppText.headingSmall.copyWith(
                                 fontSize: 14,
@@ -387,7 +484,7 @@ class HistoryRunCard extends StatelessWidget {
                           ),
                           const SizedBox(width: AppSpacing.s4),
                           Text(
-                            _formatDate(territory.capturedAt),
+                            _formatDate(_effectiveDate),
                             style: AppText.bodySmall.copyWith(
                               color: AppColors.textMuted,
                               fontSize: 10.5,
@@ -426,7 +523,7 @@ class HistoryRunCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '${estimatedKm.toStringAsFixed(2)} km • ${AppPreferences().formatCalories(cardCalories)}',
+                            '${distKm.toStringAsFixed(2)} km • ${AppPreferences().formatCalories(cardCalories)}',
                             style: AppText.bodySmall.copyWith(
                               color: AppColors.textSecondary,
                               fontSize: 11,
@@ -452,13 +549,13 @@ class HistoryRunCard extends StatelessWidget {
                   onPressed: () {
                     RunShareCardModal.show(
                       context: context,
-                      distanceKm: estimatedKm,
-                      durationSeconds: (estimatedKm * 330).round(),
-                      areaSqMeters: territory.areaSqMeters,
-                      points: territory.polygon,
+                      distanceKm: distKm,
+                      durationSeconds: _effectiveDurationSeconds,
+                      areaSqMeters: _effectiveAreaSqm,
+                      points: _effectivePoints,
                       callsign: callsign,
                       faction: faction,
-                      capturedAt: territory.capturedAt,
+                      capturedAt: _effectiveDate,
                     );
                   },
                 ),

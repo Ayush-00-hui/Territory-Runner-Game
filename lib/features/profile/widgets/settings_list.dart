@@ -13,6 +13,7 @@ import '../../../services/battery_saver_service.dart';
 import '../../../services/export_service.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/run_log_service.dart';
 import '../../../services/user_settings_service.dart';
 import '../../../ui/ui.dart';
 import '../../gallery/design_gallery_screen.dart';
@@ -240,6 +241,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
       if (Hive.isBoxOpen('rejected_runs_v1')) {
         await Hive.box<String>('rejected_runs_v1').clear();
       }
+      await RunLogService().clearAllRuns();
 
       await _appPrefs.clearBodyProfile();
       final prefs = await SharedPreferences.getInstance();
