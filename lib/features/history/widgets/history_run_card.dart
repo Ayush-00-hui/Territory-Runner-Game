@@ -6,9 +6,12 @@ import 'package:latlong2/latlong.dart' hide Path;
 import '../../../models/run_log_entry.dart';
 import '../../../models/territory.dart';
 import '../../../services/app_preferences.dart';
+import '../../../services/elevation_splits_service.dart';
 import '../../../ui/ui.dart';
 import '../../profile/widgets/calorie_factors_sheet.dart';
+import 'elevation_profile_chart.dart';
 import 'run_share_card_modal.dart';
+import 'splits_table.dart';
 
 class HistoryRunCard extends StatelessWidget {
   final RunLogEntry? run;
@@ -112,6 +115,26 @@ class HistoryRunCard extends StatelessWidget {
           ? _effectiveDurationSeconds / 60.0
           : null,
     );
+    final profileData = ElevationSplitsService().computeProfile(
+      samples:
+          run?.samples ??
+          _effectivePoints.asMap().entries.map((e) {
+            final tMs =
+                _effectiveDurationSeconds > 0 && _effectivePoints.length > 1
+                ? ((_effectiveDurationSeconds * 1000) *
+                          (e.key / (_effectivePoints.length - 1)))
+                      .round()
+                : e.key * 1000;
+            return RunSample(
+              timeOffsetMs: tMs,
+              lat: e.value.latitude,
+              lng: e.value.longitude,
+            );
+          }).toList(),
+      unit: AppPreferences().unit,
+      cacheKey: run?.id,
+    );
+    final scrubNotifier = ValueNotifier<LatLng?>(null);
 
     showModalBottomSheet(
       context: context,
@@ -194,8 +217,16 @@ class HistoryRunCard extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: AppSpacing.br20,
-                    child: CustomPaint(
-                      painter: _HistoryPolygonPainter(points: _effectivePoints),
+                    child: ValueListenableBuilder<LatLng?>(
+                      valueListenable: scrubNotifier,
+                      builder: (context, scrubPt, _) {
+                        return CustomPaint(
+                          painter: _HistoryPolygonPainter(
+                            points: _effectivePoints,
+                            scrubPoint: scrubPt,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -280,6 +311,19 @@ class HistoryRunCard extends StatelessWidget {
                     ],
                   ),
                 ),
+
+                const SizedBox(height: AppSpacing.s16),
+
+                // Elevation Profile Chart
+                ElevationProfileChart(
+                  profileData: profileData,
+                  onScrub: (pt) => scrubNotifier.value = pt?.latLng,
+                ),
+
+                const SizedBox(height: AppSpacing.s16),
+
+                // Real Splits Table
+                SplitsTable(splits: profileData.splits, unit: profileData.unit),
 
                 const SizedBox(height: AppSpacing.s20),
 
@@ -570,8 +614,9 @@ class HistoryRunCard extends StatelessWidget {
 
 class _HistoryPolygonPainter extends CustomPainter {
   final List<LatLng> points;
+  final LatLng? scrubPoint;
 
-  _HistoryPolygonPainter({required this.points});
+  _HistoryPolygonPainter({required this.points, this.scrubPoint});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -654,10 +699,30 @@ class _HistoryPolygonPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
       canvas.drawCircle(Offset(x0, y0), 2.5, dotPaint);
     }
+
+    if (scrubPoint != null) {
+      final double sx =
+          padding + ((scrubPoint!.longitude - minLng) / lngSpan) * usableW;
+      final double sy =
+          padding +
+          (1.0 - ((scrubPoint!.latitude - minLat) / latSpan)) * usableH;
+      final scrubOffset = Offset(sx, sy);
+
+      final markerFill = Paint()
+        ..color = AppColors.accent
+        ..style = PaintingStyle.fill;
+      final markerRing = Paint()
+        ..color = AppColors.bgDeep
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke;
+
+      canvas.drawCircle(scrubOffset, 6.0, markerFill);
+      canvas.drawCircle(scrubOffset, 6.0, markerRing);
+    }
   }
 
   @override
   bool shouldRepaint(covariant _HistoryPolygonPainter oldDelegate) {
-    return oldDelegate.points != points;
+    return oldDelegate.points != points || oldDelegate.scrubPoint != scrubPoint;
   }
 }

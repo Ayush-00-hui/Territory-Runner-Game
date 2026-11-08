@@ -136,6 +136,7 @@ void handleFinishRun({
     profile: TerritoryService().getProfile(),
     coachService: LLMCoachService(),
     routePoints: points,
+    samples: samples,
     areaSqMeters: finalArea > 0 ? finalArea : null,
     elevationGainMeters: elevationGain,
   );

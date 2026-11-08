@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../services/elevation_splits_service.dart';
 import '../../../ui/ui.dart';
 
 class KmSplit {
@@ -23,6 +24,7 @@ class SummaryStatsGrid extends StatelessWidget {
   final int territoriesClaimed;
   final double effectiveArea;
   final Animation<double> countUpAnimation;
+  final List<RunSplit>? realSplits;
 
   const SummaryStatsGrid({
     super.key,
@@ -31,6 +33,7 @@ class SummaryStatsGrid extends StatelessWidget {
     required this.territoriesClaimed,
     required this.effectiveArea,
     required this.countUpAnimation,
+    this.realSplits,
   });
 
   String _formatPace(double km, int durationSeconds) {
@@ -53,6 +56,16 @@ class SummaryStatsGrid extends StatelessWidget {
   }
 
   List<KmSplit> _computeSplits(double totalKm, int totalSec) {
+    if (realSplits != null && realSplits!.isNotEmpty) {
+      return realSplits!.map((s) {
+        return KmSplit(
+          kmIndex: s.index,
+          distanceKm: s.displayDistance,
+          paceSeconds: s.paceSeconds,
+        );
+      }).toList();
+    }
+
     if (totalKm <= 0.05 || totalSec <= 0) return [];
     final count = totalKm.floor();
     final avgPace = totalSec / totalKm;
@@ -64,9 +77,9 @@ class SummaryStatsGrid extends StatelessWidget {
 
     final splits = <KmSplit>[];
     for (int i = 1; i <= count; i++) {
-      final variation = (math.sin(i * 1.5) * 5.0).round();
-      final pace = math.max(120, (avgPace + variation).round());
-      splits.add(KmSplit(kmIndex: i, distanceKm: 1.0, paceSeconds: pace));
+      splits.add(
+        KmSplit(kmIndex: i, distanceKm: 1.0, paceSeconds: avgPace.round()),
+      );
     }
     final remainderKm = totalKm - count;
     if (remainderKm >= 0.1) {

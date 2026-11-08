@@ -14,6 +14,7 @@ class SummaryRouteReplay extends StatelessWidget {
   final int calories;
   final String? calorieRange;
   final AnimationController replayController;
+  final ValueNotifier<LatLng?>? scrubNotifier;
 
   const SummaryRouteReplay({
     super.key,
@@ -22,6 +23,7 @@ class SummaryRouteReplay extends StatelessWidget {
     required this.calories,
     this.calorieRange,
     required this.replayController,
+    this.scrubNotifier,
   });
 
   String _formatArea(double area) {
@@ -58,8 +60,10 @@ class SummaryRouteReplay extends StatelessWidget {
           child: Stack(
             children: [
               Positioned.fill(
-                child: AnimatedBuilder(
-                  animation: replayController,
+                child: ListenableBuilder(
+                  listenable: scrubNotifier != null
+                      ? Listenable.merge([replayController, scrubNotifier!])
+                      : replayController,
                   builder: (context, _) {
                     final replayProgress = isReducedMotion
                         ? 1.0
@@ -68,6 +72,7 @@ class SummaryRouteReplay extends StatelessWidget {
                       painter: VictoryMapPainter(
                         points: routePoints,
                         routeProgress: replayProgress,
+                        scrubPoint: scrubNotifier?.value,
                       ),
                     );
                   },
@@ -165,8 +170,13 @@ class SummaryRouteReplay extends StatelessWidget {
 class VictoryMapPainter extends CustomPainter {
   final List<LatLng> points;
   final double routeProgress;
+  final LatLng? scrubPoint;
 
-  VictoryMapPainter({required this.points, this.routeProgress = 1.0});
+  VictoryMapPainter({
+    required this.points,
+    this.routeProgress = 1.0,
+    this.scrubPoint,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -242,6 +252,26 @@ class VictoryMapPainter extends CustomPainter {
       final dotPaint = Paint()..color = AppColors.accent;
       canvas.drawCircle(tip, 4.0, dotPaint);
     }
+
+    if (scrubPoint != null) {
+      final double sx =
+          padding + ((scrubPoint!.longitude - minLng) / lngSpan) * usableW;
+      final double sy =
+          padding +
+          (1.0 - ((scrubPoint!.latitude - minLat) / latSpan)) * usableH;
+      final scrubOffset = Offset(sx, sy);
+
+      final markerFill = Paint()
+        ..color = AppColors.accent
+        ..style = PaintingStyle.fill;
+      final markerRing = Paint()
+        ..color = AppColors.bgDeep
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.0;
+
+      canvas.drawCircle(scrubOffset, 6.0, markerFill);
+      canvas.drawCircle(scrubOffset, 6.0, markerRing);
+    }
   }
 
   void _drawFallbackTerritory(Canvas canvas, Size size) {
@@ -266,6 +296,7 @@ class VictoryMapPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant VictoryMapPainter oldDelegate) {
     return oldDelegate.points != points ||
-        oldDelegate.routeProgress != routeProgress;
+        oldDelegate.routeProgress != routeProgress ||
+        oldDelegate.scrubPoint != scrubPoint;
   }
 }

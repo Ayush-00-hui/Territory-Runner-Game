@@ -4,12 +4,16 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
+import '../../../models/run_log_entry.dart';
 import '../../../models/runner_profile.dart';
 import '../../../services/app_preferences.dart';
+import '../../../services/elevation_splits_service.dart';
 import '../../../services/gallery_saver_service.dart';
 import '../../../ui/ui.dart';
 import '../../coach/llm_coach_service.dart';
+import '../../history/widgets/elevation_profile_chart.dart';
 import '../../history/widgets/run_share_card_modal.dart';
+import '../../history/widgets/splits_table.dart';
 import '../../profile/widgets/body_details_sheet.dart';
 import '../../profile/widgets/calorie_factors_sheet.dart';
 import 'summary_coach_card.dart';
@@ -25,6 +29,7 @@ class SummarySheet extends StatefulWidget {
   final RunnerProfile profile;
   final LLMCoachService coachService;
   final List<LatLng>? routePoints;
+  final List<RunSample>? samples;
   final double? areaSqMeters;
   final String? rejectionReason;
   final double elevationGainMeters;
@@ -37,6 +42,7 @@ class SummarySheet extends StatefulWidget {
     required this.profile,
     required this.coachService,
     this.routePoints,
+    this.samples,
     this.areaSqMeters,
     this.rejectionReason,
     this.elevationGainMeters = 0.0,
@@ -50,6 +56,7 @@ class SummarySheet extends StatefulWidget {
     required RunnerProfile profile,
     required LLMCoachService coachService,
     List<LatLng>? routePoints,
+    List<RunSample>? samples,
     double? areaSqMeters,
     String? rejectionReason,
     double elevationGainMeters = 0.0,
@@ -68,6 +75,7 @@ class SummarySheet extends StatefulWidget {
         profile: profile,
         coachService: coachService,
         routePoints: routePoints,
+        samples: samples,
         areaSqMeters: areaSqMeters,
         rejectionReason: rejectionReason,
         elevationGainMeters: elevationGainMeters,
@@ -84,6 +92,9 @@ class _SummarySheetState extends State<SummarySheet>
   late final AnimationController _countUpController;
   late final Animation<double> _countUpAnimation;
   late final AnimationController _replayController;
+  final ValueNotifier<LatLng?> _scrubPointNotifier = ValueNotifier<LatLng?>(
+    null,
+  );
   bool _reminderManuallyDismissed = false;
 
   bool get _shouldShowBodyReminder {
@@ -162,6 +173,7 @@ class _SummarySheetState extends State<SummarySheet>
   void dispose() {
     _countUpController.dispose();
     _replayController.dispose();
+    _scrubPointNotifier.dispose();
     super.dispose();
   }
 
@@ -215,6 +227,23 @@ class _SummarySheetState extends State<SummarySheet>
       elevationGainMeters: widget.elevationGainMeters,
     );
     final activeWeightKg = AppPreferences().bodyWeightKg ?? 70.0;
+    final profileData = ElevationSplitsService().computeProfile(
+      samples:
+          widget.samples ??
+          effectivePoints.asMap().entries.map((e) {
+            final tMs = widget.durationSeconds > 0 && effectivePoints.length > 1
+                ? ((widget.durationSeconds * 1000) *
+                          (e.key / (effectivePoints.length - 1)))
+                      .round()
+                : e.key * 1000;
+            return RunSample(
+              timeOffsetMs: tMs,
+              lat: e.value.latitude,
+              lng: e.value.longitude,
+            );
+          }).toList(),
+      unit: AppPreferences().unit,
+    );
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -256,11 +285,25 @@ class _SummarySheetState extends State<SummarySheet>
               effectiveArea: effectiveArea,
               calories: calories,
               replayController: _replayController,
+              scrubNotifier: _scrubPointNotifier,
             ),
 
             const SizedBox(height: AppSpacing.s14),
 
-            // 3b. Honest Calorie Range Card
+            // 3b. Elevation Profile
+            ElevationProfileChart(
+              profileData: profileData,
+              onScrub: (pt) => _scrubPointNotifier.value = pt?.latLng,
+            ),
+
+            const SizedBox(height: AppSpacing.s14),
+
+            // 3c. Real Splits Table
+            SplitsTable(splits: profileData.splits, unit: profileData.unit),
+
+            const SizedBox(height: AppSpacing.s14),
+
+            // 3d. Honest Calorie Range Card
             AppCard(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.s12,
