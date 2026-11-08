@@ -12,6 +12,7 @@ import '../../models/territory.dart';
 import '../../services/app_preferences.dart';
 import '../../services/battery_saver_service.dart';
 import '../../services/firebase_service.dart';
+import '../../services/ghost_runner_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
 import '../../ui/ui.dart';
@@ -21,6 +22,7 @@ import 'controllers/map_run_controller.dart';
 import 'models/run_telemetry.dart';
 import 'widgets/amoled_battery_saver_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
+import 'widgets/ghost_runner_picker_sheet.dart';
 import 'widgets/map_demo_runner.dart';
 import 'widgets/map_exit_dialog.dart';
 import 'widgets/map_floating_controls.dart';
@@ -278,6 +280,20 @@ class _MapScreenState extends State<MapScreen> {
       onOpenOfflineMaps: () => showOfflineMapsSheet(context),
       onTriggerSos: () =>
           showSosBeaconSheet(context, controller.currentLocation),
+      onOpenGhostRunner: () {
+        GhostRunnerPickerSheet.show(
+          context: context,
+          initialMode: controller.ghostMode,
+          currentLocation: controller.currentLocation,
+          activityType: controller.selectedActivity.id,
+          onGhostSelected: (result) {
+            controller.setGhostSelection(result);
+          },
+        );
+      },
+      activeGhostLabel: controller.ghostMode != GhostMode.off
+          ? controller.ghostMode.label
+          : null,
     );
   }
 

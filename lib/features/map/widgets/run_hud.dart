@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/run_goal.dart';
+import '../../../services/ghost_runner_service.dart';
 import '../../../ui/ui.dart';
 import 'run_hud_closure_bar.dart';
 import 'run_hud_controls_bar.dart';
@@ -34,6 +35,7 @@ class RunHud extends StatefulWidget {
   final VoidCallback? onToggleAmoledSaver;
   final bool isBatterySaverActive;
   final bool isSearchingGps;
+  final ValueNotifier<GhostTelemetry?>? ghostTelemetryNotifier;
   final VoidCallback onToggleRun;
   final VoidCallback onSealShape;
   final VoidCallback onFinishRun;
@@ -64,6 +66,7 @@ class RunHud extends StatefulWidget {
     this.onToggleAmoledSaver,
     this.isBatterySaverActive = false,
     this.isSearchingGps = false,
+    this.ghostTelemetryNotifier,
     required this.onToggleRun,
     required this.onSealShape,
     required this.onFinishRun,
@@ -227,6 +230,18 @@ class _RunHudState extends State<RunHud> {
                 ),
               ],
 
+              // Ghost Runner Live Pacing Chip
+              if (widget.isRunActive &&
+                  widget.ghostTelemetryNotifier != null) ...[
+                ValueListenableBuilder<GhostTelemetry?>(
+                  valueListenable: widget.ghostTelemetryNotifier!,
+                  builder: (context, ghost, _) {
+                    if (ghost == null) return const SizedBox.shrink();
+                    return _GhostHudChip(telemetry: ghost);
+                  },
+                ),
+              ],
+
               // Closure and Goal Bar
               RunHudClosureBar(
                 isRunActive: widget.isRunActive,
@@ -283,6 +298,71 @@ class _RunHudState extends State<RunHud> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GhostHudChip extends StatelessWidget {
+  final GhostTelemetry telemetry;
+
+  const _GhostHudChip({required this.telemetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final Color tint;
+    if (telemetry.isOffRoute) {
+      tint = AppColors.warning;
+    } else if (telemetry.isRunnerAhead) {
+      tint = AppColors.accent;
+    } else {
+      tint = AppColors.textSecondary;
+    }
+
+    final diffText = telemetry.statusText;
+
+    return Semantics(
+      liveRegion: true,
+      label: 'Ghost runner: $diffText',
+      child: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.s12,
+          vertical: AppSpacing.s4,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.surface2,
+          borderRadius: AppSpacing.brFull,
+          border: Border.all(
+            color: telemetry.isOffRoute
+                ? AppColors.warning.withValues(alpha: 0.6)
+                : AppColors.borderSubtle,
+            width: 1.0,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              telemetry.isOffRoute
+                  ? Icons.warning_amber_rounded
+                  : Icons.directions_run_rounded,
+              size: 13,
+              color: tint,
+            ),
+            const SizedBox(width: AppSpacing.s6),
+            Text(
+              telemetry.statusText,
+              style: TextStyle(
+                color: tint,
+                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                letterSpacing: 0.2,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
         ),
       ),
     );

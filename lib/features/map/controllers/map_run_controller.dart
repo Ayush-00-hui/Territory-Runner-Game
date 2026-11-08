@@ -10,6 +10,7 @@ import '../../../models/run_goal.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/auto_pause_engine.dart';
 import '../../../services/elevation_incline_service.dart';
+import '../../../services/ghost_runner_service.dart';
 import '../../../services/gps_quality_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/motion_sensor_service.dart';
@@ -34,6 +35,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   final SpeedSmoothingPipeline _speedPipeline;
   final ElevationGradePipeline _elevationPipeline;
   final MotionSensorService _motionSensorService;
+  final GhostRunnerService _ghostRunnerService;
 
   // Real-time Notifiers
   final RunTelemetryNotifier telemetryNotifier = RunTelemetryNotifier();
@@ -41,6 +43,11 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     null,
   );
   final ValueNotifier<int> runPathUpdateNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<GhostTelemetry?> ghostTelemetryNotifier =
+      ValueNotifier<GhostTelemetry?>(null);
+  final ValueNotifier<LatLng?> ghostLocationNotifier = ValueNotifier<LatLng?>(
+    null,
+  );
 
   // Run & Telemetry State
   bool _isRunActive = false;
@@ -61,6 +68,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   LatLng? _currentLocation;
   String? _highlightedTerritoryId;
   SuggestedRoute? _activeSuggestedRoute;
+  GhostMode _ghostMode = GhostMode.off;
+  GhostSelectionResult? _activeGhostResult;
   RunGoal _activeGoal = const RunGoal(
     type: GoalType.distance,
     targetValue: 5.0,
@@ -89,6 +98,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     SpeedSmoothingPipeline? speedPipeline,
     ElevationGradePipeline? elevationPipeline,
     MotionSensorService? motionSensorService,
+    GhostRunnerService? ghostRunnerService,
   }) : _locationService = locationService ?? LocationService(),
        _polygonEngine = polygonEngine ?? PolygonEnclosureEngine(),
        _autoPauseEngine = autoPauseEngine ?? AutoPauseEngine(),
@@ -97,7 +107,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
        _territoryService = territoryService ?? TerritoryService(),
        _speedPipeline = speedPipeline ?? SpeedSmoothingPipeline(),
        _elevationPipeline = elevationPipeline ?? ElevationGradePipeline(),
-       _motionSensorService = motionSensorService ?? MotionSensorService();
+       _motionSensorService = motionSensorService ?? MotionSensorService(),
+       _ghostRunnerService = ghostRunnerService ?? GhostRunnerService();
 
   // Getters
   bool get isRunActive => _isRunActive;
@@ -118,6 +129,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   LatLng? get currentLocation => _currentLocation;
   String? get highlightedTerritoryId => _highlightedTerritoryId;
   SuggestedRoute? get activeSuggestedRoute => _activeSuggestedRoute;
+  GhostMode get ghostMode => _ghostMode;
+  GhostSelectionResult? get activeGhostResult => _activeGhostResult;
   RunGoal get activeGoal => _activeGoal;
   List<LatLng> get runCoordinates => List.unmodifiable(_runCoordinates);
   List<Position> get recentPositions => List.unmodifiable(_recentPositions);
@@ -188,6 +201,26 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     notifyListeners();
   }
 
+  void setGhostSelection(GhostSelectionResult result) {
+    _ghostMode = result.mode;
+    _activeGhostResult = result;
+    if (result.matchedRun != null) {
+      final telem = _ghostRunnerService.computeTelemetry(
+        ghostRun: result.matchedRun!,
+        runnerPosition: _currentLocation,
+        runnerMovingSeconds: _movingDurationSeconds,
+        runnerElapsedSeconds: _elapsedDurationSeconds,
+        isPaused: _isAutoPaused,
+      );
+      ghostTelemetryNotifier.value = telem;
+      ghostLocationNotifier.value = telem.ghostPosition;
+    } else {
+      ghostTelemetryNotifier.value = null;
+      ghostLocationNotifier.value = null;
+    }
+    notifyListeners();
+  }
+
   void startCountdown() {
     _isCountingDown = true;
     notifyListeners();
@@ -236,6 +269,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _autoPauseEngine.reset();
 
     _startRunTimer();
+    _updateGhostTelemetry();
     WakelockPlus.enable();
     _appPrefs.triggerRunStartHaptic();
     MapScreenFeature.isRunActiveNotifier.value = true;
@@ -267,6 +301,25 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
     _isRunActive = false;
     MapScreenFeature.isRunActiveNotifier.value = false;
+
+    String? ghostSummary;
+    if (_activeGhostResult?.matchedRun != null) {
+      final ghost = _activeGhostResult!.matchedRun!;
+      final runnerSec = finalSeconds;
+      final ghostSec = ghost.movingSeconds > 0
+          ? ghost.movingSeconds
+          : ghost.totalSeconds;
+      final delta = runnerSec - ghostSec;
+      final modeLabel = _activeGhostResult!.mode.label;
+      if (delta <= -1) {
+        ghostSummary = 'Finished ${delta.abs()} s ahead of Ghost ($modeLabel)';
+      } else if (delta >= 1) {
+        ghostSummary = 'Finished $delta s behind Ghost ($modeLabel)';
+      } else {
+        ghostSummary = 'Finished on pace with Ghost ($modeLabel)';
+      }
+    }
+
     notifyListeners();
 
     return {
@@ -285,6 +338,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       'positions': positionsCopy,
       'startTime': startTime,
       'endTime': endTime,
+      'ghostResult': ghostSummary,
+      'ghostRun': _activeGhostResult?.matchedRun,
     };
   }
 
@@ -441,6 +496,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       }
 
       telemetryNotifier.tick(isAutoPaused: _isAutoPaused);
+      _updateGhostTelemetry();
       _checkGoalCompletion();
 
       if (_elapsedDurationSeconds % 5 == 0 && _runCoordinates.length >= 2) {
@@ -497,6 +553,21 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       isStepCountEstimated: isStepCountEstimated,
       currentAltitudeMeters: _elevationPipeline.smoothedAltitude,
     );
+    _updateGhostTelemetry();
+  }
+
+  void _updateGhostTelemetry() {
+    if (_activeGhostResult?.matchedRun != null) {
+      final telem = _ghostRunnerService.computeTelemetry(
+        ghostRun: _activeGhostResult!.matchedRun!,
+        runnerPosition: _currentLocation,
+        runnerMovingSeconds: _movingDurationSeconds,
+        runnerElapsedSeconds: _elapsedDurationSeconds,
+        isPaused: _isAutoPaused,
+      );
+      ghostTelemetryNotifier.value = telem;
+      ghostLocationNotifier.value = telem.ghostPosition;
+    }
   }
 
   String _computeSplitPace() {

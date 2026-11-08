@@ -17,8 +17,10 @@ class MapToolsSheet extends StatelessWidget {
   final VoidCallback onToggleAmoled;
   final VoidCallback onOpenOfflineMaps;
   final VoidCallback onTriggerSos;
+  final VoidCallback? onOpenGhostRunner;
   final String? activePacerLabel;
   final String? activeGoalLabel;
+  final String? activeGhostLabel;
   final bool isAmoledActive;
   final bool? isDemoMode;
 
@@ -30,8 +32,10 @@ class MapToolsSheet extends StatelessWidget {
     required this.onToggleAmoled,
     required this.onOpenOfflineMaps,
     required this.onTriggerSos,
+    this.onOpenGhostRunner,
     this.activePacerLabel,
     this.activeGoalLabel,
+    this.activeGhostLabel,
     this.isAmoledActive = false,
     this.isDemoMode,
   });
@@ -44,8 +48,10 @@ class MapToolsSheet extends StatelessWidget {
     required VoidCallback onToggleAmoled,
     required VoidCallback onOpenOfflineMaps,
     required VoidCallback onTriggerSos,
+    VoidCallback? onOpenGhostRunner,
     String? activePacerLabel,
     String? activeGoalLabel,
+    String? activeGhostLabel,
     bool isAmoledActive = false,
     bool? isDemoMode,
   }) {
@@ -76,8 +82,15 @@ class MapToolsSheet extends StatelessWidget {
           Navigator.pop(ctx);
           onTriggerSos();
         },
+        onOpenGhostRunner: onOpenGhostRunner != null
+            ? () {
+                Navigator.pop(ctx);
+                onOpenGhostRunner();
+              }
+            : null,
         activePacerLabel: activePacerLabel,
         activeGoalLabel: activeGoalLabel,
+        activeGhostLabel: activeGhostLabel,
         isAmoledActive: isAmoledActive,
         isDemoMode: isDemoMode,
       ),
@@ -87,78 +100,95 @@ class MapToolsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showDemoControls = isDemoMode ?? AppPreferences().isDemoModeEnabled;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.70;
 
     return AppSheet(
       title: 'Run tools',
       subtitle: 'Pacer, goals, route guidance and utilities',
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 1. Virtual Pacer (Demo mode only)
-          if (showDemoControls) ...[
-            _ToolTile(
-              icon: Icons.speed_rounded,
-              title: 'Virtual pacer',
-              subtitle:
-                  activePacerLabel ?? 'Select target split pace & test lab',
-              accentColor: AppColors.accent,
-              onTap: onOpenPacer,
-            ),
-            const SizedBox(height: AppSpacing.s8),
-          ],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. Virtual Pacer (Demo mode only)
+              if (showDemoControls) ...[
+                _ToolTile(
+                  icon: Icons.speed_rounded,
+                  title: 'Virtual pacer',
+                  subtitle:
+                      activePacerLabel ?? 'Select target split pace & test lab',
+                  accentColor: AppColors.accent,
+                  onTap: onOpenPacer,
+                ),
+                const SizedBox(height: AppSpacing.s8),
+              ],
 
-          // 2. Run Goals
-          _ToolTile(
-            icon: Icons.flag_rounded,
-            title: 'Run goals',
-            subtitle: activeGoalLabel ?? 'Set distance, time or area targets',
-            accentColor: AppColors.gold,
-            onTap: onOpenGoals,
-          ),
-          const SizedBox(height: AppSpacing.s8),
+              // 2. Run Goals
+              _ToolTile(
+                icon: Icons.flag_rounded,
+                title: 'Run goals',
+                subtitle:
+                    activeGoalLabel ?? 'Set distance, time or area targets',
+                accentColor: AppColors.gold,
+                onTap: onOpenGoals,
+              ),
+              const SizedBox(height: AppSpacing.s8),
 
-          // 3. Route Suggestions
-          _ToolTile(
-            icon: Icons.alt_route_rounded,
-            title: 'Route suggestions',
-            subtitle: 'Suggested closed loops for territory capture',
-            accentColor: AppColors.info,
-            onTap: onOpenRoutePlanner,
-          ),
-          const SizedBox(height: AppSpacing.s8),
+              // 3. Ghost Runner
+              _ToolTile(
+                icon: Icons.directions_run_rounded,
+                title: 'Ghost runner',
+                subtitle: activeGhostLabel ?? 'Pace against past efforts (Off)',
+                accentColor: AppColors.accent,
+                onTap: onOpenGhostRunner ?? () {},
+              ),
+              const SizedBox(height: AppSpacing.s8),
 
-          // 4. Low-Power Display
-          _ToolTile(
-            icon: Icons.battery_saver_rounded,
-            title: 'Low-power display',
-            subtitle: isAmoledActive
-                ? 'Active (pure black AMOLED HUD)'
-                : 'Save battery with high-contrast black HUD',
-            accentColor: AppColors.accent,
-            onTap: onToggleAmoled,
-          ),
-          const SizedBox(height: AppSpacing.s8),
+              // 4. Route Suggestions
+              _ToolTile(
+                icon: Icons.alt_route_rounded,
+                title: 'Route suggestions',
+                subtitle: 'Suggested closed loops for territory capture',
+                accentColor: AppColors.info,
+                onTap: onOpenRoutePlanner,
+              ),
+              const SizedBox(height: AppSpacing.s8),
 
-          // 5. Offline Maps
-          _ToolTile(
-            icon: Icons.download_rounded,
-            title: 'Offline maps',
-            subtitle: 'Preload local tiles for offline running',
-            accentColor: AppColors.textSecondary,
-            onTap: onOpenOfflineMaps,
-          ),
-          const SizedBox(height: AppSpacing.s8),
+              // 4. Low-Power Display
+              _ToolTile(
+                icon: Icons.battery_saver_rounded,
+                title: 'Low-power display',
+                subtitle: isAmoledActive
+                    ? 'Active (pure black AMOLED HUD)'
+                    : 'Save battery with high-contrast black HUD',
+                accentColor: AppColors.accent,
+                onTap: onToggleAmoled,
+              ),
+              const SizedBox(height: AppSpacing.s8),
 
-          // 6. Emergency SOS Trigger
-          _ToolTile(
-            icon: Icons.emergency_rounded,
-            title: 'Emergency SOS',
-            subtitle: 'Trigger distress alert with GPS coordinates',
-            accentColor: AppColors.error,
-            isDestructive: true,
-            onTap: onTriggerSos,
+              // 5. Offline Maps
+              _ToolTile(
+                icon: Icons.download_rounded,
+                title: 'Offline maps',
+                subtitle: 'Preload local tiles for offline running',
+                accentColor: AppColors.textSecondary,
+                onTap: onOpenOfflineMaps,
+              ),
+              const SizedBox(height: AppSpacing.s8),
+
+              // 6. Emergency SOS Trigger
+              _ToolTile(
+                icon: Icons.emergency_rounded,
+                title: 'Emergency SOS',
+                subtitle: 'Trigger distress alert with GPS coordinates',
+                accentColor: AppColors.error,
+                isDestructive: true,
+                onTap: onTriggerSos,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

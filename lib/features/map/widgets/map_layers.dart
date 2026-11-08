@@ -10,6 +10,7 @@ import '../../../models/ws_events.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../services/tile_cache_service.dart';
 import '../../gameplay/polygon_enclosure_engine.dart';
+import 'ghost_runner_marker.dart';
 
 /// Performance-optimized Map Layers component wrapped in a RepaintBoundary.
 class MapLayers {
@@ -345,12 +346,30 @@ class MapLayers {
     );
   }
 
-  /// Waypoint and live rival presence marker layer
+  /// Waypoint, live rival presence, and ghost runner marker layer
   static MarkerLayer buildMarkerLayer({
     required LatLng? currentLocation,
     required Map<String, RunnerPresenceEvent> activeRivalRunners,
+    LatLng? ghostLocation,
+    bool isBatterySaverActive = false,
+    bool isReducedMotion = false,
   }) {
     final List<Marker> markers = [];
+
+    // Ghost Runner Marker: Neutral circular node with dashed ring, zero glow
+    if (ghostLocation != null) {
+      markers.add(
+        Marker(
+          point: ghostLocation,
+          width: 32,
+          height: 32,
+          child: GhostRunnerMarkerWidget(
+            isBatterySaverActive: isBatterySaverActive,
+            isReducedMotion: isReducedMotion,
+          ),
+        ),
+      );
+    }
 
     // User Position Marker: Crisp geometric circle with center notch, NO pulsing rings, NO glow
     if (currentLocation != null) {

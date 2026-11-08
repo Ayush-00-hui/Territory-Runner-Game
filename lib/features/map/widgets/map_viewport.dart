@@ -65,9 +65,16 @@ class MapViewport extends StatelessWidget {
           ),
           ValueListenableBuilder<LatLng?>(
             valueListenable: controller.liveLocationNotifier,
-            builder: (context, loc, child) => MapLayers.buildMarkerLayer(
-              currentLocation: loc ?? controller.currentLocation,
-              activeRivalRunners: controller.activeRivalRunners,
+            builder: (context, loc, child) => ValueListenableBuilder<LatLng?>(
+              valueListenable: controller.ghostLocationNotifier,
+              builder: (context, ghostLoc, _) => MapLayers.buildMarkerLayer(
+                currentLocation: loc ?? controller.currentLocation,
+                activeRivalRunners: controller.activeRivalRunners,
+                ghostLocation: ghostLoc,
+                isBatterySaverActive: controller.isBatterySaverActive,
+                isReducedMotion:
+                    MediaQuery.maybeOf(context)?.disableAnimations ?? false,
+              ),
             ),
           ),
           if (AppConstants.tileAttribution.isNotEmpty)

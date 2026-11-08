@@ -33,6 +33,7 @@ class SummarySheet extends StatefulWidget {
   final double? areaSqMeters;
   final String? rejectionReason;
   final double elevationGainMeters;
+  final String? ghostResult;
 
   const SummarySheet({
     super.key,
@@ -46,6 +47,7 @@ class SummarySheet extends StatefulWidget {
     this.areaSqMeters,
     this.rejectionReason,
     this.elevationGainMeters = 0.0,
+    this.ghostResult,
   });
 
   static Future<void> show({
@@ -60,6 +62,7 @@ class SummarySheet extends StatefulWidget {
     double? areaSqMeters,
     String? rejectionReason,
     double elevationGainMeters = 0.0,
+    String? ghostResult,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -79,6 +82,7 @@ class SummarySheet extends StatefulWidget {
         areaSqMeters: areaSqMeters,
         rejectionReason: rejectionReason,
         elevationGainMeters: elevationGainMeters,
+        ghostResult: ghostResult,
       ),
     );
   }
@@ -265,6 +269,46 @@ class _SummarySheetState extends State<SummarySheet>
               profile: widget.profile,
               onClose: () => Navigator.pop(context),
             ),
+
+            if (widget.ghostResult != null) ...[
+              const SizedBox(height: AppSpacing.s12),
+              Semantics(
+                label: 'Ghost runner comparison: ${widget.ghostResult}',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s12,
+                    vertical: AppSpacing.s10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: AppRadius.br16,
+                    border: Border.all(
+                      color: AppColors.borderSubtle,
+                      width: 1.0,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.directions_run_rounded,
+                        size: 16,
+                        color: AppColors.accent,
+                      ),
+                      const SizedBox(width: AppSpacing.s8),
+                      Expanded(
+                        child: Text(
+                          widget.ghostResult!,
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
 
             const SizedBox(height: AppSpacing.s16),
 

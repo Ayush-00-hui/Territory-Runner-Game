@@ -188,5 +188,19 @@ Under the Digital Personal Data Protection (DPDP) Act, 2023 (India) and the Gene
    - Detailed per-run logs (sample points, elevation changes, pace history, and heart rate/cadence telemetry) reside exclusively on the runner's local device in an AES-256 encrypted Hive box (`run_log_v1`).
    - Run logs are never uploaded to the server and are wiped completely when executing **Delete account & data**.
 
+---
+
+## 12. Ghost Runner (On-Device Local Replay)
+
+1. **Strictly Local Run Replay**:
+   - Ghost Runner matches and replays historical athletic efforts strictly from the runner's own local encrypted run log (`run_log_v1`).
+   - Only your own historical runs are matched and replayed: there are zero friends' ghosts, public ghost rankings, or remote pacing competitors.
+2. **Zero Network Transmission**:
+   - Loop matching (Discrete Fréchet distance), trajectory downsampling, orthogonal arc-length projection, and live ahead/behind delta calculations execute 100% on-device.
+   - Zero coordinates, ghost timestamps, or pace differentials are ever transmitted across the network, broadcast via WebSockets, or sent to backend databases.
+3. **Offline Operation & Battery Safety**:
+   - Ghost Runner functions fully offline in remote areas without cellular or Wi-Fi connectivity.
+   - Ghost replay rendering respects low-power display modes, battery saver settings, and OS reduced-motion preferences without degrading battery endurance.
+
 
 

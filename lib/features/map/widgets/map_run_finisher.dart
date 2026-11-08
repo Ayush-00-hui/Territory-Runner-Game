@@ -139,6 +139,7 @@ void handleFinishRun({
     samples: samples,
     areaSqMeters: finalArea > 0 ? finalArea : null,
     elevationGainMeters: elevationGain,
+    ghostResult: summary['ghostResult'] as String?,
   );
 
   // Opt-in flow: prompt for notification permissions only after capturing territory
