@@ -1103,7 +1103,7 @@ func TestPostgres_CrewsFlow(t *testing.T) {
 	assert.NotEmpty(t, crew.JoinCode)
 
 	// 2. Member joins
-	joinedCrew, err := st.JoinCrew(ctx, crew.JoinCode, member.ID)
+	joinedCrew, err := st.JoinCrew(ctx, member.ID, crew.JoinCode)
 	require.NoError(t, err)
 	assert.Equal(t, crew.ID, joinedCrew.ID)
 

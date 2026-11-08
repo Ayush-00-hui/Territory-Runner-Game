@@ -186,14 +186,12 @@ func (s *PostgresStore) GetAllTerritories(ctx context.Context) ([]Territory, err
 	}
 	defer rows.Close()
 
-	now := time.Now().UTC()
 	var list []Territory
 	for rows.Next() {
 		var t Territory
 		if err := rows.Scan(&t.ID, &t.OwnerID, &t.Username, &t.GeoJSON, &t.AreaSqm, &t.Strength, &t.LastDefendedAt, &t.LastDecayedAt, &t.UpdatedAt); err != nil {
 			return nil, err
 		}
-		t.Strength = t.EffectiveStrength(now)
 		list = append(list, t)
 	}
 	return list, nil

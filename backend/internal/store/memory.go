@@ -202,12 +202,9 @@ func (m *MemoryStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat, 
 func (m *MemoryStore) GetAllTerritories(ctx context.Context) ([]Territory, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	now := time.Now().UTC()
 	var res []Territory
 	for _, t := range m.territories {
-		cpy := *t
-		cpy.Strength = cpy.EffectiveStrength(now)
-		res = append(res, cpy)
+		res = append(res, *t)
 	}
 	return res, nil
 }
