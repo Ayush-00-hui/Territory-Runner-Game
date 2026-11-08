@@ -263,3 +263,83 @@ type DecayNotification struct {
 	Threshold   int       `json:"threshold"` // 50 or 30 percent
 	SentAt      time.Time `json:"sent_at"`
 }
+
+// Season represents a calendar month competitive territorial season.
+type Season struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	StartsAt  time.Time `json:"starts_at"`
+	EndsAt    time.Time `json:"ends_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// SeasonUserStanding represents a single runner's aggregate standing in a season.
+type SeasonUserStanding struct {
+	SeasonID       string    `json:"season_id"`
+	UserID         string    `json:"user_id"`
+	Username       string    `json:"username,omitempty"`
+	Faction        string    `json:"faction"`
+	SeasonRank     int       `json:"season_rank"`
+	TotalAreaSqm   float64   `json:"total_area_sqm"`
+	TotalDistanceM float64   `json:"total_distance_m"`
+	XP             int       `json:"xp"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// SeasonFactionStanding represents faction aggregate standing in a season.
+type SeasonFactionStanding struct {
+	Faction        string  `json:"faction"`
+	TotalAreaSqm   float64 `json:"total_area_sqm"`
+	TotalDistanceM float64 `json:"total_distance_m"`
+	RunnerCount    int     `json:"runner_count"`
+}
+
+// CurrentSeasonResponse wraps current season info, time remaining, runner standing, and faction leaderboard.
+type CurrentSeasonResponse struct {
+	Season               Season                  `json:"season"`
+	TimeRemainingSeconds int64                   `json:"time_remaining_seconds"`
+	UserStanding         *SeasonUserStanding     `json:"user_standing,omitempty"`
+	FactionStandings     []SeasonFactionStanding `json:"faction_standings"`
+}
+
+// Crew represents a collaborative group of up to 10 runners.
+type Crew struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	JoinCode  string    `json:"join_code"`
+	CreatorID string    `json:"creator_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// CrewMember represents a runner membership in a crew.
+type CrewMember struct {
+	CrewID          string    `json:"crew_id"`
+	UserID          string    `json:"user_id"`
+	Username        string    `json:"username"`
+	Role            string    `json:"role"` // "leader", "member"
+	JoinedAt        time.Time `json:"joined_at"`
+	WeeklyDistanceM float64   `json:"weekly_distance_m"`
+	WeeklyAreaSqm   float64   `json:"weekly_area_sqm"`
+}
+
+// CrewGoal represents an active weekly target for a crew.
+type CrewGoal struct {
+	ID              string    `json:"id"`
+	CrewID          string    `json:"crew_id"`
+	GoalType        string    `json:"goal_type"` // "distance", "area"
+	TargetValue     float64   `json:"target_value"`
+	CurrentValue    float64   `json:"current_value"`
+	WeekStart       time.Time `json:"week_start"`
+	ProgressPercent float64   `json:"progress_percent"`
+	CreatedBy       string    `json:"created_by"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+// MyCrewResponse represents the user's crew, members, and active goal.
+type MyCrewResponse struct {
+	Crew       *Crew        `json:"crew"`
+	Role       string       `json:"role,omitempty"`
+	Members    []CrewMember `json:"members,omitempty"`
+	ActiveGoal *CrewGoal    `json:"active_goal,omitempty"`
+}
+

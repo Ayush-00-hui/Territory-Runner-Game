@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
 import '../core/logging/app_logger.dart';
+import '../models/crew.dart';
 import '../models/duel.dart';
 import '../models/faction_standing.dart';
 import '../models/friend.dart';
@@ -14,6 +15,7 @@ import '../models/leaderboard_entry.dart';
 import '../models/league_standing.dart';
 import '../models/privacy_zone.dart';
 import '../models/runner_profile.dart';
+import '../models/season.dart';
 import '../models/territory.dart';
 import '../ui/theme/app_colors.dart';
 import 'firebase_service.dart';
@@ -754,5 +756,106 @@ class ApiClient {
     );
 
     return response.statusCode == 200 || response.statusCode == 204;
+  }
+
+  /// Fetches current season status, time remaining, runner and faction standings (GET /v1/seasons/current)
+  Future<CurrentSeasonData?> getCurrentSeason() async {
+    final uri = Uri.parse('$baseUrl/v1/seasons/current');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return CurrentSeasonData.fromJson(data);
+    }
+    return null;
+  }
+
+  /// Fetches current runner's crew, weekly members stats, and active goal (GET /v1/crews/my)
+  Future<MyCrewData?> getMyCrew() async {
+    final uri = Uri.parse('$baseUrl/v1/crews/my');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return MyCrewData.fromJson(data);
+    }
+    return null;
+  }
+
+  /// Creates a new runner crew (POST /v1/crews)
+  Future<Crew?> createCrew(String name) async {
+    final uri = Uri.parse('$baseUrl/v1/crews');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'name': name});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+    );
+
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return Crew.fromJson(data);
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>?;
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: data?['error'] as String? ?? 'CREATE_CREW_ERROR',
+      message: data?['detail'] as String? ?? 'Failed to create crew',
+    );
+  }
+
+  /// Joins an existing runner crew with a join code (POST /v1/crews/join)
+  Future<Crew?> joinCrew(String joinCode) async {
+    final uri = Uri.parse('$baseUrl/v1/crews/join');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'join_code': joinCode});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return Crew.fromJson(data);
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>?;
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: data?['error'] as String? ?? 'JOIN_CREW_ERROR',
+      message: data?['detail'] as String? ?? 'Failed to join crew',
+    );
+  }
+
+  /// Sets the active weekly goal for a crew (POST /v1/crews/goals)
+  Future<CrewGoal?> setCrewGoal(String goalType, double targetValue) async {
+    final uri = Uri.parse('$baseUrl/v1/crews/goals');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({
+      'goal_type': goalType,
+      'target_value': targetValue,
+    });
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+    );
+
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return CrewGoal.fromJson(data);
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>?;
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: data?['error'] as String? ?? 'SET_GOAL_ERROR',
+      message: data?['detail'] as String? ?? 'Failed to set crew goal',
+    );
   }
 }

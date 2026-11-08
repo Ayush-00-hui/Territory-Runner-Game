@@ -105,6 +105,13 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 		v1.Post("/duels", api.HandleCreateDuel)
 		v1.Put("/duels/{id}/accept", api.HandleAcceptDuel)
 		v1.Put("/duels/{id}/decline", api.HandleDeclineDuel)
+
+		// Seasons & Crews
+		v1.Get("/seasons/current", api.HandleGetCurrentSeason)
+		v1.Get("/crews/my", api.HandleGetMyCrew)
+		v1.Post("/crews", api.HandleCreateCrew)
+		v1.Post("/crews/join", api.HandleJoinCrew)
+		v1.Post("/crews/goals", api.HandleSetCrewGoal)
 	})
 
 	return r

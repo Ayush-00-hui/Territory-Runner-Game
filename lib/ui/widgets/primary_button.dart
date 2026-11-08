@@ -86,7 +86,13 @@ class _PrimaryButtonState extends State<PrimaryButton> {
           Icon(widget.icon, color: fgColor, size: 20),
           const SizedBox(width: AppSpacing.s8),
         ],
-        Text(widget.label, style: AppText.button.copyWith(color: fgColor)),
+        Flexible(
+          child: Text(
+            widget.label,
+            style: AppText.button.copyWith(color: fgColor),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
 

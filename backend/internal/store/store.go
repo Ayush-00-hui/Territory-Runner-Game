@@ -120,6 +120,36 @@ type Store interface {
 	// RecordDecayNotification stores a recorded decay push notification for deduplication.
 	RecordDecayNotification(ctx context.Context, ownerID, territoryID string, threshold int, sentAt time.Time) error
 
+	// GetCurrentSeason returns the active calendar month season or creates it if not present.
+	GetCurrentSeason(ctx context.Context, now time.Time) (*Season, error)
+
+	// GetSeasonStandingByUser returns runner standing for the given season.
+	GetSeasonStandingByUser(ctx context.Context, seasonID, userID string) (*SeasonUserStanding, error)
+
+	// GetSeasonFactionStandings returns faction aggregated standings for a season.
+	GetSeasonFactionStandings(ctx context.Context, seasonID string) ([]SeasonFactionStanding, error)
+
+	// RecordSeasonProgress increments a runner's season standing metrics.
+	RecordSeasonProgress(ctx context.Context, seasonID, userID, faction string, areaSqm, distanceM float64, xp int) error
+
+	// CreateCrew creates a new crew and assigns the creator as leader.
+	CreateCrew(ctx context.Context, creatorID, name, joinCode string) (*Crew, error)
+
+	// JoinCrew adds a runner to a crew by joinCode. Enforces 10-runner limit and 1-crew-per-user limit.
+	JoinCrew(ctx context.Context, userID, joinCode string) (*Crew, error)
+
+	// GetCrewByUserID retrieves the crew the user belongs to, or nil if none.
+	GetCrewByUserID(ctx context.Context, userID string) (*Crew, string, error)
+
+	// GetCrewMembers returns all members of a crew along with their weekly contributions.
+	GetCrewMembers(ctx context.Context, crewID string, weekStart time.Time) ([]CrewMember, error)
+
+	// SetCrewGoal sets the active weekly goal for a crew.
+	SetCrewGoal(ctx context.Context, crewID, goalType string, targetValue float64, weekStart time.Time, createdBy string) (*CrewGoal, error)
+
+	// GetActiveCrewGoal returns the active goal for a crew for the given weekStart, with calculated progress.
+	GetActiveCrewGoal(ctx context.Context, crewID string, weekStart time.Time) (*CrewGoal, error)
+
 	// Ping checks database connectivity.
 	Ping(ctx context.Context) error
 

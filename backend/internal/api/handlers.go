@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1407,6 +1408,276 @@ func (a *API) HandleDeclineDuel(w http.ResponseWriter, r *http.Request) {
 		"status": "ok",
 		"action": "declined",
 	})
+}
+
+// HandleGetCurrentSeason handles GET /v1/seasons/current.
+func (a *API) HandleGetCurrentSeason(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	now := time.Now().UTC()
+	season, err := a.store.GetCurrentSeason(r.Context(), now)
+	if err != nil {
+		a.logger.Error("failed to get current season", "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to get current season")
+		return
+	}
+
+	timeRemaining := int64(season.EndsAt.Sub(now).Seconds())
+	if timeRemaining < 0 {
+		timeRemaining = 0
+	}
+
+	userStanding, err := a.store.GetSeasonStandingByUser(r.Context(), season.ID, uid)
+	if err != nil {
+		a.logger.Warn("failed to get season user standing", "user_id", uid, "error", err)
+	}
+
+	factionStandings, err := a.store.GetSeasonFactionStandings(r.Context(), season.ID)
+	if err != nil {
+		a.logger.Error("failed to get season faction standings", "error", err)
+		factionStandings = []store.SeasonFactionStanding{}
+	}
+	if factionStandings == nil {
+		factionStandings = []store.SeasonFactionStanding{}
+	}
+
+	resp := store.CurrentSeasonResponse{
+		Season:               *season,
+		TimeRemainingSeconds: timeRemaining,
+		UserStanding:         userStanding,
+		FactionStandings:     factionStandings,
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// HandleGetMyCrew handles GET /v1/crews/my.
+func (a *API) HandleGetMyCrew(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	crew, role, err := a.store.GetCrewByUserID(r.Context(), uid)
+	if err != nil {
+		a.logger.Error("failed to check crew membership", "user_id", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to check crew membership")
+		return
+	}
+
+	if crew == nil {
+		writeJSON(w, http.StatusOK, store.MyCrewResponse{Crew: nil})
+		return
+	}
+
+	now := time.Now().UTC()
+	weekStart := league.CurrentWeekStart(now)
+
+	members, err := a.store.GetCrewMembers(r.Context(), crew.ID, weekStart)
+	if err != nil {
+		a.logger.Error("failed to get crew members", "crew_id", crew.ID, "error", err)
+		members = []store.CrewMember{}
+	}
+	if members == nil {
+		members = []store.CrewMember{}
+	}
+
+	activeGoal, err := a.store.GetActiveCrewGoal(r.Context(), crew.ID, weekStart)
+	if err != nil {
+		a.logger.Warn("failed to get active crew goal", "crew_id", crew.ID, "error", err)
+	}
+
+	resp := store.MyCrewResponse{
+		Crew:       crew,
+		Role:       role,
+		Members:    members,
+		ActiveGoal: activeGoal,
+	}
+
+	writeJSON(w, http.StatusOK, resp)
+}
+
+// CreateCrewRequest encapsulates parameters to create a new runner crew.
+type CreateCrewRequest struct {
+	Name string `json:"name"`
+}
+
+func generateCrewJoinCode() string {
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	b := make([]byte, 4)
+	if _, err := cryptorand.Read(b); err != nil {
+		return fmt.Sprintf("CRW-%04X", time.Now().UnixNano()%0xFFFF)
+	}
+	var res strings.Builder
+	res.WriteString("CRW-")
+	for _, v := range b {
+		res.WriteByte(charset[int(v)%len(charset)])
+	}
+	return res.String()
+}
+
+// HandleCreateCrew handles POST /v1/crews.
+func (a *API) HandleCreateCrew(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var req CreateCrewRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	valRes, err := ValidateTeamName(req.Name)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_CREW_NAME", err.Error())
+		return
+	}
+
+	var crew *store.Crew
+	for attempts := 0; attempts < 3; attempts++ {
+		joinCode := generateCrewJoinCode()
+		crew, err = a.store.CreateCrew(r.Context(), uid, valRes.DisplayName, joinCode)
+		if err == nil {
+			break
+		}
+		if !strings.Contains(err.Error(), "join_code") {
+			break
+		}
+	}
+
+	if err != nil {
+		errStr := err.Error()
+		if strings.Contains(errStr, "already a member of a crew") || strings.Contains(errStr, "already in a crew") {
+			writeError(w, http.StatusBadRequest, "USER_ALREADY_IN_CREW", errStr)
+			return
+		}
+		if strings.Contains(errStr, "already taken") || strings.Contains(errStr, "unique") {
+			writeError(w, http.StatusBadRequest, "CREW_NAME_TAKEN", "A crew with this name already exists")
+			return
+		}
+		a.logger.Error("failed to create crew", "error", err)
+		writeError(w, http.StatusBadRequest, "CREATE_CREW_ERROR", errStr)
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, crew)
+}
+
+// JoinCrewRequest encapsulates the join code required to enter a crew.
+type JoinCrewRequest struct {
+	JoinCode string `json:"join_code"`
+}
+
+// HandleJoinCrew handles POST /v1/crews/join.
+func (a *API) HandleJoinCrew(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var req JoinCrewRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	joinCode := strings.ToUpper(strings.TrimSpace(req.JoinCode))
+	if joinCode == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_JOIN_CODE", "Join code cannot be empty")
+		return
+	}
+
+	crew, err := a.store.JoinCrew(r.Context(), uid, joinCode)
+	if err != nil {
+		errStr := err.Error()
+		errLower := strings.ToLower(errStr)
+		if strings.Contains(errLower, "not found") || strings.Contains(errLower, "invalid join code") {
+			writeError(w, http.StatusNotFound, "CREW_NOT_FOUND", "No crew found with that join code")
+			return
+		}
+		if strings.Contains(errLower, "already in a crew") || strings.Contains(errLower, "already a member") {
+			writeError(w, http.StatusBadRequest, "USER_ALREADY_IN_CREW", errStr)
+			return
+		}
+		if strings.Contains(errLower, "maximum capacity") || strings.Contains(errLower, "full") {
+			writeError(w, http.StatusBadRequest, "CREW_FULL", "Crew has reached maximum capacity of 10 members")
+			return
+		}
+		a.logger.Error("failed to join crew", "error", err)
+		writeError(w, http.StatusBadRequest, "JOIN_CREW_ERROR", errStr)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, crew)
+}
+
+// SetCrewGoalRequest encapsulates a leader's weekly target definition.
+type SetCrewGoalRequest struct {
+	GoalType    string  `json:"goal_type"`
+	TargetValue float64 `json:"target_value"`
+}
+
+// HandleSetCrewGoal handles POST /v1/crews/goals.
+func (a *API) HandleSetCrewGoal(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var req SetCrewGoalRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	goalType := strings.ToLower(strings.TrimSpace(req.GoalType))
+	if goalType != "distance" && goalType != "area" {
+		writeError(w, http.StatusBadRequest, "INVALID_GOAL_TYPE", "Goal type must be 'distance' or 'area'")
+		return
+	}
+
+	if req.TargetValue <= 0 {
+		writeError(w, http.StatusBadRequest, "INVALID_TARGET_VALUE", "Target value must be greater than zero")
+		return
+	}
+
+	crew, role, err := a.store.GetCrewByUserID(r.Context(), uid)
+	if err != nil {
+		a.logger.Error("failed to find crew for user", "user_id", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve crew")
+		return
+	}
+	if crew == nil {
+		writeError(w, http.StatusBadRequest, "NOT_IN_CREW", "User is not a member of any crew")
+		return
+	}
+
+	if role != "leader" {
+		writeError(w, http.StatusForbidden, "FORBIDDEN", "Only crew leaders can set weekly goals")
+		return
+	}
+
+	now := time.Now().UTC()
+	weekStart := league.CurrentWeekStart(now)
+
+	goal, err := a.store.SetCrewGoal(r.Context(), crew.ID, goalType, req.TargetValue, weekStart, uid)
+	if err != nil {
+		a.logger.Error("failed to set crew goal", "error", err)
+		writeError(w, http.StatusBadRequest, "SET_GOAL_ERROR", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, goal)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

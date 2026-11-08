@@ -421,6 +421,30 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		return nil, fmt.Errorf("failed to insert run: %w", err)
 	}
 
+	// Update season progress for current month within transaction
+	seasonID := fmt.Sprintf("season_%d_%02d", createdAt.Year(), createdAt.Month())
+	seasonName := fmt.Sprintf("%s %d", createdAt.Month().String(), createdAt.Year())
+	seasonStart := time.Date(createdAt.Year(), createdAt.Month(), 1, 0, 0, 0, 0, time.UTC)
+	seasonEnd := time.Date(createdAt.Year(), createdAt.Month()+1, 1, 0, 0, 0, 0, time.UTC)
+
+	_, _ = tx.Exec(ctx, `
+		INSERT INTO seasons (id, name, starts_at, ends_at, created_at)
+		VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (id) DO NOTHING;
+	`, seasonID, seasonName, seasonStart, seasonEnd)
+
+	_, _ = tx.Exec(ctx, `
+		INSERT INTO season_standings (season_id, user_id, faction, total_area_sqm, total_distance_m, xp, updated_at)
+		SELECT $1, $2, COALESCE(u.faction, ''), $3, $4, $5, NOW()
+		FROM users u WHERE u.id = $2
+		ON CONFLICT (season_id, user_id) DO UPDATE SET
+			total_area_sqm = season_standings.total_area_sqm + EXCLUDED.total_area_sqm,
+			total_distance_m = season_standings.total_distance_m + EXCLUDED.total_distance_m,
+			xp = season_standings.xp + EXCLUDED.xp,
+			faction = CASE WHEN EXCLUDED.faction != '' THEN EXCLUDED.faction ELSE season_standings.faction END,
+			updated_at = NOW();
+	`, seasonID, run.UserID, areaClaimed, run.DistanceMeters, xpAwarded)
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit capture transaction: %w", err)
 	}
@@ -1423,3 +1447,332 @@ func (s *PostgresStore) RecordDecayNotification(ctx context.Context, ownerID, te
 	}
 	return nil
 }
+
+// GetCurrentSeason returns the active calendar month season or creates it if not present.
+func (s *PostgresStore) GetCurrentSeason(ctx context.Context, now time.Time) (*Season, error) {
+	now = now.UTC()
+	seasonID := fmt.Sprintf("season_%d_%02d", now.Year(), now.Month())
+	seasonName := fmt.Sprintf("%s %d", now.Month().String(), now.Year())
+	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
+
+	query := `
+		INSERT INTO seasons (id, name, starts_at, ends_at, created_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+		RETURNING id, name, starts_at, ends_at, created_at;
+	`
+	var season Season
+	err := s.pool.QueryRow(ctx, query, seasonID, seasonName, start, end, now).Scan(
+		&season.ID, &season.Name, &season.StartsAt, &season.EndsAt, &season.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current season: %w", err)
+	}
+	return &season, nil
+}
+
+// GetSeasonStandingByUser returns runner standing for the given season.
+func (s *PostgresStore) GetSeasonStandingByUser(ctx context.Context, seasonID, userID string) (*SeasonUserStanding, error) {
+	query := `
+		WITH ranked AS (
+			SELECT
+				season_id,
+				user_id,
+				faction,
+				total_area_sqm,
+				total_distance_m,
+				xp,
+				updated_at,
+				DENSE_RANK() OVER (ORDER BY total_area_sqm DESC) as season_rank
+			FROM season_standings
+			WHERE season_id = $1
+		)
+		SELECT r.season_id, r.user_id, COALESCE(u.username, 'Runner'), r.faction, r.season_rank, r.total_area_sqm, r.total_distance_m, r.xp, r.updated_at
+		FROM ranked r
+		LEFT JOIN users u ON u.id = r.user_id
+		WHERE r.user_id = $2;
+	`
+	var st SeasonUserStanding
+	err := s.pool.QueryRow(ctx, query, seasonID, userID).Scan(
+		&st.SeasonID, &st.UserID, &st.Username, &st.Faction, &st.SeasonRank,
+		&st.TotalAreaSqm, &st.TotalDistanceM, &st.XP, &st.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get user season standing: %w", err)
+	}
+	return &st, nil
+}
+
+// GetSeasonFactionStandings returns faction aggregated standings for a season.
+func (s *PostgresStore) GetSeasonFactionStandings(ctx context.Context, seasonID string) ([]SeasonFactionStanding, error) {
+	query := `
+		SELECT
+			faction,
+			COALESCE(SUM(total_area_sqm), 0) as total_area_sqm,
+			COALESCE(SUM(total_distance_m), 0) as total_distance_m,
+			COUNT(DISTINCT user_id) as runner_count
+		FROM season_standings
+		WHERE season_id = $1 AND faction != ''
+		GROUP BY faction
+		ORDER BY total_area_sqm DESC;
+	`
+	rows, err := s.pool.Query(ctx, query, seasonID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get season faction standings: %w", err)
+	}
+	defer rows.Close()
+
+	var standings []SeasonFactionStanding
+	for rows.Next() {
+		var f SeasonFactionStanding
+		if err := rows.Scan(&f.Faction, &f.TotalAreaSqm, &f.TotalDistanceM, &f.RunnerCount); err != nil {
+			return nil, err
+		}
+		standings = append(standings, f)
+	}
+	if standings == nil {
+		standings = []SeasonFactionStanding{}
+	}
+	return standings, nil
+}
+
+// RecordSeasonProgress increments a runner's season standing metrics.
+func (s *PostgresStore) RecordSeasonProgress(ctx context.Context, seasonID, userID, faction string, areaSqm, distanceM float64, xp int) error {
+	query := `
+		INSERT INTO season_standings (season_id, user_id, faction, total_area_sqm, total_distance_m, xp, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW())
+		ON CONFLICT (season_id, user_id) DO UPDATE SET
+			total_area_sqm = season_standings.total_area_sqm + EXCLUDED.total_area_sqm,
+			total_distance_m = season_standings.total_distance_m + EXCLUDED.total_distance_m,
+			xp = season_standings.xp + EXCLUDED.xp,
+			faction = CASE WHEN EXCLUDED.faction != '' THEN EXCLUDED.faction ELSE season_standings.faction END,
+			updated_at = NOW();
+	`
+	_, err := s.pool.Exec(ctx, query, seasonID, userID, faction, areaSqm, distanceM, xp)
+	return err
+}
+
+// CreateCrew creates a new crew and assigns creator as leader.
+func (s *PostgresStore) CreateCrew(ctx context.Context, creatorID, name, joinCode string) (*Crew, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	// Check if user is already in a crew
+	var existingCrewID string
+	err = tx.QueryRow(ctx, `SELECT crew_id FROM crew_memberships WHERE user_id = $1`, creatorID).Scan(&existingCrewID)
+	if err == nil {
+		return nil, errors.New("User is already a member of a crew")
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+
+	crewID := "crew_" + uuid.NewString()[:8]
+	var c Crew
+	insertCrewQuery := `
+		INSERT INTO crews (id, name, join_code, creator_id, created_at)
+		VALUES ($1, $2, $3, $4, NOW())
+		RETURNING id, name, join_code, creator_id, created_at;
+	`
+	if err := tx.QueryRow(ctx, insertCrewQuery, crewID, name, joinCode, creatorID).Scan(
+		&c.ID, &c.Name, &c.JoinCode, &c.CreatorID, &c.CreatedAt,
+	); err != nil {
+		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
+			return nil, errors.New("Crew name is already taken")
+		}
+		return nil, err
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO crew_memberships (crew_id, user_id, role, joined_at)
+		VALUES ($1, $2, 'leader', NOW());
+	`, crewID, creatorID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// JoinCrew adds a runner to a crew by joinCode. Enforces 10-runner limit and 1-crew-per-user limit.
+func (s *PostgresStore) JoinCrew(ctx context.Context, userID, joinCode string) (*Crew, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	var existingCrew string
+	err = tx.QueryRow(ctx, `SELECT crew_id FROM crew_memberships WHERE user_id = $1`, userID).Scan(&existingCrew)
+	if err == nil {
+		return nil, errors.New("You are already in a crew")
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+
+	var c Crew
+	err = tx.QueryRow(ctx, `SELECT id, name, join_code, creator_id, created_at FROM crews WHERE join_code = $1 FOR UPDATE`, joinCode).Scan(
+		&c.ID, &c.Name, &c.JoinCode, &c.CreatorID, &c.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, errors.New("Invalid join code")
+		}
+		return nil, err
+	}
+
+	var count int
+	if err := tx.QueryRow(ctx, `SELECT COUNT(*) FROM crew_memberships WHERE crew_id = $1`, c.ID).Scan(&count); err != nil {
+		return nil, err
+	}
+	if count >= 10 {
+		return nil, errors.New("Crew is at maximum capacity (10 runners)")
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO crew_memberships (crew_id, user_id, role, joined_at)
+		VALUES ($1, $2, 'member', NOW());
+	`, c.ID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// GetCrewByUserID retrieves the crew the user belongs to, or nil if none.
+func (s *PostgresStore) GetCrewByUserID(ctx context.Context, userID string) (*Crew, string, error) {
+	query := `
+		SELECT c.id, c.name, c.join_code, c.creator_id, c.created_at, cm.role
+		FROM crew_memberships cm
+		JOIN crews c ON c.id = cm.crew_id
+		WHERE cm.user_id = $1;
+	`
+	var c Crew
+	var role string
+	err := s.pool.QueryRow(ctx, query, userID).Scan(
+		&c.ID, &c.Name, &c.JoinCode, &c.CreatorID, &c.CreatedAt, &role,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, "", nil
+		}
+		return nil, "", fmt.Errorf("failed to get crew by user: %w", err)
+	}
+	return &c, role, nil
+}
+
+// GetCrewMembers returns all members of a crew along with their weekly contributions.
+func (s *PostgresStore) GetCrewMembers(ctx context.Context, crewID string, weekStart time.Time) ([]CrewMember, error) {
+	weekEnd := weekStart.AddDate(0, 0, 7)
+	query := `
+		SELECT
+			cm.crew_id,
+			cm.user_id,
+			COALESCE(u.username, 'Runner') as username,
+			cm.role,
+			cm.joined_at,
+			COALESCE(SUM(r.distance_meters), 0) as weekly_distance_m,
+			COALESCE(SUM(r.area_claimed), 0) as weekly_area_sqm
+		FROM crew_memberships cm
+		LEFT JOIN users u ON u.id = cm.user_id
+		LEFT JOIN runs r ON r.user_id = cm.user_id AND r.created_at >= $2 AND r.created_at < $3
+		WHERE cm.crew_id = $1
+		GROUP BY cm.crew_id, cm.user_id, u.username, cm.role, cm.joined_at
+		ORDER BY CASE WHEN cm.role = 'leader' THEN 0 ELSE 1 END, weekly_distance_m DESC;
+	`
+	rows, err := s.pool.Query(ctx, query, crewID, weekStart, weekEnd)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get crew members: %w", err)
+	}
+	defer rows.Close()
+
+	var members []CrewMember
+	for rows.Next() {
+		var m CrewMember
+		if err := rows.Scan(
+			&m.CrewID, &m.UserID, &m.Username, &m.Role, &m.JoinedAt,
+			&m.WeeklyDistanceM, &m.WeeklyAreaSqm,
+		); err != nil {
+			return nil, err
+		}
+		members = append(members, m)
+	}
+	if members == nil {
+		members = []CrewMember{}
+	}
+	return members, nil
+}
+
+// SetCrewGoal sets the active weekly goal for a crew.
+func (s *PostgresStore) SetCrewGoal(ctx context.Context, crewID, goalType string, targetValue float64, weekStart time.Time, createdBy string) (*CrewGoal, error) {
+	goalID := "goal_" + uuid.NewString()[:8]
+	query := `
+		INSERT INTO crew_goals (id, crew_id, goal_type, target_value, week_start, created_by, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW())
+		ON CONFLICT (crew_id, week_start) DO UPDATE SET
+			goal_type = EXCLUDED.goal_type,
+			target_value = EXCLUDED.target_value,
+			created_by = EXCLUDED.created_by,
+			created_at = NOW()
+		RETURNING id, crew_id, goal_type, target_value, week_start, created_by, created_at;
+	`
+	var g CrewGoal
+	err := s.pool.QueryRow(ctx, query, goalID, crewID, goalType, targetValue, weekStart, createdBy).Scan(
+		&g.ID, &g.CrewID, &g.GoalType, &g.TargetValue, &g.WeekStart, &g.CreatedBy, &g.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set crew goal: %w", err)
+	}
+	return &g, nil
+}
+
+// GetActiveCrewGoal returns the active goal for a crew for the given weekStart, with calculated progress.
+func (s *PostgresStore) GetActiveCrewGoal(ctx context.Context, crewID string, weekStart time.Time) (*CrewGoal, error) {
+	weekEnd := weekStart.AddDate(0, 0, 7)
+	query := `
+		SELECT id, crew_id, goal_type, target_value, week_start, created_by, created_at
+		FROM crew_goals
+		WHERE crew_id = $1 AND week_start = $2;
+	`
+	var g CrewGoal
+	err := s.pool.QueryRow(ctx, query, crewID, weekStart).Scan(
+		&g.ID, &g.CrewID, &g.GoalType, &g.TargetValue, &g.WeekStart, &g.CreatedBy, &g.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get active crew goal: %w", err)
+	}
+
+	progressQuery := `
+		SELECT
+			COALESCE(SUM(CASE WHEN $3 = 'area' THEN r.area_claimed ELSE r.distance_meters END), 0)
+		FROM runs r
+		JOIN crew_memberships cm ON cm.user_id = r.user_id
+		WHERE cm.crew_id = $1 AND r.created_at >= $2 AND r.created_at < $4;
+	`
+	var currentVal float64
+	if err := s.pool.QueryRow(ctx, progressQuery, crewID, weekStart, g.GoalType, weekEnd).Scan(&currentVal); err != nil {
+		return nil, fmt.Errorf("failed to calculate crew goal progress: %w", err)
+	}
+	g.CurrentValue = currentVal
+	if g.TargetValue > 0 {
+		g.ProgressPercent = math.Min(100.0, (currentVal/g.TargetValue)*100.0)
+	}
+	return &g, nil
+}
+

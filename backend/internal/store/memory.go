@@ -28,6 +28,13 @@ type MemoryStore struct {
 	decayNotifications []*DecayNotification
 	decayLockMu        sync.Mutex
 	isDecayLocked      bool
+	seasons            map[string]*Season
+	seasonStandings    map[string]map[string]*SeasonUserStanding
+	crews              map[string]*Crew
+	crewsByCode        map[string]*Crew
+	crewMembers        map[string]map[string]*CrewMember
+	userCrew           map[string]string
+	crewGoals          map[string]map[string]*CrewGoal
 }
 
 // NewMemoryStore initializes an in-memory store.
@@ -43,6 +50,13 @@ func NewMemoryStore() *MemoryStore {
 		privacyZones:       make(map[string][]PrivacyZone),
 		userSettings:       make(map[string]*UserSettings),
 		decayNotifications: make([]*DecayNotification, 0),
+		seasons:            make(map[string]*Season),
+		seasonStandings:    make(map[string]map[string]*SeasonUserStanding),
+		crews:              make(map[string]*Crew),
+		crewsByCode:        make(map[string]*Crew),
+		crewMembers:        make(map[string]map[string]*CrewMember),
+		userCrew:           make(map[string]string),
+		crewGoals:          make(map[string]map[string]*CrewGoal),
 	}
 }
 
@@ -115,6 +129,26 @@ func (m *MemoryStore) DeleteUser(ctx context.Context, userID string) error {
 		if d.ChallengerID == userID || d.OpponentID == userID {
 			delete(m.duels, id)
 		}
+	}
+
+	// Cascade delete crew memberships
+	if crewID, ok := m.userCrew[userID]; ok {
+		delete(m.userCrew, userID)
+		if members, ok := m.crewMembers[crewID]; ok {
+			delete(members, userID)
+			if len(members) == 0 {
+				if c, ok := m.crews[crewID]; ok {
+					delete(m.crewsByCode, c.JoinCode)
+				}
+				delete(m.crews, crewID)
+				delete(m.crewGoals, crewID)
+			}
+		}
+	}
+
+	// Remove from season standings
+	for _, standings := range m.seasonStandings {
+		delete(standings, userID)
 	}
 
 	return nil
@@ -323,6 +357,10 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	}
 	m.runs[run.IdempotencyKey] = &runCopy
 	m.runsByOrder = append(m.runsByOrder, run.IdempotencyKey)
+
+	// Update season progress for current calendar month
+	seasonID := fmt.Sprintf("season_%d_%02d", now.Year(), now.Month())
+	m.recordSeasonProgressLocked(seasonID, run.UserID, user.Faction, areaClaimed, run.DistanceMeters, xpAwarded)
 
 	// High-value reward: Only advance duels when movement has verified human motion
 	if runCopy.Status != "flagged_review" && runCopy.VerificationStatus != "unverified_motion" {
@@ -1304,3 +1342,357 @@ func (m *MemoryStore) RecordDecayNotification(ctx context.Context, ownerID, terr
 	m.decayNotifications = append(m.decayNotifications, notif)
 	return nil
 }
+
+// GetCurrentSeason returns the active calendar month season or creates it if not present.
+func (m *MemoryStore) GetCurrentSeason(ctx context.Context, now time.Time) (*Season, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now = now.UTC()
+	start := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	end := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, time.UTC)
+	seasonID := fmt.Sprintf("season_%d_%02d", now.Year(), now.Month())
+
+	s, ok := m.seasons[seasonID]
+	if !ok {
+		s = &Season{
+			ID:        seasonID,
+			Name:      fmt.Sprintf("%s %d", now.Month().String(), now.Year()),
+			StartsAt:  start,
+			EndsAt:    end,
+			CreatedAt: now,
+		}
+		m.seasons[seasonID] = s
+	}
+	cpy := *s
+	return &cpy, nil
+}
+
+// GetSeasonStandingByUser returns runner standing for the given season.
+func (m *MemoryStore) GetSeasonStandingByUser(ctx context.Context, seasonID, userID string) (*SeasonUserStanding, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	standingsMap, ok := m.seasonStandings[seasonID]
+	if !ok {
+		return nil, nil
+	}
+
+	type userArea struct {
+		userID  string
+		areaSqm float64
+	}
+	all := make([]userArea, 0, len(standingsMap))
+	for uid, st := range standingsMap {
+		all = append(all, userArea{userID: uid, areaSqm: st.TotalAreaSqm})
+	}
+	sort.Slice(all, func(i, j int) bool {
+		return all[i].areaSqm > all[j].areaSqm
+	})
+
+	rank := 0
+	for i, ua := range all {
+		if ua.userID == userID {
+			rank = i + 1
+			break
+		}
+	}
+
+	st, ok := standingsMap[userID]
+	if !ok {
+		return nil, nil
+	}
+	cpy := *st
+	cpy.SeasonRank = rank
+	if u, ok := m.users[userID]; ok {
+		cpy.Username = u.Username
+	}
+	return &cpy, nil
+}
+
+// GetSeasonFactionStandings returns faction aggregated standings for a season.
+func (m *MemoryStore) GetSeasonFactionStandings(ctx context.Context, seasonID string) ([]SeasonFactionStanding, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	standingsMap, ok := m.seasonStandings[seasonID]
+	if !ok {
+		return []SeasonFactionStanding{}, nil
+	}
+
+	factions := make(map[string]*SeasonFactionStanding)
+	for _, st := range standingsMap {
+		if st.Faction == "" {
+			continue
+		}
+		f, ok := factions[st.Faction]
+		if !ok {
+			f = &SeasonFactionStanding{
+				Faction: st.Faction,
+			}
+			factions[st.Faction] = f
+		}
+		f.TotalAreaSqm += st.TotalAreaSqm
+		f.TotalDistanceM += st.TotalDistanceM
+		f.RunnerCount++
+	}
+
+	res := make([]SeasonFactionStanding, 0, len(factions))
+	for _, f := range factions {
+		res = append(res, *f)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return res[i].TotalAreaSqm > res[j].TotalAreaSqm
+	})
+	return res, nil
+}
+
+// RecordSeasonProgress increments a runner's season standing metrics.
+func (m *MemoryStore) RecordSeasonProgress(ctx context.Context, seasonID, userID, faction string, areaSqm, distanceM float64, xp int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.recordSeasonProgressLocked(seasonID, userID, faction, areaSqm, distanceM, xp)
+}
+
+func (m *MemoryStore) recordSeasonProgressLocked(seasonID, userID, faction string, areaSqm, distanceM float64, xp int) error {
+	if m.seasonStandings[seasonID] == nil {
+		m.seasonStandings[seasonID] = make(map[string]*SeasonUserStanding)
+	}
+	st, ok := m.seasonStandings[seasonID][userID]
+	if !ok {
+		st = &SeasonUserStanding{
+			SeasonID:  seasonID,
+			UserID:    userID,
+			Faction:   faction,
+			UpdatedAt: time.Now().UTC(),
+		}
+		m.seasonStandings[seasonID][userID] = st
+	}
+	if faction != "" {
+		st.Faction = faction
+	}
+	st.TotalAreaSqm += areaSqm
+	st.TotalDistanceM += distanceM
+	st.XP += xp
+	st.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// CreateCrew creates a new crew and assigns creator as leader.
+func (m *MemoryStore) CreateCrew(ctx context.Context, creatorID, name, joinCode string) (*Crew, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, ok := m.userCrew[creatorID]; ok {
+		return nil, fmt.Errorf("User is already a member of a crew")
+	}
+
+	for _, c := range m.crews {
+		if strings.EqualFold(c.Name, name) {
+			return nil, fmt.Errorf("Crew name is already taken")
+		}
+	}
+
+	crewID := "crew_" + uuid.NewString()[:8]
+	c := &Crew{
+		ID:        crewID,
+		Name:      name,
+		JoinCode:  joinCode,
+		CreatorID: creatorID,
+		CreatedAt: time.Now().UTC(),
+	}
+	m.crews[crewID] = c
+	m.crewsByCode[joinCode] = c
+	m.userCrew[creatorID] = crewID
+
+	uName := "Runner"
+	if u, ok := m.users[creatorID]; ok {
+		uName = u.Username
+	}
+
+	if m.crewMembers[crewID] == nil {
+		m.crewMembers[crewID] = make(map[string]*CrewMember)
+	}
+	m.crewMembers[crewID][creatorID] = &CrewMember{
+		CrewID:   crewID,
+		UserID:   creatorID,
+		Username: uName,
+		Role:     "leader",
+		JoinedAt: time.Now().UTC(),
+	}
+
+	cpy := *c
+	return &cpy, nil
+}
+
+// JoinCrew adds a runner to a crew by joinCode. Enforces 10-runner limit and 1-crew-per-user limit.
+func (m *MemoryStore) JoinCrew(ctx context.Context, userID, joinCode string) (*Crew, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if _, ok := m.userCrew[userID]; ok {
+		return nil, fmt.Errorf("You are already in a crew")
+	}
+
+	c, ok := m.crewsByCode[joinCode]
+	if !ok {
+		return nil, fmt.Errorf("Invalid join code")
+	}
+
+	members := m.crewMembers[c.ID]
+	if len(members) >= 10 {
+		return nil, fmt.Errorf("Crew is at maximum capacity (10 runners)")
+	}
+
+	uName := "Runner"
+	if u, ok := m.users[userID]; ok {
+		uName = u.Username
+	}
+
+	m.userCrew[userID] = c.ID
+	members[userID] = &CrewMember{
+		CrewID:   c.ID,
+		UserID:   userID,
+		Username: uName,
+		Role:     "member",
+		JoinedAt: time.Now().UTC(),
+	}
+
+	cpy := *c
+	return &cpy, nil
+}
+
+// GetCrewByUserID retrieves the crew the user belongs to, or nil if none.
+func (m *MemoryStore) GetCrewByUserID(ctx context.Context, userID string) (*Crew, string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	crewID, ok := m.userCrew[userID]
+	if !ok {
+		return nil, "", nil
+	}
+
+	c, ok := m.crews[crewID]
+	if !ok {
+		return nil, "", nil
+	}
+
+	role := "member"
+	if mem, ok := m.crewMembers[crewID][userID]; ok {
+		role = mem.Role
+	}
+
+	cpy := *c
+	return &cpy, role, nil
+}
+
+// GetCrewMembers returns all members of a crew along with their weekly contributions.
+func (m *MemoryStore) GetCrewMembers(ctx context.Context, crewID string, weekStart time.Time) ([]CrewMember, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	membersMap, ok := m.crewMembers[crewID]
+	if !ok {
+		return []CrewMember{}, nil
+	}
+
+	weekEnd := weekStart.AddDate(0, 0, 7)
+
+	res := make([]CrewMember, 0, len(membersMap))
+	for _, mem := range membersMap {
+		cpy := *mem
+		if u, ok := m.users[mem.UserID]; ok {
+			cpy.Username = u.Username
+		}
+		var dist float64
+		var area float64
+		for _, key := range m.runsByOrder {
+			r := m.runs[key]
+			if r != nil && r.UserID == mem.UserID && !r.CreatedAt.Before(weekStart) && r.CreatedAt.Before(weekEnd) {
+				dist += r.DistanceMeters
+				area += r.AreaClaimed
+			}
+		}
+		cpy.WeeklyDistanceM = dist
+		cpy.WeeklyAreaSqm = area
+		res = append(res, cpy)
+	}
+
+	sort.Slice(res, func(i, j int) bool {
+		if res[i].Role == "leader" {
+			return true
+		}
+		if res[j].Role == "leader" {
+			return false
+		}
+		return res[i].WeeklyDistanceM > res[j].WeeklyDistanceM
+	})
+
+	return res, nil
+}
+
+// SetCrewGoal sets the active weekly goal for a crew.
+func (m *MemoryStore) SetCrewGoal(ctx context.Context, crewID, goalType string, targetValue float64, weekStart time.Time, createdBy string) (*CrewGoal, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.crewGoals[crewID] == nil {
+		m.crewGoals[crewID] = make(map[string]*CrewGoal)
+	}
+
+	weekKey := weekStart.Format("2006-01-02")
+	goal := &CrewGoal{
+		ID:          "goal_" + uuid.NewString()[:8],
+		CrewID:      crewID,
+		GoalType:    goalType,
+		TargetValue: targetValue,
+		WeekStart:   weekStart,
+		CreatedBy:   createdBy,
+		CreatedAt:   time.Now().UTC(),
+	}
+	m.crewGoals[crewID][weekKey] = goal
+
+	cpy := *goal
+	return &cpy, nil
+}
+
+// GetActiveCrewGoal returns the active goal for a crew for the given weekStart, with calculated progress.
+func (m *MemoryStore) GetActiveCrewGoal(ctx context.Context, crewID string, weekStart time.Time) (*CrewGoal, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	goalsMap, ok := m.crewGoals[crewID]
+	if !ok {
+		return nil, nil
+	}
+	weekKey := weekStart.Format("2006-01-02")
+	g, ok := goalsMap[weekKey]
+	if !ok {
+		return nil, nil
+	}
+
+	weekEnd := weekStart.AddDate(0, 0, 7)
+	membersMap := m.crewMembers[crewID]
+
+	var currentVal float64
+	for _, key := range m.runsByOrder {
+		r := m.runs[key]
+		if r != nil && !r.CreatedAt.Before(weekStart) && r.CreatedAt.Before(weekEnd) {
+			if _, isMember := membersMap[r.UserID]; isMember {
+				if g.GoalType == "area" {
+					currentVal += r.AreaClaimed
+				} else {
+					currentVal += r.DistanceMeters
+				}
+			}
+		}
+	}
+
+	cpy := *g
+	cpy.CurrentValue = currentVal
+	if cpy.TargetValue > 0 {
+		cpy.ProgressPercent = math.Min(100.0, (currentVal/cpy.TargetValue)*100.0)
+	}
+	return &cpy, nil
+}
+

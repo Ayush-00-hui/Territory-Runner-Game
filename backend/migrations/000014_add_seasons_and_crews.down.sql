@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS crew_goals;
+DROP TABLE IF EXISTS crew_memberships;
+DROP TABLE IF EXISTS crews;
+DROP TABLE IF EXISTS season_standings;
+DROP TABLE IF EXISTS seasons;

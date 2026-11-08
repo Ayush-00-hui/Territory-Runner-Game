@@ -9,6 +9,7 @@ import 'features/profile/widgets/profile_dialogs.dart';
 import 'features/profile/widgets/profile_hero.dart';
 import 'features/profile/widgets/settings_list.dart';
 import 'features/profile/widgets/stat_grid.dart';
+import 'features/profile/widgets/season_crew_view.dart';
 import 'features/profile/widgets/weekly_league_view.dart';
 import 'features/social/widgets/social_hub_sheet.dart';
 import 'models/runner_profile.dart';
@@ -33,6 +34,7 @@ class _ProfilePageState extends State<ProfilePage>
   late final AnimationController _pageController;
   late final Animation<double> _fadeAnimation;
   ProfileTab _activeTab = ProfileTab.athlete;
+  int _leagueSubTab = 0;
 
   final TerritoryService _territoryService = TerritoryService();
   final FirebaseService _firebaseService = FirebaseService();
@@ -254,8 +256,84 @@ class _ProfilePageState extends State<ProfilePage>
               // --- FACTION LEADERBOARD & TURF WAR DOMINANCE ---
               FactionLeaderboard(profile: profile, territories: territories),
             ] else if (_activeTab == ProfileTab.league) ...[
-              // --- WEEKLY LEAGUE STANDINGS & CUTOFFS ---
-              const WeeklyLeagueView(),
+              // --- LEAGUE & SEASONS SUB-TAB SELECTOR ---
+              Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.s16),
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppSpacing.brFull,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        label: 'Show Weekly League',
+                        selected: _leagueSubTab == 0,
+                        child: InkWell(
+                          onTap: () => setState(() => _leagueSubTab = 0),
+                          borderRadius: AppSpacing.brFull,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _leagueSubTab == 0
+                                  ? AppColors.surface2
+                                  : Colors.transparent,
+                              borderRadius: AppSpacing.brFull,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Weekly League',
+                              style: AppText.caption.copyWith(
+                                color: _leagueSubTab == 0
+                                    ? AppColors.textPrimary
+                                    : AppColors.textMuted,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Semantics(
+                        button: true,
+                        label: 'Show Season & Crew',
+                        selected: _leagueSubTab == 1,
+                        child: InkWell(
+                          onTap: () => setState(() => _leagueSubTab = 1),
+                          borderRadius: AppSpacing.brFull,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _leagueSubTab == 1
+                                  ? AppColors.surface2
+                                  : Colors.transparent,
+                              borderRadius: AppSpacing.brFull,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Season & Crew',
+                              style: AppText.caption.copyWith(
+                                color: _leagueSubTab == 1
+                                    ? AppColors.textPrimary
+                                    : AppColors.textMuted,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (_leagueSubTab == 0)
+                const WeeklyLeagueView()
+              else
+                const SeasonCrewView(),
             ] else ...[
               // --- SQUAD & DUELS HUB ---
               const SizedBox(height: 600, child: SocialHubView()),
