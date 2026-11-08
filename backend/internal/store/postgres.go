@@ -427,23 +427,34 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	seasonStart := time.Date(createdAt.Year(), createdAt.Month(), 1, 0, 0, 0, 0, time.UTC)
 	seasonEnd := time.Date(createdAt.Year(), createdAt.Month()+1, 1, 0, 0, 0, 0, time.UTC)
 
-	_, _ = tx.Exec(ctx, `
-		INSERT INTO seasons (id, name, starts_at, ends_at, created_at)
-		VALUES ($1, $2, $3, $4, NOW())
-		ON CONFLICT (id) DO NOTHING;
-	`, seasonID, seasonName, seasonStart, seasonEnd)
+	// Update season progress for current month within transaction (guarded by savepoint)
+	if _, err := tx.Exec(ctx, "SAVEPOINT season_update;"); err == nil {
+		_, errSeason := tx.Exec(ctx, `
+			INSERT INTO seasons (id, name, starts_at, ends_at, created_at)
+			VALUES ($1, $2, $3, $4, NOW())
+			ON CONFLICT (id) DO NOTHING;
+		`, seasonID, seasonName, seasonStart, seasonEnd)
 
-	_, _ = tx.Exec(ctx, `
-		INSERT INTO season_standings (season_id, user_id, faction, total_area_sqm, total_distance_m, xp, updated_at)
-		SELECT $1, $2, COALESCE(u.faction, ''), $3, $4, $5, NOW()
-		FROM users u WHERE u.id = $2
-		ON CONFLICT (season_id, user_id) DO UPDATE SET
-			total_area_sqm = season_standings.total_area_sqm + EXCLUDED.total_area_sqm,
-			total_distance_m = season_standings.total_distance_m + EXCLUDED.total_distance_m,
-			xp = season_standings.xp + EXCLUDED.xp,
-			faction = CASE WHEN EXCLUDED.faction != '' THEN EXCLUDED.faction ELSE season_standings.faction END,
-			updated_at = NOW();
-	`, seasonID, run.UserID, areaClaimed, run.DistanceMeters, xpAwarded)
+		if errSeason == nil {
+			_, errSeason = tx.Exec(ctx, `
+				INSERT INTO season_standings (season_id, user_id, faction, total_area_sqm, total_distance_m, xp, updated_at)
+				SELECT $1, $2, COALESCE(u.faction, ''), $3, $4, $5, NOW()
+				FROM users u WHERE u.id = $2
+				ON CONFLICT (season_id, user_id) DO UPDATE SET
+					total_area_sqm = season_standings.total_area_sqm + EXCLUDED.total_area_sqm,
+					total_distance_m = season_standings.total_distance_m + EXCLUDED.total_distance_m,
+					xp = season_standings.xp + EXCLUDED.xp,
+					faction = CASE WHEN EXCLUDED.faction != '' THEN EXCLUDED.faction ELSE season_standings.faction END,
+					updated_at = NOW();
+			`, seasonID, run.UserID, areaClaimed, run.DistanceMeters, xpAwarded)
+		}
+
+		if errSeason != nil {
+			_, _ = tx.Exec(ctx, "ROLLBACK TO SAVEPOINT season_update;")
+		} else {
+			_, _ = tx.Exec(ctx, "RELEASE SAVEPOINT season_update;")
+		}
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit capture transaction: %w", err)

@@ -45,6 +45,7 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000014_add_seasons_and_crews.down.sql",
 		"000013_add_land_reminders_and_decay_notifications.down.sql",
 		"000012_add_run_step_count.down.sql",
 		"000011_add_territory_last_decayed_at.down.sql",
@@ -65,7 +66,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 			_, _ = pool.Exec(ctx, sql)
 		}
 	}
-	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS decay_notifications, duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS crew_goals, crew_memberships, crews, season_standings, seasons, decay_notifications, duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
 
 	upFiles := []string{
 		"000001_init_schema.up.sql",
@@ -81,6 +82,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000011_add_territory_last_decayed_at.up.sql",
 		"000012_add_run_step_count.up.sql",
 		"000013_add_land_reminders_and_decay_notifications.up.sql",
+		"000014_add_seasons_and_crews.up.sql",
 	}
 
 	for _, uf := range upFiles {
@@ -1054,4 +1056,84 @@ func TestPostgres_PrivacyZonesPersistence(t *testing.T) {
 	retrieved3, err := st.GetPrivacyZones(ctx, user.ID)
 	require.NoError(t, err)
 	assert.Empty(t, retrieved3)
+}
+
+// 13. Seasons persistence and aggregation in PostgreSQL
+func TestPostgres_SeasonsPersistence(t *testing.T) {
+	st, _ := setupTestStore(t)
+	ctx := context.Background()
+
+	now := time.Now().UTC()
+	season, err := st.GetCurrentSeason(ctx, now)
+	require.NoError(t, err)
+	require.NotNil(t, season)
+	assert.NotEmpty(t, season.ID)
+	assert.NotEmpty(t, season.Name)
+
+	u := &store.User{ID: "usr_season_pg", Username: "SeasonChamp", Faction: "Cyber Vanguard"}
+	require.NoError(t, st.UpsertUser(ctx, u))
+
+	// Standings initially nil for user with no runs
+	standing, err := st.GetSeasonStandingByUser(ctx, season.ID, u.ID)
+	require.NoError(t, err)
+	assert.Nil(t, standing)
+
+	// Faction standings
+	factionStandings, err := st.GetSeasonFactionStandings(ctx, season.ID)
+	require.NoError(t, err)
+	assert.NotNil(t, factionStandings)
+}
+
+// 14. Crews lifecycle, membership, and weekly goals in PostgreSQL
+func TestPostgres_CrewsFlow(t *testing.T) {
+	st, _ := setupTestStore(t)
+	ctx := context.Background()
+
+	leader := &store.User{ID: "usr_crew_lead", Username: "LeadRunner", Faction: "Cyber Vanguard"}
+	member := &store.User{ID: "usr_crew_member", Username: "WingRunner", Faction: "Cyber Vanguard"}
+	require.NoError(t, st.UpsertUser(ctx, leader))
+	require.NoError(t, st.UpsertUser(ctx, member))
+
+	// 1. Create crew
+	crew, err := st.CreateCrew(ctx, leader.ID, "Ghost Runners", "CRW-GHOST1")
+	require.NoError(t, err)
+	require.NotNil(t, crew)
+	assert.Equal(t, "Ghost Runners", crew.Name)
+	assert.Equal(t, leader.ID, crew.CreatorID)
+	assert.NotEmpty(t, crew.JoinCode)
+
+	// 2. Member joins
+	joinedCrew, err := st.JoinCrew(ctx, crew.JoinCode, member.ID)
+	require.NoError(t, err)
+	assert.Equal(t, crew.ID, joinedCrew.ID)
+
+	// 3. Get crew by user
+	c, role, err := st.GetCrewByUserID(ctx, leader.ID)
+	require.NoError(t, err)
+	require.NotNil(t, c)
+	assert.Equal(t, "leader", role)
+
+	c2, role2, err := st.GetCrewByUserID(ctx, member.ID)
+	require.NoError(t, err)
+	require.NotNil(t, c2)
+	assert.Equal(t, "member", role2)
+
+	// 4. Set weekly goal
+	weekStart := time.Now().UTC().Truncate(24 * time.Hour)
+	goal, err := st.SetCrewGoal(ctx, crew.ID, "distance", 50000.0, weekStart, leader.ID)
+	require.NoError(t, err)
+	require.NotNil(t, goal)
+	assert.Equal(t, "distance", goal.GoalType)
+	assert.Equal(t, 50000.0, goal.TargetValue)
+
+	// 5. Get active crew goal
+	activeGoal, err := st.GetActiveCrewGoal(ctx, crew.ID, weekStart)
+	require.NoError(t, err)
+	require.NotNil(t, activeGoal)
+	assert.Equal(t, 50000.0, activeGoal.TargetValue)
+
+	// 6. Get crew members
+	members, err := st.GetCrewMembers(ctx, crew.ID, weekStart)
+	require.NoError(t, err)
+	assert.Len(t, members, 2)
 }
