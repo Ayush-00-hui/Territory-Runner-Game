@@ -384,9 +384,8 @@ class _SummarySheetState extends State<SummarySheet>
                       Expanded(
                         child: Text(
                           AppPreferences().formatCalories(calories),
-                          style: AppText.headingSmall.copyWith(
+                          style: AppText.statSmall.copyWith(
                             fontWeight: FontWeight.w700,
-                            fontSize: 16,
                             color: AppColors.textPrimary,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
@@ -397,9 +396,8 @@ class _SummarySheetState extends State<SummarySheet>
                   const SizedBox(height: AppSpacing.s4),
                   Text(
                     'Likely between ${quantile.p10Kcal.round()} and ${quantile.p90Kcal.round()} kcal',
-                    style: AppText.bodySmall.copyWith(
+                    style: AppText.caption.copyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 11,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s4),
@@ -407,7 +405,6 @@ class _SummarySheetState extends State<SummarySheet>
                     'Based on ${activeWeightKg.toStringAsFixed(0)} kg, ${widget.distanceKm.toStringAsFixed(1)} km${widget.elevationGainMeters > 0 ? ", +${widget.elevationGainMeters.toStringAsFixed(0)} m climb" : ""}',
                     style: AppText.labelSmall.copyWith(
                       color: AppColors.textMuted,
-                      fontSize: 10.5,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s6),
@@ -419,26 +416,31 @@ class _SummarySheetState extends State<SummarySheet>
                       durationSeconds: widget.durationSeconds,
                       elevationGainMeters: widget.elevationGainMeters,
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            'How we estimate this',
-                            style: AppText.labelSmall.copyWith(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        minHeight: AppSpacing.touchTarget,
+                      ),
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'How we estimate this',
+                              style: AppText.caption.copyWith(
+                                color: AppColors.accent,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.info_outline_rounded,
-                          size: 13,
-                          color: AppColors.accent,
-                        ),
-                      ],
+                          const SizedBox(width: AppSpacing.s4),
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 20,
+                            color: AppColors.accent,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -586,7 +588,6 @@ class _WorkoutPhasesSummaryCard extends StatelessWidget {
                 '${executions.length} phases',
                 style: AppText.caption.copyWith(
                   color: AppColors.textMuted,
-                  fontSize: 11,
                 ),
               ),
             ],
@@ -666,12 +667,10 @@ class _WorkoutPhasesSummaryCard extends StatelessWidget {
                       child: Text(
                         e.phase.formattedTarget,
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontFamily: AppText.fontFamily,
+                        style: AppText.bodySmall.copyWith(
                           color: AppColors.textSecondary,
-                          fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          fontFeatures: [FontFeature.tabularFigures()],
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),
@@ -682,12 +681,10 @@ class _WorkoutPhasesSummaryCard extends StatelessWidget {
                             ? '${e.formattedActualDuration} (skip)'
                             : e.formattedActualDuration,
                         textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontFamily: AppText.fontFamily,
+                        style: AppText.bodySmall.copyWith(
                           color: e.isSkipped
                               ? AppColors.warning
                               : AppColors.textPrimary,
-                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           fontFeatures: const [FontFeature.tabularFigures()],
                         ),

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'inline_loading.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import '../motion/motion.dart';
+import 'app_toast.dart';
 
 /// Athletic Primary Button with press-scale feedback and haptic tick.
-/// Pacer Blue fill `#4C8DFF`, onAccent `#06080C` text, 48dp touch target, Semantics.
+/// High-contrast fill, 48dp minimum touch target, Semantics, focus,
+/// debounced taps, and disabled explanation feedback.
 class PrimaryButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -17,6 +20,12 @@ class PrimaryButton extends StatefulWidget {
   final Color foregroundColor;
   final double height;
   final bool isOutlined;
+  final String? disabledReason;
+  final VoidCallback? onDisabledTap;
+  final bool debounce;
+
+  /// Clock provider for deterministic testing of debounce timing
+  static DateTime Function() clock = DateTime.now;
 
   const PrimaryButton({
     super.key,
@@ -27,8 +36,11 @@ class PrimaryButton extends StatefulWidget {
     this.isFullWidth = true,
     this.backgroundColor = AppColors.primary,
     this.foregroundColor = AppColors.onPrimary,
-    this.height = 48.0,
+    this.height = AppSpacing.touchTarget,
     this.isOutlined = false,
+    this.disabledReason,
+    this.onDisabledTap,
+    this.debounce = false,
   });
 
   @override
@@ -38,6 +50,8 @@ class PrimaryButton extends StatefulWidget {
 class _PrimaryButtonState extends State<PrimaryButton> {
   bool _isPressed = false;
   bool _isFocused = false;
+  DateTime? _lastTapTime;
+  static const Duration _debounceThreshold = Duration(milliseconds: 400);
 
   void _handleTapDown(TapDownDetails _) {
     if (widget.onPressed == null || widget.isLoading) return;
@@ -47,12 +61,35 @@ class _PrimaryButtonState extends State<PrimaryButton> {
   void _handleTapUp(TapUpDetails _) {
     if (widget.onPressed == null || widget.isLoading) return;
     setState(() => _isPressed = false);
+
+    if (widget.debounce) {
+      final now = PrimaryButton.clock();
+      if (_lastTapTime != null &&
+          now.difference(_lastTapTime!) < _debounceThreshold) {
+        return;
+      }
+      _lastTapTime = now;
+    }
+
     widget.onPressed?.call();
   }
 
   void _handleTapCancel() {
     if (widget.onPressed == null || widget.isLoading) return;
     setState(() => _isPressed = false);
+  }
+
+  void _handleDisabledTap() {
+    if (widget.onDisabledTap != null) {
+      widget.onDisabledTap!();
+    } else if (widget.disabledReason != null &&
+        widget.disabledReason!.trim().isNotEmpty) {
+      AppToast.show(
+        context,
+        widget.disabledReason!,
+        type: AppToastType.warning,
+      );
+    }
   }
 
   @override
@@ -73,13 +110,10 @@ class _PrimaryButtonState extends State<PrimaryButton> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (widget.isLoading) ...[
-          SizedBox(
-            height: 18,
-            width: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.0,
-              valueColor: AlwaysStoppedAnimation<Color>(fgColor),
-            ),
+          InlineLoading(
+            size: 18,
+            strokeWidth: 2.0,
+            color: fgColor,
           ),
           const SizedBox(width: AppSpacing.s12),
         ] else if (widget.icon != null) ...[
@@ -100,6 +134,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
       button: true,
       enabled: enabled,
       label: widget.label,
+      hint: !enabled && widget.disabledReason != null ? widget.disabledReason : null,
       child: Focus(
         onFocusChange: (focused) => setState(() => _isFocused = focused),
         child: AnimatedScale(
@@ -110,31 +145,27 @@ class _PrimaryButtonState extends State<PrimaryButton> {
             onTapDown: enabled ? _handleTapDown : null,
             onTapUp: enabled ? _handleTapUp : null,
             onTapCancel: enabled ? _handleTapCancel : null,
+            onTap: !enabled ? _handleDisabledTap : null,
             behavior: HitTestBehavior.opaque,
             child: AnimatedContainer(
               duration: AppMotion.duration(context, AppMotion.fast),
               curve: AppMotion.easeOut,
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.touchTarget,
+                minWidth: AppSpacing.touchTarget,
+              ),
               height: widget.height,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: AppRadius.br12,
-                boxShadow: (enabled && !widget.isOutlined)
-                    ? [
-                        BoxShadow(
-                          color: widget.backgroundColor.withValues(alpha: 0.35),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : null,
                 border: Border.all(
                   color: _isFocused
                       ? AppColors.textPrimary
                       : (widget.isOutlined
                             ? widget.backgroundColor
-                            : Colors.transparent),
-                  width: _isFocused ? 1.5 : (widget.isOutlined ? 1.2 : 0.0),
+                            : AppColors.borderSubtle),
+                  width: _isFocused ? 1.5 : 1.0,
                 ),
               ),
               child: Center(child: content),

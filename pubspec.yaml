@@ -99,6 +99,7 @@ flutter:
     - assets/icons/
     - assets/fonts/
     - assets/audio/
+    - assets/loading_quotes.json
 
   fonts:
     - family: Inter

@@ -247,9 +247,13 @@ class _SocialHubViewState extends State<SocialHubView> {
           ),
         const SizedBox(height: AppSpacing.s12),
         if (_isLoading)
-          const Expanded(
+          Expanded(
             child: Center(
-              child: CircularProgressIndicator(color: AppColors.accent),
+              child: AppLoadingView(
+                label: 'Loading crew & duels...',
+                painterSize: 52,
+                onRetry: _refreshData,
+              ),
             ),
           )
         else if (_errorMessage != null && _friends.isEmpty && _duels.isEmpty)

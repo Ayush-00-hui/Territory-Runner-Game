@@ -126,7 +126,6 @@ class _AppIntroGateState extends State<AppIntroGate>
                             child: Text(
                               'TERRITORY RUNNER',
                               style: AppText.headingLarge.copyWith(
-                                fontSize: 24,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 2.5,
                                 color: AppColors.textPrimary,
@@ -204,7 +203,6 @@ class _AppIntroGateState extends State<AppIntroGate>
                                     child: Text(
                                       'TERRITORY RUNNER',
                                       style: AppText.headingLarge.copyWith(
-                                        fontSize: 26,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: letterSpacing,
                                         color: AppColors.textPrimary,
@@ -220,7 +218,6 @@ class _AppIntroGateState extends State<AppIntroGate>
                                     child: Text(
                                       'RUN • CLAIM • DEFEND',
                                       style: AppText.labelAccent.copyWith(
-                                        fontSize: 12,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: 3.2,
                                         color: AppColors.accent,

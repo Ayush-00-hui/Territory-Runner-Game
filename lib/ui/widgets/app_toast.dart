@@ -28,6 +28,9 @@ class AppToast extends StatelessWidget {
   static final GlobalKey<ScaffoldMessengerState> messengerKey =
       GlobalKey<ScaffoldMessengerState>();
 
+  /// Global bottom offset (e.g. above bottom nav bar or action sheets)
+  static double bottomOffset = 0.0;
+
   /// Displays the toast globally via the root ScaffoldMessenger key
   static void showGlobal(
     String message, {
@@ -36,6 +39,7 @@ class AppToast extends StatelessWidget {
     Duration duration = const Duration(seconds: 3),
     VoidCallback? onAction,
     String? actionLabel,
+    double? bottomMargin,
   }) {
     final messenger = messengerKey.currentState;
     if (messenger == null) return;
@@ -47,15 +51,20 @@ class AppToast extends StatelessWidget {
               ? const Duration(seconds: 3)
               : duration);
 
+    final double effectiveBottom = bottomMargin ??
+        (bottomOffset > 0 ? bottomOffset : AppSpacing.s16);
+
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s16,
-          vertical: AppSpacing.s12,
+        margin: EdgeInsets.fromLTRB(
+          AppSpacing.s16,
+          0,
+          AppSpacing.s16,
+          effectiveBottom,
         ),
         padding: EdgeInsets.zero,
         duration: effectiveDuration,
@@ -79,6 +88,7 @@ class AppToast extends StatelessWidget {
     Duration duration = const Duration(seconds: 3),
     VoidCallback? onAction,
     String? actionLabel,
+    double? bottomMargin,
   }) {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
@@ -90,15 +100,20 @@ class AppToast extends StatelessWidget {
               ? const Duration(seconds: 3)
               : duration);
 
+    final double effectiveBottom = bottomMargin ??
+        (bottomOffset > 0 ? bottomOffset : AppSpacing.s16);
+
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
       SnackBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.s16,
-          vertical: AppSpacing.s12,
+        margin: EdgeInsets.fromLTRB(
+          AppSpacing.s16,
+          0,
+          AppSpacing.s16,
+          effectiveBottom,
         ),
         padding: EdgeInsets.zero,
         duration: effectiveDuration,

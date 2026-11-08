@@ -22,8 +22,14 @@ enum ProfileTab { athlete, turfWar, league, squad }
 class ProfilePage extends StatefulWidget {
   final RunnerProfile? initialProfile;
   final List<Territory>? initialTerritories;
+  final ScrollController? scrollController;
 
-  const ProfilePage({super.key, this.initialProfile, this.initialTerritories});
+  const ProfilePage({
+    super.key,
+    this.initialProfile,
+    this.initialTerritories,
+    this.scrollController,
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -44,7 +50,7 @@ class _ProfilePageState extends State<ProfilePage>
     super.initState();
     _pageController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 220),
     );
     _fadeAnimation = CurvedAnimation(
       parent: _pageController,
@@ -77,10 +83,9 @@ class _ProfilePageState extends State<ProfilePage>
         elevation: 0,
         title: Text(
           'Profile',
-          style: AppText.headingSmall.copyWith(
+          style: AppText.titleMedium.copyWith(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
-            fontSize: 18,
           ),
         ),
         centerTitle: true,
@@ -131,6 +136,7 @@ class _ProfilePageState extends State<ProfilePage>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SingleChildScrollView(
+        controller: widget.scrollController,
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.s16,
@@ -212,9 +218,8 @@ class _ProfilePageState extends State<ProfilePage>
               // --- METRIC OVERVIEW GRID ---
               Text(
                 'Stats',
-                style: AppText.headingSmall.copyWith(
+                style: AppText.titleSmall.copyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -239,9 +244,8 @@ class _ProfilePageState extends State<ProfilePage>
               // --- SETTINGS & CONTROLS ---
               Text(
                 'Settings',
-                style: AppText.headingSmall.copyWith(
+                style: AppText.titleSmall.copyWith(
                   color: AppColors.textPrimary,
-                  fontSize: 15,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -365,7 +369,10 @@ class _ProfilePageState extends State<ProfilePage>
         child: AnimatedContainer(
           duration: AppMotion.duration(context, AppMotion.fast),
           curve: AppMotion.easeOut,
-          constraints: const BoxConstraints(minHeight: 36),
+          constraints: const BoxConstraints(
+            minHeight: AppSpacing.touchTarget,
+            minWidth: AppSpacing.touchTarget,
+          ),
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
             color: isSelected ? AppColors.accentContainer : Colors.transparent,
@@ -381,20 +388,19 @@ class _ProfilePageState extends State<ProfilePage>
             children: [
               Icon(
                 icon,
-                size: 14,
+                size: 20,
                 color: isSelected ? AppColors.accent : AppColors.textMuted,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: AppSpacing.s4),
               Flexible(
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
                     label,
-                    style: AppText.label.copyWith(
+                    style: AppText.labelMedium.copyWith(
                       color: isSelected
                           ? AppColors.accent
                           : AppColors.textMuted,
-                      fontSize: 11,
                       fontWeight: isSelected
                           ? FontWeight.w700
                           : FontWeight.w600,

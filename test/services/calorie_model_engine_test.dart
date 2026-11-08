@@ -156,6 +156,17 @@ void main() {
           metaJson: sampleMetaJson,
         );
 
+        // JIT warm-up before timing
+        for (var i = 0; i < 200; i++) {
+          engine.predictRates(
+            massKg: 70.0,
+            speedKmh: 10.0,
+            grade: 0.02,
+            cadenceSpm: 165.0,
+            climbRateMMin: 3.3,
+          );
+        }
+
         final stopwatch = Stopwatch()..start();
         const iterations = 1000;
         for (var i = 0; i < iterations; i++) {

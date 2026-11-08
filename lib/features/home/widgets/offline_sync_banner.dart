@@ -77,13 +77,11 @@ class OfflineSyncBanner extends StatelessWidget {
                   ),
                   const SizedBox(width: AppSpacing.s8),
                   if (isSyncing)
-                    const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.warning,
-                      ),
+                    const InlineLoading(
+                      size: 18,
+                      strokeWidth: 2,
+                      color: AppColors.warning,
+                      semanticsLabel: 'Syncing runs...',
                     )
                   else
                     ElevatedButton(

@@ -326,18 +326,10 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
 
         // --- LEADERBOARD ENTRIES ---
         if (_isLoading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.s24),
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.accent,
-                ),
-              ),
-            ),
+          AppLoadingView(
+            label: 'Loading season standings...',
+            painterSize: 48,
+            onRetry: _loadData,
           )
         else
           _buildLeaderboardContent(userAreaSqm),

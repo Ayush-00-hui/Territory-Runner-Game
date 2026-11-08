@@ -22,6 +22,7 @@ import 'features/home/home_screen.dart';
 import 'features/routing/route_service.dart';
 import 'services/api_client.dart';
 import 'services/app_preferences.dart';
+import 'services/avatar_service.dart';
 import 'services/battery_saver_service.dart';
 import 'services/export_service.dart';
 import 'services/firebase_service.dart';
@@ -96,6 +97,7 @@ void main() {
       await Hive.openBox<RunnerProfile>('profile');
       await RunRecoveryService().init();
       await RunLogService().init();
+      await AvatarService.instance.init();
 
       // Load package metadata
       unawaited(AppVersion.init());
@@ -261,14 +263,33 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final Set<int> _loadedTabs = {0};
   StreamSubscription<String>? _notificationSub;
+  final ScrollController _homeScrollController = ScrollController();
+  final ScrollController _profileScrollController = ScrollController();
 
   void _onTabSelected(int index) {
-    if (mounted) {
-      setState(() {
-        _selectedIndex = index;
-        _loadedTabs.add(index);
-      });
+    if (!mounted) return;
+    if (_selectedIndex == index) {
+      // Tapping the active tab scrolls to top
+      if (index == 0 && _homeScrollController.hasClients) {
+        _homeScrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+        );
+      } else if (index == 2 && _profileScrollController.hasClients) {
+        _profileScrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+        );
+      }
+      return;
     }
+
+    setState(() {
+      _selectedIndex = index;
+      _loadedTabs.add(index);
+    });
   }
 
   @override
@@ -291,47 +312,67 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void dispose() {
     _notificationSub?.cancel();
+    _homeScrollController.dispose();
+    _profileScrollController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgDeep,
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          _loadedTabs.contains(0)
-              ? HomeScreen(
-                  isActive: _selectedIndex == 0,
-                  onStartRun: () => _onTabSelected(1),
-                )
-              : const SizedBox.shrink(),
-          _loadedTabs.contains(1)
-              ? MapScreenFeature(isActive: _selectedIndex == 1)
-              : const SizedBox.shrink(),
-          _loadedTabs.contains(2)
-              ? const ProfilePage()
-              : const SizedBox.shrink(),
-        ],
-      ),
-      bottomNavigationBar: ValueListenableBuilder<bool>(
-        valueListenable: MapScreenFeature.isRunActiveNotifier,
-        builder: (context, isRunActive, _) {
-          return AnimatedSlide(
-            offset: isRunActive ? const Offset(0, 1.2) : Offset.zero,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeInOut,
-            child: AnimatedOpacity(
-              opacity: isRunActive ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 180),
-              child: isRunActive
-                  ? const SizedBox(height: 0)
-                  : _buildPremiumBottomNav(context),
+    return ValueListenableBuilder<bool>(
+      valueListenable: MapScreenFeature.isRunActiveNotifier,
+      builder: (context, isRunActive, _) {
+        AppToast.bottomOffset = isRunActive ? 0.0 : 76.0;
+
+        return PopScope(
+          canPop: !isRunActive && _selectedIndex == 0,
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) return;
+            if (isRunActive) {
+              // Active run exit is guarded by MapScreen confirmation
+              return;
+            }
+            if (_selectedIndex != 0) {
+              setState(() => _selectedIndex = 0);
+            }
+          },
+          child: Scaffold(
+            backgroundColor: AppColors.bgDeep,
+            body: IndexedStack(
+              index: _selectedIndex,
+              children: [
+                _loadedTabs.contains(0)
+                    ? HomeScreen(
+                        isActive: _selectedIndex == 0,
+                        onStartRun: () => _onTabSelected(1),
+                        scrollController: _homeScrollController,
+                      )
+                    : const SizedBox.shrink(),
+                _loadedTabs.contains(1)
+                    ? MapScreenFeature(isActive: _selectedIndex == 1)
+                    : const SizedBox.shrink(),
+                _loadedTabs.contains(2)
+                    ? ProfilePage(
+                        scrollController: _profileScrollController,
+                      )
+                    : const SizedBox.shrink(),
+              ],
             ),
-          );
-        },
-      ),
+            bottomNavigationBar: AnimatedSlide(
+              offset: isRunActive ? const Offset(0, 1.2) : Offset.zero,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              child: AnimatedOpacity(
+                opacity: isRunActive ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 180),
+                child: isRunActive
+                    ? const SizedBox(height: 0)
+                    : _buildPremiumBottomNav(context),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

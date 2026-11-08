@@ -46,6 +46,12 @@ class SummaryVictoryHeader extends StatelessWidget {
             Expanded(
               child: Row(
                 children: [
+                  const AvatarWidget(
+                    size: 32,
+                    isRunning: false,
+                    semanticsLabel: 'Runner avatar victory stance',
+                  ),
+                  const SizedBox(width: AppSpacing.s8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -76,11 +82,10 @@ class SummaryVictoryHeader extends StatelessWidget {
                         const SizedBox(width: 5),
                         Text(
                           isRejected ? 'Run rejected' : 'Run complete',
-                          style: TextStyle(
+                          style: AppText.caption.copyWith(
                             color: isRejected
                                 ? AppColors.error
                                 : AppColors.accent,
-                            fontSize: 10,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.8,
                           ),
@@ -97,9 +102,8 @@ class SummaryVictoryHeader extends StatelessWidget {
                             : profile!.username,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppText.bodySmall.copyWith(
+                        style: AppText.caption.copyWith(
                           color: AppColors.textMuted,
-                          fontSize: 11,
                         ),
                       ),
                     ),
@@ -140,7 +144,6 @@ class SummaryVictoryHeader extends StatelessWidget {
           headline,
           style: AppText.headingSmall.copyWith(
             color: isRejected ? AppColors.error : AppColors.textPrimary,
-            fontSize: 20,
             fontWeight: FontWeight.w700,
             letterSpacing: -0.3,
           ),
@@ -171,9 +174,8 @@ class SummaryVictoryHeader extends StatelessWidget {
                 Expanded(
                   child: Text(
                     rejectionReason!,
-                    style: const TextStyle(
+                    style: AppText.caption.copyWith(
                       color: AppColors.textPrimary,
-                      fontSize: 12,
                       height: 1.35,
                     ),
                   ),

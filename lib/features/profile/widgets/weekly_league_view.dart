@@ -140,14 +140,10 @@ class _WeeklyLeagueViewState extends State<WeeklyLeagueView> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSpacing.s48),
-        child: Center(
-          child: CircularProgressIndicator(
-            color: AppColors.accent,
-            strokeWidth: 2,
-          ),
-        ),
+      return AppLoadingView(
+        label: 'Loading weekly league standings...',
+        painterSize: 52,
+        onRetry: _fetchLeagueStandings,
       );
     }
 

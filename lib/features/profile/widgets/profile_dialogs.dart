@@ -262,18 +262,9 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
         const SizedBox(height: AppSpacing.s16),
 
         if (_isLoading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.s24),
-            child: Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: AppColors.accent,
-                ),
-              ),
-            ),
+          const AppLoadingView(
+            label: 'Loading running teams...',
+            painterSize: 44,
           )
         else if (_serverTeams.isEmpty)
           Container(
@@ -478,13 +469,11 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
                       _setTeam(name);
                     },
               child: _isSubmitting
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.bgDeep,
-                      ),
+                  ? const InlineLoading(
+                      size: 16,
+                      strokeWidth: 2,
+                      color: AppColors.bgDeep,
+                      semanticsLabel: 'Saving team...',
                     )
                   : const Text(
                       'Save',

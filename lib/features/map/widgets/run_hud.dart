@@ -148,6 +148,48 @@ class _RunHudState extends State<RunHud> {
                 ),
               ),
 
+              // Live Runner Avatar Buddy
+              if (widget.isRunActive)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                  child: Center(
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 240),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.s10,
+                        vertical: AppSpacing.s4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: palette.surface2,
+                        borderRadius: AppSpacing.brFull,
+                        border: Border.all(color: palette.borderSubtle, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AvatarWidget(
+                            size: 20,
+                            isRunning: !widget.isAutoPaused,
+                            semanticsLabel: 'Runner buddy pacing indicator',
+                          ),
+                          const SizedBox(width: AppSpacing.s6),
+                          Flexible(
+                            child: Text(
+                              widget.isAutoPaused ? 'Paused' : 'Pacing with you',
+                              style: AppText.caption.copyWith(
+                                color: palette.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
               // Auto-Pause Banner
               if (widget.isAutoPaused && widget.isRunActive) ...[
                 Semantics(
@@ -175,10 +217,9 @@ class _RunHudState extends State<RunHud> {
                         const SizedBox(width: AppSpacing.s6),
                         Text(
                           'Auto-paused • Speed < 2.5 km/h',
-                          style: TextStyle(
+                          style: AppText.caption.copyWith(
                             color: palette.warning,
                             fontWeight: FontWeight.w700,
-                            fontSize: 10,
                             letterSpacing: 0.3,
                           ),
                         ),
@@ -210,21 +251,18 @@ class _RunHudState extends State<RunHud> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(
-                          width: 10,
-                          height: 10,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
-                            color: palette.accent,
-                          ),
+                        InlineLoading(
+                          size: 10,
+                          strokeWidth: 1.5,
+                          color: palette.accent,
+                          semanticsLabel: 'Finding GPS...',
                         ),
                         const SizedBox(width: AppSpacing.s6),
                         Text(
                           'Finding GPS...',
-                          style: TextStyle(
+                          style: AppText.caption.copyWith(
                             color: palette.textSecondary,
                             fontWeight: FontWeight.w600,
-                            fontSize: 10,
                             letterSpacing: 0.3,
                           ),
                         ),

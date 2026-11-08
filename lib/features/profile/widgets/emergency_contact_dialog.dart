@@ -69,10 +69,15 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const AlertDialog(
+      return AlertDialog(
         backgroundColor: AppColors.surface,
-        content: Center(
-          child: CircularProgressIndicator(color: AppColors.accent),
+        shape: RoundedRectangleBorder(
+          borderRadius: AppRadius.br16,
+          side: const BorderSide(color: AppColors.border),
+        ),
+        content: const AppLoadingView(
+          label: 'Loading safety contacts...',
+          painterSize: 48,
         ),
       );
     }

@@ -338,20 +338,15 @@ void showProfileAuthModal(
                                 }
                               },
                         child: isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.onAccent,
-                                ),
+                            ? const InlineLoading(
+                                size: 20,
+                                strokeWidth: 2,
+                                color: AppColors.onAccent,
+                                semanticsLabel: 'Sending SMS verification code...',
                               )
-                            : const Text(
+                            : Text(
                                 'Send SMS Verification Code',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                ),
+                                style: AppText.button.copyWith(color: AppColors.onAccent),
                               ),
                       ),
                     ] else ...[
@@ -450,20 +445,15 @@ void showProfileAuthModal(
                                 }
                               },
                         child: isLoading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.onAccent,
-                                ),
+                            ? const InlineLoading(
+                                size: 20,
+                                strokeWidth: 2,
+                                color: AppColors.onAccent,
+                                semanticsLabel: 'Verifying code...',
                               )
-                            : const Text(
+                            : Text(
                                 'Verify Code & Connect',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                ),
+                                style: AppText.button.copyWith(color: AppColors.onAccent),
                               ),
                       ),
                       TextButton(

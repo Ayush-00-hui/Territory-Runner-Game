@@ -18,8 +18,14 @@ import '../history/run_history_screen.dart';
 class HomeScreen extends StatelessWidget {
   final VoidCallback? onStartRun;
   final bool isActive;
+  final ScrollController? scrollController;
 
-  const HomeScreen({super.key, this.onStartRun, this.isActive = true});
+  const HomeScreen({
+    super.key,
+    this.onStartRun,
+    this.isActive = true,
+    this.scrollController,
+  });
 
   Widget _buildSkeleton(BuildContext context, double topPad, double bottomPad) {
     return SingleChildScrollView(
@@ -110,6 +116,7 @@ class HomeScreen extends StatelessWidget {
                   await SyncQueueService().syncPendingRuns();
                 },
                 child: SingleChildScrollView(
+                  controller: scrollController,
                   physics: const AlwaysScrollableScrollPhysics(
                     parent: BouncingScrollPhysics(),
                   ),
