@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'app_colors.dart';
+import 'app_palette.dart';
 import 'app_text.dart';
 import '../motion/motion.dart';
 
@@ -18,6 +19,7 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.bgDeep,
       canvasColor: AppColors.bgDeep,
       cardColor: AppColors.surface,
+      extensions: const [AppPalette.dark],
 
       // Color Scheme
       colorScheme: const ColorScheme.dark(
@@ -239,6 +241,174 @@ class AppTheme {
       ),
 
       // Shared Page Transitions (Fade + subtle slide)
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: _SportsPageTransitionsBuilder(),
+          TargetPlatform.iOS: _SportsPageTransitionsBuilder(),
+        },
+      ),
+    );
+  }
+
+  /// Outdoor High-Contrast Daylight Light Theme
+  /// Calibrated for outdoor visibility under direct sunlight with WCAG AA compliance.
+  static ThemeData get lightTheme {
+    const palette = AppPalette.light;
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      fontFamily: AppText.fontFamily,
+      scaffoldBackgroundColor: palette.bgDeep,
+      canvasColor: palette.bgDeep,
+      cardColor: palette.surface,
+      extensions: const [palette],
+
+      colorScheme: ColorScheme.light(
+        primary: palette.primary,
+        onPrimary: palette.onPrimary,
+        primaryContainer: palette.primaryContainer,
+        secondary: palette.accent,
+        onSecondary: palette.onAccent,
+        secondaryContainer: palette.accentContainer,
+        surface: palette.surface,
+        onSurface: palette.textPrimary,
+        surfaceContainer: palette.surface2,
+        surfaceContainerHigh: palette.bgElevated,
+        error: palette.error,
+        onError: palette.onPrimary,
+        outline: palette.border,
+        outlineVariant: palette.borderSubtle,
+        scrim: palette.scrim,
+      ),
+
+      textTheme: TextTheme(
+        displayLarge: AppText.displayLarge.copyWith(color: palette.textPrimary),
+        displayMedium: AppText.displayMedium.copyWith(
+          color: palette.textPrimary,
+        ),
+        displaySmall: AppText.displaySmall.copyWith(color: palette.textPrimary),
+        headlineLarge: AppText.headlineLarge.copyWith(
+          color: palette.textPrimary,
+        ),
+        headlineMedium: AppText.headlineMedium.copyWith(
+          color: palette.textPrimary,
+        ),
+        headlineSmall: AppText.headlineSmall.copyWith(
+          color: palette.textPrimary,
+        ),
+        titleLarge: AppText.titleLarge.copyWith(color: palette.textPrimary),
+        titleMedium: AppText.titleMedium.copyWith(color: palette.textPrimary),
+        titleSmall: AppText.titleSmall.copyWith(color: palette.textPrimary),
+        bodyLarge: AppText.bodyLarge.copyWith(color: palette.textPrimary),
+        bodyMedium: AppText.bodyMedium.copyWith(color: palette.textPrimary),
+        bodySmall: AppText.bodySmall.copyWith(color: palette.textSecondary),
+        labelLarge: AppText.labelLarge.copyWith(color: palette.textPrimary),
+        labelMedium: AppText.labelMedium.copyWith(color: palette.textPrimary),
+        labelSmall: AppText.labelSmall.copyWith(color: palette.textSecondary),
+      ),
+
+      appBarTheme: AppBarTheme(
+        backgroundColor: palette.bgDeep,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        iconTheme: IconThemeData(color: palette.textPrimary, size: 20),
+        titleTextStyle: TextStyle(
+          fontFamily: AppText.fontFamily,
+          color: palette.textPrimary,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          systemNavigationBarColor: palette.bgDeep,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
+      ),
+
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: palette.primary,
+          foregroundColor: palette.onPrimary,
+          elevation: 1,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: AppText.button,
+        ),
+      ),
+
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: palette.primary,
+          side: BorderSide(color: palette.primary, width: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          textStyle: AppText.button,
+        ),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: palette.surface2,
+        hintStyle: AppText.caption.copyWith(color: palette.textMuted),
+        labelStyle: AppText.bodyMedium.copyWith(color: palette.textSecondary),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide(color: palette.border, width: 1.0),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide(color: palette.border, width: 1.0),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide(color: palette.primary, width: 1.2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12.0),
+          borderSide: BorderSide(color: palette.error, width: 1.0),
+        ),
+      ),
+
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return palette.onPrimary;
+          }
+          return palette.textMuted;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return palette.primary;
+          }
+          return palette.surface2;
+        }),
+        trackOutlineColor: WidgetStatePropertyAll(palette.border),
+      ),
+
+      sliderTheme: SliderThemeData(
+        activeTrackColor: palette.primary,
+        inactiveTrackColor: palette.surface2,
+        thumbColor: palette.primary,
+        overlayColor: palette.primaryContainer,
+        trackHeight: 4.0,
+      ),
+
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: palette.primary,
+        linearTrackColor: palette.surface2,
+        circularTrackColor: palette.surface2,
+      ),
+
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: _SportsPageTransitionsBuilder(),

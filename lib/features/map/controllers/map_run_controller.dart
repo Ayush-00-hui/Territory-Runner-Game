@@ -315,8 +315,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       _workoutTimeline!.onSnapshotUpdated = (snapshot) {
         workoutSnapshotNotifier.value = snapshot;
       };
-      workoutSnapshotNotifier.value =
-          _workoutTimeline!.getSnapshot(currentDistanceM: 0.0);
+      workoutSnapshotNotifier.value = _workoutTimeline!.getSnapshot(
+        currentDistanceM: 0.0,
+      );
     } else {
       _workoutTimeline = null;
       workoutSnapshotNotifier.value = null;

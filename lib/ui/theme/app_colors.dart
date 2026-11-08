@@ -63,18 +63,18 @@ class AppColors {
     0xFFA0AAB5,
   ); // Slate Titanium (8.0:1 AAA on surface)
   static const Color textMuted = Color(
-    0xFF6B7684,
-  ); // Muted Graphite (4.0:1 AA on surface)
+    0xFF8692A0,
+  ); // Muted Slate (5.8:1 AAA/AA on surface)
 
   // Map Territory Tokens
   static const Color mine = primary; // Player territory (Electric Blue #2D9CDB)
-  static const Color rival = Color(
-    0xFFEB5757,
-  ); // Rival territory & pacer markers (Coral Red #EB5757)
+  static const Color rival = Color(0xFFFF6B6B); // Rival territory & pacer markers (Coral Pink #FF6B6B, distinct from error)
 
   // Status & Metric Semantics
   static const Color warning = accent; // Mustard Yellow (#F2C94C)
-  static const Color error = Color(0xFFEB5757); // Coral Red (#EB5757)
+  static const Color error = Color(
+    0xFFE53935,
+  ); // Safety Alert Crimson (#E53935)
   static const Color info = primary; // Electric Blue (#2D9CDB)
   static const Color success = Color(
     0xFF27AE60,
