@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
+import '../../../models/interval_workout.dart';
 import '../../../models/run_log_entry.dart';
 import '../../../models/runner_profile.dart';
 import '../../../services/app_preferences.dart';
@@ -34,6 +35,8 @@ class SummarySheet extends StatefulWidget {
   final String? rejectionReason;
   final double elevationGainMeters;
   final String? ghostResult;
+  final IntervalWorkoutPlan? workoutPlan;
+  final List<WorkoutPhaseExecution>? workoutExecutions;
 
   const SummarySheet({
     super.key,
@@ -48,6 +51,8 @@ class SummarySheet extends StatefulWidget {
     this.rejectionReason,
     this.elevationGainMeters = 0.0,
     this.ghostResult,
+    this.workoutPlan,
+    this.workoutExecutions,
   });
 
   static Future<void> show({
@@ -63,6 +68,8 @@ class SummarySheet extends StatefulWidget {
     String? rejectionReason,
     double elevationGainMeters = 0.0,
     String? ghostResult,
+    IntervalWorkoutPlan? workoutPlan,
+    List<WorkoutPhaseExecution>? workoutExecutions,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -83,6 +90,8 @@ class SummarySheet extends StatefulWidget {
         rejectionReason: rejectionReason,
         elevationGainMeters: elevationGainMeters,
         ghostResult: ghostResult,
+        workoutPlan: workoutPlan,
+        workoutExecutions: workoutExecutions,
       ),
     );
   }
@@ -310,6 +319,14 @@ class _SummarySheetState extends State<SummarySheet>
               ),
             ],
 
+            if (widget.workoutExecutions != null &&
+                widget.workoutExecutions!.isNotEmpty) ...[
+              _WorkoutPhasesSummaryCard(
+                plan: widget.workoutPlan,
+                executions: widget.workoutExecutions!,
+              ),
+            ],
+
             const SizedBox(height: AppSpacing.s16),
 
             // 2. Animated Metrics Grid & Splits
@@ -523,6 +540,165 @@ class _SummarySheetState extends State<SummarySheet>
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _WorkoutPhasesSummaryCard extends StatelessWidget {
+  final IntervalWorkoutPlan? plan;
+  final List<WorkoutPhaseExecution> executions;
+
+  const _WorkoutPhasesSummaryCard({this.plan, required this.executions});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: AppSpacing.s12),
+      padding: const EdgeInsets.all(AppSpacing.s16),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: AppRadius.br16,
+        border: Border.all(color: AppColors.borderSubtle, width: 1.0),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.timer_outlined,
+                size: 16,
+                color: AppColors.accent,
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Expanded(
+                child: Text(
+                  plan?.name ?? 'Interval workout',
+                  style: AppText.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                '${executions.length} phases',
+                style: AppText.caption.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          Row(
+            children: [
+              Expanded(
+                flex: 3,
+                child: Text(
+                  'Phase',
+                  style: AppText.caption.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'Planned',
+                  textAlign: TextAlign.right,
+                  style: AppText.caption.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 2,
+                child: Text(
+                  'Actual',
+                  textAlign: TextAlign.right,
+                  style: AppText.caption.copyWith(
+                    color: AppColors.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s8),
+          const Divider(height: 1, color: AppColors.borderSubtle),
+          const SizedBox(height: AppSpacing.s8),
+          ...executions.map((e) {
+            final phaseColor = e.phase.type.color;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Semantics(
+                label:
+                    '${e.phase.name}. Planned ${e.phase.formattedTarget}, actual ${e.formattedActualDuration}${e.isSkipped ? ', skipped' : ''}.',
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: phaseColor,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      flex: 3,
+                      child: Text(
+                        e.phase.name,
+                        style: AppText.bodySmall.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        e.phase.formattedTarget,
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontFamily: AppText.fontFamily,
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          fontFeatures: [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        e.isSkipped
+                            ? '${e.formattedActualDuration} (skip)'
+                            : e.formattedActualDuration,
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontFamily: AppText.fontFamily,
+                          color: e.isSkipped
+                              ? AppColors.warning
+                              : AppColors.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }

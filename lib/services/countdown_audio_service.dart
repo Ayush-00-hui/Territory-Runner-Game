@@ -1,4 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../core/logging/app_logger.dart';
@@ -17,8 +18,12 @@ class CountdownAudioService {
 
   CountdownAudioService._internal();
 
+  @visibleForTesting
+  CountdownAudioService.forTesting();
+
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
+    _initialized = true;
     try {
       _player = AudioPlayer();
       await AudioPlayer.global.setAudioContext(
@@ -84,6 +89,30 @@ class CountdownAudioService {
       _tts?.speak('Go!').catchError((_) {});
     } catch (e) {
       AppLogger.warning('Go audio notice: $e', tag: 'CountdownAudio');
+    }
+  }
+
+  /// Plays short rising chime on entering a RUN / WORK interval. Tones only, zero spoken voice.
+  Future<void> playIntervalWork() async {
+    if (!AppPreferences().isSoundEffectsEnabled) return;
+    try {
+      await _ensureInitialized();
+      _player?.stop().catchError((_) {});
+      _player?.play(AssetSource('audio/interval_work.wav')).catchError((_) {});
+    } catch (e) {
+      AppLogger.warning('Interval work tone notice: $e', tag: 'CountdownAudio');
+    }
+  }
+
+  /// Plays short descending cue on entering a WALK / REST / COOL-DOWN interval. Tones only, zero spoken voice.
+  Future<void> playIntervalRest() async {
+    if (!AppPreferences().isSoundEffectsEnabled) return;
+    try {
+      await _ensureInitialized();
+      _player?.stop().catchError((_) {});
+      _player?.play(AssetSource('audio/interval_rest.wav')).catchError((_) {});
+    } catch (e) {
+      AppLogger.warning('Interval rest tone notice: $e', tag: 'CountdownAudio');
     }
   }
 

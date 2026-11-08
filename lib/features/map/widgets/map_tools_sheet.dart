@@ -18,9 +18,11 @@ class MapToolsSheet extends StatelessWidget {
   final VoidCallback onOpenOfflineMaps;
   final VoidCallback onTriggerSos;
   final VoidCallback? onOpenGhostRunner;
+  final VoidCallback? onOpenIntervalWorkouts;
   final String? activePacerLabel;
   final String? activeGoalLabel;
   final String? activeGhostLabel;
+  final String? activeWorkoutLabel;
   final bool isAmoledActive;
   final bool? isDemoMode;
 
@@ -33,9 +35,11 @@ class MapToolsSheet extends StatelessWidget {
     required this.onOpenOfflineMaps,
     required this.onTriggerSos,
     this.onOpenGhostRunner,
+    this.onOpenIntervalWorkouts,
     this.activePacerLabel,
     this.activeGoalLabel,
     this.activeGhostLabel,
+    this.activeWorkoutLabel,
     this.isAmoledActive = false,
     this.isDemoMode,
   });
@@ -49,9 +53,11 @@ class MapToolsSheet extends StatelessWidget {
     required VoidCallback onOpenOfflineMaps,
     required VoidCallback onTriggerSos,
     VoidCallback? onOpenGhostRunner,
+    VoidCallback? onOpenIntervalWorkouts,
     String? activePacerLabel,
     String? activeGoalLabel,
     String? activeGhostLabel,
+    String? activeWorkoutLabel,
     bool isAmoledActive = false,
     bool? isDemoMode,
   }) {
@@ -88,9 +94,16 @@ class MapToolsSheet extends StatelessWidget {
                 onOpenGhostRunner();
               }
             : null,
+        onOpenIntervalWorkouts: onOpenIntervalWorkouts != null
+            ? () {
+                Navigator.pop(ctx);
+                onOpenIntervalWorkouts();
+              }
+            : null,
         activePacerLabel: activePacerLabel,
         activeGoalLabel: activeGoalLabel,
         activeGhostLabel: activeGhostLabel,
+        activeWorkoutLabel: activeWorkoutLabel,
         isAmoledActive: isAmoledActive,
         isDemoMode: isDemoMode,
       ),
@@ -142,6 +155,17 @@ class MapToolsSheet extends StatelessWidget {
                 subtitle: activeGhostLabel ?? 'Pace against past efforts (Off)',
                 accentColor: AppColors.accent,
                 onTap: onOpenGhostRunner ?? () {},
+              ),
+              const SizedBox(height: AppSpacing.s8),
+
+              // 4. Interval Workouts
+              _ToolTile(
+                icon: Icons.timer_outlined,
+                title: 'Workout plan',
+                subtitle:
+                    activeWorkoutLabel ?? 'Free run (No structured intervals)',
+                accentColor: AppColors.accent,
+                onTap: onOpenIntervalWorkouts ?? () {},
               ),
               const SizedBox(height: AppSpacing.s8),
 

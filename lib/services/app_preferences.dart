@@ -25,6 +25,7 @@ class AppPreferences {
   static const String _prefLeftHandedKey = 'pref_left_handed_mode';
   static const String _prefDailyGoalKmKey = 'pref_daily_goal_km';
   static const String _prefCountdownVoiceKey = 'pref_countdown_voice_enabled';
+  static const String _prefSoundEffectsKey = 'pref_sound_effects_enabled';
   static const String _prefAutoSaveCardKey = 'pref_auto_save_run_card';
   static const String _prefDemoModeUnlockedKey = 'pref_demo_mode_unlocked';
   static const String _prefDemoModeEnabledKey = 'pref_demo_mode_enabled';
@@ -42,6 +43,7 @@ class AppPreferences {
   bool _isLeftHandedMode = false;
   double? _dailyGoalKm;
   bool _isCountdownVoiceEnabled = true;
+  bool _isSoundEffectsEnabled = true;
   bool _isAutoSaveCardEnabled = true;
   bool _isDemoModeUnlocked = false;
   bool _isDemoModeEnabled = false;
@@ -71,6 +73,7 @@ class AppPreferences {
   bool get isLeftHandedMode => _isLeftHandedMode;
   double? get dailyGoalKm => _dailyGoalKm;
   bool get isCountdownVoiceEnabled => _isCountdownVoiceEnabled;
+  bool get isSoundEffectsEnabled => _isSoundEffectsEnabled;
   bool get isAutoSaveCardEnabled => _isAutoSaveCardEnabled;
   bool get isDemoModeUnlocked => _isDemoModeUnlocked;
   bool get isDemoModeEnabled => _isDemoModeEnabled;
@@ -97,6 +100,7 @@ class AppPreferences {
       _isHapticsEnabled = prefs.getBool(_prefHapticsKey) ?? true;
       AppMotion.hapticsEnabled = _isHapticsEnabled;
       _isCountdownVoiceEnabled = prefs.getBool(_prefCountdownVoiceKey) ?? true;
+      _isSoundEffectsEnabled = prefs.getBool(_prefSoundEffectsKey) ?? true;
       _isAutoSaveCardEnabled = prefs.getBool(_prefAutoSaveCardKey) ?? true;
       _isLeftHandedMode = prefs.getBool(_prefLeftHandedKey) ?? false;
       leftHandedModeNotifier.value = _isLeftHandedMode;
@@ -219,6 +223,15 @@ class AppPreferences {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefCountdownVoiceKey, enabled);
+    } catch (_) {}
+  }
+
+  /// Toggles audio cues and sound effects for intervals and countdowns
+  Future<void> toggleSoundEffects(bool enabled) async {
+    _isSoundEffectsEnabled = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefSoundEffectsKey, enabled);
     } catch (_) {}
   }
 
@@ -726,6 +739,10 @@ class AppPreferences {
   Future<void> triggerRunCompleteHaptic() => triggerHaptic([0, 300, 150, 300]);
   Future<void> triggerGoalAchievedHaptic() =>
       triggerHaptic([0, 150, 80, 150, 80, 250]);
+
+  /// Interval workout phase transition haptics
+  Future<void> triggerIntervalRunHaptic() => triggerHaptic([0, 160, 80, 160]);
+  Future<void> triggerIntervalWalkHaptic() => triggerHaptic([0, 90]);
   // Auto-pause and auto-resume haptics removed to prevent sensory vibration clutter
   Future<void> triggerAutoPauseHaptic() async {}
   Future<void> triggerAutoResumeHaptic() async {}

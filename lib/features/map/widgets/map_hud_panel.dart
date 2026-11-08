@@ -65,6 +65,8 @@ class MapHudPanel extends StatelessWidget {
             },
             isBatterySaverActive: BatterySaverService().isBatterySaverEnabled,
             ghostTelemetryNotifier: controller.ghostTelemetryNotifier,
+            workoutSnapshotNotifier: controller.workoutSnapshotNotifier,
+            onSkipWorkoutPhase: controller.skipWorkoutPhase,
             onToggleAmoledSaver: () {
               BatterySaverService().setAmoledHudActive(true);
             },

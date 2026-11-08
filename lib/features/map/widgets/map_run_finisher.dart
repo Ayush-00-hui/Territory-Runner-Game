@@ -5,6 +5,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../models/interval_workout.dart';
 import '../../../models/run_log_entry.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/calorie_model_engine.dart';
@@ -140,6 +141,9 @@ void handleFinishRun({
     areaSqMeters: finalArea > 0 ? finalArea : null,
     elevationGainMeters: elevationGain,
     ghostResult: summary['ghostResult'] as String?,
+    workoutPlan: summary['workoutPlan'] as IntervalWorkoutPlan?,
+    workoutExecutions:
+        summary['workoutExecutions'] as List<WorkoutPhaseExecution>?,
   );
 
   // Opt-in flow: prompt for notification permissions only after capturing territory

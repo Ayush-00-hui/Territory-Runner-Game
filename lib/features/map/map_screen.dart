@@ -23,6 +23,7 @@ import 'models/run_telemetry.dart';
 import 'widgets/amoled_battery_saver_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
 import 'widgets/ghost_runner_picker_sheet.dart';
+import 'widgets/interval_workout_picker_sheet.dart';
 import 'widgets/map_demo_runner.dart';
 import 'widgets/map_exit_dialog.dart';
 import 'widgets/map_floating_controls.dart';
@@ -291,9 +292,19 @@ class _MapScreenState extends State<MapScreen> {
           },
         );
       },
+      onOpenIntervalWorkouts: () {
+        IntervalWorkoutPickerSheet.show(
+          context: context,
+          currentPlan: controller.activeWorkoutPlan,
+          onPlanSelected: (plan) {
+            controller.setWorkoutPlan(plan);
+          },
+        );
+      },
       activeGhostLabel: controller.ghostMode != GhostMode.off
           ? controller.ghostMode.label
           : null,
+      activeWorkoutLabel: controller.activeWorkoutPlan?.name,
     );
   }
 

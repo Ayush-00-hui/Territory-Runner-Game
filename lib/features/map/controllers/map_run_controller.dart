@@ -6,12 +6,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../models/activity_type.dart';
+import '../../../models/interval_workout.dart';
 import '../../../models/run_goal.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/auto_pause_engine.dart';
 import '../../../services/elevation_incline_service.dart';
 import '../../../services/ghost_runner_service.dart';
 import '../../../services/gps_quality_service.dart';
+import '../../../services/interval_workout_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/motion_sensor_service.dart';
 import '../../../services/run_recovery_service.dart';
@@ -48,6 +50,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   final ValueNotifier<LatLng?> ghostLocationNotifier = ValueNotifier<LatLng?>(
     null,
   );
+  final ValueNotifier<IntervalWorkoutSnapshot?> workoutSnapshotNotifier =
+      ValueNotifier<IntervalWorkoutSnapshot?>(null);
 
   // Run & Telemetry State
   bool _isRunActive = false;
@@ -70,6 +74,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   SuggestedRoute? _activeSuggestedRoute;
   GhostMode _ghostMode = GhostMode.off;
   GhostSelectionResult? _activeGhostResult;
+  IntervalWorkoutPlan? _activeWorkoutPlan;
+  IntervalWorkoutTimeline? _workoutTimeline;
   RunGoal _activeGoal = const RunGoal(
     type: GoalType.distance,
     targetValue: 5.0,
@@ -131,6 +137,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   SuggestedRoute? get activeSuggestedRoute => _activeSuggestedRoute;
   GhostMode get ghostMode => _ghostMode;
   GhostSelectionResult? get activeGhostResult => _activeGhostResult;
+  IntervalWorkoutPlan? get activeWorkoutPlan => _activeWorkoutPlan;
+  IntervalWorkoutTimeline? get workoutTimeline => _workoutTimeline;
   RunGoal get activeGoal => _activeGoal;
   List<LatLng> get runCoordinates => List.unmodifiable(_runCoordinates);
   List<Position> get recentPositions => List.unmodifiable(_recentPositions);
@@ -221,6 +229,21 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     notifyListeners();
   }
 
+  void setWorkoutPlan(IntervalWorkoutPlan? plan) {
+    _activeWorkoutPlan = plan;
+    if (!_isRunActive) {
+      _workoutTimeline = null;
+      workoutSnapshotNotifier.value = null;
+    }
+    notifyListeners();
+  }
+
+  void skipWorkoutPhase() {
+    _workoutTimeline?.skipPhase(
+      currentRunDistanceMeters: _runDistanceKm * 1000.0,
+    );
+  }
+
   void startCountdown() {
     _isCountingDown = true;
     notifyListeners();
@@ -267,6 +290,37 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _movingDurationSeconds = 0;
     _goalCompletedAnnounced = false;
     _autoPauseEngine.reset();
+
+    if (_activeWorkoutPlan != null) {
+      _workoutTimeline = IntervalWorkoutTimeline(
+        plan: _activeWorkoutPlan!,
+        initialDistanceM: 0.0,
+      );
+      _workoutTimeline!.onSnapshotUpdated = (snapshot) {
+        workoutSnapshotNotifier.value = snapshot;
+      };
+      workoutSnapshotNotifier.value = _workoutTimeline!.getSnapshot(
+        currentDistanceM: 0.0,
+      );
+    } else {
+      _workoutTimeline = null;
+      workoutSnapshotNotifier.value = null;
+    }
+
+    if (_activeWorkoutPlan != null) {
+      _workoutTimeline = IntervalWorkoutTimeline(
+        plan: _activeWorkoutPlan!,
+        initialDistanceM: 0.0,
+      );
+      _workoutTimeline!.onSnapshotUpdated = (snapshot) {
+        workoutSnapshotNotifier.value = snapshot;
+      };
+      workoutSnapshotNotifier.value =
+          _workoutTimeline!.getSnapshot(currentDistanceM: 0.0);
+    } else {
+      _workoutTimeline = null;
+      workoutSnapshotNotifier.value = null;
+    }
 
     _startRunTimer();
     _updateGhostTelemetry();
@@ -340,6 +394,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       'endTime': endTime,
       'ghostResult': ghostSummary,
       'ghostRun': _activeGhostResult?.matchedRun,
+      'workoutPlan': _activeWorkoutPlan,
+      'workoutExecutions': _workoutTimeline?.executions,
     };
   }
 
@@ -416,6 +472,10 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
         final deltaMeters = dist(_runCoordinates.last, latLng);
         if (deltaMeters >= 2.0) {
           _runDistanceKm += (deltaMeters / 1000.0);
+          _workoutTimeline?.tick(
+            secondsDelta: 0,
+            currentRunDistanceMeters: _runDistanceKm * 1000.0,
+          );
           _runCoordinates.add(latLng);
           _recentPositions.add(pos);
           _autoPauseEngine.markMovement();
@@ -485,14 +545,20 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
         _isAutoPaused = true;
         _locationService.setTrackingMode(GpsTrackingMode.paused);
         telemetryNotifier.setAutoPaused(true);
+        _workoutTimeline?.pause();
       } else if (transition == AutoPauseTransition.resumed) {
         _isAutoPaused = false;
         _locationService.setTrackingMode(GpsTrackingMode.activeRun);
         telemetryNotifier.setAutoPaused(false);
+        _workoutTimeline?.resume();
       }
 
       if (!_autoPauseEngine.isAutoPaused) {
         _movingDurationSeconds++;
+        _workoutTimeline?.tick(
+          secondsDelta: 1,
+          currentRunDistanceMeters: _runDistanceKm * 1000.0,
+        );
       }
 
       telemetryNotifier.tick(isAutoPaused: _isAutoPaused);

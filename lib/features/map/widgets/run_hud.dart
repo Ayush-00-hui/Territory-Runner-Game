@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../models/run_goal.dart';
 import '../../../services/ghost_runner_service.dart';
+import '../../../services/interval_workout_service.dart';
 import '../../../ui/ui.dart';
+import 'interval_workout_banner.dart';
 import 'run_hud_closure_bar.dart';
 import 'run_hud_controls_bar.dart';
 import 'run_hud_expanded_drawer.dart';
@@ -36,6 +38,8 @@ class RunHud extends StatefulWidget {
   final bool isBatterySaverActive;
   final bool isSearchingGps;
   final ValueNotifier<GhostTelemetry?>? ghostTelemetryNotifier;
+  final ValueNotifier<IntervalWorkoutSnapshot?>? workoutSnapshotNotifier;
+  final VoidCallback? onSkipWorkoutPhase;
   final VoidCallback onToggleRun;
   final VoidCallback onSealShape;
   final VoidCallback onFinishRun;
@@ -67,6 +71,8 @@ class RunHud extends StatefulWidget {
     this.isBatterySaverActive = false,
     this.isSearchingGps = false,
     this.ghostTelemetryNotifier,
+    this.workoutSnapshotNotifier,
+    this.onSkipWorkoutPhase,
     required this.onToggleRun,
     required this.onSealShape,
     required this.onFinishRun,
@@ -238,6 +244,21 @@ class _RunHudState extends State<RunHud> {
                   builder: (context, ghost, _) {
                     if (ghost == null) return const SizedBox.shrink();
                     return _GhostHudChip(telemetry: ghost);
+                  },
+                ),
+              ],
+
+              // Workout Interval Banner
+              if (widget.isRunActive &&
+                  widget.workoutSnapshotNotifier != null) ...[
+                ValueListenableBuilder<IntervalWorkoutSnapshot?>(
+                  valueListenable: widget.workoutSnapshotNotifier!,
+                  builder: (context, workout, _) {
+                    if (workout == null) return const SizedBox.shrink();
+                    return IntervalWorkoutBanner(
+                      snapshot: workout,
+                      onSkipPhase: widget.onSkipWorkoutPhase ?? () {},
+                    );
                   },
                 ),
               ],
