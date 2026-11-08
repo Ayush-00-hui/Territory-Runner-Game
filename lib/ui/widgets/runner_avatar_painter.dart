@@ -1,7 +1,9 @@
 import 'dart:io' show Platform;
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 import '../../models/runner_avatar.dart';
 import '../../models/wardrobe_catalog.dart';
@@ -91,7 +93,8 @@ class _AvatarWidgetState extends State<AvatarWidget>
         painter: RunnerAvatarPainter(
           avatar: effectiveAvatar,
           progress: reduceMotion ? 0.0 : _strideController.value,
-          isReadyPose: effectiveAvatar.isReadyPose || !widget.isRunning || reduceMotion,
+          isReadyPose:
+              effectiveAvatar.isReadyPose || !widget.isRunning || reduceMotion,
         ),
       );
     }
@@ -524,7 +527,8 @@ class RunnerAvatarPainter extends CustomPainter {
         ..lineTo(headCenter.dx + 6 * s, headCenter.dy + 1 * s)
         ..close();
       canvas.drawPath(billPath, capPaint);
-    } else if (headwearItem.id.contains('headband') || headwearItem.id.contains('crown')) {
+    } else if (headwearItem.id.contains('headband') ||
+        headwearItem.id.contains('crown')) {
       final bandPaint = Paint()
         ..color = headwearItem.primaryColor
         ..style = PaintingStyle.stroke
@@ -556,7 +560,12 @@ class RunnerAvatarPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(headCenter.dx + 1 * s, headCenter.dy - 2 * s, 11 * s, 5 * s),
+          Rect.fromLTWH(
+            headCenter.dx + 1 * s,
+            headCenter.dy - 2 * s,
+            11 * s,
+            5 * s,
+          ),
           Radius.circular(2 * s),
         ),
         shadesPaint,
@@ -653,11 +662,7 @@ class RunnerAvatarPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 7.5 * s;
-    canvas.drawLine(
-      hip,
-      Offset(hip.dx, hip.dy + 10 * s),
-      tightPaint,
-    );
+    canvas.drawLine(hip, Offset(hip.dx, hip.dy + 10 * s), tightPaint);
 
     // Shoe
     final shoeRect = RRect.fromRectAndRadius(
@@ -712,7 +717,11 @@ class RunnerAvatarPainter extends CustomPainter {
         ..color = accessoryItem.primaryColor
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3.0 * s;
-      canvas.drawCircle(Offset((elbow.dx + hand.dx) / 2, (elbow.dy + hand.dy) / 2), 2.5 * s, watchPaint);
+      canvas.drawCircle(
+        Offset((elbow.dx + hand.dx) / 2, (elbow.dy + hand.dy) / 2),
+        2.5 * s,
+        watchPaint,
+      );
     }
   }
 
@@ -725,7 +734,10 @@ class RunnerAvatarPainter extends CustomPainter {
     required WardrobeItem topItem,
     required WardrobeItem accessoryItem,
   }) {
-    final hand = Offset(shoulder.dx + (isLeft ? -4 * s : 4 * s), shoulder.dy + 25 * s);
+    final hand = Offset(
+      shoulder.dx + (isLeft ? -4 * s : 4 * s),
+      shoulder.dy + 25 * s,
+    );
     canvas.drawLine(shoulder, hand, paint);
 
     final sleevePaint = Paint()
@@ -746,4 +758,3 @@ class RunnerAvatarPainter extends CustomPainter {
       oldDelegate.isReadyPose != isReadyPose ||
       oldDelegate.avatar != avatar;
 }
-

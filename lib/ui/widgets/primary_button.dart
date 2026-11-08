@@ -110,11 +110,7 @@ class _PrimaryButtonState extends State<PrimaryButton> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (widget.isLoading) ...[
-          InlineLoading(
-            size: 18,
-            strokeWidth: 2.0,
-            color: fgColor,
-          ),
+          InlineLoading(size: 18, strokeWidth: 2.0, color: fgColor),
           const SizedBox(width: AppSpacing.s12),
         ] else if (widget.icon != null) ...[
           Icon(widget.icon, color: fgColor, size: 20),
@@ -134,7 +130,9 @@ class _PrimaryButtonState extends State<PrimaryButton> {
       button: true,
       enabled: enabled,
       label: widget.label,
-      hint: !enabled && widget.disabledReason != null ? widget.disabledReason : null,
+      hint: !enabled && widget.disabledReason != null
+          ? widget.disabledReason
+          : null,
       child: Focus(
         onFocusChange: (focused) => setState(() => _isFocused = focused),
         child: AnimatedScale(

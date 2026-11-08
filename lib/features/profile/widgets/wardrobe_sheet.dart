@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../../models/runner_avatar.dart';
 import '../../../models/runner_profile.dart';
 import '../../../models/wardrobe_catalog.dart';
@@ -43,7 +44,9 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
     return ValueListenableBuilder<RunnerAvatar>(
       valueListenable: avatarService.avatarNotifier,
       builder: (context, currentAvatar, _) {
-        final categoryItems = WardrobeCatalog.getItemsByCategory(_selectedCategory);
+        final categoryItems = WardrobeCatalog.getItemsByCategory(
+          _selectedCategory,
+        );
 
         return Scaffold(
           backgroundColor: AppColors.surface,
@@ -51,7 +54,10 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
             backgroundColor: AppColors.surface,
             elevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.close_rounded, color: AppColors.textPrimary),
+              icon: const Icon(
+                Icons.close_rounded,
+                color: AppColors.textPrimary,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
             title: Text(
@@ -64,10 +70,14 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
             actions: [
               IconButton(
                 icon: Icon(
-                  _previewRunning ? Icons.directions_run_rounded : Icons.accessibility_new_rounded,
+                  _previewRunning
+                      ? Icons.directions_run_rounded
+                      : Icons.accessibility_new_rounded,
                   color: AppColors.accent,
                 ),
-                tooltip: _previewRunning ? 'Switch to Standing Pose' : 'Switch to Running Stride',
+                tooltip: _previewRunning
+                    ? 'Switch to Standing Pose'
+                    : 'Switch to Running Stride',
                 onPressed: () {
                   HapticFeedback.selectionClick();
                   setState(() {
@@ -101,7 +111,9 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
                     ),
                     const SizedBox(height: AppSpacing.s8),
                     Text(
-                      _previewRunning ? 'Dynamic Stride Cycle' : 'Athletic Ready Stance',
+                      _previewRunning
+                          ? 'Dynamic Stride Cycle'
+                          : 'Athletic Ready Stance',
                       style: AppText.caption.copyWith(
                         color: AppColors.textMuted,
                         letterSpacing: 0.5,
@@ -117,9 +129,12 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
                 padding: const EdgeInsets.symmetric(vertical: AppSpacing.s6),
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s16,
+                  ),
                   itemCount: WardrobeCategory.values.length,
-                  separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.s8),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: AppSpacing.s8),
                   itemBuilder: (context, index) {
                     final cat = WardrobeCategory.values[index];
                     final isSelected = cat == _selectedCategory;
@@ -129,13 +144,19 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
                       avatar: Icon(
                         cat.icon,
                         size: 16,
-                        color: isSelected ? AppColors.onAccent : AppColors.textSecondary,
+                        color: isSelected
+                            ? AppColors.onAccent
+                            : AppColors.textSecondary,
                       ),
                       label: Text(
                         cat.displayName,
                         style: AppText.caption.copyWith(
-                          color: isSelected ? AppColors.onAccent : AppColors.textPrimary,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                          color: isSelected
+                              ? AppColors.onAccent
+                              : AppColors.textPrimary,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
                         ),
                       ),
                       selectedColor: AppColors.accent,
@@ -172,7 +193,9 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
                   itemBuilder: (context, index) {
                     final item = categoryItems[index];
                     final isEquipped = _isItemEquipped(currentAvatar, item);
-                    final isUnlocked = item.unlockCondition.isUnlocked(widget.profile);
+                    final isUnlocked = item.unlockCondition.isUnlocked(
+                      widget.profile,
+                    );
 
                     return _WardrobeItemCard(
                       item: item,
@@ -240,7 +263,8 @@ class _WardrobeItemCard extends StatelessWidget {
         : (isUnlocked ? AppColors.border : AppColors.borderSubtle);
 
     return Semantics(
-      label: '${item.name}, ${isEquipped ? 'Equipped' : (isUnlocked ? 'Available' : item.unlockCondition.label)}',
+      label:
+          '${item.name}, ${isEquipped ? 'Equipped' : (isUnlocked ? 'Available' : item.unlockCondition.label)}',
       button: true,
       child: InkWell(
         onTap: onTap,
@@ -271,12 +295,10 @@ class _WardrobeItemCard extends StatelessWidget {
                           ? AppColors.surface2
                           : item.primaryColor,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppColors.border,
-                        width: 1.5,
-                      ),
+                      border: Border.all(color: AppColors.border, width: 1.5),
                     ),
-                    child: item.accentColor != Colors.transparent &&
+                    child:
+                        item.accentColor != Colors.transparent &&
                             item.accentColor != item.primaryColor
                         ? Align(
                             alignment: Alignment.bottomRight,
@@ -299,7 +321,10 @@ class _WardrobeItemCard extends StatelessWidget {
                   // State Badge
                   if (isEquipped)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.accent,
                         borderRadius: AppRadius.br8,
@@ -326,7 +351,9 @@ class _WardrobeItemCard extends StatelessWidget {
                   Text(
                     item.name,
                     style: AppText.titleSmall.copyWith(
-                      color: isUnlocked ? AppColors.textPrimary : AppColors.textMuted,
+                      color: isUnlocked
+                          ? AppColors.textPrimary
+                          : AppColors.textMuted,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,
@@ -336,7 +363,9 @@ class _WardrobeItemCard extends StatelessWidget {
                   Text(
                     isUnlocked ? item.description : item.unlockCondition.label,
                     style: AppText.caption.copyWith(
-                      color: isUnlocked ? AppColors.textSecondary : AppColors.warning,
+                      color: isUnlocked
+                          ? AppColors.textSecondary
+                          : AppColors.warning,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

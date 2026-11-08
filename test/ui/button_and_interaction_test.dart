@@ -48,7 +48,8 @@ void main() {
         expect(
           tapCount,
           equals(1),
-          reason: 'Rapid double tap must be debounced to prevent duplicate actions',
+          reason:
+              'Rapid double tap must be debounced to prevent duplicate actions',
         );
 
         // Advance time past debounce threshold (400ms) and tap again
@@ -200,7 +201,8 @@ void main() {
         expect(
           margin.bottom,
           equals(80.0),
-          reason: 'Toast must float comfortably above the bottom navigation bar',
+          reason:
+              'Toast must float comfortably above the bottom navigation bar',
         );
 
         // Clean up

@@ -270,322 +270,322 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   border: Border.all(color: AppColors.borderSubtle),
                 ),
                 child: Row(
-                children: [
-                  Expanded(
-                    child: _buildSummaryMetric(
-                      'Total area',
-                      totalAreaFormatted,
-                      AppColors.accent,
+                  children: [
+                    Expanded(
+                      child: _buildSummaryMetric(
+                        'Total area',
+                        totalAreaFormatted,
+                        AppColors.accent,
+                      ),
                     ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 36,
-                    color: AppColors.borderSubtle,
-                  ),
-                  Expanded(
-                    child: _buildSummaryMetric(
-                      'Territories',
-                      '${rawRuns.length}',
-                      AppColors.textPrimary,
+                    Container(
+                      width: 1,
+                      height: 36,
+                      color: AppColors.borderSubtle,
                     ),
-                  ),
-                  Container(
-                    width: 1,
-                    height: 36,
-                    color: AppColors.borderSubtle,
-                  ),
-                  Expanded(
-                    child: _buildSummaryMetric(
-                      'Total distance',
-                      '${totalDistKm.toStringAsFixed(1)} km',
-                      AppColors.textPrimary,
+                    Expanded(
+                      child: _buildSummaryMetric(
+                        'Territories',
+                        '${rawRuns.length}',
+                        AppColors.textPrimary,
+                      ),
                     ),
-                  ),
-                ],
+                    Container(
+                      width: 1,
+                      height: 36,
+                      color: AppColors.borderSubtle,
+                    ),
+                    Expanded(
+                      child: _buildSummaryMetric(
+                        'Total distance',
+                        '${totalDistKm.toStringAsFixed(1)} km',
+                        AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
-        // Personal records section (Phase D4 & F0)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.s16,
-              0,
-              AppSpacing.s16,
-              AppSpacing.s14,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SectionHeader(title: 'Personal records'),
-                const SizedBox(height: AppSpacing.s8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.s12,
-                    vertical: AppSpacing.s12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: AppSpacing.br16,
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _buildSummaryMetric(
-                          'Longest run',
-                          longestRunFormatted,
-                          AppColors.textPrimary,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 32,
-                        color: AppColors.borderSubtle,
-                      ),
-                      Expanded(
-                        child: _buildSummaryMetric(
-                          'Biggest capture',
-                          biggestCaptureFormatted,
-                          AppColors.accent,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 32,
-                        color: AppColors.borderSubtle,
-                      ),
-                      Expanded(
-                        child: _buildSummaryMetric(
-                          'Fastest km',
-                          fastestKmFormatted,
-                          AppColors.textPrimary,
-                        ),
-                      ),
-                      Container(
-                        width: 1,
-                        height: 32,
-                        color: AppColors.borderSubtle,
-                      ),
-                      Expanded(
-                        child: _buildSummaryMetric(
-                          'Streak',
-                          streakFormatted,
-                          AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        // Filter chips row
-        SliverToBoxAdapter(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
-            child: Row(
-              children: [
-                _buildFilterChip(HistoryFilter.all, 'All runs'),
-                const SizedBox(width: AppSpacing.s8),
-                _buildFilterChip(HistoryFilter.loops, 'Loops'),
-                const SizedBox(width: AppSpacing.s8),
-                _buildFilterChip(HistoryFilter.claims, 'Claims'),
-                const SizedBox(width: AppSpacing.s8),
-                _buildFilterChip(HistoryFilter.thisWeek, 'This week'),
-                const SizedBox(width: AppSpacing.s8),
-                _buildFilterChip(HistoryFilter.thisMonth, 'This month'),
-              ],
-            ),
-          ),
-        ),
-
-        // Sort Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.s16,
-              AppSpacing.s14,
-              AppSpacing.s16,
-              AppSpacing.s8,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${runs.length} ${runs.length == 1 ? 'session' : 'sessions'}',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-                PopupMenuButton<HistorySortOption>(
-                  initialValue: _sortOption,
-                  color: AppColors.bgElevated,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.br12,
-                    side: const BorderSide(color: AppColors.borderSubtle),
-                  ),
-                  onSelected: (opt) => setState(() => _sortOption = opt),
-                  child: Container(
-                    constraints: const BoxConstraints(
-                      minHeight: AppSpacing.touchTarget,
-                      minWidth: AppSpacing.touchTarget,
+          // Personal records section (Phase D4 & F0)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s16,
+                0,
+                AppSpacing.s16,
+                AppSpacing.s14,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SectionHeader(title: 'Personal records'),
+                  const SizedBox(height: AppSpacing.s8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s12,
+                      vertical: AppSpacing.s12,
                     ),
-                    alignment: Alignment.centerRight,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppSpacing.br16,
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          _sortLabel(_sortOption),
-                          style: AppText.caption.copyWith(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: _buildSummaryMetric(
+                            'Longest run',
+                            longestRunFormatted,
+                            AppColors.textPrimary,
                           ),
                         ),
-                        const SizedBox(width: AppSpacing.s4),
-                        const Icon(
-                          Icons.sort_rounded,
-                          size: 20,
-                          color: AppColors.accent,
+                        Container(
+                          width: 1,
+                          height: 32,
+                          color: AppColors.borderSubtle,
+                        ),
+                        Expanded(
+                          child: _buildSummaryMetric(
+                            'Biggest capture',
+                            biggestCaptureFormatted,
+                            AppColors.accent,
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 32,
+                          color: AppColors.borderSubtle,
+                        ),
+                        Expanded(
+                          child: _buildSummaryMetric(
+                            'Fastest km',
+                            fastestKmFormatted,
+                            AppColors.textPrimary,
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 32,
+                          color: AppColors.borderSubtle,
+                        ),
+                        Expanded(
+                          child: _buildSummaryMetric(
+                            'Streak',
+                            streakFormatted,
+                            AppColors.textPrimary,
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: HistorySortOption.newest,
-                      child: Text('Newest'),
-                    ),
-                    const PopupMenuItem(
-                      value: HistorySortOption.largestArea,
-                      child: Text('Largest area'),
-                    ),
-                    const PopupMenuItem(
-                      value: HistorySortOption.longestDistance,
-                      child: Text('Longest distance'),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
 
-        // If no runs exist, display calm empty state (Task F0)
-        if (runs.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s24,
-                vertical: AppSpacing.s48,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+          // Filter chips row
+          SliverToBoxAdapter(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+              child: Row(
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.borderSubtle),
-                    ),
-                    child: const Icon(
-                      Icons.directions_run_rounded,
-                      color: AppColors.textMuted,
-                      size: 32,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.s16),
+                  _buildFilterChip(HistoryFilter.all, 'All runs'),
+                  const SizedBox(width: AppSpacing.s8),
+                  _buildFilterChip(HistoryFilter.loops, 'Loops'),
+                  const SizedBox(width: AppSpacing.s8),
+                  _buildFilterChip(HistoryFilter.claims, 'Claims'),
+                  const SizedBox(width: AppSpacing.s8),
+                  _buildFilterChip(HistoryFilter.thisWeek, 'This week'),
+                  const SizedBox(width: AppSpacing.s8),
+                  _buildFilterChip(HistoryFilter.thisMonth, 'This month'),
+                ],
+              ),
+            ),
+          ),
+
+          // Sort Header
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s16,
+                AppSpacing.s14,
+                AppSpacing.s16,
+                AppSpacing.s8,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
                   Text(
-                    'No runs in range',
-                    style: AppText.titleSmall.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    '${runs.length} ${runs.length == 1 ? 'session' : 'sessions'}',
+                    style: AppText.caption.copyWith(color: AppColors.textMuted),
                   ),
-                  const SizedBox(height: AppSpacing.s6),
-                  Text(
-                    'Try changing your filters or start a new run to claim territory.',
-                    textAlign: TextAlign.center,
-                    style: AppText.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.4,
+                  PopupMenuButton<HistorySortOption>(
+                    initialValue: _sortOption,
+                    color: AppColors.bgElevated,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppRadius.br12,
+                      side: const BorderSide(color: AppColors.borderSubtle),
                     ),
+                    onSelected: (opt) => setState(() => _sortOption = opt),
+                    child: Container(
+                      constraints: const BoxConstraints(
+                        minHeight: AppSpacing.touchTarget,
+                        minWidth: AppSpacing.touchTarget,
+                      ),
+                      alignment: Alignment.centerRight,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _sortLabel(_sortOption),
+                            style: AppText.caption.copyWith(
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          const Icon(
+                            Icons.sort_rounded,
+                            size: 20,
+                            color: AppColors.accent,
+                          ),
+                        ],
+                      ),
+                    ),
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: HistorySortOption.newest,
+                        child: Text('Newest'),
+                      ),
+                      const PopupMenuItem(
+                        value: HistorySortOption.largestArea,
+                        child: Text('Largest area'),
+                      ),
+                      const PopupMenuItem(
+                        value: HistorySortOption.longestDistance,
+                        child: Text('Longest distance'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          )
-        else if (isNewestSort && groupedRuns != null)
-          ...groupedRuns.entries.expand((entry) {
-            return [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.s16,
-                    AppSpacing.s12,
-                    AppSpacing.s16,
-                    AppSpacing.s6,
-                  ),
-                  child: Text(
-                    entry.key,
-                    style: AppText.caption.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
+          ),
+
+          // If no runs exist, display calm empty state (Task F0)
+          if (runs.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s24,
+                  vertical: AppSpacing.s48,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.borderSubtle),
+                      ),
+                      child: const Icon(
+                        Icons.directions_run_rounded,
+                        color: AppColors.textMuted,
+                        size: 32,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s16),
+                    Text(
+                      'No runs in range',
+                      style: AppText.titleSmall.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s6),
+                    Text(
+                      'Try changing your filters or start a new run to claim territory.',
+                      textAlign: TextAlign.center,
+                      style: AppText.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (isNewestSort && groupedRuns != null)
+            ...groupedRuns.entries.expand((entry) {
+              return [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.s16,
+                      AppSpacing.s12,
+                      AppSpacing.s16,
+                      AppSpacing.s6,
+                    ),
+                    child: Text(
+                      entry.key,
+                      style: AppText.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final run = entry.value[index];
-                    return HistoryRunCard(
-                      run: run,
-                      callsign: profile.username,
-                      faction: profile.faction,
-                      onDelete: () => _runLogService.deleteRun(run.id),
-                    );
-                  }, childCount: entry.value.length),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s16,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final run = entry.value[index];
+                      return HistoryRunCard(
+                        run: run,
+                        callsign: profile.username,
+                        faction: profile.faction,
+                        onDelete: () => _runLogService.deleteRun(run.id),
+                      );
+                    }, childCount: entry.value.length),
+                  ),
                 ),
+              ];
+            })
+          else
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s16,
+                AppSpacing.s8,
+                AppSpacing.s16,
+                AppSpacing.s32,
               ),
-            ];
-          })
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.s16,
-              AppSpacing.s8,
-              AppSpacing.s16,
-              AppSpacing.s32,
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final run = runs[index];
+                  return HistoryRunCard(
+                    run: run,
+                    callsign: profile.username,
+                    faction: profile.faction,
+                    onDelete: () => _runLogService.deleteRun(run.id),
+                  );
+                }, childCount: runs.length),
+              ),
             ),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final run = runs[index];
-                return HistoryRunCard(
-                  run: run,
-                  callsign: profile.username,
-                  faction: profile.faction,
-                  onDelete: () => _runLogService.deleteRun(run.id),
-                );
-              }, childCount: runs.length),
-            ),
-          ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s32)),
-      ],
-    ),
-  );
+          const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s32)),
+        ],
+      ),
+    );
   }
 
   String _sortLabel(HistorySortOption opt) {
@@ -648,9 +648,7 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           fit: BoxFit.scaleDown,
           child: Text(
             label,
-            style: AppText.labelSmall.copyWith(
-              color: AppColors.textMuted,
-            ),
+            style: AppText.labelSmall.copyWith(color: AppColors.textMuted),
           ),
         ),
         const SizedBox(height: 4),

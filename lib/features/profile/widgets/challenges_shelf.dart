@@ -161,9 +161,7 @@ class ChallengesShelf extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     description,
-                    style: AppText.caption.copyWith(
-                      color: AppColors.textMuted,
-                    ),
+                    style: AppText.caption.copyWith(color: AppColors.textMuted),
                   ),
                 ],
               ),

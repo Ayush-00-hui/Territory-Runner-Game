@@ -586,9 +586,7 @@ class _WorkoutPhasesSummaryCard extends StatelessWidget {
               ),
               Text(
                 '${executions.length} phases',
-                style: AppText.caption.copyWith(
-                  color: AppColors.textMuted,
-                ),
+                style: AppText.caption.copyWith(color: AppColors.textMuted),
               ),
             ],
           ),

@@ -101,4 +101,3 @@ class RunnerAvatar {
       bodyToneId.hashCode ^
       isReadyPose.hashCode;
 }
-

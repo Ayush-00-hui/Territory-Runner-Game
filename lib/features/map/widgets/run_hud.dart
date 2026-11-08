@@ -162,7 +162,10 @@ class _RunHudState extends State<RunHud> {
                       decoration: BoxDecoration(
                         color: palette.surface2,
                         borderRadius: AppSpacing.brFull,
-                        border: Border.all(color: palette.borderSubtle, width: 1),
+                        border: Border.all(
+                          color: palette.borderSubtle,
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -175,7 +178,9 @@ class _RunHudState extends State<RunHud> {
                           const SizedBox(width: AppSpacing.s6),
                           Flexible(
                             child: Text(
-                              widget.isAutoPaused ? 'Paused' : 'Pacing with you',
+                              widget.isAutoPaused
+                                  ? 'Paused'
+                                  : 'Pacing with you',
                               style: AppText.caption.copyWith(
                                 color: palette.textSecondary,
                                 fontWeight: FontWeight.w600,

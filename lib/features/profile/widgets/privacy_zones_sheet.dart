@@ -395,9 +395,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                     const SizedBox(height: AppSpacing.s8),
                     Text(
                       'No privacy zones yet',
-                      style: AppText.titleSmall.copyWith(
-                        letterSpacing: 0.2,
-                      ),
+                      style: AppText.titleSmall.copyWith(letterSpacing: 0.2),
                     ),
                     const SizedBox(height: AppSpacing.s4),
                     Text(

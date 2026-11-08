@@ -352,9 +352,7 @@ class _MainScreenState extends State<MainScreen> {
                     ? MapScreenFeature(isActive: _selectedIndex == 1)
                     : const SizedBox.shrink(),
                 _loadedTabs.contains(2)
-                    ? ProfilePage(
-                        scrollController: _profileScrollController,
-                      )
+                    ? ProfilePage(scrollController: _profileScrollController)
                     : const SizedBox.shrink(),
               ],
             ),

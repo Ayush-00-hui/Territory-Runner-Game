@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../../services/loading_quotes_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
@@ -57,10 +59,7 @@ class AppLoadingView extends StatefulWidget {
               horizontal: AppSpacing.s24,
               vertical: AppSpacing.s32,
             ),
-            child: AppLoadingView(
-              label: label,
-              painterSize: 52,
-            ),
+            child: AppLoadingView(label: label, painterSize: 52),
           ),
         ),
       ),
@@ -120,7 +119,9 @@ class _AppLoadingViewState extends State<AppLoadingView>
     _rotationTimer = Timer.periodic(widget.quoteRotationInterval, (_) {
       if (!mounted) return;
       final reduceMotion = MediaQuery.of(context).disableAnimations;
-      if (reduceMotion) return; // Do not rotate when reduced motion is preferred
+      if (reduceMotion) {
+        return; // Do not rotate when reduced motion is preferred
+      }
 
       setState(() {
         _currentQuote = LoadingQuotesService.instance.getQuote();
@@ -238,10 +239,7 @@ class _AppLoadingViewState extends State<AppLoadingView>
               decoration: BoxDecoration(
                 color: AppColors.surface2,
                 borderRadius: AppRadius.br8,
-                border: Border.all(
-                  color: AppColors.border,
-                  width: 1,
-                ),
+                border: Border.all(color: AppColors.border, width: 1),
               ),
               child: Column(
                 children: [
@@ -309,10 +307,7 @@ class _TrackLoopPainter extends CustomPainter {
   final double progress;
   final bool isStatic;
 
-  _TrackLoopPainter({
-    required this.progress,
-    required this.isStatic,
-  });
+  _TrackLoopPainter({required this.progress, required this.isStatic});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -384,7 +379,8 @@ class _TrackLoopPainter extends CustomPainter {
         ..style = PaintingStyle.fill;
 
       // Soft non-neon breathing radius
-      final dotRadius = strokeWidth * 0.75 * (0.85 + 0.15 * math.sin(progress * 2 * math.pi));
+      final dotRadius =
+          strokeWidth * 0.75 * (0.85 + 0.15 * math.sin(progress * 2 * math.pi));
       canvas.drawCircle(tangent.position, dotRadius, dotPaint);
     }
   }

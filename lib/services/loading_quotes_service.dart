@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter/services.dart';
 
 /// A calm, athletic, or biomechanical fact or quote displayed during loading.
@@ -7,10 +8,7 @@ class RunningQuote {
   final String text;
   final String author;
 
-  const RunningQuote({
-    required this.text,
-    required this.author,
-  });
+  const RunningQuote({required this.text, required this.author});
 
   factory RunningQuote.fromJson(Map<String, dynamic> json) {
     return RunningQuote(
@@ -73,7 +71,9 @@ class LoadingQuotesService {
 
     try {
       final assetBundle = bundle ?? rootBundle;
-      final rawString = await assetBundle.loadString('assets/loading_quotes.json');
+      final rawString = await assetBundle.loadString(
+        'assets/loading_quotes.json',
+      );
       final dynamic decoded = jsonDecode(rawString);
       if (decoded is List) {
         _cachedQuotes = decoded
@@ -111,4 +111,3 @@ class LoadingQuotesService {
     _cachedQuotes = quotes;
   }
 }
-

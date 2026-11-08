@@ -1,15 +1,10 @@
 import '../../ui/theme/wardrobe_colors.dart';
+
 import 'package:flutter/material.dart';
+
 import 'runner_profile.dart';
 
-enum WardrobeCategory {
-  headwear,
-  top,
-  bottoms,
-  shoes,
-  accessory,
-  bodyTone,
-}
+enum WardrobeCategory { headwear, top, bottoms, shoes, accessory, bodyTone }
 
 extension WardrobeCategoryExtension on WardrobeCategory {
   String get displayName {
@@ -47,13 +42,7 @@ extension WardrobeCategoryExtension on WardrobeCategory {
   }
 }
 
-enum WardrobeUnlockType {
-  free,
-  level,
-  distanceKm,
-  streakDays,
-  season,
-}
+enum WardrobeUnlockType { free, level, distanceKm, streakDays, season }
 
 class WardrobeUnlockCondition {
   final WardrobeUnlockType type;
@@ -61,29 +50,29 @@ class WardrobeUnlockCondition {
   final String label;
 
   const WardrobeUnlockCondition.free()
-      : type = WardrobeUnlockType.free,
-        requiredValue = 0,
-        label = 'Unlocked';
+    : type = WardrobeUnlockType.free,
+      requiredValue = 0,
+      label = 'Unlocked';
 
   const WardrobeUnlockCondition.level(int level)
-      : type = WardrobeUnlockType.level,
-        requiredValue = level,
-        label = 'Reach Level $level';
+    : type = WardrobeUnlockType.level,
+      requiredValue = level,
+      label = 'Reach Level $level';
 
   const WardrobeUnlockCondition.distance(int km)
-      : type = WardrobeUnlockType.distanceKm,
-        requiredValue = km,
-        label = 'Run $km km total';
+    : type = WardrobeUnlockType.distanceKm,
+      requiredValue = km,
+      label = 'Run $km km total';
 
   const WardrobeUnlockCondition.streak(int days)
-      : type = WardrobeUnlockType.streakDays,
-        requiredValue = days,
-        label = '$days-day run streak';
+    : type = WardrobeUnlockType.streakDays,
+      requiredValue = days,
+      label = '$days-day run streak';
 
   const WardrobeUnlockCondition.season(String seasonName)
-      : type = WardrobeUnlockType.season,
-        requiredValue = 1,
-        label = 'Season $seasonName reward';
+    : type = WardrobeUnlockType.season,
+      requiredValue = 1,
+      label = 'Season $seasonName reward';
 
   bool isUnlocked(RunnerProfile? profile) {
     if (type == WardrobeUnlockType.free) return true;
@@ -698,20 +687,14 @@ class WardrobeCatalog {
   }
 
   static WardrobeItem findById(String id) {
-    return items.firstWhere(
-      (item) => item.id == id,
-      orElse: () => items.first,
-    );
+    return items.firstWhere((item) => item.id == id, orElse: () => items.first);
   }
 
   static Color getToneColor(String toneId) {
     final item = items.firstWhere(
       (item) => item.id == toneId && item.category == WardrobeCategory.bodyTone,
-      orElse: () => items.firstWhere(
-        (i) => i.id == 'tone_warm_sand',
-      ),
+      orElse: () => items.firstWhere((i) => i.id == 'tone_warm_sand'),
     );
     return item.primaryColor;
   }
 }
-

@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+
 import '../theme/app_colors.dart';
 
 /// A compact, calm loading indicator for buttons, chips, and tight inline spaces.
@@ -44,9 +46,8 @@ class _InlineLoadingState extends State<InlineLoading>
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = widget.color ??
-        IconTheme.of(context).color ??
-        AppColors.primary;
+    final effectiveColor =
+        widget.color ?? IconTheme.of(context).color ?? AppColors.primary;
     final reduceMotion = MediaQuery.of(context).disableAnimations;
 
     return Semantics(
@@ -154,4 +155,3 @@ class _StaticInlinePainter extends CustomPainter {
   bool shouldRepaint(covariant _StaticInlinePainter oldDelegate) =>
       oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
 }
-

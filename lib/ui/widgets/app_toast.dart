@@ -51,8 +51,8 @@ class AppToast extends StatelessWidget {
               ? const Duration(seconds: 3)
               : duration);
 
-    final double effectiveBottom = bottomMargin ??
-        (bottomOffset > 0 ? bottomOffset : AppSpacing.s16);
+    final double effectiveBottom =
+        bottomMargin ?? (bottomOffset > 0 ? bottomOffset : AppSpacing.s16);
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(
@@ -100,8 +100,8 @@ class AppToast extends StatelessWidget {
               ? const Duration(seconds: 3)
               : duration);
 
-    final double effectiveBottom = bottomMargin ??
-        (bottomOffset > 0 ? bottomOffset : AppSpacing.s16);
+    final double effectiveBottom =
+        bottomMargin ?? (bottomOffset > 0 ? bottomOffset : AppSpacing.s16);
 
     messenger.hideCurrentSnackBar();
     messenger.showSnackBar(

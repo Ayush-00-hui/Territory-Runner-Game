@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import '../models/runner_avatar.dart';
 import '../models/wardrobe_catalog.dart';
 
@@ -95,4 +96,3 @@ class AvatarService {
     avatarNotifier.value = avatar;
   }
 }
-

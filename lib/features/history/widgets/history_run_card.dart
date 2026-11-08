@@ -385,9 +385,7 @@ class HistoryRunCard extends StatelessWidget {
         ),
         title: Text(
           'Delete run?',
-          style: AppText.titleMedium.copyWith(
-            color: AppColors.textPrimary,
-          ),
+          style: AppText.titleMedium.copyWith(color: AppColors.textPrimary),
         ),
         content: Text(
           'This will permanently remove this run from your local history.',
@@ -424,9 +422,7 @@ class HistoryRunCard extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppText.caption.copyWith(
-            color: AppColors.textMuted,
-          ),
+          style: AppText.caption.copyWith(color: AppColors.textMuted),
         ),
         const SizedBox(width: AppSpacing.s8),
         Flexible(

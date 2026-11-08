@@ -156,7 +156,8 @@ class ProfileHeroCard extends StatelessWidget {
                         NeutralChip(
                           label: 'Gear',
                           icon: Icons.checkroom_rounded,
-                          onTap: () => WardrobeSheet.show(context, profile: profile),
+                          onTap: () =>
+                              WardrobeSheet.show(context, profile: profile),
                         ),
                       ],
                     ),

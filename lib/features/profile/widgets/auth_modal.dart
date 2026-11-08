@@ -342,11 +342,14 @@ void showProfileAuthModal(
                                 size: 20,
                                 strokeWidth: 2,
                                 color: AppColors.onAccent,
-                                semanticsLabel: 'Sending SMS verification code...',
+                                semanticsLabel:
+                                    'Sending SMS verification code...',
                               )
                             : Text(
                                 'Send SMS Verification Code',
-                                style: AppText.button.copyWith(color: AppColors.onAccent),
+                                style: AppText.button.copyWith(
+                                  color: AppColors.onAccent,
+                                ),
                               ),
                       ),
                     ] else ...[
@@ -453,7 +456,9 @@ void showProfileAuthModal(
                               )
                             : Text(
                                 'Verify Code & Connect',
-                                style: AppText.button.copyWith(color: AppColors.onAccent),
+                                style: AppText.button.copyWith(
+                                  color: AppColors.onAccent,
+                                ),
                               ),
                       ),
                       TextButton(
