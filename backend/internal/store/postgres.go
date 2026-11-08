@@ -1775,4 +1775,3 @@ func (s *PostgresStore) GetActiveCrewGoal(ctx context.Context, crewID string, we
 	}
 	return &g, nil
 }
-

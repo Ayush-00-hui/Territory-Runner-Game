@@ -342,4 +342,3 @@ type MyCrewResponse struct {
 	Members    []CrewMember `json:"members,omitempty"`
 	ActiveGoal *CrewGoal    `json:"active_goal,omitempty"`
 }
-

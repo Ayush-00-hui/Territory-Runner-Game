@@ -15,14 +15,14 @@ import (
 
 // MemoryStore provides a thread-safe, in-memory implementation of Store for hermetic unit testing.
 type MemoryStore struct {
-	mu           sync.Mutex
-	users        map[string]*User
-	runs         map[string]*Run
-	runsByOrder  []string
-	territories  map[string]*Territory
-	deviceTokens map[string][]string
-	friendships  map[string]*Friendship
-	duels        map[string]*Duel
+	mu                 sync.Mutex
+	users              map[string]*User
+	runs               map[string]*Run
+	runsByOrder        []string
+	territories        map[string]*Territory
+	deviceTokens       map[string][]string
+	friendships        map[string]*Friendship
+	duels              map[string]*Duel
 	privacyZones       map[string][]PrivacyZone
 	userSettings       map[string]*UserSettings
 	decayNotifications []*DecayNotification
@@ -1695,4 +1695,3 @@ func (m *MemoryStore) GetActiveCrewGoal(ctx context.Context, crewID string, week
 	}
 	return &cpy, nil
 }
-
