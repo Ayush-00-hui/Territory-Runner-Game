@@ -104,7 +104,10 @@ class AppChip extends StatelessWidget {
           },
           behavior: HitTestBehavior.opaque,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 36.0),
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.touchTarget,
+              minWidth: AppSpacing.touchTarget,
+            ),
             child: Center(widthFactor: 1.0, child: content),
           ),
         ),

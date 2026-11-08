@@ -172,9 +172,8 @@ class HistoryRunCard extends StatelessWidget {
                   children: [
                     Text(
                       'Run dossier',
-                      style: AppText.headingSmall.copyWith(
+                      style: AppText.titleSmall.copyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 15,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -257,37 +256,47 @@ class HistoryRunCard extends StatelessWidget {
                         children: [
                           Text(
                             'Calorie model',
-                            style: AppText.label.copyWith(
+                            style: AppText.caption.copyWith(
                               color: AppColors.textMuted,
-                              fontSize: 11,
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () {
-                              CalorieFactorsSheet.show(
-                                context: context,
-                                distanceKm: distKm,
-                                durationSeconds: _effectiveDurationSeconds,
-                              );
-                            },
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  'How we estimate this',
-                                  style: AppText.labelSmall.copyWith(
-                                    color: AppColors.accent,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                          Semantics(
+                            button: true,
+                            label: 'How we estimate this calories',
+                            child: GestureDetector(
+                              onTap: () {
+                                CalorieFactorsSheet.show(
+                                  context: context,
+                                  distanceKm: distKm,
+                                  durationSeconds: _effectiveDurationSeconds,
+                                );
+                              },
+                              behavior: HitTestBehavior.opaque,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minHeight: AppSpacing.touchTarget,
+                                  minWidth: AppSpacing.touchTarget,
                                 ),
-                                const SizedBox(width: 4),
-                                const Icon(
-                                  Icons.info_outline_rounded,
-                                  size: 13,
-                                  color: AppColors.accent,
+                                alignment: Alignment.centerRight,
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'How we estimate this',
+                                      style: AppText.caption.copyWith(
+                                        color: AppColors.accent,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.s4),
+                                    const Icon(
+                                      Icons.info_outline_rounded,
+                                      size: 20,
+                                      color: AppColors.accent,
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ],
@@ -330,26 +339,9 @@ class HistoryRunCard extends StatelessWidget {
                 Row(
                   children: [
                     Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.accent,
-                          side: const BorderSide(
-                            color: AppColors.accent,
-                            width: 1.5,
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppSpacing.br16,
-                          ),
-                        ),
-                        icon: const Icon(Icons.share_rounded, size: 18),
-                        label: const Text(
-                          'Share run',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                          ),
-                        ),
+                      child: SecondaryButton(
+                        label: 'Share run',
+                        icon: Icons.share_rounded,
                         onPressed: () {
                           Navigator.pop(ctx);
                           RunShareCardModal.show(
@@ -393,9 +385,8 @@ class HistoryRunCard extends StatelessWidget {
         ),
         title: Text(
           'Delete run?',
-          style: AppText.headingSmall.copyWith(
+          style: AppText.titleMedium.copyWith(
             color: AppColors.textPrimary,
-            fontSize: 16,
           ),
         ),
         content: Text(
@@ -433,9 +424,8 @@ class HistoryRunCard extends StatelessWidget {
       children: [
         Text(
           label,
-          style: AppText.label.copyWith(
+          style: AppText.caption.copyWith(
             color: AppColors.textMuted,
-            fontSize: 11,
           ),
         ),
         const SizedBox(width: AppSpacing.s8),
@@ -445,7 +435,6 @@ class HistoryRunCard extends StatelessWidget {
             textAlign: TextAlign.end,
             style: AppText.bodyBold.copyWith(
               color: AppColors.textPrimary,
-              fontSize: 13,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
@@ -519,8 +508,7 @@ class HistoryRunCard extends StatelessWidget {
                                         : '${run!.activityType.toUpperCase()} RUN')
                                   : 'Closed loop',
                               overflow: TextOverflow.ellipsis,
-                              style: AppText.headingSmall.copyWith(
-                                fontSize: 14,
+                              style: AppText.labelLarge.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
                               ),
@@ -529,36 +517,34 @@ class HistoryRunCard extends StatelessWidget {
                           const SizedBox(width: AppSpacing.s4),
                           Text(
                             _formatDate(_effectiveDate),
-                            style: AppText.bodySmall.copyWith(
+                            style: AppText.labelSmall.copyWith(
                               color: AppColors.textMuted,
-                              fontSize: 10.5,
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: AppSpacing.s6),
                       Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
+                        spacing: AppSpacing.s6,
+                        runSpacing: AppSpacing.s4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           Container(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
+                              horizontal: AppSpacing.s8,
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.accent.withValues(alpha: 0.12),
-                              borderRadius: AppSpacing.br8,
+                              borderRadius: AppRadius.br8,
                               border: Border.all(
                                 color: AppColors.accent.withValues(alpha: 0.25),
                               ),
                             ),
                             child: Text(
                               '+$areaDisplay claimed',
-                              style: AppText.label.copyWith(
+                              style: AppText.labelSmall.copyWith(
                                 color: AppColors.accent,
-                                fontSize: 9.5,
                                 fontWeight: FontWeight.w700,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
@@ -570,7 +556,6 @@ class HistoryRunCard extends StatelessWidget {
                             '${distKm.toStringAsFixed(2)} km • ${AppPreferences().formatCalories(cardCalories)}',
                             style: AppText.bodySmall.copyWith(
                               color: AppColors.textSecondary,
-                              fontSize: 11,
                               fontFeatures: const [
                                 FontFeature.tabularFigures(),
                               ],

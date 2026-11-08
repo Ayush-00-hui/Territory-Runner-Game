@@ -60,13 +60,11 @@ class SummaryCoachCard extends StatelessWidget {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            SizedBox(
-                              height: 14,
-                              width: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.accent,
-                              ),
+                            InlineLoading(
+                              size: 14,
+                              strokeWidth: 2,
+                              color: AppColors.accent,
+                              semanticsLabel: 'Coach analyzing run stats...',
                             ),
                             SizedBox(width: AppSpacing.s10),
                             Flexible(

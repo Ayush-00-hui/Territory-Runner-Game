@@ -165,16 +165,14 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                       children: [
                         Text(
                           'Privacy zones',
-                          style: AppText.headingSmall.copyWith(
-                            fontSize: 15,
+                          style: AppText.titleSmall.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         Text(
                           'Privacy exclusion radius',
-                          style: AppText.label.copyWith(
+                          style: AppText.labelSmall.copyWith(
                             color: AppColors.accent,
-                            fontSize: 9.5,
                           ),
                         ),
                       ],
@@ -207,7 +205,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
 
             const SizedBox(height: AppSpacing.s12),
             Text(
-              'Your GPS tracks, start/finish points, and live presence inside privacy zones are strictly hidden from other runners and public exports. Territory polygons remain visible to maintain fair territory gameplay.',
+              'Your GPS tracks, start/finish points, and live presence inside privacy zones are strictly hidden from other runners and public exports. Territory boundaries remain visible to maintain fair territory gameplay.',
               style: AppText.bodySmall.copyWith(
                 color: AppColors.textSecondary,
                 height: 1.35,
@@ -221,7 +219,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                 padding: const EdgeInsets.all(AppSpacing.s16),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
-                  borderRadius: AppSpacing.br16,
+                  borderRadius: AppRadius.br16,
                   border: Border.all(
                     color: AppColors.accent.withValues(alpha: 0.4),
                     width: 1.2,
@@ -232,18 +230,16 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                   children: [
                     Text(
                       'New privacy zone',
-                      style: AppText.label.copyWith(
+                      style: AppText.labelSmall.copyWith(
                         color: AppColors.accent,
-                        fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.s8),
                     TextField(
                       controller: _nameController,
-                      style: const TextStyle(
+                      style: AppText.bodyMedium.copyWith(
                         color: AppColors.textPrimary,
-                        fontSize: 14,
                       ),
                       decoration: InputDecoration(
                         hintText: 'e.g. Home, Work, Gym',
@@ -308,13 +304,11 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                               ),
                             ),
                             icon: _isLocating
-                                ? const SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.accent,
-                                    ),
+                                ? const InlineLoading(
+                                    size: 14,
+                                    strokeWidth: 2,
+                                    color: AppColors.accent,
+                                    semanticsLabel: 'Detecting location...',
                                   )
                                 : const Icon(
                                     Icons.my_location_rounded,
@@ -325,7 +319,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                               _selectedCoordinates == null
                                   ? 'Pin Current Location'
                                   : 'Pinned (${_selectedCoordinates!.latitude.toStringAsFixed(3)}, ${_selectedCoordinates!.longitude.toStringAsFixed(3)})',
-                              style: const TextStyle(fontSize: 11),
+                              style: AppText.caption,
                             ),
                             onPressed: _fetchCurrentLocation,
                           ),
@@ -339,11 +333,10 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => setState(() => _isAdding = false),
-                            child: const Text(
+                            child: Text(
                               'Cancel',
-                              style: TextStyle(
+                              style: AppText.caption.copyWith(
                                 color: AppColors.textMuted,
-                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -356,15 +349,15 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                               backgroundColor: AppColors.accent,
                               foregroundColor: AppColors.onAccent,
                               shape: RoundedRectangleBorder(
-                                borderRadius: AppSpacing.br12,
+                                borderRadius: AppRadius.br12,
                               ),
                             ),
                             onPressed: _saveNewZone,
-                            child: const Text(
+                            child: Text(
                               'Save zone',
-                              style: TextStyle(
+                              style: AppText.button.copyWith(
+                                color: AppColors.onAccent,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
                               ),
                             ),
                           ),
@@ -379,8 +372,9 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
 
             // Zones List
             if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(color: AppColors.accent),
+              const AppLoadingView(
+                label: 'Loading privacy zones...',
+                painterSize: 44,
               )
             else if (_privacyService.zones.isEmpty)
               Container(
@@ -401,18 +395,16 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                     const SizedBox(height: AppSpacing.s8),
                     Text(
                       'No privacy zones yet',
-                      style: AppText.headingSmall.copyWith(
-                        fontSize: 12,
-                        letterSpacing: 0.5,
+                      style: AppText.titleSmall.copyWith(
+                        letterSpacing: 0.2,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.s4),
                     Text(
                       'Tap + above to mask your home or workplace coordinates.',
                       textAlign: TextAlign.center,
-                      style: AppText.bodySmall.copyWith(
+                      style: AppText.caption.copyWith(
                         color: AppColors.textMuted,
-                        fontSize: 11,
                       ),
                     ),
                   ],
@@ -428,7 +420,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
-                    borderRadius: AppSpacing.br16,
+                    borderRadius: AppRadius.br16,
                     border: Border.all(
                       color: zone.isEnabled
                           ? AppColors.accent.withValues(alpha: 0.3)
@@ -464,14 +456,12 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                                 color: zone.isEnabled
                                     ? AppColors.textPrimary
                                     : AppColors.textMuted,
-                                fontSize: 13,
                               ),
                             ),
                             Text(
                               '${zone.radiusMeters.round()}m exclusion radius • Lat: ${zone.latitude.toStringAsFixed(3)}, Lng: ${zone.longitude.toStringAsFixed(3)}',
-                              style: AppText.bodySmall.copyWith(
+                              style: AppText.labelSmall.copyWith(
                                 color: AppColors.textMuted,
-                                fontSize: 10,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
                                 ],

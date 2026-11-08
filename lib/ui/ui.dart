@@ -27,5 +27,8 @@ export 'widgets/combined_status_indicator.dart';
 export 'widgets/territory_hero_card.dart';
 export 'widgets/premium_bottom_nav.dart';
 export 'widgets/app_intro_animation.dart';
+export 'widgets/app_loading_view.dart';
+export 'widgets/inline_loading.dart';
+export 'widgets/runner_avatar_painter.dart';
 export 'theme/app_version.dart';
 export '../core/logging/app_logger.dart';

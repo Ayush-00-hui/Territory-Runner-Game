@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import 'inline_loading.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import '../motion/motion.dart';
+import 'app_toast.dart';
 
 /// Athletic Secondary Button (Surface tone step + 1px hairline border)
+/// 48dp minimum touch target, Semantics, focus, debounced taps,
+/// and disabled explanation feedback.
 class SecondaryButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
@@ -13,6 +17,12 @@ class SecondaryButton extends StatefulWidget {
   final bool isLoading;
   final bool isFullWidth;
   final double height;
+  final String? disabledReason;
+  final VoidCallback? onDisabledTap;
+  final bool debounce;
+
+  /// Clock provider for deterministic testing of debounce timing
+  static DateTime Function() clock = DateTime.now;
 
   const SecondaryButton({
     super.key,
@@ -21,7 +31,10 @@ class SecondaryButton extends StatefulWidget {
     this.icon,
     this.isLoading = false,
     this.isFullWidth = true,
-    this.height = 48.0,
+    this.height = AppSpacing.touchTarget,
+    this.disabledReason,
+    this.onDisabledTap,
+    this.debounce = false,
   });
 
   @override
@@ -31,6 +44,8 @@ class SecondaryButton extends StatefulWidget {
 class _SecondaryButtonState extends State<SecondaryButton> {
   bool _isPressed = false;
   bool _isFocused = false;
+  DateTime? _lastTapTime;
+  static const Duration _debounceThreshold = Duration(milliseconds: 400);
 
   void _handleTapDown(TapDownDetails _) {
     if (widget.onPressed == null || widget.isLoading) return;
@@ -40,12 +55,35 @@ class _SecondaryButtonState extends State<SecondaryButton> {
   void _handleTapUp(TapUpDetails _) {
     if (widget.onPressed == null || widget.isLoading) return;
     setState(() => _isPressed = false);
+
+    if (widget.debounce) {
+      final now = SecondaryButton.clock();
+      if (_lastTapTime != null &&
+          now.difference(_lastTapTime!) < _debounceThreshold) {
+        return;
+      }
+      _lastTapTime = now;
+    }
+
     widget.onPressed?.call();
   }
 
   void _handleTapCancel() {
     if (widget.onPressed == null || widget.isLoading) return;
     setState(() => _isPressed = false);
+  }
+
+  void _handleDisabledTap() {
+    if (widget.onDisabledTap != null) {
+      widget.onDisabledTap!();
+    } else if (widget.disabledReason != null &&
+        widget.disabledReason!.trim().isNotEmpty) {
+      AppToast.show(
+        context,
+        widget.disabledReason!,
+        type: AppToastType.warning,
+      );
+    }
   }
 
   @override
@@ -62,13 +100,10 @@ class _SecondaryButtonState extends State<SecondaryButton> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (widget.isLoading) ...[
-          SizedBox(
-            height: 18,
-            width: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2.0,
-              valueColor: AlwaysStoppedAnimation<Color>(fgColor),
-            ),
+          InlineLoading(
+            size: 18,
+            strokeWidth: 2.0,
+            color: fgColor,
           ),
           const SizedBox(width: AppSpacing.s12),
         ] else if (widget.icon != null) ...[
@@ -89,6 +124,7 @@ class _SecondaryButtonState extends State<SecondaryButton> {
       button: true,
       enabled: enabled,
       label: widget.label,
+      hint: !enabled && widget.disabledReason != null ? widget.disabledReason : null,
       child: Focus(
         onFocusChange: (focused) => setState(() => _isFocused = focused),
         child: AnimatedScale(
@@ -99,10 +135,15 @@ class _SecondaryButtonState extends State<SecondaryButton> {
             onTapDown: enabled ? _handleTapDown : null,
             onTapUp: enabled ? _handleTapUp : null,
             onTapCancel: enabled ? _handleTapCancel : null,
+            onTap: !enabled ? _handleDisabledTap : null,
             behavior: HitTestBehavior.opaque,
             child: AnimatedContainer(
               duration: AppMotion.duration(context, AppMotion.fast),
               curve: AppMotion.easeOut,
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.touchTarget,
+                minWidth: AppSpacing.touchTarget,
+              ),
               height: widget.height,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
               decoration: BoxDecoration(

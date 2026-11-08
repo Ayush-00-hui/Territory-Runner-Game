@@ -145,9 +145,8 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
         ),
         title: Text(
           'Run history',
-          style: AppText.headingSmall.copyWith(
+          style: AppText.titleMedium.copyWith(
             fontWeight: FontWeight.w700,
-            fontSize: 16,
             color: AppColors.textPrimary,
           ),
         ),
@@ -243,26 +242,34 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
     final isNewestSort = _sortOption == HistorySortOption.newest;
     final groupedRuns = isNewestSort ? _groupByPeriod(runs) : null;
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        // Aggregate metrics summary banner
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.s16,
-              AppSpacing.s8,
-              AppSpacing.s16,
-              AppSpacing.s12,
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.s16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppSpacing.br20,
-                border: Border.all(color: AppColors.borderSubtle),
+    return RefreshIndicator(
+      color: AppColors.accent,
+      backgroundColor: AppColors.surface,
+      onRefresh: () async {
+        setState(() {});
+      },
+      child: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        slivers: [
+          // Aggregate metrics summary banner
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s16,
+                AppSpacing.s8,
+                AppSpacing.s16,
+                AppSpacing.s12,
               ),
-              child: Row(
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.s16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppRadius.br16,
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: Row(
                 children: [
                   Expanded(
                     child: _buildSummaryMetric(
@@ -317,8 +324,8 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                 const SizedBox(height: AppSpacing.s8),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 14,
+                    horizontal: AppSpacing.s12,
+                    vertical: AppSpacing.s12,
                   ),
                   decoration: BoxDecoration(
                     color: AppColors.surface,
@@ -413,37 +420,42 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               children: [
                 Text(
                   '${runs.length} ${runs.length == 1 ? 'session' : 'sessions'}',
-                  style: AppText.labelSmall.copyWith(
+                  style: AppText.caption.copyWith(
                     color: AppColors.textMuted,
-                    fontSize: 11,
                   ),
                 ),
                 PopupMenuButton<HistorySortOption>(
                   initialValue: _sortOption,
                   color: AppColors.bgElevated,
                   shape: RoundedRectangleBorder(
-                    borderRadius: AppSpacing.br14,
+                    borderRadius: AppRadius.br12,
                     side: const BorderSide(color: AppColors.borderSubtle),
                   ),
                   onSelected: (opt) => setState(() => _sortOption = opt),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _sortLabel(_sortOption),
-                        style: AppText.labelSmall.copyWith(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
+                  child: Container(
+                    constraints: const BoxConstraints(
+                      minHeight: AppSpacing.touchTarget,
+                      minWidth: AppSpacing.touchTarget,
+                    ),
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _sortLabel(_sortOption),
+                          style: AppText.caption.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.sort_rounded,
-                        size: 14,
-                        color: AppColors.accent,
-                      ),
-                    ],
+                        const SizedBox(width: AppSpacing.s4),
+                        const Icon(
+                          Icons.sort_rounded,
+                          size: 20,
+                          color: AppColors.accent,
+                        ),
+                      ],
+                    ),
                   ),
                   itemBuilder: (context) => [
                     const PopupMenuItem(
@@ -494,10 +506,9 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   const SizedBox(height: AppSpacing.s16),
                   Text(
                     'No runs in range',
-                    style: AppText.headingSmall.copyWith(
+                    style: AppText.titleSmall.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
-                      fontSize: 15,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.s6),
@@ -506,7 +517,6 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                     textAlign: TextAlign.center,
                     style: AppText.bodyMedium.copyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 12,
                       height: 1.4,
                     ),
                   ),
@@ -527,10 +537,9 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   ),
                   child: Text(
                     entry.key,
-                    style: AppText.labelSmall.copyWith(
+                    style: AppText.caption.copyWith(
                       color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
-                      fontSize: 11,
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -575,7 +584,8 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
 
         const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s32)),
       ],
-    );
+    ),
+  );
   }
 
   String _sortLabel(HistorySortOption opt) {
@@ -618,9 +628,8 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           child: Center(
             child: Text(
               label,
-              style: AppText.labelSmall.copyWith(
+              style: AppText.caption.copyWith(
                 color: isSelected ? AppColors.accent : AppColors.textMuted,
-                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 letterSpacing: 0.2,
               ),
@@ -641,7 +650,6 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
             label,
             style: AppText.labelSmall.copyWith(
               color: AppColors.textMuted,
-              fontSize: 10,
             ),
           ),
         ),
@@ -651,7 +659,6 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           child: Text(
             value,
             style: AppText.statSmall.copyWith(
-              fontSize: 16,
               color: valueColor,
               fontWeight: FontWeight.w700,
               fontFeatures: const [FontFeature.tabularFigures()],

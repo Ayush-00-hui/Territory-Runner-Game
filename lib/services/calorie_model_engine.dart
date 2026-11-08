@@ -74,7 +74,7 @@ class CalorieModelEngine {
   String _modelSha256 = '';
   bool _hasLoggedFallbackWarning = false;
 
-  Map<String, List<Map<String, dynamic>>> _treesByQuantile = {};
+  Map<String, List<_CalorieTreeNode>> _treesByQuantile = {};
 
   bool get isModelVerified => _isModelVerified;
   String get modelVersion => _modelVersion;
@@ -130,13 +130,17 @@ class CalorieModelEngine {
       _modelSha256 = actualSha;
 
       final models = bundle['models'] as Map<String, dynamic>;
-      final loadedTrees = <String, List<Map<String, dynamic>>>{};
+      final loadedTrees = <String, List<_CalorieTreeNode>>{};
 
       for (final q in ['p10', 'p50', 'p90']) {
         if (models.containsKey(q)) {
           final rawList = models[q]['trees'] as List;
           loadedTrees[q] = rawList
-              .map((e) => Map<String, dynamic>.from(e as Map))
+              .map(
+                (e) => _CalorieTreeNode.fromMap(
+                  Map<String, dynamic>.from(e as Map),
+                ),
+              )
               .toList();
         }
       }
@@ -160,26 +164,6 @@ class CalorieModelEngine {
         tag: 'CalorieModelEngine',
       );
       return false;
-    }
-  }
-
-  /// Evaluates an individual decision tree node against input feature vector.
-  double _evaluateNode(Map<String, dynamic> node, List<double> features) {
-    if (node.containsKey('leaf_value') && node['leaf_value'] != null) {
-      return (node['leaf_value'] as num).toDouble();
-    }
-    final splitFeature = (node['split_feature'] as num).toInt();
-    final threshold = (node['threshold'] as num).toDouble();
-    final val = (splitFeature >= 0 && splitFeature < features.length)
-        ? features[splitFeature]
-        : 0.0;
-
-    if (val <= threshold) {
-      final left = node['left'] as Map<String, dynamic>?;
-      return left != null ? _evaluateNode(left, features) : 0.0;
-    } else {
-      final right = node['right'] as Map<String, dynamic>?;
-      return right != null ? _evaluateNode(right, features) : 0.0;
     }
   }
 
@@ -212,17 +196,17 @@ class CalorieModelEngine {
 
     if (_treesByQuantile.containsKey('p10')) {
       for (final tree in _treesByQuantile['p10']!) {
-        p10 += _evaluateNode(tree, features);
+        p10 += tree.evaluate(features);
       }
     }
     if (_treesByQuantile.containsKey('p50')) {
       for (final tree in _treesByQuantile['p50']!) {
-        p50 += _evaluateNode(tree, features);
+        p50 += tree.evaluate(features);
       }
     }
     if (_treesByQuantile.containsKey('p90')) {
       for (final tree in _treesByQuantile['p90']!) {
-        p90 += _evaluateNode(tree, features);
+        p90 += tree.evaluate(features);
       }
     }
 
@@ -322,5 +306,49 @@ class CalorieModelEngine {
     _isModelVerified = isVerified;
     _treesByQuantile = {};
     _hasLoggedFallbackWarning = false;
+  }
+}
+
+/// Strongly-typed compiled decision tree node for fast microsecond evaluations.
+class _CalorieTreeNode {
+  final double? leafValue;
+  final int splitFeature;
+  final double threshold;
+  final _CalorieTreeNode? left;
+  final _CalorieTreeNode? right;
+
+  const _CalorieTreeNode({
+    this.leafValue,
+    this.splitFeature = 0,
+    this.threshold = 0.0,
+    this.left,
+    this.right,
+  });
+
+  static _CalorieTreeNode fromMap(Map<String, dynamic> map) {
+    final leaf = map['leaf_value'];
+    if (leaf != null) {
+      return _CalorieTreeNode(leafValue: (leaf as num).toDouble());
+    }
+    final leftMap = map['left'] as Map<String, dynamic>?;
+    final rightMap = map['right'] as Map<String, dynamic>?;
+    return _CalorieTreeNode(
+      splitFeature: (map['split_feature'] as num).toInt(),
+      threshold: (map['threshold'] as num).toDouble(),
+      left: leftMap != null ? _CalorieTreeNode.fromMap(leftMap) : null,
+      right: rightMap != null ? _CalorieTreeNode.fromMap(rightMap) : null,
+    );
+  }
+
+  double evaluate(List<double> features) {
+    if (leafValue != null) return leafValue!;
+    final val = (splitFeature >= 0 && splitFeature < features.length)
+        ? features[splitFeature]
+        : 0.0;
+    if (val <= threshold) {
+      return left != null ? left!.evaluate(features) : 0.0;
+    } else {
+      return right != null ? right!.evaluate(features) : 0.0;
+    }
   }
 }

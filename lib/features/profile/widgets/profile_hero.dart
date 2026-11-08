@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
+import 'wardrobe_sheet.dart';
 
 class ProfileHeroCard extends StatelessWidget {
   final RunnerProfile profile;
@@ -25,7 +26,7 @@ class ProfileHeroCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.s20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: AppSpacing.br20,
+        borderRadius: AppRadius.br16,
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
@@ -39,24 +40,52 @@ class ProfileHeroCard extends StatelessWidget {
                 strokeWidth: 3.5,
                 progressColor: AppColors.accent,
                 trackColor: AppColors.surface2,
-                center: Container(
-                  height: 52,
-                  width: 52,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.accent,
-                  ),
-                  child: Center(
-                    child: Text(
-                      profile.username.isNotEmpty
-                          ? profile.username[0].toUpperCase()
-                          : 'R',
-                      style: AppText.headingLarge.copyWith(
-                        color: AppColors.onAccent,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
+                center: GestureDetector(
+                  onTap: () => WardrobeSheet.show(context, profile: profile),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        height: 52,
+                        width: 52,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.surface2,
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: Center(
+                          child: AvatarWidget(
+                            size: 46,
+                            isRunning: false,
+                            semanticsLabel:
+                                'Runner avatar buddy. Tap to open wardrobe.',
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.accent,
+                          ),
+                          child: Center(
+                            child: Text(
+                              profile.username.isNotEmpty
+                                  ? profile.username[0].toUpperCase()
+                                  : 'R',
+                              style: AppText.labelSmall.copyWith(
+                                color: AppColors.onAccent,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -72,8 +101,7 @@ class ProfileHeroCard extends StatelessWidget {
                             profile.username.isNotEmpty
                                 ? profile.username
                                 : 'Athlete',
-                            style: AppText.headlineMedium.copyWith(
-                              fontSize: 16,
+                            style: AppText.titleMedium.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
@@ -125,6 +153,11 @@ class ProfileHeroCard extends StatelessWidget {
                           icon: Icons.shield_outlined,
                           onTap: onSelectFaction,
                         ),
+                        NeutralChip(
+                          label: 'Gear',
+                          icon: Icons.checkroom_rounded,
+                          onTap: () => WardrobeSheet.show(context, profile: profile),
+                        ),
                       ],
                     ),
                   ],
@@ -156,7 +189,6 @@ class ProfileHeroCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppText.labelSmall.copyWith(
                         color: AppColors.textMuted,
-                        fontSize: 10,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.6,
                       ),
@@ -165,9 +197,8 @@ class ProfileHeroCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.s8),
                   Text(
                     '${profile.xp} / $nextLevelXp XP',
-                    style: AppText.labelSmall.copyWith(
+                    style: AppText.caption.copyWith(
                       color: AppColors.textSecondary,
-                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       fontFeatures: const [FontFeature.tabularFigures()],
                     ),

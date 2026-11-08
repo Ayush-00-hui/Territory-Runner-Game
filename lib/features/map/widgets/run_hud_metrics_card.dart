@@ -116,8 +116,7 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                           widget.isRunActive
                               ? widget.distanceKm.toStringAsFixed(2)
                               : '0.00',
-                          style: AppText.statHero.copyWith(
-                            fontSize: isLight ? 36 : 34,
+                          style: AppText.displayMedium.copyWith(
                             fontWeight: FontWeight.w700,
                             color: palette.textPrimary,
                             fontFeatures: const [FontFeature.tabularFigures()],
@@ -179,7 +178,6 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                             )
                           : '00:00',
                       style: AppText.timer.copyWith(
-                        fontSize: isLight ? 34 : 32,
                         fontWeight: FontWeight.w700,
                         color: palette.textPrimary,
                         fontFeatures: const [FontFeature.tabularFigures()],
@@ -219,7 +217,6 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                             'P: ${widget.targetPace}',
                             style: AppText.labelSmall.copyWith(
                               color: palette.info,
-                              fontSize: 8.5,
                             ),
                           ),
                         ),
@@ -232,8 +229,7 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                     alignment: Alignment.centerRight,
                     child: Text(
                       widget.isRunActive ? widget.splitPace : "--'--\"",
-                      style: AppText.statHero.copyWith(
-                        fontSize: isLight ? 30 : 28,
+                      style: AppText.displaySmall.copyWith(
                         fontWeight: FontWeight.w700,
                         color: palette.textPrimary,
                         fontFeatures: const [FontFeature.tabularFigures()],
@@ -259,7 +255,7 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
             ),
             decoration: BoxDecoration(
               color: palette.surface2,
-              borderRadius: AppSpacing.br14,
+              borderRadius: AppRadius.br12,
               border: Border.all(color: palette.borderSubtle),
             ),
             child: Row(
@@ -279,9 +275,8 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           '${widget.currentSpeedKmh.toStringAsFixed(1)} km/h',
-                          style: AppText.bodyBold.copyWith(
+                          style: AppText.caption.copyWith(
                             color: palette.textPrimary,
-                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
@@ -308,9 +303,8 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                           AppPreferences().formatCalories(
                             _getThrottledCalories(),
                           ),
-                          style: AppText.bodyBold.copyWith(
+                          style: AppText.caption.copyWith(
                             color: palette.textPrimary,
-                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),
@@ -341,8 +335,7 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                           widget.satelliteAccuracyMeters > 50.0
                               ? 'No GPS'
                               : '±${widget.satelliteAccuracyMeters.toStringAsFixed(0)}m',
-                          style: AppText.bodySmall.copyWith(
-                            fontSize: 11,
+                          style: AppText.caption.copyWith(
                             fontWeight: FontWeight.w700,
                             color: widget.satelliteAccuracyMeters <= 10.0
                                 ? palette.textSecondary
@@ -379,9 +372,8 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                               widget.isStepCountEstimated
                                   ? '~${_formatSteps(widget.stepCount!)} steps (est.)'
                                   : '${_formatSteps(widget.stepCount!)} steps',
-                              style: AppText.bodyBold.copyWith(
+                              style: AppText.caption.copyWith(
                                 color: palette.textPrimary,
-                                fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 fontFeatures: const [
                                   FontFeature.tabularFigures(),
@@ -410,9 +402,8 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                         const SizedBox(width: AppSpacing.s4),
                         Text(
                           '${widget.territoriesClaimed} claimed',
-                          style: AppText.bodyBold.copyWith(
+                          style: AppText.caption.copyWith(
                             color: palette.textPrimary,
-                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                             fontFeatures: const [FontFeature.tabularFigures()],
                           ),

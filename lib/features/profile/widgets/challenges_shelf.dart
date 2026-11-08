@@ -48,8 +48,7 @@ class ChallengesShelf extends StatelessWidget {
                         Flexible(
                           child: Text(
                             'Active territory quests',
-                            style: AppText.headingSmall.copyWith(
-                              fontSize: 14,
+                            style: AppText.labelLarge.copyWith(
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                               letterSpacing: 0.2,
@@ -65,7 +64,6 @@ class ChallengesShelf extends StatelessWidget {
                     'Resets in 14h',
                     style: AppText.labelSmall.copyWith(
                       color: AppColors.textMuted,
-                      fontSize: 10,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.4,
                     ),
@@ -116,9 +114,8 @@ class ChallengesShelf extends StatelessWidget {
         // --- TROPHY CASE SECTION HEADER ---
         Text(
           'Trophy case & badges',
-          style: AppText.headingSmall.copyWith(
+          style: AppText.labelLarge.copyWith(
             color: AppColors.textPrimary,
-            fontSize: 14,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.2,
           ),
@@ -155,7 +152,6 @@ class ChallengesShelf extends StatelessWidget {
                   Text(
                     title,
                     style: AppText.bodyMedium.copyWith(
-                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: isCompleted
                           ? AppColors.accent
@@ -165,9 +161,8 @@ class ChallengesShelf extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     description,
-                    style: AppText.bodySmall.copyWith(
+                    style: AppText.caption.copyWith(
                       color: AppColors.textMuted,
-                      fontSize: 11,
                     ),
                   ),
                 ],
@@ -190,7 +185,6 @@ class ChallengesShelf extends StatelessWidget {
                   color: isCompleted
                       ? AppColors.accent
                       : AppColors.textSecondary,
-                  fontSize: 10,
                   fontWeight: FontWeight.w700,
                   fontFeatures: const [FontFeature.tabularFigures()],
                 ),
@@ -218,8 +212,7 @@ class ChallengesShelf extends StatelessWidget {
           children: [
             Text(
               '${(progress * 100).round()}% complete',
-              style: AppText.bodySmall.copyWith(
-                fontSize: 10,
+              style: AppText.labelSmall.copyWith(
                 color: AppColors.textMuted,
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),
@@ -231,8 +224,7 @@ class ChallengesShelf extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: Text(
                   '${current >= 1000 ? current.toStringAsFixed(0) : current.toStringAsFixed(1)} / ${target >= 1000 ? target.toStringAsFixed(0) : target.toStringAsFixed(1)} $unit',
-                  style: AppText.bodySmall.copyWith(
-                    fontSize: 10,
+                  style: AppText.labelSmall.copyWith(
                     color: AppColors.textSecondary,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   ),
@@ -249,10 +241,10 @@ class ChallengesShelf extends StatelessWidget {
     final badges = [
       _BadgeDefinition(
         name: 'First Claim',
-        subtitle: 'Claimed 1st polygon loop',
+        subtitle: 'Claimed 1st territory loop',
         icon: Icons.emoji_events_rounded,
         unlocked: profile.hasBadge('First Claim') || territoriesCount >= 1,
-        criteria: 'Enclose and claim at least 1 territory GPS loop.',
+        criteria: 'Enclose and claim at least 1 territory running loop.',
         reward: '+50 XP, "Pioneer Runner" Title',
       ),
       _BadgeDefinition(
@@ -333,7 +325,10 @@ class ChallengesShelf extends StatelessWidget {
               reward: b.reward,
             );
           },
-          child: Padding(
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.touchTarget,
+            ),
             padding: const EdgeInsets.all(AppSpacing.s12),
             child: Row(
               children: [
@@ -366,7 +361,6 @@ class ChallengesShelf extends StatelessWidget {
                       Text(
                         b.name,
                         style: AppText.bodyMedium.copyWith(
-                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: b.unlocked
                               ? AppColors.textPrimary
@@ -382,7 +376,6 @@ class ChallengesShelf extends StatelessWidget {
                           color: b.unlocked
                               ? AppColors.gold
                               : AppColors.textMuted,
-                          fontSize: 9,
                           fontWeight: FontWeight.w700,
                         ),
                       ),

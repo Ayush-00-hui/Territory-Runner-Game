@@ -9,6 +9,7 @@ import '../../../models/territory.dart';
 import '../../../models/user_body_profile.dart';
 import '../../../services/api_client.dart';
 import '../../../services/app_preferences.dart';
+import '../../../services/avatar_service.dart';
 import '../../../services/battery_saver_service.dart';
 import '../../../services/export_service.dart';
 import '../../../services/firebase_service.dart';
@@ -116,9 +117,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                       for (final t in territories) {
                         allPoints.addAll(t.polygon);
                       }
-                      await ExportService().exportAndShareGpx(
-                        runTitle: 'Territory Run History',
-                        coordinates: allPoints,
+                      await AppLoadingView.showModal(
+                        context: context,
+                        label: 'Exporting GPX file...',
+                        task: () => ExportService().exportAndShareGpx(
+                          runTitle: 'Territory Run History',
+                          coordinates: allPoints,
+                        ),
                       );
                     },
                   ),
@@ -130,8 +135,12 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                     icon: Icons.map_rounded,
                     onPressed: () async {
                       Navigator.pop(ctx);
-                      await ExportService().exportAndShareGeoJson(
-                        territories: territories,
+                      await AppLoadingView.showModal(
+                        context: context,
+                        label: 'Exporting GeoJSON...',
+                        task: () => ExportService().exportAndShareGeoJson(
+                          territories: territories,
+                        ),
                       );
                     },
                   ),
@@ -144,9 +153,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               icon: Icons.file_download_outlined,
               onPressed: () async {
                 Navigator.pop(ctx);
-                await ExportService().exportAndShareUserData(
-                  territories: territories,
-                  bodyProfile: _appPrefs.bodyProfile,
+                await AppLoadingView.showModal(
+                  context: context,
+                  label: 'Compiling local data export...',
+                  task: () => ExportService().exportAndShareUserData(
+                    territories: territories,
+                    bodyProfile: _appPrefs.bodyProfile,
+                  ),
                 );
               },
             ),
@@ -242,6 +255,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         await Hive.box<String>('rejected_runs_v1').clear();
       }
       await RunLogService().clearAllRuns();
+      await AvatarService.instance.clear();
 
       await _appPrefs.clearBodyProfile();
       final prefs = await SharedPreferences.getInstance();

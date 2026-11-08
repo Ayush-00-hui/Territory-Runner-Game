@@ -7,6 +7,7 @@ import '../../routing/route_service.dart';
 import '../../../ui/theme/app_colors.dart';
 import '../../../ui/theme/app_spacing.dart';
 import '../../../ui/theme/app_text.dart';
+import '../../../ui/widgets/inline_loading.dart';
 
 /// Preset area target configuration
 class AreaPreset {
@@ -218,13 +219,11 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                 ),
               ),
               if (_isLoading)
-                const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
-                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
-                  ),
+                const InlineLoading(
+                  size: 18,
+                  strokeWidth: 2.2,
+                  color: AppColors.accent,
+                  semanticsLabel: 'Computing claim route...',
                 ),
             ],
           ),
