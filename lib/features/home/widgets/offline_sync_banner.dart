@@ -84,29 +84,13 @@ class OfflineSyncBanner extends StatelessWidget {
                       semanticsLabel: 'Syncing runs...',
                     )
                   else
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.warning,
-                        foregroundColor: AppColors.onAccent,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppRadius.br8,
-                        ),
-                        minimumSize: const Size(0, 48),
-                      ),
+                    PrimaryButton(
+                      label: 'Sync now',
+                      isFullWidth: false,
+                      height: 48,
                       onPressed: () {
                         queue.syncPendingRuns();
                       },
-                      child: Text(
-                        'Sync now',
-                        style: AppText.labelSmall.copyWith(
-                          color: AppColors.onAccent,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                     ),
                 ],
               ),

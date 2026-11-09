@@ -445,57 +445,29 @@ class _TeamSelectionSheetState extends State<TeamSelectionSheet> {
               ),
             ),
             const SizedBox(width: AppSpacing.s8),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.bgDeep,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
-              ),
-              onPressed: _isSubmitting
-                  ? null
-                  : () {
-                      final name = _customTeamController.text.trim();
-                      if (name.isEmpty) {
-                        setState(
-                          () => _errorMessage = 'Team name cannot be empty',
-                        );
-                        AppToast.showGlobal('Team name cannot be empty');
-                        return;
-                      }
-                      _setTeam(name);
-                    },
-              child: _isSubmitting
-                  ? const InlineLoading(
-                      size: 16,
-                      strokeWidth: 2,
-                      color: AppColors.bgDeep,
-                      semanticsLabel: 'Saving team...',
-                    )
-                  : const Text(
-                      'Save',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
+            PrimaryButton(
+              label: 'Save',
+              isLoading: _isSubmitting,
+              isFullWidth: false,
+              height: 48,
+              onPressed: () {
+                final name = _customTeamController.text.trim();
+                if (name.isEmpty) {
+                  setState(() => _errorMessage = 'Team name cannot be empty');
+                  AppToast.showGlobal('Team name cannot be empty');
+                  return;
+                }
+                _setTeam(name);
+              },
             ),
           ],
         ),
 
         if (currentFaction.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.s12),
-          Center(
-            child: TextButton(
-              onPressed: () => _setTeam(''),
-              child: Text(
-                'Leave Team (Run Independent)',
-                style: AppText.bodySmall.copyWith(
-                  color: AppColors.rival,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
+          SecondaryButton(
+            label: 'Leave Team (Run Independent)',
+            onPressed: () => _setTeam(''),
           ),
         ],
       ],

@@ -44,28 +44,18 @@ class SocialDuelsTab extends StatelessWidget {
           children: [
             Text(
               'Head-to-head battles',
-              style: AppText.label.copyWith(
+              style: AppText.labelSmall.copyWith(
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,
-                fontSize: 11,
               ),
             ),
-            TextButton.icon(
+            SecondaryButton(
+              label: 'New duel',
+              icon: Icons.add_rounded,
+              isFullWidth: false,
+              height: 38,
               onPressed: onNewDuel,
-              icon: const Icon(
-                Icons.add_rounded,
-                size: 16,
-                color: AppColors.accent,
-              ),
-              label: const Text(
-                'New duel',
-                style: TextStyle(
-                  color: AppColors.accent,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
             ),
           ],
         ),
@@ -131,20 +121,10 @@ class SocialDuelsTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.s16),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.onAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSpacing.br12,
-                    ),
-                  ),
+                PrimaryButton(
+                  label: 'Create first duel',
+                  icon: Icons.add_rounded,
                   onPressed: onNewDuel,
-                  icon: const Icon(Icons.add_rounded, size: 18),
-                  label: const Text(
-                    'Create first duel',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
                 ),
               ],
             ),
@@ -353,33 +333,16 @@ class SocialDuelsTab extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSpacing.br10,
-                      ),
-                    ),
+                  child: PrimaryButton(
+                    label: 'Accept duel',
                     onPressed: () => onAcceptDuel(duel.id),
-                    child: const Text(
-                      'Accept duel',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.s8),
                 Expanded(
-                  child: OutlinedButton(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textSecondary,
-                      side: const BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSpacing.br10,
-                      ),
-                    ),
+                  child: SecondaryButton(
+                    label: 'Decline',
                     onPressed: () => onDeclineDuel(duel.id),
-                    child: const Text('Decline'),
                   ),
                 ),
               ],

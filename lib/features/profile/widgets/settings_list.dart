@@ -192,9 +192,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             const SizedBox(width: AppSpacing.s8),
             Text(
               'Delete account?',
-              style: AppText.headingSmall.copyWith(
+              style: AppText.titleSmall.copyWith(
                 color: AppColors.textPrimary,
-                fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -205,24 +204,18 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
-          TextButton(
+          SecondaryButton(
+            label: 'Keep account',
+            isFullWidth: false,
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Keep account',
-              style: AppText.label.copyWith(color: AppColors.textMuted),
-            ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: AppColors.textPrimary,
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.brFull),
-            ),
+          PrimaryButton(
+            label: 'Delete permanently',
+            isFullWidth: false,
             onPressed: () async {
               Navigator.of(ctx).pop();
               await _executeAccountDeletion(context);
             },
-            child: const Text('Delete permanently'),
           ),
         ],
       ),
@@ -299,21 +292,11 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Appearance',
-                            style: AppText.bodyMedium.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                          ),
+                          Text('Appearance', style: AppText.bodyBold),
                           const SizedBox(height: 2),
                           Text(
                             'Dark (default), outdoor light high-contrast, or system',
-                            style: AppText.bodySmall.copyWith(
-                              color: AppColors.textMuted,
-                              fontSize: 11,
-                            ),
+                            style: AppText.bodySmall,
                           ),
                         ],
                       ),
@@ -388,20 +371,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               color: AppColors.accent,
               size: 20,
             ),
-            title: Text(
-              'Haptic feedback',
-              style: AppText.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-            subtitle: Text(
+            title: const Text('Haptic feedback', style: AppText.bodyBold),
+            subtitle: const Text(
               'Key events only: run start, loop closed, milestones, alerts, and finish',
-              style: AppText.bodySmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-              ),
+              style: AppText.bodySmall,
             ),
             activeThumbColor: AppColors.accent,
             activeTrackColor: AppColors.accentContainer,
@@ -425,20 +398,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               color: AppColors.accent,
               size: 20,
             ),
-            title: Text(
-              'Battery saver',
-              style: AppText.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-            subtitle: Text(
+            title: const Text('Battery saver', style: AppText.bodyBold),
+            subtitle: const Text(
               'AMOLED black HUD, reduced animations, optimized GPS',
-              style: AppText.bodySmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-              ),
+              style: AppText.bodySmall,
             ),
             activeThumbColor: AppColors.accent,
             activeTrackColor: AppColors.accentContainer,
@@ -456,20 +419,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               color: AppColors.accent,
               size: 20,
             ),
-            title: Text(
+            title: const Text(
               'Left-handed map layout',
-              style: AppText.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
+              style: AppText.bodyBold,
             ),
-            subtitle: Text(
+            subtitle: const Text(
               'Position thumb controls on the left for one-handed reach',
-              style: AppText.bodySmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-              ),
+              style: AppText.bodySmall,
             ),
             activeThumbColor: AppColors.accent,
             activeTrackColor: AppColors.accentContainer,
@@ -487,20 +443,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               color: AppColors.accent,
               size: 20,
             ),
-            title: Text(
+            title: const Text(
               'Countdown voice & sounds',
-              style: AppText.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
+              style: AppText.bodyBold,
             ),
-            subtitle: Text(
+            subtitle: const Text(
               'Audio beeps and vocal prompts before run start',
-              style: AppText.bodySmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-              ),
+              style: AppText.bodySmall,
             ),
             activeThumbColor: AppColors.accent,
             activeTrackColor: AppColors.accentContainer,
@@ -518,20 +467,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               color: AppColors.accent,
               size: 20,
             ),
-            title: Text(
-              'Auto-save run card',
-              style: AppText.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
-            subtitle: Text(
+            title: const Text('Auto-save run card', style: AppText.bodyBold),
+            subtitle: const Text(
               'Save 1080p card to photo gallery when run completes',
-              style: AppText.bodySmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-              ),
+              style: AppText.bodySmall,
             ),
             activeThumbColor: AppColors.accent,
             activeTrackColor: AppColors.accentContainer,
@@ -566,20 +505,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                   color: AppColors.accent,
                   size: 20,
                 ),
-                title: Text(
-                  'Land reminders',
-                  style: AppText.bodyMedium.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                subtitle: Text(
+                title: const Text('Land reminders', style: AppText.bodyBold),
+                subtitle: const Text(
                   'Notify when territory strength drops below 50% or 30%',
-                  style: AppText.bodySmall.copyWith(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                  ),
+                  style: AppText.bodySmall,
                 ),
                 activeThumbColor: AppColors.accent,
                 activeTrackColor: AppColors.accentContainer,
@@ -643,32 +572,22 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
               color: AppColors.accent,
               size: 20,
             ),
-            title: Text(
-              'Distance & pace units',
-              style: AppText.bodyMedium.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
-              ),
-            ),
+            title: const Text('Distance & pace units', style: AppText.bodyBold),
             subtitle: Text(
               _appPrefs.unit == DistanceUnit.metric
                   ? 'Metric (Kilometers, m²)'
                   : 'Imperial (Miles, Acres)',
-              style: AppText.bodySmall.copyWith(
-                color: AppColors.textMuted,
-                fontSize: 11,
-              ),
+              style: AppText.bodySmall,
             ),
             trailing: SegmentedButton<DistanceUnit>(
               segments: const [
                 ButtonSegment(
                   value: DistanceUnit.metric,
-                  label: Text('KM', style: TextStyle(fontSize: 11)),
+                  label: Text('KM', style: AppText.labelSmall),
                 ),
                 ButtonSegment(
                   value: DistanceUnit.imperial,
-                  label: Text('MI', style: TextStyle(fontSize: 11)),
+                  label: Text('MI', style: AppText.labelSmall),
                 ),
               ],
               selected: {_appPrefs.unit},
@@ -716,21 +635,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                   color: AppColors.accent,
                   size: 20,
                 ),
-                title: Text(
-                  'Body details',
-                  style: AppText.bodyMedium.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
-                ),
-                subtitle: Text(
-                  subtitle,
-                  style: AppText.bodySmall.copyWith(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                  ),
-                ),
+                title: const Text('Body details', style: AppText.bodyBold),
+                subtitle: Text(subtitle, style: AppText.bodySmall),
                 trailing: const Icon(
                   Icons.chevron_right_rounded,
                   color: AppColors.textMuted,
@@ -764,21 +670,11 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                   color: AppColors.accent,
                   size: 20,
                 ),
-                title: Text(
+                title: const Text(
                   'Watch calorie calibration',
-                  style: AppText.bodyMedium.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
+                  style: AppText.bodyBold,
                 ),
-                subtitle: Text(
-                  subtitle,
-                  style: AppText.bodySmall.copyWith(
-                    color: AppColors.textMuted,
-                    fontSize: 11,
-                  ),
-                ),
+                subtitle: Text(subtitle, style: AppText.bodySmall),
                 trailing: const Icon(
                   Icons.chevron_right_rounded,
                   color: AppColors.textMuted,
@@ -805,9 +701,8 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 subtitle: 'Sharing: ${vis.displayName} (default: Off)',
                 trailing: Text(
                   vis.displayName,
-                  style: const TextStyle(
+                  style: AppText.labelMedium.copyWith(
                     color: AppColors.accent,
-                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -883,10 +778,10 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           ProfileOptionTile(
             icon: Icons.info_outline_rounded,
             title: 'Territory Runner',
-            subtitle: '${AppVersion.display} • Territory running',
+            subtitle: 'Real-world GPS running and territory loops',
             trailing: Text(
-              AppVersion.display,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+              'v${AppVersion.display}',
+              style: AppText.labelMedium.copyWith(color: AppColors.textMuted),
             ),
             onTap: _onVersionTap,
           ),
@@ -935,20 +830,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 color: AppColors.info,
                 size: 20,
               ),
-              title: Text(
+              title: const Text(
                 'Demo mode & simulation',
-                style: AppText.bodyMedium.copyWith(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+                style: AppText.bodyBold,
               ),
-              subtitle: Text(
+              subtitle: const Text(
                 'Enable virtual pacer, simulated routes & demo lab triggers',
-                style: AppText.bodySmall.copyWith(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                ),
+                style: AppText.bodySmall,
               ),
               activeThumbColor: AppColors.accent,
               activeTrackColor: AppColors.accentContainer,
@@ -1053,20 +941,12 @@ class ProfileOptionTile extends StatelessWidget {
         leading: Icon(icon, color: iconColor ?? AppColors.accent, size: 20),
         title: Text(
           title,
-          style: AppText.bodyMedium.copyWith(
+          style: AppText.bodyBold.copyWith(
             color: titleColor ?? AppColors.textPrimary,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
           ),
         ),
         subtitle: subtitle != null
-            ? Text(
-                subtitle!,
-                style: AppText.bodySmall.copyWith(
-                  color: AppColors.textMuted,
-                  fontSize: 11,
-                ),
-              )
+            ? Text(subtitle!, style: AppText.bodySmall)
             : null,
         trailing:
             trailing ??
@@ -1120,11 +1000,9 @@ class _ThemeOptionButton extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppText.fontFamily,
+            style: AppText.labelSmall.copyWith(
               color: isSelected ? AppColors.accent : AppColors.textPrimary,
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-              fontSize: 11,
             ),
           ),
         ),

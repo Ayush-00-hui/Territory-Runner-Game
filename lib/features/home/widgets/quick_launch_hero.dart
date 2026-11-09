@@ -87,17 +87,12 @@ class QuickLaunchHero extends StatelessWidget {
                 ),
                 if (currentGoal != null && currentGoal > 0) ...[
                   const SizedBox(height: AppSpacing.s8),
-                  TextButton(
+                  SecondaryButton(
+                    label: 'Clear daily goal',
                     onPressed: () {
                       AppPreferences().setDailyGoalKm(null);
                       Navigator.pop(sheetCtx);
                     },
-                    child: Text(
-                      'Clear daily goal',
-                      style: AppText.labelMedium.copyWith(
-                        color: AppColors.textMuted,
-                      ),
-                    ),
                   ),
                 ],
               ],

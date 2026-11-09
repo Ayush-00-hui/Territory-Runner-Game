@@ -208,149 +208,111 @@ void showProfileAuthModal(
                         ),
                       ),
                       const SizedBox(height: 18),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: AppColors.onAccent,
-                          minimumSize: const Size.fromHeight(52),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        onPressed: isLoading
-                            ? null
-                            : () async {
-                                String phone = phoneController.text.trim();
-                                if (phone.isEmpty) {
-                                  AppToast.show(
-                                    context,
-                                    'Please enter a phone number with country code (e.g. +91...)',
-                                    type: AppToastType.warning,
-                                  );
-                                  return;
-                                }
-                                if (!phone.startsWith('+')) {
-                                  phone = '+$phone';
-                                }
-                                setModalState(() => isLoading = true);
-                                try {
-                                  await firebaseService.verifyPhoneNumber(
-                                    phoneNumber: phone,
-                                    onCodeSent: (verId) {
-                                      setModalState(() {
-                                        verificationId = verId;
-                                        codeSent = true;
-                                        isLoading = false;
-                                      });
-                                      AppToast.show(
-                                        context,
-                                        'SMS OTP code sent to $phone',
-                                        type: AppToastType.success,
-                                      );
-                                    },
-                                    onVerificationFailed: (e) {
-                                      setModalState(() => isLoading = false);
-                                      showDialog(
-                                        context: context,
-                                        builder: (dialogCtx) => AlertDialog(
-                                          backgroundColor: AppColors.surface,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              20,
-                                            ),
-                                          ),
-                                          title: const Text(
-                                            'Athlete Auth Notice',
-                                            style: TextStyle(
-                                              color: AppColors.textPrimary,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          content: Text(
-                                            'Firebase returned: ${e.message ?? e.code}\n\n'
-                                            'To authenticate seamlessly in testing, you can tap Demo Login below.',
-                                            style: const TextStyle(
-                                              color: AppColors.textSecondary,
-                                              fontSize: 13,
-                                              height: 1.4,
-                                            ),
-                                          ),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(dialogCtx),
-                                              child: const Text(
-                                                'Cancel',
-                                                style: TextStyle(
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                ),
-                                              ),
-                                            ),
-                                            ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    AppColors.accent,
-                                                foregroundColor:
-                                                    AppColors.onAccent,
-                                              ),
-                                              onPressed: () async {
-                                                Navigator.pop(dialogCtx);
-                                                final profile = territoryService
-                                                    .getProfile();
-                                                profile.username = phone;
-                                                await territoryService
-                                                    .saveProfile(profile);
-                                                if (context.mounted) {
-                                                  Navigator.pop(ctx);
-                                                  onProfileUpdated();
-                                                  AppToast.show(
-                                                    context,
-                                                    '⚡ Athlete Profile Synced!',
-                                                    type: AppToastType.success,
-                                                  );
-                                                }
-                                              },
-                                              child: const Text(
-                                                'Demo Login',
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                    onVerificationCompleted: (cred) async {
-                                      setModalState(() => isLoading = false);
-                                    },
-                                  );
-                                } catch (e) {
-                                  setModalState(() => isLoading = false);
-                                  if (context.mounted) {
-                                    AppToast.show(
-                                      context,
-                                      'Error: $e',
-                                      type: AppToastType.error,
-                                    );
-                                  }
-                                }
+                      PrimaryButton(
+                        label: 'Send SMS Verification Code',
+                        isLoading: isLoading,
+                        onPressed: () async {
+                          String phone = phoneController.text.trim();
+                          if (phone.isEmpty) {
+                            AppToast.show(
+                              context,
+                              'Please enter a phone number with country code (e.g. +91...)',
+                              type: AppToastType.warning,
+                            );
+                            return;
+                          }
+                          if (!phone.startsWith('+')) {
+                            phone = '+$phone';
+                          }
+                          setModalState(() => isLoading = true);
+                          try {
+                            await firebaseService.verifyPhoneNumber(
+                              phoneNumber: phone,
+                              onCodeSent: (verId) {
+                                setModalState(() {
+                                  verificationId = verId;
+                                  codeSent = true;
+                                  isLoading = false;
+                                });
+                                AppToast.show(
+                                  context,
+                                  'SMS OTP code sent to $phone',
+                                  type: AppToastType.success,
+                                );
                               },
-                        child: isLoading
-                            ? const InlineLoading(
-                                size: 20,
-                                strokeWidth: 2,
-                                color: AppColors.onAccent,
-                                semanticsLabel:
-                                    'Sending SMS verification code...',
-                              )
-                            : Text(
-                                'Send SMS Verification Code',
-                                style: AppText.button.copyWith(
-                                  color: AppColors.onAccent,
-                                ),
-                              ),
+                              onVerificationFailed: (e) {
+                                setModalState(() => isLoading = false);
+                                showDialog(
+                                  context: context,
+                                  builder: (dialogCtx) => AlertDialog(
+                                    backgroundColor: AppColors.surface,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: AppSpacing.br20,
+                                    ),
+                                    title: const Text(
+                                      'Athlete Auth Notice',
+                                      style: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    content: Text(
+                                      'Firebase returned: ${e.message ?? e.code}\n\n'
+                                      'To authenticate seamlessly in testing, you can tap Demo Login below.',
+                                      style: const TextStyle(
+                                        color: AppColors.textSecondary,
+                                        fontSize: 13,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                    actions: [
+                                      SecondaryButton(
+                                        label: 'Cancel',
+                                        isFullWidth: false,
+                                        onPressed: () =>
+                                            Navigator.pop(dialogCtx),
+                                      ),
+                                      PrimaryButton(
+                                        label: 'Demo Login',
+                                        isFullWidth: false,
+                                        onPressed: () async {
+                                          Navigator.pop(dialogCtx);
+                                          final profile = territoryService
+                                              .getProfile();
+                                          profile.username = phone;
+                                          await territoryService.saveProfile(
+                                            profile,
+                                          );
+                                          if (context.mounted) {
+                                            Navigator.pop(ctx);
+                                            onProfileUpdated();
+                                            AppToast.show(
+                                              context,
+                                              'Athlete profile synced',
+                                              type: AppToastType.success,
+                                            );
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              onVerificationCompleted: (cred) async {
+                                setModalState(() => isLoading = false);
+                              },
+                            );
+                          } catch (e) {
+                            setModalState(() => isLoading = false);
+                            if (context.mounted) {
+                              AppToast.show(
+                                context,
+                                'Error: $e',
+                                type: AppToastType.error,
+                              );
+                            }
+                          }
+                        },
                       ),
                     ] else ...[
                       Text(
@@ -394,86 +356,56 @@ void showProfileAuthModal(
                         ),
                       ),
                       const SizedBox(height: 18),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: AppColors.onAccent,
-                          minimumSize: const Size.fromHeight(52),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        onPressed: isLoading
-                            ? null
-                            : () async {
-                                final smsCode = otpController.text.trim();
-                                if (smsCode.length < 6 ||
-                                    verificationId == null) {
-                                  AppToast.show(
-                                    context,
-                                    'Please enter the 6-digit code',
-                                    type: AppToastType.warning,
-                                  );
-                                  return;
-                                }
-                                setModalState(() => isLoading = true);
-                                try {
-                                  await firebaseService.signInWithOtp(
-                                    verificationId!,
-                                    smsCode,
-                                  );
-                                  final profile = territoryService.getProfile();
-                                  profile.username = phoneController.text
-                                      .trim();
-                                  await territoryService.saveProfile(profile);
+                      PrimaryButton(
+                        label: 'Verify Code & Connect',
+                        isLoading: isLoading,
+                        onPressed: () async {
+                          final smsCode = otpController.text.trim();
+                          if (smsCode.length < 6 || verificationId == null) {
+                            AppToast.show(
+                              context,
+                              'Please enter the 6-digit code',
+                              type: AppToastType.warning,
+                            );
+                            return;
+                          }
+                          setModalState(() => isLoading = true);
+                          try {
+                            await firebaseService.signInWithOtp(
+                              verificationId!,
+                              smsCode,
+                            );
+                            final profile = territoryService.getProfile();
+                            profile.username = phoneController.text.trim();
+                            await territoryService.saveProfile(profile);
 
-                                  if (context.mounted) {
-                                    Navigator.pop(ctx);
-                                    onProfileUpdated();
-                                    AppToast.show(
-                                      context,
-                                      '⚡ Athlete Profile Synced & Connected!',
-                                      type: AppToastType.success,
-                                    );
-                                  }
-                                } catch (e) {
-                                  setModalState(() => isLoading = false);
-                                  if (context.mounted) {
-                                    AppToast.show(
-                                      context,
-                                      'Verification error: $e',
-                                      type: AppToastType.error,
-                                    );
-                                  }
-                                }
-                              },
-                        child: isLoading
-                            ? const InlineLoading(
-                                size: 20,
-                                strokeWidth: 2,
-                                color: AppColors.onAccent,
-                                semanticsLabel: 'Verifying code...',
-                              )
-                            : Text(
-                                'Verify Code & Connect',
-                                style: AppText.button.copyWith(
-                                  color: AppColors.onAccent,
-                                ),
-                              ),
+                            if (context.mounted) {
+                              Navigator.pop(ctx);
+                              onProfileUpdated();
+                              AppToast.show(
+                                context,
+                                'Athlete profile connected and synced',
+                                type: AppToastType.success,
+                              );
+                            }
+                          } catch (e) {
+                            setModalState(() => isLoading = false);
+                            if (context.mounted) {
+                              AppToast.show(
+                                context,
+                                'Verification error: $e',
+                                type: AppToastType.error,
+                              );
+                            }
+                          }
+                        },
                       ),
-                      TextButton(
+                      const SizedBox(height: AppSpacing.s10),
+                      SecondaryButton(
+                        label: 'Change Phone Number',
                         onPressed: () {
                           setModalState(() => codeSent = false);
                         },
-                        child: const Center(
-                          child: Text(
-                            'Change Phone Number',
-                            style: TextStyle(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
                       ),
                     ],
                   ] else ...[
@@ -547,15 +479,11 @@ void showProfileAuthModal(
                       ),
                     ),
                     const SizedBox(height: 18),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: AppColors.onAccent,
-                        minimumSize: const Size.fromHeight(52),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
+                    PrimaryButton(
+                      label: isSignUp
+                          ? 'Create Athlete Profile'
+                          : 'Log In with Email',
+                      isLoading: isLoading,
                       onPressed: () async {
                         try {
                           if (isSignUp) {
@@ -577,7 +505,7 @@ void showProfileAuthModal(
                             onProfileUpdated();
                             AppToast.show(
                               context,
-                              '⚡ Athlete Account Synced!',
+                              'Athlete account synced',
                               type: AppToastType.success,
                             );
                           }
@@ -591,34 +519,17 @@ void showProfileAuthModal(
                           }
                         }
                       },
-                      child: Text(
-                        isSignUp
-                            ? 'Create Athlete Profile'
-                            : 'Log In with Email',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                        ),
-                      ),
                     ),
-                    const SizedBox(height: 10),
-                    TextButton(
+                    const SizedBox(height: AppSpacing.s10),
+                    SecondaryButton(
+                      label: isSignUp
+                          ? 'Already registered? Log In'
+                          : 'New runner? Create Profile',
                       onPressed: () {
                         setModalState(() {
                           isSignUp = !isSignUp;
                         });
                       },
-                      child: Center(
-                        child: Text(
-                          isSignUp
-                              ? 'Already registered? Log In'
-                              : 'New runner? Create Profile',
-                          style: const TextStyle(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
                     ),
                   ],
                 ],

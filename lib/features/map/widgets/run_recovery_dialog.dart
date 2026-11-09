@@ -110,31 +110,15 @@ class RunRecoveryDialog extends StatelessWidget {
         ],
       ),
       actions: [
-        TextButton(
+        SecondaryButton(
+          label: 'Discard',
+          isFullWidth: false,
           onPressed: onDiscard,
-          child: const Text(
-            'Discard',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-          ),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accent,
-            foregroundColor: AppColors.bgDeep,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          ),
+        PrimaryButton(
+          label: 'Resume Session',
+          isFullWidth: false,
           onPressed: onResume,
-          child: const Text(
-            'Resume Session',
-            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-          ),
         ),
       ],
     );

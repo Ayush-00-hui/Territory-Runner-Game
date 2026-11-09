@@ -163,6 +163,7 @@ class PermissionPrimerSheet extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: AppSpacing.br14,
                     ),
+                    minimumSize: const Size.fromHeight(48),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -174,9 +175,8 @@ class PermissionPrimerSheet extends StatelessWidget {
                   },
                   child: Text(
                     config.secondaryButtonText,
-                    style: const TextStyle(
+                    style: AppText.labelMedium.copyWith(
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
                     ),
                   ),
                 ),
@@ -191,6 +191,7 @@ class PermissionPrimerSheet extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                       borderRadius: AppSpacing.br14,
                     ),
+                    minimumSize: const Size.fromHeight(48),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   onPressed: () {
@@ -202,9 +203,8 @@ class PermissionPrimerSheet extends StatelessWidget {
                   },
                   child: Text(
                     config.primaryButtonText,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
+                    style: AppText.bodyBold.copyWith(
+                      color: AppColors.onAccent,
                       letterSpacing: 0.5,
                     ),
                   ),

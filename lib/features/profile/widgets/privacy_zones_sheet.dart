@@ -292,74 +292,30 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                     ),
 
                     // Coordinate Pinning
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.textPrimary,
-                              side: const BorderSide(color: AppColors.border),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppSpacing.br12,
-                              ),
-                            ),
-                            icon: _isLocating
-                                ? const InlineLoading(
-                                    size: 14,
-                                    strokeWidth: 2,
-                                    color: AppColors.accent,
-                                    semanticsLabel: 'Detecting location...',
-                                  )
-                                : const Icon(
-                                    Icons.my_location_rounded,
-                                    size: 16,
-                                    color: AppColors.accent,
-                                  ),
-                            label: Text(
-                              _selectedCoordinates == null
-                                  ? 'Pin Current Location'
-                                  : 'Pinned (${_selectedCoordinates!.latitude.toStringAsFixed(3)}, ${_selectedCoordinates!.longitude.toStringAsFixed(3)})',
-                              style: AppText.caption,
-                            ),
-                            onPressed: _fetchCurrentLocation,
-                          ),
-                        ),
-                      ],
+                    SecondaryButton(
+                      label: _selectedCoordinates == null
+                          ? 'Pin Current Location'
+                          : 'Pinned (${_selectedCoordinates!.latitude.toStringAsFixed(3)}, ${_selectedCoordinates!.longitude.toStringAsFixed(3)})',
+                      icon: Icons.my_location_rounded,
+                      isLoading: _isLocating,
+                      onPressed: _fetchCurrentLocation,
                     ),
 
                     const SizedBox(height: AppSpacing.s12),
                     Row(
                       children: [
                         Expanded(
-                          child: TextButton(
+                          child: SecondaryButton(
+                            label: 'Cancel',
                             onPressed: () => setState(() => _isAdding = false),
-                            child: Text(
-                              'Cancel',
-                              style: AppText.caption.copyWith(
-                                color: AppColors.textMuted,
-                              ),
-                            ),
                           ),
                         ),
                         const SizedBox(width: AppSpacing.s8),
                         Expanded(
                           flex: 2,
-                          child: FilledButton(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.accent,
-                              foregroundColor: AppColors.onAccent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: AppRadius.br12,
-                              ),
-                            ),
+                          child: PrimaryButton(
+                            label: 'Save zone',
                             onPressed: _saveNewZone,
-                            child: Text(
-                              'Save zone',
-                              style: AppText.button.copyWith(
-                                color: AppColors.onAccent,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
                           ),
                         ),
                       ],

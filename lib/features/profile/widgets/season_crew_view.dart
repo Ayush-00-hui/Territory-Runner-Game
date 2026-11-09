@@ -859,30 +859,17 @@ class _SeasonCrewViewState extends State<SeasonCrewView> {
                   children: [
                     Text(
                       'WEEKLY CREW GOAL',
-                      style: AppText.label.copyWith(
+                      style: AppText.labelSmall.copyWith(
                         color: AppColors.textSecondary,
-                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     if (isLeader)
-                      Semantics(
-                        button: true,
-                        label: 'Set or update crew weekly goal',
-                        child: TextButton(
-                          onPressed: _showSetGoalDialog,
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(48, 36),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                          child: Text(
-                            goal != null ? 'Edit Target' : 'Set Target',
-                            style: AppText.caption.copyWith(
-                              color: AppColors.accent,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
+                      SecondaryButton(
+                        label: goal != null ? 'Edit Target' : 'Set Target',
+                        onPressed: _showSetGoalDialog,
+                        isFullWidth: false,
+                        height: 38,
                       ),
                   ],
                 ),

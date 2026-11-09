@@ -255,14 +255,12 @@ class _CalorieFactorsSheetState extends State<CalorieFactorsSheet> {
                         ),
                       ),
                     ),
-                    TextButton(
+                    SecondaryButton(
+                      label: 'Reset',
+                      isFullWidth: false,
                       onPressed: () async {
                         await _appPrefs.resetWatchCalibration();
                       },
-                      child: Text(
-                        'Reset',
-                        style: AppText.label.copyWith(color: AppColors.error),
-                      ),
                     ),
                   ],
                 ),
@@ -325,19 +323,21 @@ class _CalorieFactorsSheetState extends State<CalorieFactorsSheet> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        TextButton(
+                        SecondaryButton(
+                          label: 'Cancel',
+                          isFullWidth: false,
                           onPressed: () {
                             setState(() {
                               _isEnteringSession = false;
                               _inlineError = null;
                             });
                           },
-                          child: const Text('Cancel'),
                         ),
                         const SizedBox(width: AppSpacing.s8),
-                        ElevatedButton(
+                        PrimaryButton(
+                          label: 'Save session',
+                          isFullWidth: false,
                           onPressed: _saveCalibrationSession,
-                          child: const Text('Save session'),
                         ),
                       ],
                     ),
@@ -345,13 +345,11 @@ class _CalorieFactorsSheetState extends State<CalorieFactorsSheet> {
                 ),
               ),
             ] else ...[
-              OutlinedButton.icon(
-                icon: const Icon(Icons.add_rounded, size: 18),
-                label: Text(
-                  sessionCount == 0
-                      ? 'Add first watch calibration run'
-                      : 'Add session ($sessionCount / 3 completed)',
-                ),
+              SecondaryButton(
+                label: sessionCount == 0
+                    ? 'Add first watch calibration run'
+                    : 'Add session ($sessionCount / 3 completed)',
+                icon: Icons.add_rounded,
                 onPressed: () {
                   setState(() {
                     _isEnteringSession = true;
@@ -391,9 +389,9 @@ class _CalorieFactorsSheetState extends State<CalorieFactorsSheet> {
               ),
             ),
             const SizedBox(height: AppSpacing.s16),
-            ElevatedButton(
+            PrimaryButton(
+              label: 'Got it',
               onPressed: () => Navigator.pop(context),
-              child: const Text('Got it'),
             ),
           ],
         );

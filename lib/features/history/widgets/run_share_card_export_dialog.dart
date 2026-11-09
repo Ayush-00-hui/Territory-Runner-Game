@@ -88,17 +88,15 @@ void showMlDebugExportDialog(
           ],
         ),
         actions: [
-          TextButton(
+          SecondaryButton(
+            label: 'Cancel',
+            isFullWidth: false,
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
           ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: AppColors.surface,
-            ),
-            icon: const Icon(Icons.share_rounded, size: 16),
-            label: const Text('Export & Share'),
+          PrimaryButton(
+            label: 'Export & Share',
+            icon: Icons.share_rounded,
+            isFullWidth: false,
             onPressed: () async {
               Navigator.pop(ctx);
               final sessionId =

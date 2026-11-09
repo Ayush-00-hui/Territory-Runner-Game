@@ -285,22 +285,11 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
 
           // Action Buttons
           if (AppConstants.allowTilePrefetch) ...[
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: AppColors.onAccent,
-                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
-                ),
-                icon: const Icon(Icons.download_rounded, size: 20),
-                label: const Text(
-                  'Pre-cache current area (1.2 km)',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                ),
-                onPressed: _isDownloading ? null : _preDownloadCurrentArea,
-              ),
+            PrimaryButton(
+              label: 'Pre-cache current area (1.2 km)',
+              icon: Icons.download_rounded,
+              isLoading: _isDownloading,
+              onPressed: _preDownloadCurrentArea,
             ),
             const SizedBox(height: AppSpacing.s10),
           ] else ...[
@@ -335,24 +324,11 @@ class _OfflineMapsSheetState extends State<OfflineMapsSheet> {
             const SizedBox(height: AppSpacing.s12),
           ],
 
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.error,
-                side: const BorderSide(color: AppColors.border),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
-              ),
-              icon: const Icon(Icons.delete_sweep_rounded, size: 18),
-              label: const Text(
-                'Purge Offline Map Cache',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-              ),
-              onPressed: (_tileCount == 0 || _isDownloading)
-                  ? null
-                  : _clearCache,
-            ),
+          SecondaryButton(
+            label: 'Purge Offline Map Cache',
+            icon: Icons.delete_sweep_rounded,
+            height: 48,
+            onPressed: (_tileCount == 0 || _isDownloading) ? null : _clearCache,
           ),
         ],
       ),

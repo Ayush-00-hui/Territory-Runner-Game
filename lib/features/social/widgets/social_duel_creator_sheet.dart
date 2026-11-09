@@ -269,17 +269,8 @@ Future<void> showCreateDuelSheet(
 
                 const SizedBox(height: AppSpacing.s24),
 
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.secondary,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.s14,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSpacing.br12,
-                    ),
-                  ),
+                PrimaryButton(
+                  label: 'Launch 24-hour duel',
                   onPressed: () async {
                     final chosenOpponent = opponentId.isNotEmpty
                         ? opponentId
@@ -319,14 +310,6 @@ Future<void> showCreateDuelSheet(
                       }
                     }
                   },
-                  child: const Text(
-                    'Launch 24-hour duel',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
                 ),
               ],
             ),

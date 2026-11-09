@@ -235,9 +235,8 @@ class _SocialHubViewState extends State<SocialHubView> {
                   Expanded(
                     child: Text(
                       _errorMessage!,
-                      style: const TextStyle(
+                      style: AppText.labelSmall.copyWith(
                         color: AppColors.textSecondary,
-                        fontSize: 11,
                       ),
                     ),
                   ),
@@ -273,19 +272,15 @@ class _SocialHubViewState extends State<SocialHubView> {
                     Text(
                       _errorMessage!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: AppText.bodyMedium.copyWith(
                         color: AppColors.textSecondary,
-                        fontSize: 13,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.s16),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.accent,
-                        side: const BorderSide(color: AppColors.accent),
-                      ),
+                    SecondaryButton(
+                      label: 'Retry connection',
                       onPressed: _refreshData,
-                      child: const Text('Retry connection'),
+                      isFullWidth: false,
                     ),
                   ],
                 ),

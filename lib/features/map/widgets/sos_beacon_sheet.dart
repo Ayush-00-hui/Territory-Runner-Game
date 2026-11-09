@@ -152,37 +152,19 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
           const SizedBox(height: AppSpacing.s12),
 
           // Action 2: Send SOS SMS to Emergency Contact
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textPrimary,
-                side: const BorderSide(color: AppColors.error, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
-              ),
-              icon: const Icon(
-                Icons.sms_rounded,
-                color: AppColors.error,
-                size: 20,
-              ),
-              label: Text(
-                _safetyService.hasContactConfigured
-                    ? 'SMS contact (${_safetyService.contactName.isNotEmpty ? _safetyService.contactName : _safetyService.contactPhone})'
-                    : 'Set up emergency contact SMS',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12.5,
-                ),
-              ),
-              onPressed: () {
-                if (_safetyService.hasContactConfigured) {
-                  _safetyService.sendEmergencySms(position: position);
-                } else {
-                  showEmergencyContactDialog(context);
-                }
-              },
-            ),
+          SecondaryButton(
+            label: _safetyService.hasContactConfigured
+                ? 'SMS contact (${_safetyService.contactName.isNotEmpty ? _safetyService.contactName : _safetyService.contactPhone})'
+                : 'Set up emergency contact SMS',
+            icon: Icons.sms_rounded,
+            height: 48,
+            onPressed: () {
+              if (_safetyService.hasContactConfigured) {
+                _safetyService.sendEmergencySms(position: position);
+              } else {
+                showEmergencyContactDialog(context);
+              }
+            },
           ),
 
           const SizedBox(height: AppSpacing.s12),
@@ -191,70 +173,24 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
           Row(
             children: [
               Expanded(
-                child: SizedBox(
+                child: SecondaryButton(
+                  label: 'Share GPS',
+                  icon: Icons.share_location_rounded,
                   height: 48,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
-                      side: const BorderSide(color: AppColors.borderSubtle),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSpacing.br14,
-                      ),
-                    ),
-                    icon: const Icon(
-                      Icons.share_location_rounded,
-                      color: AppColors.accent,
-                      size: 18,
-                    ),
-                    label: const Text(
-                      'Share GPS',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                    ),
-                    onPressed: () {
-                      _safetyService.shareLiveLocation(position: position);
-                    },
-                  ),
+                  onPressed: () {
+                    _safetyService.shareLiveLocation(position: position);
+                  },
                 ),
               ),
               const SizedBox(width: AppSpacing.s10),
               Expanded(
-                child: SizedBox(
+                child: PrimaryButton(
+                  label: _isSirenOn ? 'Stop siren' : 'Siren alarm',
+                  icon: _isSirenOn
+                      ? Icons.volume_off_rounded
+                      : Icons.volume_up_rounded,
                   height: 48,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: _isSirenOn
-                          ? AppColors.warning
-                          : AppColors.surface,
-                      foregroundColor: _isSirenOn
-                          ? AppColors.onAccent
-                          : AppColors.textPrimary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSpacing.br14,
-                      ),
-                      side: BorderSide(
-                        color: _isSirenOn
-                            ? AppColors.warning
-                            : AppColors.borderSubtle,
-                      ),
-                    ),
-                    icon: Icon(
-                      _isSirenOn
-                          ? Icons.volume_off_rounded
-                          : Icons.volume_up_rounded,
-                      size: 18,
-                    ),
-                    label: Text(
-                      _isSirenOn ? 'Stop siren' : 'Siren alarm',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
-                      ),
-                    ),
-                    onPressed: _toggleSiren,
-                  ),
+                  onPressed: _toggleSiren,
                 ),
               ),
             ],

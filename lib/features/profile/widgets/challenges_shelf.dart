@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/runner_profile.dart';
+import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
 import 'profile_dialogs.dart';
 
@@ -8,16 +9,34 @@ class ChallengesShelf extends StatelessWidget {
   final RunnerProfile profile;
   final int territoriesCount;
   final double totalAreaSqMeters;
+  final String resetCountdown;
 
   const ChallengesShelf({
     super.key,
     required this.profile,
     required this.territoriesCount,
     required this.totalAreaSqMeters,
+    this.resetCountdown = 'Resets in 14h',
   });
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final runs = RunLogService().getAllRuns();
+    final todayRuns = runs
+        .where((r) => r.startedAt.isAfter(todayStart))
+        .toList();
+    final double todayDistanceKm = todayRuns.fold(
+      0.0,
+      (sum, r) => sum + (r.distanceM / 1000.0),
+    );
+    final int todayLoopsClaimed = todayRuns
+        .where((r) => r.claimedAreaSqM > 0)
+        .length;
+
+    final String resetString = resetCountdown;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -60,12 +79,17 @@ class ChallengesShelf extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.s8),
-                  Text(
-                    'Resets in 14h',
-                    style: AppText.labelSmall.copyWith(
-                      color: AppColors.textMuted,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.4,
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        resetString,
+                        style: AppText.labelSmall.copyWith(
+                          color: AppColors.textMuted,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -75,8 +99,8 @@ class ChallengesShelf extends StatelessWidget {
               // Quest 1: Distance
               _buildQuestItem(
                 title: 'Daily distance run',
-                description: 'Run at least 2.0 km on foot',
-                current: profile.totalDistanceKm,
+                description: 'Run at least 2.0 km on foot today',
+                current: todayDistanceKm,
                 target: 2.0,
                 unit: 'km',
                 xpReward: 75,
@@ -87,8 +111,8 @@ class ChallengesShelf extends StatelessWidget {
               // Quest 2: Loops
               _buildQuestItem(
                 title: 'Loop closure',
-                description: 'Enclose and claim 1 territory polygon',
-                current: territoriesCount.toDouble(),
+                description: 'Enclose and claim 1 territory polygon today',
+                current: todayLoopsClaimed.toDouble(),
                 target: 1.0,
                 unit: 'loop',
                 xpReward: 120,
@@ -243,7 +267,7 @@ class ChallengesShelf extends StatelessWidget {
         icon: Icons.emoji_events_rounded,
         unlocked: profile.hasBadge('First Claim') || territoriesCount >= 1,
         criteria: 'Enclose and claim at least 1 territory running loop.',
-        reward: '+50 XP, "Pioneer Runner" Title',
+        reward: '+50 XP • Pioneer Runner Title',
       ),
       _BadgeDefinition(
         name: 'Territory Master',
@@ -251,8 +275,8 @@ class ChallengesShelf extends StatelessWidget {
         icon: Icons.military_tech_rounded,
         unlocked:
             profile.hasBadge('Territory Master') || totalAreaSqMeters >= 10000,
-        criteria: 'Hold 10,000+ m² of territory.',
-        reward: '+200 XP, "Master Runner" Insignia',
+        criteria: 'Hold 10,000+ m² of territory on foot.',
+        reward: '+200 XP • Gold Crown in Wardrobe',
       ),
       _BadgeDefinition(
         name: '10K Centurion',
@@ -262,7 +286,7 @@ class ChallengesShelf extends StatelessWidget {
             profile.hasBadge('10K Centurion') ||
             profile.totalDistanceKm >= 10.0,
         criteria: 'Complete 10.0 cumulative km on foot.',
-        reward: '+300 XP, Centurion Wings',
+        reward: '+300 XP • Speed Visor in Wardrobe',
       ),
       _BadgeDefinition(
         name: 'Streak Flame',
@@ -271,7 +295,7 @@ class ChallengesShelf extends StatelessWidget {
         unlocked:
             profile.hasBadge('Streak Flame') || profile.currentStreak >= 7,
         criteria: 'Maintain run momentum for 7 continuous days.',
-        reward: '+150 XP, Burning Flame Avatar Aura',
+        reward: '+150 XP • Flame Shorts in Wardrobe',
       ),
     ];
 

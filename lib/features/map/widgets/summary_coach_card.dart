@@ -153,18 +153,9 @@ class SummaryCoachCard extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.accent,
-                  side: const BorderSide(color: AppColors.accent, width: 1.2),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
-                ),
-                icon: const Icon(Icons.share_rounded, size: 16),
-                label: const Text(
-                  'Share run',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
-                ),
+              child: SecondaryButton(
+                label: 'Share run',
+                icon: Icons.share_rounded,
                 onPressed: () {
                   RunShareCardModal.show(
                     context: context,
@@ -184,18 +175,9 @@ class SummaryCoachCard extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.s10),
             Expanded(
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textSecondary,
-                  side: const BorderSide(color: AppColors.borderSubtle),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
-                ),
-                icon: const Icon(Icons.download_rounded, size: 16),
-                label: const Text(
-                  'Export GPX',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5),
-                ),
+              child: SecondaryButton(
+                label: 'Export GPX',
+                icon: Icons.download_rounded,
                 onPressed: () async {
                   final file = await ExportService().exportAndShareGpx(
                     runTitle: 'Territory Run - ${profile.username}',

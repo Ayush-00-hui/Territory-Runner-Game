@@ -392,24 +392,18 @@ class HistoryRunCard extends StatelessWidget {
           style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
         ),
         actions: [
-          TextButton(
+          SecondaryButton(
+            label: 'Cancel',
+            isFullWidth: false,
             onPressed: () => Navigator.pop(ctx),
-            child: Text(
-              'Cancel',
-              style: AppText.label.copyWith(color: AppColors.textMuted),
-            ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: AppColors.textPrimary,
-              shape: RoundedRectangleBorder(borderRadius: AppRadius.brFull),
-            ),
+          PrimaryButton(
+            label: 'Delete',
+            isFullWidth: false,
             onPressed: () {
               Navigator.pop(ctx);
               onDelete?.call();
             },
-            child: const Text('Delete'),
           ),
         ],
       ),

@@ -28,16 +28,15 @@ Future<bool> showExitRunConfirmation(BuildContext context) async {
         AppSpacing.s16,
       ),
       actions: [
-        TextButton(
+        SecondaryButton(
+          label: 'Pause run',
+          isFullWidth: false,
           onPressed: () => Navigator.of(ctx).pop(true),
-          child: Text(
-            'Pause run',
-            style: AppText.labelMedium.copyWith(color: AppColors.textMuted),
-          ),
         ),
         PrimaryButton(
           label: 'Keep running',
           icon: Icons.directions_run_rounded,
+          isFullWidth: false,
           onPressed: () => Navigator.of(ctx).pop(false),
         ),
       ],

@@ -426,13 +426,9 @@ class _BodyDetailsSheetState extends State<BodyDetailsSheet> {
               ),
               if (_appPrefs.hasBodyProfile) ...[
                 const SizedBox(height: AppSpacing.s12),
-                TextButton(
+                SecondaryButton(
+                  label: 'Remove my body details',
                   onPressed: _removeDetails,
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    minimumSize: const Size.fromHeight(48),
-                  ),
-                  child: const Text('Remove my body details'),
                 ),
               ],
             ],

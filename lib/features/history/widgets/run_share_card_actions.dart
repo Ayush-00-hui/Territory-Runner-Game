@@ -39,31 +39,11 @@ class RunShareCardActions extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               flex: 2,
-              child: SizedBox(
+              child: SecondaryButton(
+                label: 'Save to gallery',
+                icon: Icons.photo_library_outlined,
                 height: 48,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textPrimary,
-                    side: const BorderSide(color: AppColors.borderSubtle),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSpacing.br12,
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.photo_library_outlined,
-                    size: 18,
-                    color: AppColors.accent,
-                  ),
-                  label: Text(
-                    'Save to gallery',
-                    style: AppText.label.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 11,
-                    ),
-                  ),
-                  onPressed: isExporting ? null : onSaveToGallery,
-                ),
+                onPressed: isExporting ? null : onSaveToGallery,
               ),
             ),
           ],
@@ -72,77 +52,30 @@ class RunShareCardActions extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: SizedBox(
-                height: 42,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.borderSubtle),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSpacing.br12,
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.file_download_outlined,
-                    size: 16,
-                    color: AppColors.accent,
-                  ),
-                  label: const Text(
-                    'Export GPX',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-                  ),
-                  onPressed: onExportGpx,
-                ),
+              child: SecondaryButton(
+                label: 'Export GPX',
+                icon: Icons.file_download_outlined,
+                height: 48,
+                onPressed: onExportGpx,
               ),
             ),
             const SizedBox(width: AppSpacing.s10),
             Expanded(
-              child: SizedBox(
-                height: 42,
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    side: const BorderSide(color: AppColors.borderSubtle),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSpacing.br12,
-                    ),
-                  ),
-                  icon: const Icon(
-                    Icons.polyline_rounded,
-                    size: 16,
-                    color: AppColors.info,
-                  ),
-                  label: const Text(
-                    'Export GeoJSON',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-                  ),
-                  onPressed: onExportGeoJson,
-                ),
+              child: SecondaryButton(
+                label: 'Export GeoJSON',
+                icon: Icons.polyline_rounded,
+                height: 48,
+                onPressed: onExportGeoJson,
               ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.s8),
-        SizedBox(
-          width: double.infinity,
-          height: 38,
-          child: OutlinedButton.icon(
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.accent,
-              side: const BorderSide(color: AppColors.accent),
-              shape: RoundedRectangleBorder(borderRadius: AppSpacing.br12),
-            ),
-            icon: const Icon(
-              Icons.analytics_outlined,
-              size: 16,
-              color: AppColors.accent,
-            ),
-            label: const Text(
-              'Export ML Debug Trace (JSON)',
-              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11),
-            ),
-            onPressed: onExportMlTrace,
-          ),
+        SecondaryButton(
+          label: 'Export ML Debug Trace (JSON)',
+          icon: Icons.analytics_outlined,
+          height: 48,
+          onPressed: onExportMlTrace,
         ),
       ],
     );

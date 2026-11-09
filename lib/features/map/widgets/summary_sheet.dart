@@ -497,7 +497,7 @@ class _SummarySheetState extends State<SummarySheet>
                           label: 'Set details',
                           icon: Icons.person_outline_rounded,
                           isFullWidth: false,
-                          height: 38,
+                          height: 48,
                           onPressed: () {
                             BodyDetailsSheet.show(
                               context: context,
@@ -508,17 +508,14 @@ class _SummarySheetState extends State<SummarySheet>
                           },
                         ),
                         const SizedBox(width: AppSpacing.s8),
-                        TextButton(
+                        SecondaryButton(
+                          label: 'Keep default',
+                          isFullWidth: false,
+                          height: 48,
                           onPressed: () {
                             AppPreferences().dismissBodyDetailsReminder();
                             setState(() => _reminderManuallyDismissed = true);
                           },
-                          child: Text(
-                            'Keep average adult',
-                            style: AppText.labelMedium.copyWith(
-                              color: AppColors.textMuted,
-                            ),
-                          ),
                         ),
                       ],
                     ),

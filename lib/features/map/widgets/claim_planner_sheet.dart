@@ -4,10 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../routing/route_service.dart';
-import '../../../ui/theme/app_colors.dart';
-import '../../../ui/theme/app_spacing.dart';
-import '../../../ui/theme/app_text.dart';
-import '../../../ui/widgets/inline_loading.dart';
+import '../../../ui/ui.dart';
 
 /// Preset area target configuration
 class AreaPreset {
@@ -477,43 +474,17 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
           const SizedBox(height: AppSpacing.s24),
 
           // Action: Start Run with Guidance
-          SizedBox(
-            width: double.infinity,
-            height: 54,
-            child: ElevatedButton(
-              onPressed: route != null
-                  ? () {
-                      Navigator.of(context).maybePop();
-                      widget.onStartRun(route);
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                disabledBackgroundColor: AppColors.surface2,
-                foregroundColor: AppColors.onAccent,
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
-                elevation: 0,
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.play_arrow_rounded,
-                    color: AppColors.onAccent,
-                    size: 26,
-                  ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Start run with route',
-                    style: TextStyle(
-                      color: AppColors.onAccent,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          PrimaryButton(
+            label: 'Start run with route',
+            icon: Icons.play_arrow_rounded,
+            height: 52,
+            disabledReason: 'Generating route...',
+            onPressed: route != null
+                ? () {
+                    Navigator.of(context).maybePop();
+                    widget.onStartRun(route);
+                  }
+                : null,
           ),
         ],
       ),

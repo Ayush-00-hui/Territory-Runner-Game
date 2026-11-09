@@ -7,6 +7,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 import 'app_sheet.dart';
+import 'secondary_button.dart';
 import '../../services/sync_queue.dart';
 
 import '../../services/websocket_service.dart';
@@ -373,30 +374,21 @@ class _DiagnosticSheetContentState extends State<_DiagnosticSheetContent> {
 
           // Manual sync trigger
           if (_pendingRuns > 0)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.textPrimary,
-                  side: const BorderSide(color: AppColors.border),
-                  shape: RoundedRectangleBorder(borderRadius: AppRadius.br8),
-                ),
-                onPressed: _isSyncing
-                    ? null
-                    : () async {
-                        setState(() => _isSyncing = true);
-                        await widget.syncQueue.syncPendingRuns();
-                        if (mounted) {
-                          setState(() {
-                            _isSyncing = false;
-                            _pendingRuns =
-                                widget.syncQueue.unsettledCountNotifier.value;
-                          });
-                          Navigator.of(context).maybePop();
-                        }
-                      },
-                child: Text(_isSyncing ? 'Syncing...' : 'Sync now'),
-              ),
+            SecondaryButton(
+              label: _isSyncing ? 'Syncing...' : 'Sync now',
+              isLoading: _isSyncing,
+              onPressed: () async {
+                setState(() => _isSyncing = true);
+                await widget.syncQueue.syncPendingRuns();
+                if (mounted) {
+                  setState(() {
+                    _isSyncing = false;
+                    _pendingRuns =
+                        widget.syncQueue.unsettledCountNotifier.value;
+                  });
+                  Navigator.of(context).maybePop();
+                }
+              },
             ),
         ],
       ),

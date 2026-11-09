@@ -66,19 +66,14 @@ void showAddFriendDialog(
         ],
       ),
       actions: [
-        TextButton(
+        SecondaryButton(
+          label: 'Cancel',
+          isFullWidth: false,
           onPressed: () => Navigator.pop(ctx),
-          child: const Text(
-            'Cancel',
-            style: TextStyle(color: AppColors.textSecondary),
-          ),
         ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accent,
-            foregroundColor: Colors.black,
-            shape: RoundedRectangleBorder(borderRadius: AppSpacing.br10),
-          ),
+        PrimaryButton(
+          label: 'Send invite',
+          isFullWidth: false,
           onPressed: () async {
             final target = controller.text.trim();
             if (target.isEmpty) return;
@@ -99,10 +94,6 @@ void showAddFriendDialog(
               }
             }
           },
-          child: const Text(
-            'Send invite',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
         ),
       ],
     ),

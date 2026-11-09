@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import 'primary_button.dart';
 
 /// A calm, non-jarring fallback screen replacing the default red error box.
 ///
@@ -73,41 +74,22 @@ class _CalmErrorScreenState extends State<CalmErrorScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.s32),
-                SizedBox(
-                  width: double.infinity,
+                PrimaryButton(
+                  label: 'RETURN TO NAVIGATION',
                   height: 48,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.onAccent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      elevation: 0,
-                    ),
-                    onPressed: () {
-                      if (widget.onReset != null) {
-                        widget.onReset!();
+                  onPressed: () {
+                    if (widget.onReset != null) {
+                      widget.onReset!();
+                    } else {
+                      // Standard recovery: pop or reload home route
+                      final nav = Navigator.maybeOf(context);
+                      if (nav != null && nav.canPop()) {
+                        nav.pop();
                       } else {
-                        // Standard recovery: pop or reload home route
-                        final nav = Navigator.maybeOf(context);
-                        if (nav != null && nav.canPop()) {
-                          nav.pop();
-                        } else {
-                          nav?.pushNamedAndRemoveUntil('/', (route) => false);
-                        }
+                        nav?.pushNamedAndRemoveUntil('/', (route) => false);
                       }
-                    },
-                    child: const Text(
-                      'RETURN TO NAVIGATION',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ),
+                    }
+                  },
                 ),
                 if (kDebugMode) ...[
                   const SizedBox(height: AppSpacing.s24),

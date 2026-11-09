@@ -45,28 +45,18 @@ class SocialSquadTab extends StatelessWidget {
           children: [
             Text(
               'Athletic squad',
-              style: AppText.label.copyWith(
+              style: AppText.labelSmall.copyWith(
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,
-                fontSize: 11,
               ),
             ),
-            TextButton.icon(
+            SecondaryButton(
+              label: 'Add runner',
+              icon: Icons.person_add_rounded,
+              isFullWidth: false,
+              height: 38,
               onPressed: onAddFriend,
-              icon: const Icon(
-                Icons.person_add_rounded,
-                size: 16,
-                color: AppColors.accent,
-              ),
-              label: const Text(
-                'Add runner',
-                style: TextStyle(
-                  color: AppColors.accent,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
             ),
           ],
         ),
@@ -150,20 +140,10 @@ class SocialSquadTab extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.s16),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.onAccent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSpacing.br12,
-                    ),
-                  ),
+                PrimaryButton(
+                  label: 'Send friend request',
+                  icon: Icons.person_add_rounded,
                   onPressed: onAddFriend,
-                  icon: const Icon(Icons.person_add_rounded, size: 18),
-                  label: const Text(
-                    'Send friend request',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
                 ),
               ],
             ),
@@ -320,30 +300,12 @@ class SocialSquadTab extends StatelessWidget {
               ],
             ),
           ),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.accentContainer,
-              foregroundColor: AppColors.accent,
-              side: BorderSide(
-                color: AppColors.accent.withValues(alpha: 0.4),
-                width: 1.0,
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.s10,
-                vertical: AppSpacing.s6,
-              ),
-              shape: RoundedRectangleBorder(borderRadius: AppSpacing.br10),
-            ),
+          SecondaryButton(
+            label: 'Duel',
+            icon: Icons.sports_kabaddi_rounded,
+            isFullWidth: false,
+            height: 48,
             onPressed: () => onChallengeDuel(friend),
-            icon: const Icon(Icons.sports_kabaddi_rounded, size: 14),
-            label: const Text(
-              'Duel',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 11,
-                letterSpacing: 0.3,
-              ),
-            ),
           ),
         ],
       ),

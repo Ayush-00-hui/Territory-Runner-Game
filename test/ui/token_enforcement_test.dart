@@ -14,7 +14,7 @@ void main() {
       // As files are refactored to use AppText tokens, their baseline counts must be decreased,
       // and NO new files or increased counts are permitted.
       final Map<String, int> baselineAllowances = {
-        'lib/features/profile/widgets/settings_list.dart': 30,
+        'lib/features/profile/widgets/settings_list.dart': 0,
         'lib/features/profile/widgets/season_crew_view.dart': 26,
         'lib/features/profile/widgets/profile_dialogs.dart': 19,
         'lib/features/profile/widgets/faction_leaderboard.dart': 16,

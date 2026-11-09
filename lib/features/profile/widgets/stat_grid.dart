@@ -1,7 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../gameplay/territory_service.dart';
 import '../../../models/runner_profile.dart';
+import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
 import 'profile_dialogs.dart';
 
@@ -29,6 +32,49 @@ class ProfileStatGrid extends StatelessWidget {
     final textScale = MediaQuery.textScalerOf(context).scale(1.0);
     final double aspectRatio = textScale > 1.15 ? 1.2 : 1.45;
 
+    final runs = RunLogService().getAllRuns();
+    final int totalRuns = runs.length;
+    final double longestRunKm = runs.isEmpty
+        ? 0.0
+        : runs.map((r) => r.distanceM / 1000.0).reduce(math.max);
+    final double avgRunKm = runs.isEmpty
+        ? 0.0
+        : (runs.fold<double>(0.0, (s, r) => s + (r.distanceM / 1000.0)) /
+              runs.length);
+
+    final runsWithPace = runs
+        .where((r) => r.distanceM > 0 && r.movingSeconds > 0)
+        .toList();
+    final String avgPaceStr = runsWithPace.isEmpty
+        ? 'No runs logged'
+        : () {
+            final totalDistM = runsWithPace.fold<double>(
+              0.0,
+              (s, r) => s + r.distanceM,
+            );
+            final totalSec = runsWithPace.fold<int>(
+              0,
+              (s, r) => s + r.movingSeconds,
+            );
+            final secPerKm = totalSec / (totalDistM / 1000.0);
+            final mins = secPerKm ~/ 60;
+            final secs = (secPerKm % 60).round();
+            return "$mins'${secs.toString().padLeft(2, '0')}\" /km";
+          }();
+
+    final nextMilestone = profile.currentStreak < 3
+        ? '3 days'
+        : profile.currentStreak < 7
+        ? '7 days'
+        : profile.currentStreak < 14
+        ? '14 days'
+        : profile.currentStreak < 30
+        ? '30 days'
+        : '${((profile.currentStreak ~/ 30) + 1) * 30} days';
+
+    final int nextLevelXp = profile.level * 250;
+    final int remainingXp = (nextLevelXp - profile.xp).clamp(0, nextLevelXp);
+
     return GridView.count(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -48,18 +94,27 @@ class ProfileStatGrid extends StatelessWidget {
               context,
               title: 'Distance Stats',
               value: '${profile.totalDistanceKm.toStringAsFixed(2)} km',
-              description: 'Cumulative GPS route distance logged on foot.',
+              description: 'Cumulative GPS route distance logged on foot across all running sessions.',
               metrics: [
                 {
                   'label': 'Lifetime Distance',
                   'val': '${profile.totalDistanceKm.toStringAsFixed(2)} km',
                 },
                 {
-                  'label': 'Weekly Estimated',
-                  'val':
-                      '${(profile.totalDistanceKm / 4).toStringAsFixed(1)} km/wk',
+                  'label': 'Completed Runs',
+                  'val': totalRuns > 0 ? '$totalRuns runs' : '0 recorded',
                 },
-                {'label': 'Pace Rating', 'val': 'Active Runner'},
+                if (totalRuns > 0) ...[
+                  {
+                    'label': 'Longest Run',
+                    'val': '${longestRunKm.toStringAsFixed(2)} km',
+                  },
+                  {
+                    'label': 'Average Run',
+                    'val': '${avgRunKm.toStringAsFixed(2)} km',
+                  },
+                  {'label': 'Average Pace', 'val': avgPaceStr},
+                ],
               ],
             );
           },
@@ -74,18 +129,17 @@ class ProfileStatGrid extends StatelessWidget {
             showStatDetailModal(
               context,
               title: 'Streak Stats',
-              value: '${profile.currentStreak} days',
-              description: 'Daily running consistency. Running and claiming territory keeps your streak active.',
+              value:
+                  '${profile.currentStreak} ${profile.currentStreak == 1 ? "day" : "days"}',
+              description: 'Daily running momentum. Run and close territory loops every 24-36 hours to maintain your streak.',
               metrics: [
                 {
-                  'label': 'Active Streak Days',
-                  'val': '${profile.currentStreak} days',
+                  'label': 'Active Streak',
+                  'val':
+                      '${profile.currentStreak} ${profile.currentStreak == 1 ? "day" : "days"}',
                 },
-                {
-                  'label': 'Streak Multiplier Bonus',
-                  'val': '+${(profile.currentStreak * 2).clamp(0, 50)}% XP',
-                },
-                {'label': 'Status', 'val': 'Active Momentum'},
+                {'label': 'Next Milestone', 'val': nextMilestone},
+                {'label': 'Consistency Rule', 'val': 'Daily run or claim'},
               ],
             );
           },
@@ -101,7 +155,7 @@ class ProfileStatGrid extends StatelessWidget {
               context,
               title: 'Territory Stats',
               value: '${(totalAreaM2 / 1000000.0).toStringAsFixed(3)} km²',
-              description: 'Territory polygons permanently claimed on foot.',
+              description: 'Territory polygons enclosed and permanently claimed on foot.',
               metrics: [
                 {
                   'label': 'Captured Polygons',
@@ -130,16 +184,17 @@ class ProfileStatGrid extends StatelessWidget {
               context,
               title: 'Rank & Tier Stats',
               value: 'Level ${profile.level}',
-              description: 'Athlete experience tier. Level up as you run and claim territory.',
+              description: 'Athlete experience tier. Advance your tier by logging runs and claiming territorial loops.',
               metrics: [
                 {'label': 'Current Level', 'val': 'Level ${profile.level}'},
                 {
-                  'label': 'Experience Points',
-                  'val': '${profile.xp} / ${profile.level * 250} XP',
+                  'label': 'Tier Progress',
+                  'val': '${profile.xp} / $nextLevelXp XP',
                 },
+                {'label': 'XP to Next Level', 'val': '$remainingXp XP'},
                 {
-                  'label': 'Perks Unlocked',
-                  'val': 'Territory Master, Speed Burst',
+                  'label': 'Badges Earned',
+                  'val': '${profile.badges.length} unlocked',
                 },
               ],
             );
