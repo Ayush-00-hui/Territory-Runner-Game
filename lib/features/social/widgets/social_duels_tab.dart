@@ -10,6 +10,8 @@ class SocialDuelsTab extends StatelessWidget {
   final VoidCallback onNewDuel;
   final Future<void> Function(String duelId) onAcceptDuel;
   final Future<void> Function(String duelId) onDeclineDuel;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
 
   const SocialDuelsTab({
     super.key,
@@ -18,6 +20,8 @@ class SocialDuelsTab extends StatelessWidget {
     required this.onNewDuel,
     required this.onAcceptDuel,
     required this.onDeclineDuel,
+    this.shrinkWrap = false,
+    this.physics,
   });
 
   @override
@@ -29,9 +33,10 @@ class SocialDuelsTab extends StatelessWidget {
         .toList();
 
     return ListView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
+      shrinkWrap: shrinkWrap,
+      physics:
+          physics ??
+          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.s16,
         0,

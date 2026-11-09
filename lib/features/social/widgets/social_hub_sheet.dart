@@ -5,6 +5,7 @@ import '../../../models/friend.dart';
 import '../../../services/api_client.dart';
 import '../../../services/firebase_service.dart';
 import '../../../ui/ui.dart';
+import '../../gameplay/territory_service.dart';
 import 'social_duel_creator_sheet.dart';
 import 'social_duels_tab.dart';
 import 'social_hub_cache.dart';
@@ -79,8 +80,14 @@ class SocialHubSheet extends StatelessWidget {
 class SocialHubView extends StatefulWidget {
   final ApiClient? apiClient;
   final String? currentUserId;
+  final bool isEmbedded;
 
-  const SocialHubView({super.key, this.apiClient, this.currentUserId});
+  const SocialHubView({
+    super.key,
+    this.apiClient,
+    this.currentUserId,
+    this.isEmbedded = false,
+  });
 
   @override
   State<SocialHubView> createState() => _SocialHubViewState();
@@ -89,6 +96,7 @@ class SocialHubView extends StatefulWidget {
 class _SocialHubViewState extends State<SocialHubView> {
   late final ApiClient _apiClient;
   late final String _myUid;
+  String? _myCallsign;
 
   SocialTab _activeTab = SocialTab.squad;
   bool _isLoading = false;
@@ -103,6 +111,9 @@ class _SocialHubViewState extends State<SocialHubView> {
     super.initState();
     _apiClient = widget.apiClient ?? ApiClient();
     _myUid = widget.currentUserId ?? FirebaseService().currentUserId;
+    try {
+      _myCallsign = TerritoryService().getProfile().username;
+    } catch (_) {}
     _refreshData();
   }
 
@@ -246,85 +257,167 @@ class _SocialHubViewState extends State<SocialHubView> {
           ),
         const SizedBox(height: AppSpacing.s12),
         if (_isLoading)
-          Expanded(
-            child: Center(
-              child: AppLoadingView(
-                label: 'Loading crew & duels...',
-                painterSize: 52,
-                onRetry: _refreshData,
-              ),
-            ),
-          )
+          widget.isEmbedded
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.s32,
+                    ),
+                    child: AppLoadingView(
+                      label: 'Loading crew & duels...',
+                      painterSize: 52,
+                      onRetry: _refreshData,
+                    ),
+                  ),
+                )
+              : Expanded(
+                  child: Center(
+                    child: AppLoadingView(
+                      label: 'Loading crew & duels...',
+                      painterSize: 52,
+                      onRetry: _refreshData,
+                    ),
+                  ),
+                )
         else if (_errorMessage != null && _friends.isEmpty && _duels.isEmpty)
-          Expanded(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.s24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.cloud_off_rounded,
-                      color: AppColors.textMuted,
-                      size: 48,
+          widget.isEmbedded
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppSpacing.s24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_rounded,
+                          color: AppColors.textMuted,
+                          size: 48,
+                        ),
+                        const SizedBox(height: AppSpacing.s12),
+                        Text(
+                          _errorMessage!,
+                          textAlign: TextAlign.center,
+                          style: AppText.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s16),
+                        SecondaryButton(
+                          label: 'Retry connection',
+                          onPressed: _refreshData,
+                          isFullWidth: false,
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: AppSpacing.s12),
-                    Text(
-                      _errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: AppText.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
+                  ),
+                )
+              : Expanded(
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.s24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.cloud_off_rounded,
+                            color: AppColors.textMuted,
+                            size: 48,
+                          ),
+                          const SizedBox(height: AppSpacing.s12),
+                          Text(
+                            _errorMessage!,
+                            textAlign: TextAlign.center,
+                            style: AppText.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.s16),
+                          SecondaryButton(
+                            label: 'Retry connection',
+                            onPressed: _refreshData,
+                            isFullWidth: false,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.s16),
-                    SecondaryButton(
-                      label: 'Retry connection',
-                      onPressed: _refreshData,
-                      isFullWidth: false,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          )
+                  ),
+                )
         else
-          Expanded(
-            child: RefreshIndicator(
-              color: AppColors.accent,
-              backgroundColor: AppColors.surface,
-              onRefresh: _refreshData,
-              child: _activeTab == SocialTab.squad
-                  ? SocialSquadTab(
-                      friends: _friends,
-                      requests: _requests,
-                      onAddFriend: () => showAddFriendDialog(
-                        context,
-                        apiClient: _apiClient,
-                        onAdded: _refreshData,
-                      ),
-                      onRespondRequest: _respondRequest,
-                      onChallengeDuel: (friend) => showCreateDuelSheet(
-                        context,
-                        apiClient: _apiClient,
+          widget.isEmbedded
+              ? (_activeTab == SocialTab.squad
+                    ? SocialSquadTab(
                         friends: _friends,
-                        targetFriend: friend,
-                        onCreated: _refreshData,
-                      ),
-                    )
-                  : SocialDuelsTab(
-                      duels: _duels,
-                      myUid: _myUid,
-                      onNewDuel: () => showCreateDuelSheet(
-                        context,
-                        apiClient: _apiClient,
-                        friends: _friends,
-                        onCreated: _refreshData,
-                      ),
-                      onAcceptDuel: _acceptDuel,
-                      onDeclineDuel: _declineDuel,
-                    ),
-            ),
-          ),
+                        requests: _requests,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        myCallsign: _myCallsign,
+                        onAddFriend: () => showAddFriendDialog(
+                          context,
+                          apiClient: _apiClient,
+                          currentCallsign: _myCallsign,
+                          onAdded: _refreshData,
+                        ),
+                        onRespondRequest: _respondRequest,
+                        onChallengeDuel: (friend) => showCreateDuelSheet(
+                          context,
+                          apiClient: _apiClient,
+                          friends: _friends,
+                          targetFriend: friend,
+                          onCreated: _refreshData,
+                        ),
+                      )
+                    : SocialDuelsTab(
+                        duels: _duels,
+                        myUid: _myUid,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        onNewDuel: () => showCreateDuelSheet(
+                          context,
+                          apiClient: _apiClient,
+                          friends: _friends,
+                          onCreated: _refreshData,
+                        ),
+                        onAcceptDuel: _acceptDuel,
+                        onDeclineDuel: _declineDuel,
+                      ))
+              : Expanded(
+                  child: RefreshIndicator(
+                    color: AppColors.accent,
+                    backgroundColor: AppColors.surface,
+                    onRefresh: _refreshData,
+                    child: _activeTab == SocialTab.squad
+                        ? SocialSquadTab(
+                            friends: _friends,
+                            requests: _requests,
+                            myCallsign: _myCallsign,
+                            onAddFriend: () => showAddFriendDialog(
+                              context,
+                              apiClient: _apiClient,
+                              currentCallsign: _myCallsign,
+                              onAdded: _refreshData,
+                            ),
+                            onRespondRequest: _respondRequest,
+                            onChallengeDuel: (friend) => showCreateDuelSheet(
+                              context,
+                              apiClient: _apiClient,
+                              friends: _friends,
+                              targetFriend: friend,
+                              onCreated: _refreshData,
+                            ),
+                          )
+                        : SocialDuelsTab(
+                            duels: _duels,
+                            myUid: _myUid,
+                            onNewDuel: () => showCreateDuelSheet(
+                              context,
+                              apiClient: _apiClient,
+                              friends: _friends,
+                              onCreated: _refreshData,
+                            ),
+                            onAcceptDuel: _acceptDuel,
+                            onDeclineDuel: _declineDuel,
+                          ),
+                  ),
+                ),
       ],
     );
   }

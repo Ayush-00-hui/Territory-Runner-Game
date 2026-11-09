@@ -7,6 +7,7 @@ import 'features/profile/widgets/challenges_shelf.dart';
 import 'features/profile/widgets/faction_leaderboard.dart';
 import 'features/profile/widgets/profile_dialogs.dart';
 import 'features/profile/widgets/profile_hero.dart';
+import 'features/profile/widgets/runner_crew_view.dart';
 import 'features/profile/widgets/settings_list.dart';
 import 'features/profile/widgets/stat_grid.dart';
 import 'features/profile/widgets/season_crew_view.dart';
@@ -257,6 +258,10 @@ class _ProfilePageState extends State<ProfilePage>
                 onOpenAuth: _openAuthDialog,
               ),
             ] else if (_activeTab == ProfileTab.turfWar) ...[
+              // --- RUNNER TEAM / CREW (CREATE & JOIN TEAM) ---
+              const RunnerCrewView(),
+              const SizedBox(height: AppSpacing.s24),
+
               // --- FACTION LEADERBOARD & TURF WAR DOMINANCE ---
               FactionLeaderboard(profile: profile, territories: territories),
             ] else if (_activeTab == ProfileTab.league) ...[
@@ -340,7 +345,7 @@ class _ProfilePageState extends State<ProfilePage>
                 const SeasonCrewView(),
             ] else ...[
               // --- SQUAD & DUELS HUB ---
-              const SizedBox(height: 600, child: SocialHubView()),
+              const SocialHubView(isEmbedded: true),
             ],
           ],
         ),

@@ -704,7 +704,21 @@ func (m *MemoryStore) SendFriendRequest(ctx context.Context, requesterID, addres
 	}
 	_, addExists := m.users[addresseeID]
 	if !addExists {
+		// Attempt resolution by username/callsign
+		for _, u := range m.users {
+			if strings.EqualFold(u.Username, addresseeID) {
+				addresseeID = u.ID
+				addExists = true
+				break
+			}
+		}
+	}
+	if !addExists {
 		return nil, fmt.Errorf("addressee not found: %s", addresseeID)
+	}
+
+	if requesterID == addresseeID {
+		return nil, fmt.Errorf("cannot send friend request to yourself")
 	}
 
 	var pendingSent, pendingReceived int

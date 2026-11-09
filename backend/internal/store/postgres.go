@@ -791,6 +791,13 @@ func lineStringToWKT(points []geo.TrackPoint) string {
 
 // SendFriendRequest creates a new pending friendship request from requesterID to addresseeID.
 func (s *PostgresStore) SendFriendRequest(ctx context.Context, requesterID, addresseeID string) (*Friendship, error) {
+	// Attempt resolution by username if addresseeID doesn't match an exact user ID
+	var resolvedAddresseeID string
+	resolveQuery := `SELECT id FROM users WHERE id = $1 OR LOWER(username) = LOWER($1) LIMIT 1;`
+	if err := s.pool.QueryRow(ctx, resolveQuery, addresseeID).Scan(&resolvedAddresseeID); err == nil {
+		addresseeID = resolvedAddresseeID
+	}
+
 	if requesterID == addresseeID {
 		return nil, fmt.Errorf("cannot send friend request to yourself")
 	}

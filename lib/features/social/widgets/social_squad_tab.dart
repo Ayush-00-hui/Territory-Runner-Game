@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../models/friend.dart';
 import '../../../ui/ui.dart';
@@ -12,6 +13,9 @@ class SocialSquadTab extends StatelessWidget {
   final VoidCallback onAddFriend;
   final Future<void> Function(String reqId, String action) onRespondRequest;
   final void Function(FriendUser friend) onChallengeDuel;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
+  final String? myCallsign;
 
   const SocialSquadTab({
     super.key,
@@ -20,6 +24,9 @@ class SocialSquadTab extends StatelessWidget {
     required this.onAddFriend,
     required this.onRespondRequest,
     required this.onChallengeDuel,
+    this.shrinkWrap = false,
+    this.physics,
+    this.myCallsign,
   });
 
   @override
@@ -29,9 +36,10 @@ class SocialSquadTab extends StatelessWidget {
         .toList();
 
     return ListView(
-      physics: const AlwaysScrollableScrollPhysics(
-        parent: BouncingScrollPhysics(),
-      ),
+      shrinkWrap: shrinkWrap,
+      physics:
+          physics ??
+          const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.s16,
         0,
@@ -52,7 +60,7 @@ class SocialSquadTab extends StatelessWidget {
               ),
             ),
             SecondaryButton(
-              label: 'Add runner',
+              label: 'Add Friend',
               icon: Icons.person_add_rounded,
               isFullWidth: false,
               height: 38,
@@ -61,9 +69,79 @@ class SocialSquadTab extends StatelessWidget {
           ],
         ),
 
+        // Callsign sharing bar
+        if (myCallsign != null && myCallsign!.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.s8),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s12,
+              vertical: AppSpacing.s8,
+            ),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: AppSpacing.br12,
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.tag_rounded,
+                  color: AppColors.accent,
+                  size: 16,
+                ),
+                const SizedBox(width: AppSpacing.s8),
+                Expanded(
+                  child: Text(
+                    'Your Callsign: $myCallsign',
+                    style: AppText.caption.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    Clipboard.setData(ClipboardData(text: myCallsign!));
+                    AppToast.showGlobal(
+                      'Callsign "$myCallsign" copied to clipboard! Share it with friends.',
+                      type: AppToastType.info,
+                    );
+                  },
+                  borderRadius: AppSpacing.brFull,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Copy',
+                          style: AppText.caption.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.copy_rounded,
+                          size: 12,
+                          color: AppColors.accent,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
+        const SizedBox(height: AppSpacing.s12),
+
         // Incoming requests
         if (incomingRequests.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.s8),
           Container(
             padding: const EdgeInsets.all(AppSpacing.s12),
             decoration: BoxDecoration(
@@ -141,7 +219,7 @@ class SocialSquadTab extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.s16),
                 PrimaryButton(
-                  label: 'Send friend request',
+                  label: 'Add Friend',
                   icon: Icons.person_add_rounded,
                   onPressed: onAddFriend,
                 ),

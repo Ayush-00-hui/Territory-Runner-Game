@@ -594,7 +594,23 @@ class ApiClient {
       () => _httpClient.post(uri, headers: headers, body: body),
     );
 
-    return response.statusCode == 200 || response.statusCode == 201;
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return true;
+    }
+
+    Map<String, dynamic>? data;
+    try {
+      data = jsonDecode(response.body) as Map<String, dynamic>?;
+    } catch (_) {}
+    final errorMsg =
+        data?['detail'] as String? ??
+        data?['error'] as String? ??
+        'Failed to send friend request';
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: data?['error'] as String? ?? 'FRIEND_REQUEST_ERROR',
+      message: errorMsg,
+    );
   }
 
   /// Responds to a friend request (PUT /v1/friends/request/{id})

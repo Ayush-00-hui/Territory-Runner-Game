@@ -801,6 +801,79 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           ),
           const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Privacy Policy',
+            subtitle: 'Data protection, GPS handling, and athlete rights',
+            onTap: () {
+              AppSheet.show(
+                context: context,
+                builder: (ctx) => AppSheet(
+                  title: 'Privacy Policy',
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Data Minimization & Local-First GPS',
+                          style: AppText.titleSmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Territory Runner is designed with privacy-by-design principles. High-frequency GPS raw fixes remain on your device. Only server-validated polygon boundaries and total distances are synced with the server for leaderboard and territory game mechanics.',
+                          style: AppText.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Privacy Zones',
+                          style: AppText.titleSmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'You can configure up to 5 custom circular Privacy Zones (e.g. around home or workplace). All GPS tracks and live visibility within these zones are automatically redacted and never broadcasted to other players.',
+                          style: AppText.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Athlete Rights & Data Deletion',
+                          style: AppText.titleSmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'You have full control over your data. You may export your entire running history at any time or permanently delete your account and all associated running records from the app settings.',
+                          style: AppText.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                            height: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        PrimaryButton(
+                          label: 'Close',
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
             icon: Icons.map_outlined,
             title: 'Map Data & Attribution',
             subtitle: AppConstants.tileAttribution,
