@@ -451,7 +451,7 @@ class WebSocketService with WidgetsBindingObserver {
     final formattedError = _cleanErrorString(error);
 
     // 1. Check for Authentication Failure (401/403)
-    if (_isAuthError(error)) {
+    if (isAuthError(error)) {
       _isAuthBlocked = true;
       _reconnectTimer?.cancel();
       _reconnectTimer = null;
@@ -519,14 +519,27 @@ class WebSocketService with WidgetsBindingObserver {
     return str;
   }
 
-  static bool _isAuthError(Object? error) {
+  static final RegExp _socketExceptionRegex = RegExp(r'\bsocketexception\b');
+  static final RegExp _authStatusRegex = RegExp(r'\b(401|403)\b');
+  static final RegExp _transportDetailRegex = RegExp(
+    r'''://[^/\s'"]+|port\s*[:=]\s*\d+|errno\s*[:=]\s*\d+''',
+  );
+
+  /// Identifies HTTP 401/403 authentication rejections while ignoring
+  /// transport-level failures whose port or errno digits happen to include 401/403.
+  @visibleForTesting
+  static bool isAuthError(Object? error) {
     if (error == null) return false;
     final s = error.toString().toLowerCase();
-    return s.contains('401') ||
-        s.contains('403') ||
-        s.contains('unauthorized') ||
-        s.contains('forbidden') ||
-        s.contains('was not upgraded to websocket');
+    // TCP/socket failures occur before any HTTP authentication response.
+    if (_socketExceptionRegex.hasMatch(s) || s.contains('connection refused')) {
+      return false;
+    }
+    final sanitized = s.replaceAll(_transportDetailRegex, '');
+    return _authStatusRegex.hasMatch(sanitized) ||
+        sanitized.contains('unauthorized') ||
+        sanitized.contains('forbidden') ||
+        sanitized.contains('was not upgraded to websocket');
   }
 
   static bool _isOfflineError(Object? error) {

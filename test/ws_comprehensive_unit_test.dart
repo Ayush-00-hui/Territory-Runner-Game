@@ -293,6 +293,49 @@ void main() {
 
         wsService.dispose();
       });
+
+      test('isAuthError ignores socket ports containing 401/403 digits while detecting HTTP 401/403', () {
+        expect(
+          WebSocketService.isAuthError(
+            const SocketException(
+              'Connection refused',
+              address: null,
+              port: 40123,
+            ),
+          ),
+          isFalse,
+        );
+        expect(
+          WebSocketService.isAuthError(
+            Exception(
+              'SocketException: Connection refused (errno = 111), address = 127.0.0.1, port = 40399',
+            ),
+          ),
+          isFalse,
+        );
+        expect(
+          WebSocketService.isAuthError(
+            const WebSocketException(
+              "Connection to 'ws://127.0.0.1:403/v1/ws' failed: 503",
+            ),
+          ),
+          isFalse,
+        );
+        expect(
+          WebSocketService.isAuthError(
+            const WebSocketException(
+              "Connection to 'ws://127.0.0.1:8080/v1/ws' was not upgraded to websocket (401)",
+            ),
+          ),
+          isTrue,
+        );
+        expect(
+          WebSocketService.isAuthError(
+            const WebSocketException('HTTP/1.1 403 Forbidden'),
+          ),
+          isTrue,
+        );
+      });
     });
 
     // -------------------------------------------------------------------------
