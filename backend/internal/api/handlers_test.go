@@ -2071,3 +2071,108 @@ func TestSubmitRunStepCountBackwardCompatible(t *testing.T) {
 	require.NotNil(t, runInDb2)
 	assert.Nil(t, runInDb2.StepCount)
 }
+
+func TestUniqueRunnerIDAssignmentAndFriendSearchFlow(t *testing.T) {
+	router, _ := setupTestServer()
+
+	// 1. New user calls GET /v1/me and receives a generated permanent RUN-XXXXXX code
+	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req.Header.Set("X-Dev-User", "uid_alice_001")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var alice store.User
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &alice))
+	assert.Equal(t, "uid_alice_001", alice.ID)
+	assert.True(t, strings.HasPrefix(alice.RunnerCode, "RUN-"))
+	assert.Len(t, alice.RunnerCode, 10)
+
+	// 2. PUT /v1/me updates display name after login without changing RunnerCode
+	updBody := bytes.NewBufferString(`{"username":"AliceStrider"}`)
+	req = httptest.NewRequest(http.MethodPut, "/v1/me", updBody)
+	req.Header.Set("X-Dev-User", "uid_alice_001")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var aliceUpdated store.User
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &aliceUpdated))
+	assert.Equal(t, "AliceStrider", aliceUpdated.Username)
+	assert.Equal(t, alice.RunnerCode, aliceUpdated.RunnerCode)
+
+	// 3. Second user logs in and updates name
+	req = httptest.NewRequest(http.MethodPut, "/v1/me", bytes.NewBufferString(`{"username":"BobPacer"}`))
+	req.Header.Set("X-Dev-User", "uid_bob_002")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var bob store.User
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &bob))
+	assert.True(t, strings.HasPrefix(bob.RunnerCode, "RUN-"))
+	assert.NotEqual(t, alice.RunnerCode, bob.RunnerCode)
+
+	// 4. Alice searches for Bob by his Unique Runner ID (case-insensitive & without RUN- prefix)
+	shortCode := strings.ToLower(strings.TrimPrefix(bob.RunnerCode, "RUN-"))
+	req = httptest.NewRequest(http.MethodGet, "/v1/users/search?q="+shortCode, nil)
+	req.Header.Set("X-Dev-User", "uid_alice_001")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var results []store.UserSearchResult
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &results))
+	require.Len(t, results, 1)
+	assert.Equal(t, bob.ID, results[0].ID)
+	assert.Equal(t, bob.RunnerCode, results[0].RunnerCode)
+	assert.Equal(t, "BobPacer", results[0].Username)
+	assert.Equal(t, "", results[0].FriendshipStatus)
+
+	// 5. Alice searches for Bob by partial Name
+	req = httptest.NewRequest(http.MethodGet, "/v1/users/search?q=bobp", nil)
+	req.Header.Set("X-Dev-User", "uid_alice_001")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &results))
+	require.Len(t, results, 1)
+	assert.Equal(t, "BobPacer", results[0].Username)
+
+	// 6. Alice sends friend request using Bob's Unique Runner ID
+	reqBody, _ := json.Marshal(map[string]string{"target_user_id": strings.ToLower(bob.RunnerCode)})
+	req = httptest.NewRequest(http.MethodPost, "/v1/friends/request", bytes.NewReader(reqBody))
+	req.Header.Set("X-Dev-User", "uid_alice_001")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	// 7. Search now reflects pending_sent for Alice and pending_received for Bob
+	req = httptest.NewRequest(http.MethodGet, "/v1/users/search?q=BobPacer", nil)
+	req.Header.Set("X-Dev-User", "uid_alice_001")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &results))
+	require.Len(t, results, 1)
+	assert.Equal(t, "pending_sent", results[0].FriendshipStatus)
+
+	req = httptest.NewRequest(http.MethodGet, "/v1/users/search?q="+alice.RunnerCode, nil)
+	req.Header.Set("X-Dev-User", "uid_bob_002")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &results))
+	require.Len(t, results, 1)
+	assert.Equal(t, "pending_received", results[0].FriendshipStatus)
+
+	// 8. Non-existent target returns 404 RUNNER_NOT_FOUND
+	missingBody, _ := json.Marshal(map[string]string{"target_user_id": "RUN-ZZZZZZ"})
+	req = httptest.NewRequest(http.MethodPost, "/v1/friends/request", bytes.NewReader(missingBody))
+	req.Header.Set("X-Dev-User", "uid_alice_001")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}

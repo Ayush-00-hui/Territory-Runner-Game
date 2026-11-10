@@ -19,6 +19,7 @@ const (
 // User represents a player profile in the database.
 type User struct {
 	ID             string    `json:"id"`
+	RunnerCode     string    `json:"runner_code"`
 	Username       string    `json:"username"`
 	Faction        string    `json:"faction"`
 	TotalAreaSqm   float64   `json:"total_area_sqm"`
@@ -195,6 +196,7 @@ type Friendship struct {
 // FriendUser represents a friend with their current athlete stats.
 type FriendUser struct {
 	ID           string  `json:"id"`
+	RunnerCode   string  `json:"runner_code,omitempty"`
 	Username     string  `json:"username"`
 	Faction      string  `json:"faction"`
 	TotalAreaSqm float64 `json:"total_area_sqm"`
@@ -207,13 +209,26 @@ type FriendUser struct {
 type FriendRequestDetail struct {
 	ID               string    `json:"id"`
 	RequesterID      string    `json:"requester_id"`
+	RequesterCode    string    `json:"requester_code,omitempty"`
 	RequesterName    string    `json:"requester_name"`
 	RequesterFaction string    `json:"requester_faction"`
 	AddresseeID      string    `json:"addressee_id"`
+	AddresseeCode    string    `json:"addressee_code,omitempty"`
 	AddresseeName    string    `json:"addressee_name"`
 	Status           string    `json:"status"`
 	CreatedAt        time.Time `json:"created_at"`
 	IsIncoming       bool      `json:"is_incoming"`
+}
+
+// UserSearchResult represents a discoverable runner returned when searching by Runner ID or Name.
+type UserSearchResult struct {
+	ID               string  `json:"id"`
+	RunnerCode       string  `json:"runner_code"`
+	Username         string  `json:"username"`
+	Faction          string  `json:"faction"`
+	Level            int     `json:"level"`
+	TotalAreaSqm     float64 `json:"total_area_sqm"`
+	FriendshipStatus string  `json:"friendship_status"`
 }
 
 // Duel represents a head-to-head athletic territorial battle between two runners.

@@ -256,9 +256,10 @@ func (a *API) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if u == nil {
-		// Auto-initialize profile for new runner
+		// Auto-initialize profile for new runner with a permanent unique RunnerCode
 		u = &store.User{
 			ID:           uid,
+			RunnerCode:   store.GenerateRunnerCode(),
 			Username:     "Runner_" + uid[:min(6, len(uid))],
 			Faction:      "",
 			TotalAreaSqm: 0.0,
@@ -275,6 +276,80 @@ func (a *API) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, u)
+}
+
+// UpdateMeRequest carries updates to a runner's profile upon login or profile edits.
+type UpdateMeRequest struct {
+	Username string `json:"username"`
+}
+
+// HandleUpdateMe handles PUT /v1/me to sync username and ensure a permanent unique runner_code.
+func (a *API) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var req UpdateMeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Invalid request body")
+		return
+	}
+
+	cleaned := strings.Join(strings.Fields(strings.TrimSpace(req.Username)), " ")
+	if cleaned == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_USERNAME", "Runner name cannot be empty")
+		return
+	}
+	if strings.ContainsAny(cleaned, "<>") {
+		writeError(w, http.StatusBadRequest, "INVALID_USERNAME", "Runner name cannot contain angle brackets")
+		return
+	}
+	runes := []rune(cleaned)
+	if len(runes) < 2 || len(runes) > 24 {
+		writeError(w, http.StatusBadRequest, "INVALID_USERNAME", "Runner name must be between 2 and 24 characters")
+		return
+	}
+
+	u, err := a.store.UpdateUsername(r.Context(), uid, cleaned)
+	if err != nil {
+		a.logger.Error("failed to update runner profile", "error", err, "uid", uid)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to update runner profile")
+		return
+	}
+	u.Faction = SanitizeTeamName(u.Faction)
+	writeJSON(w, http.StatusOK, u)
+}
+
+// HandleSearchUsers handles GET /v1/users/search?q=... to discover friends by Runner ID or Name.
+func (a *API) HandleSearchUsers(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user authentication")
+		return
+	}
+
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if query == "" {
+		writeJSON(w, http.StatusOK, []store.UserSearchResult{})
+		return
+	}
+
+	results, err := a.store.SearchUsers(r.Context(), uid, query, 20)
+	if err != nil {
+		a.logger.Error("failed to search users", "error", err, "uid", uid)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to search runners")
+		return
+	}
+	if results == nil {
+		results = []store.UserSearchResult{}
+	}
+	for i := range results {
+		results[i].Faction = SanitizeTeamName(results[i].Faction)
+	}
+
+	writeJSON(w, http.StatusOK, results)
 }
 
 // HandleDeleteMe handles DELETE /v1/me runner account deletion and data purge.
@@ -1143,6 +1218,10 @@ func (a *API) HandleSendFriendRequest(w http.ResponseWriter, r *http.Request) {
 		errStr := err.Error()
 		if strings.Contains(errStr, "yourself") {
 			writeError(w, http.StatusBadRequest, "CANNOT_FRIEND_SELF", errStr)
+			return
+		}
+		if strings.Contains(errStr, "not found") {
+			writeError(w, http.StatusNotFound, "RUNNER_NOT_FOUND", "No runner found with that Runner ID or name.")
 			return
 		}
 		if strings.Contains(errStr, "limit") {

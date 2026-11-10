@@ -45,6 +45,7 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000015_add_user_runner_code.down.sql",
 		"000014_add_seasons_and_crews.down.sql",
 		"000013_add_land_reminders_and_decay_notifications.down.sql",
 		"000012_add_run_step_count.down.sql",
@@ -83,6 +84,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000012_add_run_step_count.up.sql",
 		"000013_add_land_reminders_and_decay_notifications.up.sql",
 		"000014_add_seasons_and_crews.up.sql",
+		"000015_add_user_runner_code.up.sql",
 	}
 
 	for _, uf := range upFiles {
@@ -1136,4 +1138,43 @@ func TestPostgres_CrewsFlow(t *testing.T) {
 	members, err := st.GetCrewMembers(ctx, crew.ID, weekStart)
 	require.NoError(t, err)
 	assert.Len(t, members, 2)
+}
+
+// 15. RunnerCode uniqueness, UpdateUsername, SearchUsers, and Friend Request by RunnerCode/Name in PostgreSQL
+func TestPostgres_RunnerCodeAndFriendSearch(t *testing.T) {
+	st, _ := setupTestStore(t)
+	ctx := context.Background()
+
+	u1, err := st.UpdateUsername(ctx, "pg_user_1", "AlphaRunner")
+	require.NoError(t, err)
+	assert.NotEmpty(t, u1.RunnerCode)
+
+	u2, err := st.UpdateUsername(ctx, "pg_user_2", "BetaRunner")
+	require.NoError(t, err)
+	assert.NotEmpty(t, u2.RunnerCode)
+	assert.NotEqual(t, u1.RunnerCode, u2.RunnerCode)
+
+	// Updating username preserves original RunnerCode
+	u1Again, err := st.UpdateUsername(ctx, "pg_user_1", "AlphaRenamed")
+	require.NoError(t, err)
+	assert.Equal(t, u1.RunnerCode, u1Again.RunnerCode)
+	assert.Equal(t, "AlphaRenamed", u1Again.Username)
+
+	// Search by RunnerCode
+	results, err := st.SearchUsers(ctx, "pg_user_1", u2.RunnerCode, 10)
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, "pg_user_2", results[0].ID)
+	assert.Equal(t, u2.RunnerCode, results[0].RunnerCode)
+
+	// Send friend request by RunnerCode
+	req, err := st.SendFriendRequest(ctx, "pg_user_1", u2.RunnerCode)
+	require.NoError(t, err)
+	assert.Equal(t, "pg_user_2", req.AddresseeID)
+
+	// Search reflects pending_sent
+	resultsAfter, err := st.SearchUsers(ctx, "pg_user_1", "Beta", 10)
+	require.NoError(t, err)
+	require.Len(t, resultsAfter, 1)
+	assert.Equal(t, "pending_sent", resultsAfter[0].FriendshipStatus)
 }

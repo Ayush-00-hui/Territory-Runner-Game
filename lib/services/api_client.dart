@@ -263,6 +263,19 @@ class ApiClient {
     );
   }
 
+  RunnerProfile _parseRunnerProfile(Map<String, dynamic> data) {
+    return RunnerProfile(
+      id: data['id'] as String? ?? _firebaseService.currentUserId,
+      runnerCode: data['runner_code'] as String? ?? '',
+      username: data['username'] as String? ?? 'Runner',
+      faction: FactionStanding.canonicalFaction(data['faction'] as String?),
+      xp: (data['xp'] as num?)?.toInt() ?? 0,
+      level: (data['level'] as num?)?.toInt() ?? 1,
+      totalTerritoriesClaimed: (data['total_runs'] as num?)?.toInt() ?? 0,
+      totalDistanceKm: 0.0,
+    );
+  }
+
   /// Fetches runner profile (GET /v1/me)
   Future<RunnerProfile> getMe() async {
     final uri = Uri.parse('$baseUrl/v1/me');
@@ -274,15 +287,7 @@ class ApiClient {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
-      return RunnerProfile(
-        id: data['id'] as String? ?? _firebaseService.currentUserId,
-        username: data['username'] as String? ?? 'Runner',
-        faction: FactionStanding.canonicalFaction(data['faction'] as String?),
-        xp: (data['xp'] as num?)?.toInt() ?? 0,
-        level: (data['level'] as num?)?.toInt() ?? 1,
-        totalTerritoriesClaimed: (data['total_runs'] as num?)?.toInt() ?? 0,
-        totalDistanceKm: 0.0,
-      );
+      return _parseRunnerProfile(data);
     }
 
     final errorBody = _parseError(response.body);
@@ -290,6 +295,29 @@ class ApiClient {
       statusCode: response.statusCode,
       code: errorBody['error'] ?? 'PROFILE_ERROR',
       message: errorBody['detail'] ?? 'Failed to fetch runner profile',
+    );
+  }
+
+  /// Syncs the athlete's display name with the backend and retrieves their permanent Runner ID (PUT /v1/me)
+  Future<RunnerProfile> updateMe({required String username}) async {
+    final uri = Uri.parse('$baseUrl/v1/me');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'username': username});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.put(uri, headers: headers, body: body),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      return _parseRunnerProfile(data);
+    }
+
+    final errorBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errorBody['error'] ?? 'PROFILE_UPDATE_ERROR',
+      message: errorBody['detail'] ?? 'Failed to update runner profile',
     );
   }
 
@@ -579,6 +607,29 @@ class ApiClient {
       final List<dynamic> data = jsonDecode(response.body);
       return data
           .map((e) => FriendRequestDetail.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');
+  }
+
+  /// Searches runners by Unique Runner ID or Name (GET /v1/users/search)
+  Future<List<RunnerSearchResult>> searchUsers(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) return [];
+
+    final uri = Uri.parse(
+      '$baseUrl/v1/users/search?q=${Uri.encodeQueryComponent(trimmed)}',
+    );
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final List<dynamic> data = jsonDecode(response.body);
+      return data
+          .map((e) => RunnerSearchResult.fromJson(e as Map<String, dynamic>))
           .toList();
     }
     throw http.ClientException('HTTP ${response.statusCode}: ${response.body}');

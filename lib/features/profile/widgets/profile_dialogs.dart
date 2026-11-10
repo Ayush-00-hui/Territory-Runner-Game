@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../../../models/faction_standing.dart';
 
 import 'package:flutter/material.dart';
@@ -90,6 +92,9 @@ void showEditCallsignDialog(
             if (newName.isNotEmpty) {
               profile.username = newName;
               await territoryService.saveProfile(profile);
+              unawaited(
+                territoryService.syncIdentityWithBackend(displayName: newName),
+              );
               if (ctx.mounted) {
                 Navigator.pop(ctx);
               }

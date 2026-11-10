@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../gameplay/territory_service.dart';
@@ -283,6 +285,12 @@ void showProfileAuthModal(
                                           await territoryService.saveProfile(
                                             profile,
                                           );
+                                          unawaited(
+                                            territoryService
+                                                .syncIdentityWithBackend(
+                                                  displayName: phone,
+                                                ),
+                                          );
                                           if (context.mounted) {
                                             Navigator.pop(ctx);
                                             onProfileUpdated();
@@ -378,6 +386,11 @@ void showProfileAuthModal(
                             final profile = territoryService.getProfile();
                             profile.username = phoneController.text.trim();
                             await territoryService.saveProfile(profile);
+                            unawaited(
+                              territoryService.syncIdentityWithBackend(
+                                displayName: profile.username,
+                              ),
+                            );
 
                             if (context.mounted) {
                               Navigator.pop(ctx);
@@ -500,6 +513,15 @@ void showProfileAuthModal(
                               passController.text.trim(),
                             );
                           }
+                          unawaited(
+                            territoryService.syncIdentityWithBackend(
+                              displayName:
+                                  isSignUp &&
+                                      nameController.text.trim().isNotEmpty
+                                  ? nameController.text.trim()
+                                  : firebaseService.currentUserName,
+                            ),
+                          );
                           if (context.mounted) {
                             Navigator.pop(ctx);
                             onProfileUpdated();

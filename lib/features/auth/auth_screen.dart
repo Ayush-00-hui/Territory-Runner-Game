@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../models/runner_profile.dart';
 import '../../services/firebase_service.dart';
 import '../gameplay/territory_service.dart';
 import '../../ui/ui.dart';
@@ -47,14 +50,26 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _finishAuth(String displayName) {
-    if (displayName.isNotEmpty) {
-      try {
-        final profile = _territoryService.getProfile();
-        profile.username = displayName;
-        _territoryService.saveProfile(profile);
-      } catch (e) {
-        AppLogger.warning('Notice saving profile: $e', tag: 'AuthScreen');
+    try {
+      final profile = _territoryService.getProfile();
+      final uid = _firebaseService.currentUserId;
+      if (uid.isNotEmpty) {
+        profile.id = uid;
       }
+      if (displayName.isNotEmpty) {
+        profile.username = displayName;
+      }
+      if (profile.runnerCode.trim().isEmpty) {
+        profile.runnerCode = RunnerProfile.generateFallbackCode(profile.id);
+      }
+      _territoryService.saveProfile(profile);
+      unawaited(
+        _territoryService.syncIdentityWithBackend(
+          displayName: profile.username,
+        ),
+      );
+    } catch (e) {
+      AppLogger.warning('Notice saving profile: $e', tag: 'AuthScreen');
     }
     widget.onAuthenticated();
     if (!mounted) return;
@@ -225,7 +240,16 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  void _handleGuestContinue() {
+  Future<void> _handleGuestContinue() async {
+    if (_firebaseService.isInitialized &&
+        _firebaseService.currentUser == null) {
+      try {
+        await _firebaseService.signInAnonymously().timeout(
+          const Duration(seconds: 2),
+        );
+      } catch (_) {}
+    }
+    if (!mounted) return;
     _finishAuth('Athlete');
   }
 

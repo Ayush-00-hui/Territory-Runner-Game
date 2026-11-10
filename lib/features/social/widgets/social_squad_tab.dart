@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../models/friend.dart';
 import '../../../ui/ui.dart';
@@ -16,6 +17,7 @@ class SocialSquadTab extends StatelessWidget {
   final bool shrinkWrap;
   final ScrollPhysics? physics;
   final String? myCallsign;
+  final String? myRunnerId;
 
   const SocialSquadTab({
     super.key,
@@ -27,6 +29,7 @@ class SocialSquadTab extends StatelessWidget {
     this.shrinkWrap = false,
     this.physics,
     this.myCallsign,
+    this.myRunnerId,
   });
 
   @override
@@ -69,73 +72,11 @@ class SocialSquadTab extends StatelessWidget {
           ],
         ),
 
-        // Callsign sharing bar
-        if (myCallsign != null && myCallsign!.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.s8),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.s12,
-              vertical: AppSpacing.s8,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.surface2,
-              borderRadius: AppSpacing.br12,
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.tag_rounded,
-                  color: AppColors.accent,
-                  size: 16,
-                ),
-                const SizedBox(width: AppSpacing.s8),
-                Expanded(
-                  child: Text(
-                    'Your Callsign: $myCallsign',
-                    style: AppText.caption.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                InkWell(
-                  onTap: () {
-                    Clipboard.setData(ClipboardData(text: myCallsign!));
-                    AppToast.showGlobal(
-                      'Callsign "$myCallsign" copied to clipboard! Share it with friends.',
-                      type: AppToastType.info,
-                    );
-                  },
-                  borderRadius: AppSpacing.brFull,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Copy',
-                          style: AppText.caption.copyWith(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.copy_rounded,
-                          size: 12,
-                          color: AppColors.accent,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        // Runner Identity sharing card (Unique Runner ID + Name)
+        if ((myRunnerId != null && myRunnerId!.isNotEmpty) ||
+            (myCallsign != null && myCallsign!.isNotEmpty)) ...[
+          const SizedBox(height: AppSpacing.s10),
+          _buildIdentityShareCard(),
         ],
 
         const SizedBox(height: AppSpacing.s12),
@@ -232,6 +173,130 @@ class SocialSquadTab extends StatelessWidget {
     );
   }
 
+  Widget _buildIdentityShareCard() {
+    final hasId = myRunnerId != null && myRunnerId!.isNotEmpty;
+    final hasName = myCallsign != null && myCallsign!.isNotEmpty;
+    final primaryValue = hasId ? myRunnerId! : myCallsign!;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.s12),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: AppSpacing.br12,
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.badge_outlined,
+              color: AppColors.accent,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasId ? 'Runner ID: $myRunnerId' : 'Name: $myCallsign',
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+                if (hasId && hasName) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Name: $myCallsign',
+                    style: AppText.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          InkWell(
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: primaryValue));
+              AppToast.showGlobal(
+                'Copied "$primaryValue"! Friends can add you by ID or Name.',
+                type: AppToastType.info,
+              );
+            },
+            borderRadius: AppSpacing.brFull,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppSpacing.brFull,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.copy_rounded,
+                    size: 13,
+                    color: AppColors.accent,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Copy',
+                    style: AppText.caption.copyWith(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s6),
+          InkWell(
+            onTap: () async {
+              final inviteText = hasId && hasName
+                  ? 'Add me on Territory Runner! Name: $myCallsign | Runner ID: $myRunnerId'
+                  : 'Add me on Territory Runner: $primaryValue';
+              try {
+                await SharePlus.instance.share(ShareParams(text: inviteText));
+              } catch (_) {
+                await Clipboard.setData(ClipboardData(text: inviteText));
+                AppToast.showGlobal(
+                  'Invite copied to clipboard!',
+                  type: AppToastType.info,
+                );
+              }
+            },
+            borderRadius: AppSpacing.brFull,
+            child: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: const Icon(
+                Icons.share_rounded,
+                size: 14,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRequestCard(FriendRequestDetail req) {
     return Container(
       margin: const EdgeInsets.only(bottom: AppSpacing.s8),
@@ -270,7 +335,9 @@ class SocialSquadTab extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  req.requesterFaction,
+                  req.requesterCode.isNotEmpty
+                      ? '${req.requesterCode}${req.requesterFaction.isNotEmpty ? ' • ${req.requesterFaction}' : ''}'
+                      : req.requesterFaction,
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,
@@ -369,7 +436,9 @@ class SocialSquadTab extends StatelessWidget {
                 ),
                 const SizedBox(height: AppSpacing.s2),
                 Text(
-                  '${friend.faction} • $areaFormatted claimed • ${friend.totalRuns} runs',
+                  '${friend.runnerCode.isNotEmpty ? '${friend.runnerCode} • ' : ''}'
+                  '${friend.faction.isNotEmpty ? '${friend.faction} • ' : ''}'
+                  '$areaFormatted • ${friend.totalRuns} runs',
                   style: const TextStyle(
                     color: AppColors.textSecondary,
                     fontSize: 11,

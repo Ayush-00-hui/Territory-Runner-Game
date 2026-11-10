@@ -302,6 +302,10 @@ class _MainScreenState extends State<MainScreen> {
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Ensure returning signed-in runner has permanent unique Runner ID synced from backend
+      if (FirebaseService().isSignedIn) {
+        unawaited(TerritoryService().syncIdentityWithBackend());
+      }
       // Opt-in flow: only prompt for notifications if user has claimed territory
       if (TerritoryService().getCapturedTerritories().isNotEmpty) {
         NotificationService().showPermissionPrimerIfNeeded(context);

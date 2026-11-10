@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
@@ -140,6 +141,65 @@ class ProfileHeroCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.s4),
+                    Semantics(
+                      button: true,
+                      excludeSemantics: true,
+                      label: 'Copy Runner ID ${profile.displayRunnerId}',
+                      child: InkWell(
+                        onTap: () {
+                          final code = profile.displayRunnerId;
+                          Clipboard.setData(ClipboardData(text: code));
+                          AppToast.showGlobal(
+                            'Runner ID "$code" copied to clipboard!',
+                            type: AppToastType.info,
+                          );
+                        },
+                        borderRadius: AppRadius.br8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface2,
+                            borderRadius: AppRadius.br8,
+                            border: Border.all(color: AppColors.borderSubtle),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.badge_outlined,
+                                size: 13,
+                                color: AppColors.accent,
+                              ),
+                              const SizedBox(width: AppSpacing.s6),
+                              Flexible(
+                                child: Text(
+                                  'ID: ${profile.displayRunnerId}',
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppText.caption.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.4,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.s6),
+                              const Icon(
+                                Icons.copy_rounded,
+                                size: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.s8),
                     Wrap(
                       spacing: 6,
                       runSpacing: 4,

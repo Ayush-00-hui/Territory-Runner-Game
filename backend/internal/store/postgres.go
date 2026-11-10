@@ -49,16 +49,16 @@ func (s *PostgresStore) Close() {
 	s.pool.Close()
 }
 
-// GetUser retrieves a user by ID.
+// GetUser retrieves a user by ID and backfills a permanent runner_code if missing.
 func (s *PostgresStore) GetUser(ctx context.Context, id string) (*User, error) {
 	query := `
-		SELECT id, username, faction, total_area_sqm, xp, level, total_runs, created_at, updated_at
+		SELECT id, COALESCE(runner_code, ''), username, faction, total_area_sqm, xp, level, total_runs, created_at, updated_at
 		FROM users
 		WHERE id = $1;
 	`
 	var u User
 	err := s.pool.QueryRow(ctx, query, id).Scan(
-		&u.ID, &u.Username, &u.Faction, &u.TotalAreaSqm, &u.XP, &u.Level, &u.TotalRuns, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.RunnerCode, &u.Username, &u.Faction, &u.TotalAreaSqm, &u.XP, &u.Level, &u.TotalRuns, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -66,21 +66,83 @@ func (s *PostgresStore) GetUser(ctx context.Context, id string) (*User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error querying user: %w", err)
 	}
+	if u.RunnerCode == "" {
+		for attempt := 0; attempt < 5; attempt++ {
+			candidate := GenerateRunnerCode()
+			var assigned string
+			updErr := s.pool.QueryRow(ctx, `
+				UPDATE users SET runner_code = $1, updated_at = NOW()
+				WHERE id = $2 AND (runner_code IS NULL OR runner_code = '')
+				RETURNING runner_code;
+			`, candidate, id).Scan(&assigned)
+			if updErr == nil && assigned != "" {
+				u.RunnerCode = assigned
+				break
+			}
+		}
+	}
 	return &u, nil
 }
 
-// UpsertUser inserts or updates a user profile.
+// UpsertUser inserts or updates a user profile, assigning a permanent unique runner_code if absent.
 func (s *PostgresStore) UpsertUser(ctx context.Context, u *User) error {
 	query := `
-		INSERT INTO users (id, username, faction, total_area_sqm, xp, level, total_runs, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+		INSERT INTO users (id, runner_code, username, faction, total_area_sqm, xp, level, total_runs, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
 		ON CONFLICT (id) DO UPDATE SET
 			username = EXCLUDED.username,
 			faction = EXCLUDED.faction,
-			updated_at = NOW();
+			runner_code = COALESCE(NULLIF(users.runner_code, ''), EXCLUDED.runner_code),
+			updated_at = NOW()
+		RETURNING COALESCE(runner_code, '');
 	`
-	_, err := s.pool.Exec(ctx, query, u.ID, u.Username, u.Faction, u.TotalAreaSqm, u.XP, u.Level, u.TotalRuns)
-	return err
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		code := NormalizeRunnerCode(u.RunnerCode)
+		if code == "" {
+			code = GenerateRunnerCode()
+		}
+		var assigned string
+		err := s.pool.QueryRow(ctx, query, u.ID, code, u.Username, u.Faction, u.TotalAreaSqm, u.XP, u.Level, u.TotalRuns).Scan(&assigned)
+		if err == nil {
+			u.RunnerCode = assigned
+			return nil
+		}
+		lastErr = err
+		if !strings.Contains(err.Error(), "runner_code") || u.RunnerCode != "" {
+			return err
+		}
+	}
+	return lastErr
+}
+
+// UpdateUsername updates (or creates) a runner's username while keeping their unique runner_code intact.
+func (s *PostgresStore) UpdateUsername(ctx context.Context, userID, username string) (*User, error) {
+	query := `
+		INSERT INTO users (id, runner_code, username, faction, total_area_sqm, xp, level, total_runs, updated_at)
+		VALUES ($1, $2, $3, '', 0.0, 0, 1, 0, NOW())
+		ON CONFLICT (id) DO UPDATE SET
+			username = EXCLUDED.username,
+			runner_code = COALESCE(NULLIF(users.runner_code, ''), EXCLUDED.runner_code),
+			updated_at = NOW()
+		RETURNING id, COALESCE(runner_code, ''), username, faction, total_area_sqm, xp, level, total_runs, created_at, updated_at;
+	`
+	var lastErr error
+	for attempt := 0; attempt < 5; attempt++ {
+		code := GenerateRunnerCode()
+		var u User
+		err := s.pool.QueryRow(ctx, query, userID, code, username).Scan(
+			&u.ID, &u.RunnerCode, &u.Username, &u.Faction, &u.TotalAreaSqm, &u.XP, &u.Level, &u.TotalRuns, &u.CreatedAt, &u.UpdatedAt,
+		)
+		if err == nil {
+			return &u, nil
+		}
+		lastErr = err
+		if !strings.Contains(err.Error(), "runner_code") {
+			return nil, fmt.Errorf("failed to update username: %w", err)
+		}
+	}
+	return nil, fmt.Errorf("failed to update username: %w", lastErr)
 }
 
 // DeleteUser permanently purges a user record and cascades to all associated territories, runs, duels, and privacy zones.
@@ -791,12 +853,29 @@ func lineStringToWKT(points []geo.TrackPoint) string {
 
 // SendFriendRequest creates a new pending friendship request from requesterID to addresseeID.
 func (s *PostgresStore) SendFriendRequest(ctx context.Context, requesterID, addresseeID string) (*Friendship, error) {
-	// Attempt resolution by username if addresseeID doesn't match an exact user ID
+	// Resolve target by exact user ID, RunnerCode (with or without RUN- prefix), or Username.
 	var resolvedAddresseeID string
-	resolveQuery := `SELECT id FROM users WHERE id = $1 OR LOWER(username) = LOWER($1) LIMIT 1;`
-	if err := s.pool.QueryRow(ctx, resolveQuery, addresseeID).Scan(&resolvedAddresseeID); err == nil {
-		addresseeID = resolvedAddresseeID
+	resolveQuery := `
+		SELECT id FROM users
+		WHERE id = $1
+		   OR UPPER(COALESCE(runner_code, '')) = UPPER($1)
+		   OR UPPER(COALESCE(runner_code, '')) = 'RUN-' || UPPER($1)
+		   OR LOWER(username) = LOWER($1)
+		ORDER BY
+			CASE
+				WHEN id = $1 THEN 0
+				WHEN UPPER(COALESCE(runner_code, '')) IN (UPPER($1), 'RUN-' || UPPER($1)) THEN 1
+				ELSE 2
+			END
+		LIMIT 1;
+	`
+	if err := s.pool.QueryRow(ctx, resolveQuery, addresseeID).Scan(&resolvedAddresseeID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("addressee not found: %s", addresseeID)
+		}
+		return nil, fmt.Errorf("failed to look up runner: %w", err)
 	}
+	addresseeID = resolvedAddresseeID
 
 	if requesterID == addresseeID {
 		return nil, fmt.Errorf("cannot send friend request to yourself")
@@ -900,7 +979,7 @@ func (s *PostgresStore) RemoveFriend(ctx context.Context, userA, userB string) e
 // GetFriends returns all accepted friends of the given user.
 func (s *PostgresStore) GetFriends(ctx context.Context, userID string) ([]FriendUser, error) {
 	query := `
-		SELECT u.id, u.username, u.faction, u.total_area_sqm, u.level, u.xp, u.total_runs
+		SELECT u.id, COALESCE(u.runner_code, ''), u.username, u.faction, u.total_area_sqm, u.level, u.xp, u.total_runs
 		FROM users u
 		JOIN friendships f ON (
 			(f.requester_id = u.id AND f.addressee_id = $1) OR
@@ -918,7 +997,7 @@ func (s *PostgresStore) GetFriends(ctx context.Context, userID string) ([]Friend
 	var friends []FriendUser
 	for rows.Next() {
 		var u FriendUser
-		if err := rows.Scan(&u.ID, &u.Username, &u.Faction, &u.TotalAreaSqm, &u.Level, &u.XP, &u.TotalRuns); err != nil {
+		if err := rows.Scan(&u.ID, &u.RunnerCode, &u.Username, &u.Faction, &u.TotalAreaSqm, &u.Level, &u.XP, &u.TotalRuns); err != nil {
 			return nil, fmt.Errorf("failed to scan friend row: %w", err)
 		}
 		friends = append(friends, u)
@@ -930,8 +1009,8 @@ func (s *PostgresStore) GetFriends(ctx context.Context, userID string) ([]Friend
 func (s *PostgresStore) GetFriendRequests(ctx context.Context, userID string) ([]FriendRequestDetail, error) {
 	query := `
 		SELECT 
-			f.id, f.requester_id, req.username, req.faction,
-			f.addressee_id, addr.username, f.status, f.created_at,
+			f.id, f.requester_id, COALESCE(req.runner_code, ''), req.username, req.faction,
+			f.addressee_id, COALESCE(addr.runner_code, ''), addr.username, f.status, f.created_at,
 			(f.addressee_id = $1) AS is_incoming
 		FROM friendships f
 		JOIN users req ON req.id = f.requester_id
@@ -949,14 +1028,86 @@ func (s *PostgresStore) GetFriendRequests(ctx context.Context, userID string) ([
 	for rows.Next() {
 		var d FriendRequestDetail
 		if err := rows.Scan(
-			&d.ID, &d.RequesterID, &d.RequesterName, &d.RequesterFaction,
-			&d.AddresseeID, &d.AddresseeName, &d.Status, &d.CreatedAt, &d.IsIncoming,
+			&d.ID, &d.RequesterID, &d.RequesterCode, &d.RequesterName, &d.RequesterFaction,
+			&d.AddresseeID, &d.AddresseeCode, &d.AddresseeName, &d.Status, &d.CreatedAt, &d.IsIncoming,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan friend request row: %w", err)
 		}
 		details = append(details, d)
 	}
 	return details, nil
+}
+
+// SearchUsers finds runners matching a RunnerCode, UserID, or Username query.
+func (s *PostgresStore) SearchUsers(ctx context.Context, viewerID, query string, limit int) ([]UserSearchResult, error) {
+	trimmed := strings.TrimSpace(query)
+	if trimmed == "" {
+		return []UserSearchResult{}, nil
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	escaper := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
+	escaped := escaper.Replace(trimmed)
+	likePattern := "%" + strings.ToLower(escaped) + "%"
+	prefixPattern := strings.ToLower(escaped) + "%"
+	upperPattern := "%" + strings.ToUpper(escaped) + "%"
+
+	sqlQuery := `
+		SELECT
+			u.id,
+			COALESCE(u.runner_code, ''),
+			u.username,
+			u.faction,
+			u.level,
+			u.total_area_sqm,
+			CASE
+				WHEN u.id = $1 THEN 'self'
+				WHEN f.status = 'accepted' THEN 'accepted'
+				WHEN f.status = 'pending' AND f.requester_id = $1 THEN 'pending_sent'
+				WHEN f.status = 'pending' AND f.addressee_id = $1 THEN 'pending_received'
+				ELSE ''
+			END AS friendship_status
+		FROM users u
+		LEFT JOIN friendships f ON (
+			(f.requester_id = $1 AND f.addressee_id = u.id) OR
+			(f.addressee_id = $1 AND f.requester_id = u.id)
+		) AND f.status IN ('accepted', 'pending')
+		WHERE u.id = $2
+		   OR UPPER(COALESCE(u.runner_code, '')) LIKE $3 ESCAPE '\'
+		   OR UPPER(COALESCE(u.runner_code, '')) = 'RUN-' || UPPER($2)
+		   OR LOWER(u.username) LIKE $4 ESCAPE '\'
+		ORDER BY
+			CASE WHEN u.id = $1 THEN 1 ELSE 0 END ASC,
+			CASE
+				WHEN u.id = $2 OR UPPER(COALESCE(u.runner_code, '')) IN (UPPER($2), 'RUN-' || UPPER($2)) THEN 0
+				WHEN LOWER(u.username) = LOWER($2) THEN 1
+				WHEN LOWER(u.username) LIKE $5 ESCAPE '\' THEN 2
+				ELSE 3
+			END ASC,
+			u.total_area_sqm DESC,
+			u.username ASC
+		LIMIT $6;
+	`
+
+	rows, err := s.pool.Query(ctx, sqlQuery, viewerID, trimmed, upperPattern, likePattern, prefixPattern, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search users: %w", err)
+	}
+	defer rows.Close()
+
+	var results []UserSearchResult
+	for rows.Next() {
+		var r UserSearchResult
+		if err := rows.Scan(
+			&r.ID, &r.RunnerCode, &r.Username, &r.Faction, &r.Level, &r.TotalAreaSqm, &r.FriendshipStatus,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan user search row: %w", err)
+		}
+		results = append(results, r)
+	}
+	return results, nil
 }
 
 // CreateDuel initiates a new head-to-head duel challenge.
@@ -1368,15 +1519,16 @@ func (s *PostgresStore) UpdateUserSettings(ctx context.Context, userID string, s
 	}
 
 	query := `
-		INSERT INTO users (id, username, live_visibility, timezone, land_reminders, updated_at)
-		VALUES ($1, $1, $2, $3, $4, NOW())
+		INSERT INTO users (id, runner_code, username, live_visibility, timezone, land_reminders, updated_at)
+		VALUES ($1, $2, $1, $3, $4, $5, NOW())
 		ON CONFLICT (id) DO UPDATE
 		SET live_visibility = EXCLUDED.live_visibility,
 		    timezone = EXCLUDED.timezone,
 		    land_reminders = EXCLUDED.land_reminders,
+		    runner_code = COALESCE(NULLIF(users.runner_code, ''), EXCLUDED.runner_code),
 		    updated_at = NOW();
 	`
-	if _, err := s.pool.Exec(ctx, query, userID, vis, tz, reminders); err != nil {
+	if _, err := s.pool.Exec(ctx, query, userID, GenerateRunnerCode(), vis, tz, reminders); err != nil {
 		return fmt.Errorf("failed to update user settings: %w", err)
 	}
 	return nil

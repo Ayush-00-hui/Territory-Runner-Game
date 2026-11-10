@@ -4,6 +4,7 @@ import 'faction_standing.dart';
 
 class RunnerProfile {
   String id;
+  String runnerCode;
   String username;
   String faction;
   double totalDistanceKm;
@@ -14,6 +15,35 @@ class RunnerProfile {
   int get totalHexesClaimed => totalTerritoriesClaimed;
   set totalHexesClaimed(int value) => totalTerritoriesClaimed = value;
   int currentStreak;
+
+  static const String _codeAlphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+  /// Returns the permanent server-assigned unique Runner ID (e.g. RUN-7K9M2P),
+  /// falling back to a deterministic code derived from [id] until synced.
+  String get displayRunnerId {
+    if (runnerCode.trim().isNotEmpty) {
+      return runnerCode.trim().toUpperCase();
+    }
+    return generateFallbackCode(id);
+  }
+
+  /// Derives a readable 6-character Runner ID (`RUN-XXXXXX`) from a seed string.
+  static String generateFallbackCode(String seed) {
+    final source = seed.trim().isEmpty ? 'athlete' : seed.trim();
+    var hash = 0x811c9dc5;
+    for (final unit in source.codeUnits) {
+      hash ^= unit;
+      hash = (hash * 0x01000193) & 0x7fffffff;
+    }
+    final buf = StringBuffer('RUN-');
+    var v = hash;
+    for (var i = 0; i < 6; i++) {
+      buf.write(_codeAlphabet[v % _codeAlphabet.length]);
+      v = ((v ~/ _codeAlphabet.length) ^ (i * 131 + 17)) & 0x7fffffff;
+      if (v == 0) v = hash + i + 31;
+    }
+    return buf.toString();
+  }
 
   static const Map<String, String> badgeAliases = {
     'Territory Sovereign': 'Territory Master',
@@ -39,6 +69,7 @@ class RunnerProfile {
 
   RunnerProfile({
     required this.id,
+    this.runnerCode = '',
     required this.username,
     this.faction = '',
     this.totalDistanceKm = 0.0,
@@ -129,6 +160,7 @@ class RunnerProfile {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'runner_code': runnerCode,
     'username': username,
     'faction': faction,
     'totalDistanceKm': totalDistanceKm,
@@ -161,6 +193,7 @@ class RunnerProfile {
         0;
     return RunnerProfile(
       id: json['id'] as String? ?? 'local_user',
+      runnerCode: (json['runner_code'] ?? json['runnerCode']) as String? ?? '',
       username: json['username'] as String? ?? 'Runner',
       faction: FactionStanding.canonicalFaction(json['faction'] as String?),
       totalDistanceKm: (json['totalDistanceKm'] as num?)?.toDouble() ?? 0.0,
@@ -197,6 +230,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
     final int territories = (fields[6] as int?) ?? 0;
     return RunnerProfile(
       id: fields[0] as String,
+      runnerCode: (fields[9] as String?) ?? '',
       username: fields[1] as String,
       faction: FactionStanding.canonicalFaction(fields[8] as String?),
       totalDistanceKm: (fields[2] as num).toDouble(),
@@ -211,7 +245,7 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
   @override
   void write(BinaryWriter writer, RunnerProfile obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -229,6 +263,8 @@ class RunnerProfileAdapter extends TypeAdapter<RunnerProfile> {
       ..writeByte(7)
       ..write(obj.currentStreak)
       ..writeByte(8)
-      ..write(obj.faction);
+      ..write(obj.faction)
+      ..writeByte(9)
+      ..write(obj.runnerCode);
   }
 }

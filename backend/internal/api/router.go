@@ -65,7 +65,9 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 		v1.Use(authenticator.Middleware)
 
 		v1.Get("/me", api.HandleGetMe)
+		v1.Put("/me", api.HandleUpdateMe)
 		v1.Delete("/me", api.HandleDeleteMe)
+		v1.Get("/users/search", api.HandleSearchUsers)
 		v1.Get("/me/settings", api.HandleGetSettings)
 		v1.Put("/me/settings", api.HandleUpdateSettings)
 		v1.Get("/me/privacy-zones", api.HandleGetPrivacyZones)

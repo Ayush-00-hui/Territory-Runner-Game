@@ -66,12 +66,32 @@ func (m *MemoryStore) Ping(ctx context.Context) error {
 
 func (m *MemoryStore) Close() {}
 
+func (m *MemoryStore) generateUniqueRunnerCodeLocked() string {
+	for attempt := 0; attempt < 16; attempt++ {
+		code := GenerateRunnerCode()
+		collision := false
+		for _, existing := range m.users {
+			if existing != nil && strings.EqualFold(existing.RunnerCode, code) {
+				collision = true
+				break
+			}
+		}
+		if !collision {
+			return code
+		}
+	}
+	return GenerateRunnerCode()
+}
+
 func (m *MemoryStore) GetUser(ctx context.Context, id string) (*User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	u, ok := m.users[id]
 	if !ok {
 		return nil, nil
+	}
+	if u.RunnerCode == "" {
+		u.RunnerCode = m.generateUniqueRunnerCodeLocked()
 	}
 	cpy := *u
 	return &cpy, nil
@@ -81,12 +101,56 @@ func (m *MemoryStore) UpsertUser(ctx context.Context, u *User) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	cpy := *u
+	if existing, ok := m.users[u.ID]; ok && existing != nil {
+		if cpy.RunnerCode == "" {
+			cpy.RunnerCode = existing.RunnerCode
+		}
+		if cpy.CreatedAt.IsZero() {
+			cpy.CreatedAt = existing.CreatedAt
+		}
+	}
+	if cpy.RunnerCode == "" {
+		cpy.RunnerCode = m.generateUniqueRunnerCodeLocked()
+	} else {
+		cpy.RunnerCode = NormalizeRunnerCode(cpy.RunnerCode)
+	}
+	if cpy.Level <= 0 {
+		cpy.Level = 1
+	}
 	if cpy.CreatedAt.IsZero() {
 		cpy.CreatedAt = time.Now().UTC()
 	}
 	cpy.UpdatedAt = time.Now().UTC()
 	m.users[u.ID] = &cpy
+	u.RunnerCode = cpy.RunnerCode
 	return nil
+}
+
+func (m *MemoryStore) UpdateUsername(ctx context.Context, userID, username string) (*User, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	now := time.Now().UTC()
+	u, ok := m.users[userID]
+	if !ok || u == nil {
+		u = &User{
+			ID:         userID,
+			RunnerCode: m.generateUniqueRunnerCodeLocked(),
+			Username:   username,
+			Level:      1,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		}
+		m.users[userID] = u
+	} else {
+		u.Username = username
+		if u.RunnerCode == "" {
+			u.RunnerCode = m.generateUniqueRunnerCodeLocked()
+		}
+		u.UpdatedAt = now
+	}
+	cpy := *u
+	return &cpy, nil
 }
 
 func (m *MemoryStore) DeleteUser(ctx context.Context, userID string) error {
@@ -253,6 +317,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	if !ok {
 		user = &User{
 			ID:           run.UserID,
+			RunnerCode:   m.generateUniqueRunnerCodeLocked(),
 			Username:     "Runner_" + run.UserID,
 			Faction:      "",
 			TotalAreaSqm: 0.0,
@@ -704,7 +769,20 @@ func (m *MemoryStore) SendFriendRequest(ctx context.Context, requesterID, addres
 	}
 	_, addExists := m.users[addresseeID]
 	if !addExists {
-		// Attempt resolution by username/callsign
+		normalizedCode := NormalizeRunnerCode(addresseeID)
+		// 1. Attempt resolution by exact unique RunnerCode (with or without RUN- prefix)
+		for _, u := range m.users {
+			code := NormalizeRunnerCode(u.RunnerCode)
+			shortCode := strings.TrimPrefix(code, "RUN-")
+			if code != "" && (code == normalizedCode || shortCode == normalizedCode) {
+				addresseeID = u.ID
+				addExists = true
+				break
+			}
+		}
+	}
+	if !addExists {
+		// 2. Attempt resolution by username/callsign
 		for _, u := range m.users {
 			if strings.EqualFold(u.Username, addresseeID) {
 				addresseeID = u.ID
@@ -835,6 +913,7 @@ func (m *MemoryStore) GetFriends(ctx context.Context, userID string) ([]FriendUs
 		if ok {
 			friends = append(friends, FriendUser{
 				ID:           u.ID,
+				RunnerCode:   u.RunnerCode,
 				Username:     u.Username,
 				Faction:      u.Faction,
 				TotalAreaSqm: u.TotalAreaSqm,
@@ -870,23 +949,29 @@ func (m *MemoryStore) GetFriendRequests(ctx context.Context, userID string) ([]F
 		addUser := m.users[f.AddresseeID]
 
 		reqName := f.RequesterID
+		reqCode := ""
 		reqFaction := ""
 		if reqUser != nil {
 			reqName = reqUser.Username
+			reqCode = reqUser.RunnerCode
 			reqFaction = reqUser.Faction
 		}
 
 		addName := f.AddresseeID
+		addCode := ""
 		if addUser != nil {
 			addName = addUser.Username
+			addCode = addUser.RunnerCode
 		}
 
 		details = append(details, FriendRequestDetail{
 			ID:               f.ID,
 			RequesterID:      f.RequesterID,
+			RequesterCode:    reqCode,
 			RequesterName:    reqName,
 			RequesterFaction: reqFaction,
 			AddresseeID:      f.AddresseeID,
+			AddresseeCode:    addCode,
 			AddresseeName:    addName,
 			Status:           f.Status,
 			CreatedAt:        f.CreatedAt,
@@ -899,6 +984,115 @@ func (m *MemoryStore) GetFriendRequests(ctx context.Context, userID string) ([]F
 	})
 
 	return details, nil
+}
+
+// SearchUsers searches runners by RunnerCode, UserID, or Username.
+func (m *MemoryStore) SearchUsers(ctx context.Context, viewerID, query string, limit int) ([]UserSearchResult, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	trimmed := strings.TrimSpace(query)
+	if trimmed == "" {
+		return []UserSearchResult{}, nil
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+
+	upperQ := strings.ToUpper(trimmed)
+	lowerQ := strings.ToLower(trimmed)
+
+	type rankedResult struct {
+		result UserSearchResult
+		rank   int
+	}
+	var matches []rankedResult
+
+	for _, u := range m.users {
+		if u == nil {
+			continue
+		}
+		codeUpper := NormalizeRunnerCode(u.RunnerCode)
+		shortCode := strings.TrimPrefix(codeUpper, "RUN-")
+		nameLower := strings.ToLower(u.Username)
+
+		matchRank := -1
+		if u.ID == trimmed || codeUpper == upperQ || shortCode == upperQ {
+			matchRank = 0 // Exact ID / RunnerCode match
+		} else if nameLower == lowerQ {
+			matchRank = 1 // Exact Name match
+		} else if (codeUpper != "" && (strings.HasPrefix(codeUpper, upperQ) || strings.HasPrefix(shortCode, upperQ))) ||
+			strings.HasPrefix(nameLower, lowerQ) {
+			matchRank = 2 // Prefix match
+		} else if (codeUpper != "" && strings.Contains(codeUpper, upperQ)) ||
+			strings.Contains(nameLower, lowerQ) {
+			matchRank = 3 // Partial substring match
+		}
+
+		if matchRank < 0 {
+			continue
+		}
+
+		status := ""
+		if u.ID == viewerID {
+			status = "self"
+			matchRank += 10
+		} else {
+			for _, f := range m.friendships {
+				if (f.RequesterID == viewerID && f.AddresseeID == u.ID) ||
+					(f.RequesterID == u.ID && f.AddresseeID == viewerID) {
+					if f.Status == "accepted" {
+						status = "accepted"
+						break
+					}
+					if f.Status == "pending" {
+						if f.RequesterID == viewerID {
+							status = "pending_sent"
+						} else {
+							status = "pending_received"
+						}
+						break
+					}
+				}
+			}
+		}
+
+		matches = append(matches, rankedResult{
+			rank: matchRank,
+			result: UserSearchResult{
+				ID:               u.ID,
+				RunnerCode:       u.RunnerCode,
+				Username:         u.Username,
+				Faction:          u.Faction,
+				Level:            u.Level,
+				TotalAreaSqm:     u.TotalAreaSqm,
+				FriendshipStatus: status,
+			},
+		})
+	}
+
+	sort.Slice(matches, func(i, j int) bool {
+		if matches[i].rank != matches[j].rank {
+			return matches[i].rank < matches[j].rank
+		}
+		if matches[i].result.TotalAreaSqm != matches[j].result.TotalAreaSqm {
+			return matches[i].result.TotalAreaSqm > matches[j].result.TotalAreaSqm
+		}
+		return matches[i].result.Username < matches[j].result.Username
+	})
+
+	out := make([]UserSearchResult, 0, minInt(limit, len(matches)))
+	for i := 0; i < len(matches) && i < limit; i++ {
+		out = append(out, matches[i].result)
+	}
+	return out, nil
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // CreateDuel initiates a new head-to-head duel challenge.

@@ -15,6 +15,12 @@ type Store interface {
 	// UpsertUser creates or updates a user profile.
 	UpsertUser(ctx context.Context, u *User) error
 
+	// UpdateUsername updates (or initializes) a user's display name while preserving their unique RunnerCode.
+	UpdateUsername(ctx context.Context, userID, username string) (*User, error)
+
+	// SearchUsers finds runners matching a RunnerCode, UserID, or Username query.
+	SearchUsers(ctx context.Context, viewerID, query string, limit int) ([]UserSearchResult, error)
+
 	// DeleteUser permanently purges a user record and cascades to all associated territories, runs, duels, and privacy zones.
 	DeleteUser(ctx context.Context, userID string) error
 

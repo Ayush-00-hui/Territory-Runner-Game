@@ -2,6 +2,7 @@ import 'faction_standing.dart';
 
 class FriendUser {
   final String id;
+  final String runnerCode;
   final String username;
   final String faction;
   final double totalAreaSqm;
@@ -11,6 +12,7 @@ class FriendUser {
 
   const FriendUser({
     required this.id,
+    this.runnerCode = '',
     required this.username,
     required this.faction,
     required this.totalAreaSqm,
@@ -22,6 +24,7 @@ class FriendUser {
   factory FriendUser.fromJson(Map<String, dynamic> json) {
     return FriendUser(
       id: json['id'] as String? ?? '',
+      runnerCode: json['runner_code'] as String? ?? '',
       username: json['username'] as String? ?? 'Runner',
       faction: FactionStanding.canonicalFaction(json['faction'] as String?),
       totalAreaSqm: (json['total_area_sqm'] as num?)?.toDouble() ?? 0.0,
@@ -33,6 +36,7 @@ class FriendUser {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    if (runnerCode.isNotEmpty) 'runner_code': runnerCode,
     'username': username,
     'faction': faction,
     'total_area_sqm': totalAreaSqm,
@@ -45,9 +49,11 @@ class FriendUser {
 class FriendRequestDetail {
   final String id;
   final String requesterId;
+  final String requesterCode;
   final String requesterName;
   final String requesterFaction;
   final String addresseeId;
+  final String addresseeCode;
   final String addresseeName;
   final String status;
   final DateTime createdAt;
@@ -56,9 +62,11 @@ class FriendRequestDetail {
   const FriendRequestDetail({
     required this.id,
     required this.requesterId,
+    this.requesterCode = '',
     required this.requesterName,
     required this.requesterFaction,
     required this.addresseeId,
+    this.addresseeCode = '',
     required this.addresseeName,
     required this.status,
     required this.createdAt,
@@ -69,11 +77,13 @@ class FriendRequestDetail {
     return FriendRequestDetail(
       id: json['id'] as String? ?? '',
       requesterId: json['requester_id'] as String? ?? '',
+      requesterCode: json['requester_code'] as String? ?? '',
       requesterName: json['requester_name'] as String? ?? 'Runner',
       requesterFaction: FactionStanding.canonicalFaction(
         json['requester_faction'] as String?,
       ),
       addresseeId: json['addressee_id'] as String? ?? '',
+      addresseeCode: json['addressee_code'] as String? ?? '',
       addresseeName: json['addressee_name'] as String? ?? 'Runner',
       status: json['status'] as String? ?? 'pending',
       createdAt: json['created_at'] != null
@@ -86,12 +96,52 @@ class FriendRequestDetail {
   Map<String, dynamic> toJson() => {
     'id': id,
     'requester_id': requesterId,
+    if (requesterCode.isNotEmpty) 'requester_code': requesterCode,
     'requester_name': requesterName,
     'requester_faction': requesterFaction,
     'addressee_id': addresseeId,
+    if (addresseeCode.isNotEmpty) 'addressee_code': addresseeCode,
     'addressee_name': addresseeName,
     'status': status,
     'created_at': createdAt.toIso8601String(),
     'is_incoming': isIncoming,
   };
+}
+
+class RunnerSearchResult {
+  final String id;
+  final String runnerCode;
+  final String username;
+  final String faction;
+  final int level;
+  final double totalAreaSqm;
+  final String friendshipStatus;
+
+  const RunnerSearchResult({
+    required this.id,
+    required this.runnerCode,
+    required this.username,
+    this.faction = '',
+    this.level = 1,
+    this.totalAreaSqm = 0.0,
+    this.friendshipStatus = '',
+  });
+
+  bool get isSelf => friendshipStatus == 'self';
+  bool get isFriend => friendshipStatus == 'accepted';
+  bool get isPendingSent => friendshipStatus == 'pending_sent';
+  bool get isPendingReceived => friendshipStatus == 'pending_received';
+  bool get canAdd => friendshipStatus.isEmpty;
+
+  factory RunnerSearchResult.fromJson(Map<String, dynamic> json) {
+    return RunnerSearchResult(
+      id: json['id'] as String? ?? '',
+      runnerCode: json['runner_code'] as String? ?? '',
+      username: json['username'] as String? ?? 'Runner',
+      faction: FactionStanding.canonicalFaction(json['faction'] as String?),
+      level: (json['level'] as num?)?.toInt() ?? 1,
+      totalAreaSqm: (json['total_area_sqm'] as num?)?.toDouble() ?? 0.0,
+      friendshipStatus: json['friendship_status'] as String? ?? '',
+    );
+  }
 }

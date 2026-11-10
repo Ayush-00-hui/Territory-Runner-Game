@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../models/duel.dart';
@@ -97,6 +99,7 @@ class _SocialHubViewState extends State<SocialHubView> {
   late final ApiClient _apiClient;
   late final String _myUid;
   String? _myCallsign;
+  String? _myRunnerId;
 
   SocialTab _activeTab = SocialTab.squad;
   bool _isLoading = false;
@@ -112,7 +115,9 @@ class _SocialHubViewState extends State<SocialHubView> {
     _apiClient = widget.apiClient ?? ApiClient();
     _myUid = widget.currentUserId ?? FirebaseService().currentUserId;
     try {
-      _myCallsign = TerritoryService().getProfile().username;
+      final profile = TerritoryService().getProfile();
+      _myCallsign = profile.username;
+      _myRunnerId = profile.displayRunnerId;
     } catch (_) {}
     _refreshData();
   }
@@ -129,6 +134,18 @@ class _SocialHubViewState extends State<SocialHubView> {
         _apiClient.getFriendRequests(),
         _apiClient.getDuels(),
       ]);
+
+      if (widget.apiClient == null) {
+        unawaited(
+          TerritoryService().syncIdentityWithBackend().then((profile) {
+            if (!mounted) return;
+            setState(() {
+              _myCallsign = profile.username;
+              _myRunnerId = profile.displayRunnerId;
+            });
+          }),
+        );
+      }
 
       if (!mounted) return;
       setState(() {
@@ -205,6 +222,49 @@ class _SocialHubViewState extends State<SocialHubView> {
         AppToast.show(context, 'Error: $e', type: AppToastType.error);
       }
     }
+  }
+
+  Widget _buildSquadTab({required bool embedded}) {
+    return SocialSquadTab(
+      friends: _friends,
+      requests: _requests,
+      shrinkWrap: embedded,
+      physics: embedded ? const NeverScrollableScrollPhysics() : null,
+      myCallsign: _myCallsign,
+      myRunnerId: _myRunnerId,
+      onAddFriend: () => showAddFriendDialog(
+        context,
+        apiClient: _apiClient,
+        currentCallsign: _myCallsign,
+        currentRunnerId: _myRunnerId,
+        onAdded: _refreshData,
+      ),
+      onRespondRequest: _respondRequest,
+      onChallengeDuel: (friend) => showCreateDuelSheet(
+        context,
+        apiClient: _apiClient,
+        friends: _friends,
+        targetFriend: friend,
+        onCreated: _refreshData,
+      ),
+    );
+  }
+
+  Widget _buildDuelsTab({required bool embedded}) {
+    return SocialDuelsTab(
+      duels: _duels,
+      myUid: _myUid,
+      shrinkWrap: embedded,
+      physics: embedded ? const NeverScrollableScrollPhysics() : null,
+      onNewDuel: () => showCreateDuelSheet(
+        context,
+        apiClient: _apiClient,
+        friends: _friends,
+        onCreated: _refreshData,
+      ),
+      onAcceptDuel: _acceptDuel,
+      onDeclineDuel: _declineDuel,
+    );
   }
 
   @override
@@ -344,78 +404,16 @@ class _SocialHubViewState extends State<SocialHubView> {
         else
           widget.isEmbedded
               ? (_activeTab == SocialTab.squad
-                    ? SocialSquadTab(
-                        friends: _friends,
-                        requests: _requests,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        myCallsign: _myCallsign,
-                        onAddFriend: () => showAddFriendDialog(
-                          context,
-                          apiClient: _apiClient,
-                          currentCallsign: _myCallsign,
-                          onAdded: _refreshData,
-                        ),
-                        onRespondRequest: _respondRequest,
-                        onChallengeDuel: (friend) => showCreateDuelSheet(
-                          context,
-                          apiClient: _apiClient,
-                          friends: _friends,
-                          targetFriend: friend,
-                          onCreated: _refreshData,
-                        ),
-                      )
-                    : SocialDuelsTab(
-                        duels: _duels,
-                        myUid: _myUid,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        onNewDuel: () => showCreateDuelSheet(
-                          context,
-                          apiClient: _apiClient,
-                          friends: _friends,
-                          onCreated: _refreshData,
-                        ),
-                        onAcceptDuel: _acceptDuel,
-                        onDeclineDuel: _declineDuel,
-                      ))
+                    ? _buildSquadTab(embedded: true)
+                    : _buildDuelsTab(embedded: true))
               : Expanded(
                   child: RefreshIndicator(
                     color: AppColors.accent,
                     backgroundColor: AppColors.surface,
                     onRefresh: _refreshData,
                     child: _activeTab == SocialTab.squad
-                        ? SocialSquadTab(
-                            friends: _friends,
-                            requests: _requests,
-                            myCallsign: _myCallsign,
-                            onAddFriend: () => showAddFriendDialog(
-                              context,
-                              apiClient: _apiClient,
-                              currentCallsign: _myCallsign,
-                              onAdded: _refreshData,
-                            ),
-                            onRespondRequest: _respondRequest,
-                            onChallengeDuel: (friend) => showCreateDuelSheet(
-                              context,
-                              apiClient: _apiClient,
-                              friends: _friends,
-                              targetFriend: friend,
-                              onCreated: _refreshData,
-                            ),
-                          )
-                        : SocialDuelsTab(
-                            duels: _duels,
-                            myUid: _myUid,
-                            onNewDuel: () => showCreateDuelSheet(
-                              context,
-                              apiClient: _apiClient,
-                              friends: _friends,
-                              onCreated: _refreshData,
-                            ),
-                            onAcceptDuel: _acceptDuel,
-                            onDeclineDuel: _declineDuel,
-                          ),
+                        ? _buildSquadTab(embedded: false)
+                        : _buildDuelsTab(embedded: false),
                   ),
                 ),
       ],

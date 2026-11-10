@@ -7,6 +7,7 @@ import 'package:clipper2/clipper2.dart';
 
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
+import '../../services/api_client.dart';
 import '../../services/firebase_service.dart';
 import '../../ui/theme/app_colors.dart';
 import '../../core/logging/app_logger.dart';
@@ -82,10 +83,12 @@ class TerritoryService {
     final box = _profileBox;
     if (box == null) return;
     if (box.isEmpty) {
+      final uid = _firebaseService.currentUserId;
       box.put(
         'current_user',
         RunnerProfile(
-          id: _firebaseService.currentUserId,
+          id: uid,
+          runnerCode: RunnerProfile.generateFallbackCode(uid),
           username: _firebaseService.currentUsername,
           totalDistanceKm: 0.0,
           xp: 0,
@@ -136,11 +139,66 @@ class TerritoryService {
 
   /// Updates and saves the runner profile
   Future<void> saveProfile(RunnerProfile profile) async {
+    if (profile.runnerCode.trim().isEmpty && profile.id.trim().isNotEmpty) {
+      profile.runnerCode = RunnerProfile.generateFallbackCode(profile.id);
+    }
     final box = _profileBox;
     if (box != null) {
       await box.put('current_user', profile);
     }
     unawaited(_firebaseService.syncProfileToCloud(profile));
+  }
+
+  /// Syncs the authenticated user's profile with the backend and ensures
+  /// a permanent unique Runner ID (`runnerCode`) is stored locally.
+  Future<RunnerProfile> syncIdentityWithBackend({
+    String? displayName,
+    ApiClient? apiClient,
+  }) async {
+    final profile = getProfile();
+    final uid = _firebaseService.currentUserId;
+    if (uid.isNotEmpty) {
+      profile.id = uid;
+    }
+    if (displayName != null && displayName.trim().isNotEmpty) {
+      profile.username = displayName.trim();
+    }
+    if (profile.runnerCode.trim().isEmpty) {
+      profile.runnerCode = RunnerProfile.generateFallbackCode(profile.id);
+    }
+    await saveProfile(profile);
+
+    if (apiClient == null && !Hive.isBoxOpen('profile')) {
+      return profile;
+    }
+
+    final client = apiClient ?? ApiClient();
+    try {
+      final cleanName = profile.username.trim();
+      final serverProfile =
+          await (cleanName.length >= 2 && cleanName.length <= 24
+                  ? client.updateMe(username: cleanName)
+                  : client.getMe())
+              .timeout(const Duration(seconds: 4));
+      if (serverProfile.runnerCode.trim().isNotEmpty) {
+        profile.runnerCode = serverProfile.runnerCode.trim().toUpperCase();
+      }
+      if (serverProfile.id.isNotEmpty) {
+        profile.id = serverProfile.id;
+      }
+      if (profile.faction.isEmpty && serverProfile.faction.isNotEmpty) {
+        profile.faction = serverProfile.faction;
+      }
+      if (apiClient != null || Hive.isBoxOpen('profile')) {
+        await saveProfile(profile);
+      }
+    } catch (e) {
+      AppLogger.debug(
+        'Offline or skipped backend identity sync: $e',
+        tag: 'TerritoryService',
+      );
+    }
+    return profile;
   }
 
   /// Returns all currently captured territory IDs
