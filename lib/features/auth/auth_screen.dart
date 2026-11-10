@@ -50,6 +50,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _finishAuth(String displayName) {
+    String? generatedCode;
     try {
       final profile = _territoryService.getProfile();
       final uid = _firebaseService.currentUserId;
@@ -60,8 +61,12 @@ class _AuthScreenState extends State<AuthScreen> {
         profile.username = displayName;
       }
       if (profile.runnerCode.trim().isEmpty) {
-        profile.runnerCode = RunnerProfile.generateFallbackCode(profile.id);
+        final seed = profile.id == 'local_runner'
+            ? '${profile.id}_${DateTime.now().microsecondsSinceEpoch}'
+            : profile.id;
+        profile.runnerCode = RunnerProfile.generateFallbackCode(seed);
       }
+      generatedCode = profile.displayRunnerId;
       _territoryService.saveProfile(profile);
       unawaited(
         _territoryService.syncIdentityWithBackend(
@@ -73,9 +78,12 @@ class _AuthScreenState extends State<AuthScreen> {
     }
     widget.onAuthenticated();
     if (!mounted) return;
+    final idSuffix = generatedCode != null && generatedCode.isNotEmpty
+        ? ' Your ID: $generatedCode'
+        : '';
     AppToast.show(
       context,
-      'Welcome, $displayName!',
+      'Welcome, $displayName!$idSuffix',
       type: AppToastType.success,
       icon: Icons.check_circle_rounded,
     );

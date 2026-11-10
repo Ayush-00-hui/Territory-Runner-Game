@@ -5,9 +5,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:territory_runner/features/gameplay/territory_service.dart';
 import 'package:territory_runner/features/profile/widgets/profile_hero.dart';
-import 'package:territory_runner/features/social/widgets/social_squad_tab.dart';
+import 'package:territory_runner/features/social/widgets/social_hub_cache.dart';
+import 'package:territory_runner/features/social/widgets/social_hub_sheet.dart';
 import 'package:territory_runner/models/friend.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/services/api_client.dart';
@@ -305,6 +307,168 @@ void main() {
         expect(requestedTarget, equals('uid_sarah'));
         expect(onAddedCalled, isTrue);
         expect(find.text('Sent'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'FriendRequestsInboxContent renders incoming and sent requests and accepts cleanly',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        bool respondedAccept = false;
+        bool onChangedCalled = false;
+
+        final mockClient = MockClient((request) async {
+          if (request.url.path == '/v1/friends/requests' &&
+              request.method == 'GET') {
+            return http.Response(
+              jsonEncode([
+                {
+                  'id': 'req_1',
+                  'requester_id': 'u_maya',
+                  'requester_name': 'MayaStride',
+                  'requester_code': 'RUN-4M8Q2Z',
+                  'requester_faction': 'Apex Track',
+                  'addressee_id': 'u_me',
+                  'addressee_name': 'Arnav',
+                  'addressee_code': 'RUN-2H6N8P',
+                  'status': 'pending',
+                  'created_at': DateTime.now().toIso8601String(),
+                  'is_incoming': true,
+                },
+                {
+                  'id': 'req_2',
+                  'requester_id': 'u_me',
+                  'requester_name': 'Arnav',
+                  'requester_code': 'RUN-2H6N8P',
+                  'addressee_id': 'u_liam',
+                  'addressee_name': 'LiamTempo',
+                  'addressee_code': 'RUN-7V3R5N',
+                  'status': 'pending',
+                  'created_at': DateTime.now().toIso8601String(),
+                  'is_incoming': false,
+                },
+              ]),
+              200,
+            );
+          }
+
+          if (request.url.path == '/v1/friends/request/req_1' &&
+              request.method == 'PUT') {
+            final body = jsonDecode(request.body) as Map<String, dynamic>;
+            if (body['action'] == 'accept') {
+              respondedAccept = true;
+              return http.Response(jsonEncode({'status': 'accepted'}), 200);
+            }
+          }
+
+          return http.Response('[]', 200);
+        });
+
+        final apiClient = ApiClient.custom(
+          httpClient: mockClient,
+          baseUrl: 'http://test.local',
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            scaffoldMessengerKey: AppToast.messengerKey,
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FriendRequestsInboxContent(
+                  apiClient: apiClient,
+                  currentCallsign: 'Arnav',
+                  currentRunnerId: 'RUN-2H6N8P',
+                  onChanged: () => onChangedCalled = true,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.text('Your Runner ID: RUN-2H6N8P'), findsOneWidget);
+        expect(find.text('Inbox (1)'), findsOneWidget);
+        expect(find.text('Sent (1)'), findsOneWidget);
+        expect(find.text('MayaStride'), findsOneWidget);
+        expect(find.textContaining('RUN-4M8Q2Z'), findsOneWidget);
+        expect(SocialHubCache.incomingCountNotifier.value, equals(1));
+
+        // Switch to Sent tab and inspect pending outgoing request
+        await tester.tap(find.text('Sent (1)'));
+        await tester.pumpAndSettle();
+        expect(find.text('LiamTempo'), findsOneWidget);
+        expect(find.text('Pending'), findsOneWidget);
+
+        // Switch back to Inbox tab and accept incoming request
+        await tester.tap(find.text('Inbox (1)'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byIcon(Icons.check_circle_rounded));
+        await tester.pumpAndSettle();
+
+        expect(respondedAccept, isTrue);
+        expect(onChangedCalled, isTrue);
+        expect(SocialHubCache.incomingCountNotifier.value, equals(0));
+      },
+    );
+
+    testWidgets(
+      'FriendInboxActionButtons shows badge and exposes inbox and add actions',
+      (tester) async {
+        bool inboxOpened = false;
+        bool addTapped = false;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: Center(
+                child: FriendInboxActionButtons(
+                  overridePendingCount: 3,
+                  onOpenInbox: () => inboxOpened = true,
+                  onAddFriend: () => addTapped = true,
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(find.text('3'), findsOneWidget);
+        await tester.tap(find.byTooltip('Friend requests inbox'));
+        await tester.tap(find.byTooltip('Add friend by ID'));
+        expect(inboxOpened, isTrue);
+        expect(addTapped, isTrue);
+      },
+    );
+
+    testWidgets(
+      'SocialHubView keeps Add Friend and Inbox accessible even when network is offline',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final failingMock = MockClient((_) async => http.Response('Down', 503));
+        final apiClient = ApiClient.custom(
+          httpClient: failingMock,
+          baseUrl: 'http://test.local',
+          maxRetries: 0,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: Scaffold(
+              body: SocialHubView(apiClient: apiClient, currentUserId: 'me_1'),
+            ),
+          ),
+        );
+
+        await tester.pumpAndSettle();
+
+        expect(find.byTooltip('Friend requests inbox'), findsOneWidget);
+        expect(find.byTooltip('Add friend by ID'), findsOneWidget);
+        expect(find.text('Add Friend'), findsAtLeastNWidgets(1));
+        expect(find.text('Loading crew & duels...'), findsNothing);
       },
     );
   });

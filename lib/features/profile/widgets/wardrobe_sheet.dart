@@ -89,38 +89,91 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
           ),
           body: Column(
             children: [
-              // 1. Large Live Interactive Avatar Stage
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: AppSpacing.s16),
-                decoration: BoxDecoration(
-                  color: AppColors.bgDeep,
-                  border: Border(
-                    bottom: BorderSide(color: AppColors.border, width: 1),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Center(
-                      child: AvatarWidget(
-                        avatar: currentAvatar,
-                        size: 110,
-                        isRunning: _previewRunning,
-                        semanticsLabel: 'Runner avatar live preview',
+              // 1. Large Live Interactive Athletic Showcase Stage
+              Builder(
+                builder: (context) {
+                  final topAccent = WardrobeCatalog.findById(
+                    currentAvatar.topId,
+                  ).accentColor;
+                  final stageGlow = topAccent == Colors.transparent
+                      ? AppColors.accent
+                      : topAccent;
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.s14,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: const Alignment(0, -0.05),
+                        radius: 0.9,
+                        colors: [
+                          stageGlow.withValues(alpha: 0.14),
+                          AppColors.bgDeep,
+                        ],
+                      ),
+                      border: const Border(
+                        bottom: BorderSide(color: AppColors.border, width: 1),
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.s8),
-                    Text(
-                      _previewRunning
-                          ? 'Dynamic Stride Cycle'
-                          : 'Athletic Ready Stance',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.textMuted,
-                        letterSpacing: 0.5,
-                      ),
+                    child: Column(
+                      children: [
+                        Center(
+                          child: AvatarWidget(
+                            avatar: currentAvatar,
+                            size: 152,
+                            isRunning: _previewRunning,
+                            semanticsLabel: 'Runner avatar live preview',
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s6),
+                        InkWell(
+                          onTap: () {
+                            HapticFeedback.selectionClick();
+                            setState(() {
+                              _previewRunning = !_previewRunning;
+                            });
+                          },
+                          borderRadius: AppRadius.brFull,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.s12,
+                              vertical: AppSpacing.s4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: AppRadius.brFull,
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  _previewRunning
+                                      ? Icons.directions_run_rounded
+                                      : Icons.accessibility_new_rounded,
+                                  size: 14,
+                                  color: AppColors.accent,
+                                ),
+                                const SizedBox(width: AppSpacing.s6),
+                                Text(
+                                  _previewRunning
+                                      ? 'Dynamic Stride Cycle'
+                                      : 'Athletic Ready Stance',
+                                  style: AppText.caption.copyWith(
+                                    color: AppColors.textSecondary,
+                                    letterSpacing: 0.4,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
 
               // 2. Category Selector Chips
@@ -185,7 +238,7 @@ class _WardrobeSheetState extends State<WardrobeSheet> {
                   padding: const EdgeInsets.all(AppSpacing.s16),
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 1.15,
+                    childAspectRatio: 1.0,
                     crossAxisSpacing: AppSpacing.s12,
                     mainAxisSpacing: AppSpacing.s12,
                   ),
@@ -286,36 +339,31 @@ class _WardrobeItemCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Color swatch preview
+                  // Dual-tone category gear badge
                   Container(
-                    width: 26,
-                    height: 26,
+                    width: 34,
+                    height: 34,
                     decoration: BoxDecoration(
                       color: item.primaryColor == Colors.transparent
                           ? AppColors.surface2
                           : item.primaryColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.border, width: 1.5),
+                      border: Border.all(
+                        color: item.accentColor == Colors.transparent
+                            ? AppColors.border
+                            : item.accentColor,
+                        width: 2.0,
+                      ),
                     ),
-                    child:
-                        item.accentColor != Colors.transparent &&
-                            item.accentColor != item.primaryColor
-                        ? Align(
-                            alignment: Alignment.bottomRight,
-                            child: Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: item.accentColor,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: AppColors.surface,
-                                  width: 1,
-                                ),
-                              ),
-                            ),
-                          )
-                        : null,
+                    child: Icon(
+                      item.category.icon,
+                      size: 16,
+                      color: item.primaryColor == Colors.transparent
+                          ? AppColors.textSecondary
+                          : (item.primaryColor.computeLuminance() > 0.45
+                                ? AppColors.onAccent
+                                : AppColors.textPrimary),
+                    ),
                   ),
 
                   // State Badge
@@ -356,7 +404,7 @@ class _WardrobeItemCard extends StatelessWidget {
                           : AppColors.textMuted,
                       fontWeight: FontWeight.w600,
                     ),
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),

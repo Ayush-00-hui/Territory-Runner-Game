@@ -1,24 +1,31 @@
 import 'package:flutter/material.dart';
 
 import '../../../ui/ui.dart';
+import 'friend_requests_inbox_sheet.dart';
 
 enum SocialTab { squad, duels }
 
-/// Header with Social title, refresh button, and Squad/Duels tab switcher.
+/// Header with Social title, inbox + add-friend actions, refresh button, and Squad/Duels tab switcher.
 class SocialHubHeader extends StatelessWidget {
   final SocialTab activeTab;
   final int friendsCount;
   final int activeDuelsCount;
+  final int incomingRequestsCount;
   final ValueChanged<SocialTab> onTabChanged;
   final VoidCallback onRefresh;
+  final VoidCallback? onOpenInbox;
+  final VoidCallback? onAddFriend;
 
   const SocialHubHeader({
     super.key,
     required this.activeTab,
     required this.friendsCount,
     required this.activeDuelsCount,
+    this.incomingRequestsCount = 0,
     required this.onTabChanged,
     required this.onRefresh,
+    this.onOpenInbox,
+    this.onAddFriend,
   });
 
   @override
@@ -38,6 +45,8 @@ class SocialHubHeader extends StatelessWidget {
               Expanded(
                 child: Text(
                   'Social Squads & Duels',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: AppText.headingSmall.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -46,6 +55,15 @@ class SocialHubHeader extends StatelessWidget {
                   ),
                 ),
               ),
+              if (onOpenInbox != null && onAddFriend != null) ...[
+                const SizedBox(width: AppSpacing.s6),
+                FriendInboxActionButtons(
+                  compact: true,
+                  overridePendingCount: incomingRequestsCount,
+                  onOpenInbox: onOpenInbox!,
+                  onAddFriend: onAddFriend!,
+                ),
+              ],
               IconButton(
                 icon: const Icon(
                   Icons.refresh_rounded,

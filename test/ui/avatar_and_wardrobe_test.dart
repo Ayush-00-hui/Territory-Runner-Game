@@ -212,6 +212,38 @@ void main() {
           () => painterReady.paint(canvas, const Size(100, 100)),
           returnsNormally,
         );
+
+        // Verify all silhouette variants (singlet, long sleeve, full tights, cap, shades, watch)
+        final variantAvatar = const RunnerAvatar(
+          headwearId: 'headwear_cap_graphite',
+          topId: 'top_long_sleeve_obsidian',
+          bottomsId: 'bottoms_tights_thermal',
+          shoesId: 'shoes_carbon_cyan',
+          accessoryId: 'acc_shades_cyan',
+          bodyToneId: 'tone_deep_bronze',
+        );
+        for (final t in [0.0, 0.25, 0.5, 0.75]) {
+          expect(
+            () => RunnerAvatarPainter(
+              avatar: variantAvatar,
+              progress: t,
+              isReadyPose: false,
+            ).paint(canvas, const Size(160, 160)),
+            returnsNormally,
+          );
+        }
+        expect(
+          () => RunnerAvatarPainter(
+            avatar: variantAvatar.copyWith(
+              topId: 'top_pro_tank_yellow',
+              headwearId: 'headwear_beanie_dark',
+              accessoryId: 'acc_watch_charcoal',
+            ),
+            progress: 0.0,
+            isReadyPose: true,
+          ).paint(canvas, const Size(160, 160)),
+          returnsNormally,
+        );
       },
     );
   });

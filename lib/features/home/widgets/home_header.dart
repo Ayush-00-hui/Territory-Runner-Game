@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/runner_profile.dart';
+import '../../../services/api_client.dart';
 import '../../../ui/ui.dart';
+import '../../social/widgets/friend_requests_inbox_sheet.dart';
+import '../../social/widgets/social_add_friend_dialog.dart';
 
 /// Executive Athlete Home Header
 /// Features avatar with thin athletic level ring, greeting, callsign,
@@ -68,7 +71,12 @@ class HomeHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(_greeting(), style: AppText.labelSmall),
+              Text(
+                _greeting(),
+                style: AppText.labelSmall,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
               const SizedBox(height: AppSpacing.s2),
               Text(
                 callsign,
@@ -80,12 +88,33 @@ class HomeHeader extends StatelessWidget {
               Text(
                 'Level ${profile.level}',
                 style: AppText.caption.copyWith(color: AppColors.textSecondary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
 
-        const SizedBox(width: AppSpacing.s8),
+        const SizedBox(width: AppSpacing.s6),
+
+        // Friend Requests Inbox + Add Friend (`+`) trigger
+        FriendInboxActionButtons(
+          compact: true,
+          onOpenInbox: () => showFriendRequestsInboxSheet(
+            context,
+            currentCallsign: callsign,
+            currentRunnerId: profile.displayRunnerId,
+          ),
+          onAddFriend: () => showAddFriendDialog(
+            context,
+            apiClient: ApiClient(),
+            currentCallsign: callsign,
+            currentRunnerId: profile.displayRunnerId,
+            onAdded: () {},
+          ),
+        ),
+
+        const SizedBox(width: AppSpacing.s6),
 
         // Unified calm status indicator: combines GPS and Cloud Sync (dot + label, tap for details)
         CombinedStatusIndicator(

@@ -15,6 +15,7 @@ import 'features/profile/widgets/weekly_league_view.dart';
 import 'features/social/widgets/social_hub_sheet.dart';
 import 'models/runner_profile.dart';
 import 'models/territory.dart';
+import 'services/api_client.dart';
 import 'services/firebase_service.dart';
 import 'ui/ui.dart';
 
@@ -66,6 +67,15 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
+  RunnerProfile? _resolveProfileForActions() {
+    if (widget.initialProfile != null) return widget.initialProfile;
+    try {
+      return _territoryService.getProfile();
+    } catch (_) {
+      return null;
+    }
+  }
+
   void _openAuthDialog() {
     showProfileAuthModal(
       context,
@@ -77,6 +87,8 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
+    final actionProfile = _resolveProfileForActions();
+
     return Scaffold(
       backgroundColor: AppColors.bgDeep,
       appBar: AppBar(
@@ -91,6 +103,25 @@ class _ProfilePageState extends State<ProfilePage>
         ),
         centerTitle: true,
         actions: [
+          Center(
+            child: FriendInboxActionButtons(
+              compact: true,
+              onOpenInbox: () => showFriendRequestsInboxSheet(
+                context,
+                currentCallsign: actionProfile?.username,
+                currentRunnerId: actionProfile?.displayRunnerId,
+              ),
+              onAddFriend: () => showAddFriendDialog(
+                context,
+                apiClient: ApiClient(),
+                currentCallsign: actionProfile?.username,
+                currentRunnerId: actionProfile?.displayRunnerId,
+                onAdded: () {
+                  if (mounted) setState(() {});
+                },
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(
               Icons.cloud_sync_outlined,

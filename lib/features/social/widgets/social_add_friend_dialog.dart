@@ -302,7 +302,26 @@ class _AddFriendSheetContentState extends State<AddFriendSheetContent> {
                           _onQueryChanged('');
                         },
                       )
-                    : null,
+                    : IconButton(
+                        icon: const Icon(
+                          Icons.content_paste_rounded,
+                          color: AppColors.accent,
+                          size: 18,
+                        ),
+                        tooltip: 'Paste ID',
+                        onPressed: () async {
+                          final data = await Clipboard.getData(
+                            Clipboard.kTextPlain,
+                          );
+                          final pasted = data?.text?.trim() ?? '';
+                          if (pasted.isEmpty || !mounted) return;
+                          _searchController.text = pasted;
+                          _searchController.selection = TextSelection.collapsed(
+                            offset: pasted.length,
+                          );
+                          _onQueryChanged(pasted);
+                        },
+                      ),
                 errorText: _directError,
                 errorMaxLines: 2,
                 filled: true,

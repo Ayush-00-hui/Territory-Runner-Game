@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../models/duel.dart';
@@ -12,6 +13,17 @@ class SocialHubCache {
   static const String _cachedRequestsKey =
       'territory_runner_cached_friend_requests';
   static const String _cachedDuelsKey = 'territory_runner_cached_duels';
+
+  /// Live pending incoming friend requests count for header inbox badges.
+  static final ValueNotifier<int> incomingCountNotifier = ValueNotifier<int>(0);
+
+  static void updateIncomingCountFromRequests(
+    List<FriendRequestDetail> requests,
+  ) {
+    incomingCountNotifier.value = requests
+        .where((r) => r.isIncoming && r.status == 'pending')
+        .length;
+  }
 
   static Future<
     ({
@@ -64,6 +76,8 @@ class SocialHubCache {
       );
     }
 
+    updateIncomingCountFromRequests(cachedRequests);
+
     return (
       friends: cachedFriends,
       requests: cachedRequests,
@@ -71,11 +85,27 @@ class SocialHubCache {
     );
   }
 
+  static Future<void> saveCachedRequests(
+    List<FriendRequestDetail> requests,
+  ) async {
+    updateIncomingCountFromRequests(requests);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _cachedRequestsKey,
+        jsonEncode(requests.map((r) => r.toJson()).toList()),
+      );
+    } catch (e) {
+      AppLogger.warning('Failed to cache requests: $e', tag: 'SocialHubCache');
+    }
+  }
+
   static Future<void> saveCachedData({
     required List<FriendUser> friends,
     required List<FriendRequestDetail> requests,
     required List<Duel> duels,
   }) async {
+    updateIncomingCountFromRequests(requests);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(

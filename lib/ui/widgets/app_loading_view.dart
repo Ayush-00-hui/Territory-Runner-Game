@@ -100,14 +100,8 @@ class _AppLoadingViewState extends State<AppLoadingView>
       duration: const Duration(milliseconds: 2200),
     )..repeat();
 
-    // Asynchronously warm up the quotes dataset if not cached yet
-    LoadingQuotesService.instance.loadQuotes().then((_) {
-      if (mounted) {
-        setState(() {
-          _currentQuote = LoadingQuotesService.instance.getQuote();
-        });
-      }
-    });
+    // Asynchronously warm up the quotes dataset for subsequent rotations
+    LoadingQuotesService.instance.loadQuotes();
 
     _startTimers();
   }
@@ -193,15 +187,24 @@ class _AppLoadingViewState extends State<AppLoadingView>
             const SizedBox(height: AppSpacing.s8),
           ],
 
-          // 3. Rotating Quote
+          // 3. Rotating Quote (sequential fade out then fade in so quotes never overlap)
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
             child: AnimatedSwitcher(
               duration: reduceMotion
                   ? Duration.zero
                   : const Duration(milliseconds: 350),
+              transitionBuilder: (child, animation) {
+                if (reduceMotion) return child;
+                final fadeIn = CurvedAnimation(
+                  parent: animation,
+                  curve: const Interval(0.55, 1.0, curve: Curves.easeOut),
+                );
+                return FadeTransition(opacity: fadeIn, child: child);
+              },
               child: Column(
                 key: ValueKey<String>(_currentQuote.text),
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     '“${_currentQuote.text}”',

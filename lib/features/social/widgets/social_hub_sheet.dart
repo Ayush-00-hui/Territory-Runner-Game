@@ -8,12 +8,14 @@ import '../../../services/api_client.dart';
 import '../../../services/firebase_service.dart';
 import '../../../ui/ui.dart';
 import '../../gameplay/territory_service.dart';
+import 'friend_requests_inbox_sheet.dart';
 import 'social_duel_creator_sheet.dart';
 import 'social_duels_tab.dart';
 import 'social_hub_cache.dart';
 import 'social_hub_header.dart';
 import 'social_squad_tab.dart';
 
+export 'friend_requests_inbox_sheet.dart';
 export 'social_add_friend_dialog.dart';
 export 'social_duel_creator_sheet.dart';
 export 'social_duels_tab.dart';
@@ -103,6 +105,7 @@ class _SocialHubViewState extends State<SocialHubView> {
 
   SocialTab _activeTab = SocialTab.squad;
   bool _isLoading = false;
+  bool _hasLoadedFromNetwork = false;
   String? _errorMessage;
 
   List<FriendUser> _friends = [];
@@ -119,12 +122,29 @@ class _SocialHubViewState extends State<SocialHubView> {
       _myCallsign = profile.username;
       _myRunnerId = profile.displayRunnerId;
     } catch (_) {}
-    _refreshData();
+    unawaited(_hydrateCacheInitial());
+    unawaited(_refreshData());
+  }
+
+  Future<void> _hydrateCacheInitial() async {
+    final cached = await SocialHubCache.loadCachedData();
+    if (!mounted || _hasLoadedFromNetwork) return;
+    if (_friends.isEmpty &&
+        _duels.isEmpty &&
+        (cached.friends.isNotEmpty ||
+            cached.requests.isNotEmpty ||
+            cached.duels.isNotEmpty)) {
+      setState(() {
+        _friends = cached.friends;
+        _requests = cached.requests;
+        _duels = cached.duels;
+      });
+    }
   }
 
   Future<void> _refreshData() async {
     setState(() {
-      _isLoading = _friends.isEmpty && _duels.isEmpty;
+      _isLoading = true;
       _errorMessage = null;
     });
 
@@ -148,6 +168,7 @@ class _SocialHubViewState extends State<SocialHubView> {
       }
 
       if (!mounted) return;
+      _hasLoadedFromNetwork = true;
       setState(() {
         _friends = results[0] as List<FriendUser>;
         _requests = results[1] as List<FriendRequestDetail>;
@@ -163,7 +184,10 @@ class _SocialHubViewState extends State<SocialHubView> {
       if (!mounted) return;
       if (_friends.isEmpty && _duels.isEmpty) {
         final cached = await SocialHubCache.loadCachedData();
-        if (mounted && (cached.friends.isNotEmpty || cached.duels.isNotEmpty)) {
+        if (mounted &&
+            (cached.friends.isNotEmpty ||
+                cached.requests.isNotEmpty ||
+                cached.duels.isNotEmpty)) {
           setState(() {
             _friends = cached.friends;
             _requests = cached.requests;
@@ -173,9 +197,32 @@ class _SocialHubViewState extends State<SocialHubView> {
       }
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Network offline: displaying cached squads';
+        _errorMessage = _friends.isNotEmpty || _duels.isNotEmpty
+            ? 'Network offline: displaying cached squads'
+            : 'Offline mode: add friends by Runner ID or retry sync';
       });
     }
+  }
+
+  void _openAddFriendSheet() {
+    showAddFriendDialog(
+      context,
+      apiClient: _apiClient,
+      currentCallsign: _myCallsign,
+      currentRunnerId: _myRunnerId,
+      onAdded: _refreshData,
+    );
+  }
+
+  void _openInboxSheet() {
+    showFriendRequestsInboxSheet(
+      context,
+      apiClient: _apiClient,
+      currentCallsign: _myCallsign,
+      currentRunnerId: _myRunnerId,
+      initialRequests: _requests,
+      onChanged: _refreshData,
+    );
   }
 
   Future<void> _respondRequest(String reqId, String action) async {
@@ -232,13 +279,7 @@ class _SocialHubViewState extends State<SocialHubView> {
       physics: embedded ? const NeverScrollableScrollPhysics() : null,
       myCallsign: _myCallsign,
       myRunnerId: _myRunnerId,
-      onAddFriend: () => showAddFriendDialog(
-        context,
-        apiClient: _apiClient,
-        currentCallsign: _myCallsign,
-        currentRunnerId: _myRunnerId,
-        onAdded: _refreshData,
-      ),
+      onAddFriend: _openAddFriendSheet,
       onRespondRequest: _respondRequest,
       onChallengeDuel: (friend) => showCreateDuelSheet(
         context,
@@ -269,6 +310,10 @@ class _SocialHubViewState extends State<SocialHubView> {
 
   @override
   Widget build(BuildContext context) {
+    final incomingPendingCount = _requests
+        .where((r) => r.isIncoming && r.status == 'pending')
+        .length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -276,14 +321,29 @@ class _SocialHubViewState extends State<SocialHubView> {
           activeTab: _activeTab,
           friendsCount: _friends.length,
           activeDuelsCount: _duels.where((d) => d.isActive).length,
+          incomingRequestsCount: incomingPendingCount,
           onTabChanged: (tab) => setState(() => _activeTab = tab),
           onRefresh: _refreshData,
+          onOpenInbox: _openInboxSheet,
+          onAddFriend: _openAddFriendSheet,
         ),
-        if (_errorMessage != null && (_friends.isNotEmpty || _duels.isNotEmpty))
+        if (_isLoading)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+            child: ClipRRect(
+              borderRadius: AppRadius.brFull,
+              child: const LinearProgressIndicator(
+                minHeight: 2,
+                color: AppColors.accent,
+                backgroundColor: AppColors.surface2,
+              ),
+            ),
+          ),
+        if (_errorMessage != null)
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.s16,
-              vertical: AppSpacing.s4,
+              vertical: AppSpacing.s6,
             ),
             child: Container(
               padding: const EdgeInsets.symmetric(
@@ -311,111 +371,35 @@ class _SocialHubViewState extends State<SocialHubView> {
                       ),
                     ),
                   ),
+                  TextButton(
+                    onPressed: _refreshData,
+                    child: Text(
+                      'Retry',
+                      style: AppText.caption.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
         const SizedBox(height: AppSpacing.s12),
-        if (_isLoading)
-          widget.isEmbedded
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.s32,
-                    ),
-                    child: AppLoadingView(
-                      label: 'Loading crew & duels...',
-                      painterSize: 52,
-                      onRetry: _refreshData,
-                    ),
-                  ),
-                )
-              : Expanded(
-                  child: Center(
-                    child: AppLoadingView(
-                      label: 'Loading crew & duels...',
-                      painterSize: 52,
-                      onRetry: _refreshData,
-                    ),
-                  ),
-                )
-        else if (_errorMessage != null && _friends.isEmpty && _duels.isEmpty)
-          widget.isEmbedded
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppSpacing.s24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.cloud_off_rounded,
-                          color: AppColors.textMuted,
-                          size: 48,
-                        ),
-                        const SizedBox(height: AppSpacing.s12),
-                        Text(
-                          _errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: AppText.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.s16),
-                        SecondaryButton(
-                          label: 'Retry connection',
-                          onPressed: _refreshData,
-                          isFullWidth: false,
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : Expanded(
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.s24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.cloud_off_rounded,
-                            color: AppColors.textMuted,
-                            size: 48,
-                          ),
-                          const SizedBox(height: AppSpacing.s12),
-                          Text(
-                            _errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: AppText.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          const SizedBox(height: AppSpacing.s16),
-                          SecondaryButton(
-                            label: 'Retry connection',
-                            onPressed: _refreshData,
-                            isFullWidth: false,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                )
-        else
-          widget.isEmbedded
-              ? (_activeTab == SocialTab.squad
-                    ? _buildSquadTab(embedded: true)
-                    : _buildDuelsTab(embedded: true))
-              : Expanded(
-                  child: RefreshIndicator(
-                    color: AppColors.accent,
-                    backgroundColor: AppColors.surface,
-                    onRefresh: _refreshData,
-                    child: _activeTab == SocialTab.squad
-                        ? _buildSquadTab(embedded: false)
-                        : _buildDuelsTab(embedded: false),
-                  ),
+        widget.isEmbedded
+            ? (_activeTab == SocialTab.squad
+                  ? _buildSquadTab(embedded: true)
+                  : _buildDuelsTab(embedded: true))
+            : Expanded(
+                child: RefreshIndicator(
+                  color: AppColors.accent,
+                  backgroundColor: AppColors.surface,
+                  onRefresh: _refreshData,
+                  child: _activeTab == SocialTab.squad
+                      ? _buildSquadTab(embedded: false)
+                      : _buildDuelsTab(embedded: false),
                 ),
+              ),
       ],
     );
   }
