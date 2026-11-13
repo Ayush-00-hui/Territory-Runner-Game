@@ -20,7 +20,7 @@
 
 [![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-514%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-632%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Tests-11%20Packages_Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
 [![Cartography](https://img.shields.io/badge/Cartography-OpenStreetMap_Standard-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
 [![Theme Palette](https://img.shields.io/badge/Theme-Electric_Blue_&_Mustard_Yellow-2D9CDB.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
@@ -34,8 +34,8 @@
 <br>
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.47+-02569B.svg?style=flat-square&logo=Flutter&logoColor=white)](https://flutter.dev/)
-[![Dart](https://img.shields.io/badge/Dart-3.13+-0175C2.svg?style=flat-square&logo=dart&logoColor=white)](https://dart.dev/)
-[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![Dart](https://img.shields.io/badge/Dart-3.13.2+-0175C2.svg?style=flat-square&logo=dart&logoColor=white)](https://dart.dev/)
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16_PostGIS_3.4-4169E1.svg?style=flat-square&logo=postgresql&logoColor=white)](https://postgis.net/)
 [![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Auth](https://img.shields.io/badge/Auth-Firebase_RS256_JWT-FFA000.svg?style=flat-square&logo=firebase&logoColor=white)](backend/internal/auth/)
@@ -73,7 +73,7 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 │ 🤖 Level 6: Machine Learning & Anti-Cheat Pipeline (LightGBM)                          │
 │    └─ Tier 1 deterministic gate | Safe cadence rollout | 22-feature ensemble           │
 │ 🏆 Level 7: Master Level (Testing, Audits, Verification & Production Ops)             │
-│    └─ 465 Flutter + 11 Go package suites | WCAG AAA Athletic HUD | Viva defense cheatsheet │
+│    └─ 632 Flutter + 11 Go package suites | CI/CD gates | Viva defense cheatsheet       │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -280,9 +280,9 @@ sequenceDiagram
 
 | Tool | Version Requirement | Purpose |
 | :--- | :--- | :--- |
-| **Go** | 1.22+ (tested on 1.24) | Server compilation, spatial math, WebSocket hub |
-| **Flutter SDK** | 3.13+ (Dart 3.0+) | Cross-platform mobile client (Android / iOS / Desktop) |
-| **Docker & Compose** | v2.20+ | Multi-stage backend build & PostGIS spatial database |
+| **Go** | 1.26+ (`backend/go.mod`) | Server compilation, spatial math, WebSocket hub |
+| **Flutter SDK** | Stable (Dart 3.13.2+) | Cross-platform client (Android / iOS / Web / Desktop) |
+| **Docker & Compose** | v2.20+ (optional in dev) | Multi-stage backend build & PostGIS spatial database |
 | **Android SDK / Xcode** | Android 13+ (API 33+) / iOS 15+ | Mobile deployment targets |
 
 ---
@@ -299,18 +299,18 @@ cd Territory-Runner-Game
 # 2. Launch PostgreSQL 16 + PostGIS 3.4 & Server
 docker compose up -d
 
-# 3. Verify Health
-curl http://localhost:8080/health
-# Response: {"status":"ok","timestamp":"2026-10-26T00:00:00Z"}
+# 3. Verify Health & Database Readiness
+curl http://localhost:8080/healthz
+curl http://localhost:8080/readyz
 ```
 
-The server listens on `http://localhost:8080` with PostGIS on port `5432`. Built-in SQL migrations run automatically on startup.
+The server listens on `http://localhost:8080` with PostGIS on port `5432`. Built-in SQL migrations (`000001`–`000015`) run automatically on startup when `RUN_MIGRATIONS=true`.
 
 ---
 
 ### Path B: Hermetic In-Memory Dev Store (Zero Docker Required)
 
-If you don't have Docker or PostgreSQL installed, you can launch the backend instantly using its hermetic in-memory spatial engine:
+If you don't have Docker or PostgreSQL installed, you can launch the backend locally using its hermetic in-memory store (`ENV=development` with empty `DATABASE_URL`):
 
 ```bash
 cd backend
@@ -318,66 +318,80 @@ cd backend
 # On Linux/macOS:
 export ENV=development
 export AUTH_MODE=dev
-go run cmd/server/main.go
+go run ./cmd/server
 
 # On Windows PowerShell:
 $env:ENV="development"
 $env:AUTH_MODE="dev"
-go run cmd/server/main.go
+go run ./cmd/server
 ```
 
-The server detects missing database credentials and initializes an in-memory spatial store with full REST, WebSocket, anti-cheat, and AI coaching capabilities.
+On startup, the server auto-loads `backend/.env` (if present, without overriding existing shell variables) and initializes an in-memory store with REST, WebSocket, anti-cheat, social, and AI coaching endpoints.
 
 ---
 
-### Path C: Launching the Flutter Mobile Client
+### Path C: Launching the Flutter Client
 
 ```bash
 # 1. Install Flutter dependencies
 flutter pub get
 
-# 2. Verify static analysis and tests
-flutter analyze
-flutter test
+# 2. Verify formatting, static analysis, and tests
+dart format --output=none --set-exit-if-changed .
+flutter analyze --fatal-infos --fatal-warnings
+flutter test --timeout 120s
 
-# 3. Launch on Android Emulator or Device
+# 3. Launch on Android Emulator or Physical Device
 flutter run -d emulator-5554
+# For a physical phone on your local Wi-Fi / hotspot:
+flutter run --dart-define=API_BASE_URL=http://<YOUR_LAN_IP>:8080
 
-# 4. Launch on Windows Desktop (for instant UI/layout testing)
+# 4. Launch on Windows Desktop or Chrome Web
 flutter run -d windows
+flutter run -d chrome
 ```
 
 > [!IMPORTANT]
-> **Android Emulator Networking (`adb reverse`):**  
-> Android emulators route `localhost` to the emulator loopback, not your host computer. Run this command so the mobile emulator can reach your local Go server:
-> ```bash
-> adb reverse tcp:8080 tcp:8080
-> ```
-> Alternatively, point the client to `http://10.0.2.2:8080` using `--dart-define=API_BASE_URL=http://10.0.2.2:8080`.
+> **Client API Endpoint Resolution (`lib/services/api_client.dart`):**  
+> - By default, Android builds target `http://10.0.2.2:8080` (Android Emulator host loopback), while Web/Desktop builds target `http://localhost:8080`.  
+> - For an emulator using `localhost` forwarding, run `adb reverse tcp:8080 tcp:8080` and pass `--dart-define=API_BASE_URL=http://localhost:8080`.  
+> - For a physical phone or hosted backend (Render / Railway / VPS), pass `--dart-define=API_BASE_URL=http://<LAN_IP>:8080` or `https://your-backend-host`.
 
 ---
 
 ### Environment Variables Configuration
 
-Copy `backend/.env.example` to `backend/.env` to configure optional integrations:
+Copy `backend/.env.example` to `backend/.env` to configure local or production settings (see [`backend/internal/config/config.go`](backend/internal/config/config.go) and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)):
 
 ```env
 # Server
 PORT=8080
-ENV=development
-AUTH_MODE=dev                 # 'dev' bypasses Firebase token verification for local testing
+ENV=development               # 'development' | 'staging' | 'production' (default: 'production')
+AUTH_MODE=dev                 # 'firebase' (default) | 'dev' (strictly requires ENV=development)
+RUN_MIGRATIONS=true           # Automatically runs embedded migrations on startup
 
-# Database (Leave empty to use hermetic in-memory store)
+# Database (Leave empty in ENV=development to use hermetic in-memory store)
 DATABASE_URL=postgres://runner:runnerpass@localhost:5432/territory_runner?sslmode=disable
 
-# Firebase RS256 Authentication (Production)
+# Firebase RS256 Authentication (Required when AUTH_MODE=firebase)
 FIREBASE_PROJECT_ID=territory-runner
 
-# FCM HTTP v1 Push Notifications (Optional)
-FCM_SERVICE_ACCOUNT_JSON=backend/service-account.json
+# FCM HTTP v1 Push Notifications (Optional; also supports GOOGLE_APPLICATION_CREDENTIALS)
+FIREBASE_SERVICE_ACCOUNT_JSON=backend/service-account.json
+
+# Security & Reverse Proxy
+ALLOWED_ORIGINS=              # Comma-separated CORS/WS origins (required in production unless ALLOW_ANY_ORIGIN=true)
+METRICS_TOKEN=                # Optional Bearer token protecting GET /metrics
+TRUSTED_PROXIES=              # Comma-separated CIDRs/IPs trusted for X-Forwarded-For / X-Real-IP
 
 # Google Gemini AI Athletic Coach (Optional - falls back to sports science rule heuristics)
 GEMINI_API_KEY=AIzaSy...
+GEMINI_MODEL=gemini-2.5-flash
+
+# Anti-Cheat & Limits
+ENABLE_CADENCE_MODEL=false
+MAX_POINTS_PER_RUN=20000
+MAX_RUN_DURATION_SECONDS=86400
 ```
 
 ---
@@ -455,9 +469,13 @@ Athletes can plan territory routes before leaving home:
 
 ---
 
-### 5. Head-to-Head Duels & Social Squads
+### 5. Unique Runner ID, Friend Requests Inbox, Duels & Crews
 
-- **24-Hour Duels:** Issue head-to-head challenges with configurable metrics (Area Conquered or Kinematic Distance) and XP stakes ($0 - 1000\text{ XP}$).
+- **Unique Runner ID (`RUN-XXXXXX`):** Every athlete receives a deterministic/random shareable Runner ID (`RUN-XXXXXX`) on account creation and login ([`auth_screen.dart`](lib/features/auth/auth_screen.dart), migration [`000015_add_user_runner_code.up.sql`](backend/migrations/000015_add_user_runner_code.up.sql)). Athletes can copy and share their ID directly from the Profile header badge or Squad view.
+- **Friend Search & Quick Add:** Search athletes by exact Runner ID (`RUN-XXXXXX`) or display name via `GET /v1/users/search` inside the Add Friend sheet ([`social_add_friend_dialog.dart`](lib/features/social/widgets/social_add_friend_dialog.dart)), with 1-tap clipboard paste.
+- **Friend Requests Inbox & Non-Blocking Social Hub:** Dedicated Friend Requests Inbox modal ([`friend_requests_inbox_sheet.dart`](lib/features/social/widgets/friend_requests_inbox_sheet.dart)) accessible via Inbox and `+` controls across Home (`HomeHeader`), Profile (`ProfilePage`), and Social Hub (`SocialHubHeader`). Features live incoming badge counts, incoming Accept/Decline actions, outgoing cancel controls, and instant Hive cache hydration with non-blocking offline/sync status banners ([`social_hub_sheet.dart`](lib/features/social/widgets/social_hub_sheet.dart)).
+- **Runner Crews & Seasonal Challenges:** Form or join cooperative running crews and set group territory/distance targets (`/v1/crews/*`, `/v1/seasons/current`, migration [`000014_add_seasons_and_crews.up.sql`](backend/migrations/000014_add_seasons_and_crews.up.sql)).
+- **24-Hour Head-to-Head Duels:** Issue head-to-head challenges with configurable metrics (Area Conquered or Kinematic Distance) and XP stakes ($0 - 1000\text{ XP}$).
 - **Database Unique Pair Index:**
   ```sql
   CREATE UNIQUE INDEX uq_duels_active_pair 
@@ -466,7 +484,7 @@ Athletes can plan territory routes before leaving home:
   ```
   Guarantees that no two athletes can have more than one concurrent active or pending challenge.
 - **Anti-Abuse Limits:** Max 5 active duels, max 10 pending invitations, self-duels rejected at database level.
-- **Squad Friends:** Send friend requests by athlete callsign. Mutual friends render on live tactical radar with dynamic distance and heading indicators.
+- **Squad Friends:** Mutual friends render on live tactical radar with dynamic distance and heading indicators.
 
 ---
 
@@ -502,7 +520,7 @@ Territory Runner replaces naive flat distance multipliers ($kcal = d \cdot M \cd
 
 ### 8. Google Gemini AI Athletic Coach
 
-- **Post-Run Debrief:** Calls Google Gemini 2.5 Flash (`POST /v1/coach/debrief`) to generate physiological workout debriefs analyzing cardiovascular effort, pace degradation, elevation profile, and tactical route suggestions.
+- **Post-Run Debrief:** Calls Google Gemini 2.5 Flash (`POST /v1/runs/{id}/coach`) to generate physiological workout debriefs analyzing cardiovascular effort, pace degradation, elevation profile, and tactical route suggestions.
 - **Zero Key Leakage:** Client never touches Google Gemini API keys; requests proxy through the Go backend.
 - **Heuristic Offline Fallback:** If the Gemini API is unreachable or unconfigured, the system automatically uses an on-device sports science rule engine analyzing split pace variance and heart rate zones.
 
@@ -682,7 +700,11 @@ To ensure high maintainability, zero state spaghetti, and complete testability, 
 │                       │ SummaryRouteReplay, SummaryCoachCard               │
 ├───────────────────────┼────────────────────────────────────────────────────┤
 │ SocialHubSheet        │ SocialHubHeader, SocialSquadTab, SocialDuelsTab,   │
-│                       │ SocialDuelCreatorSheet, SocialAddFriendDialog      │
+│                       │ FriendRequestsInboxSheet, SocialDuelCreatorSheet,  │
+│                       │ SocialAddFriendDialog, SocialHubCache              │
+├───────────────────────┼────────────────────────────────────────────────────┤
+│ Profile & Avatar      │ RunnerAvatarPainter, AvatarWidget, WardrobeSheet,  │
+│                       │ HomeHeader, ProfilePage                            │
 ├───────────────────────┼────────────────────────────────────────────────────┤
 │ RunShareCardModal     │ RunShareCardRenderer, RunShareCardPreview,         │
 │                       │ RunShareCardPainters, RunShareCardActions          │
@@ -694,7 +716,14 @@ To ensure high maintainability, zero state spaghetti, and complete testability, 
 
 ---
 
-### 8. Motion Sensor Cadence & Stillness Verification (`MotionSensorService`)
+### 11. Biomechanical Runner Avatar & Wardrobe (`RunnerAvatarPainter`)
+
+- **Articulated Stride Kinematics:** [`RunnerAvatarPainter`](lib/ui/widgets/runner_avatar_painter.dart) renders a sculpted multi-joint athlete using tapered limb envelopes (`torso`, `deltoid/bicep/forearm`, `quad/calf`), asymmetrical stride phase, posterior knee fold during swing recovery, opposite arm counter-swing, depth shading between near/far limbs, dynamic ground contact shadow, and scrolling track dashes.
+- **Customizable Progression Wardrobe:** [`WardrobeSheet`](lib/features/profile/widgets/wardrobe_sheet.dart) lets athletes preview live animations (`Dynamic Stride Cycle`) and equip progression-unlocked headwear, tops, bottoms, and running shoes (with sneaker midsole + upper + sole highlights).
+
+---
+
+### 12. Motion Sensor Cadence & Stillness Verification (`MotionSensorService`)
 
 ```
 📱 Accelerometer + Gyroscope ──► Step Detector ──► Cadence (SPM) + Energy
@@ -786,28 +815,45 @@ Located in [backend/internal/notify/fcm.go](backend/internal/notify/fcm.go):
 
 ### 5. REST & WebSocket API Specification
 
-#### Core HTTP Endpoints
+#### Core HTTP & WebSocket Endpoints (`backend/internal/api/router.go`)
 
 | Method | Endpoint | Description | Auth |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/v1/runs` | Submit completed run with coordinates & idempotency key | Bearer JWT |
-| `GET` | `/v1/territories` | Fetch territories in bounding box (`minLat`, `maxLat`, `minLng`, `maxLng`) | Public |
-| `GET` | `/v1/me` | Retrieve athlete profile, XP, level, and statistics | Bearer JWT |
-| `DELETE`| `/v1/me` | Account deletion; cascade purges territories, runs, zones | Bearer JWT |
-| `PUT` | `/v1/me/faction` | Update athlete faction allegiance | Bearer JWT |
-| `GET` | `/v1/factions/standings`| Global faction surface dominance | Public |
-| `GET` | `/v1/leaderboard` | Top athlete leaderboard ranking (filtered by modality) | Public |
+| `GET` | `/healthz` | Liveness probe | Public |
+| `GET` | `/readyz` | Database readiness probe | Public |
+| `GET` | `/metrics` | Prometheus-style runtime metrics | Public / `METRICS_TOKEN` |
+| `GET` | `/v1/ws` | Real-time WebSocket connection | Bearer JWT / Dev |
+| `GET` | `/v1/me` | Retrieve athlete profile, Runner ID (`runner_code`), XP, level, and stats | Bearer JWT |
+| `PUT` | `/v1/me` | Update athlete profile fields (`display_name`, `runner_code`, avatar) | Bearer JWT |
+| `DELETE`| `/v1/me` | Account deletion; cascade purges territories, runs, and privacy zones | Bearer JWT |
+| `GET` | `/v1/users/search` | Search athletes by `RUN-XXXXXX` Runner ID or display name | Bearer JWT |
+| `GET` | `/v1/me/settings` | Fetch athlete server-synced preferences | Bearer JWT |
+| `PUT` | `/v1/me/settings` | Save athlete server-synced preferences | Bearer JWT |
+| `PUT` | `/v1/me/faction` | Update athlete faction allegiance (Unicode NFKC validated) | Bearer JWT |
 | `GET` | `/v1/me/privacy-zones`| List athlete privacy exclusion zones | Bearer JWT |
 | `PUT` | `/v1/me/privacy-zones`| Save or replace privacy exclusion zones | Bearer JWT |
-| `GET` | `/v1/friends` | List squad friends and pending requests | Bearer JWT |
-| `POST` | `/v1/friends/request` | Send friend request by callsign | Bearer JWT |
+| `POST` | `/v1/runs` | Submit completed run with coordinates & idempotency key (rate-limited) | Bearer JWT |
+| `GET` | `/v1/runs` | Fetch athlete run history | Bearer JWT |
+| `POST` | `/v1/runs/{id}/coach` | Generate post-run AI coaching analysis (rate-limited) | Bearer JWT |
+| `GET` | `/v1/territories` | Fetch territories in bounding box (`minLat`, `maxLat`, `minLng`, `maxLng`) | Bearer JWT |
+| `GET` | `/v1/leaderboard` | Top athlete leaderboard ranking | Bearer JWT |
+| `GET` | `/v1/league/current` | Current weekly league division standings & percentile | Bearer JWT |
+| `GET` | `/v1/factions/standings`| Global faction surface dominance | Bearer JWT |
+| `POST` | `/v1/device-token` | Register FCM push notification token | Bearer JWT |
+| `GET` | `/v1/friends` | List mutual squad friends | Bearer JWT |
+| `GET` | `/v1/friends/requests` | List incoming and outgoing friend requests | Bearer JWT |
+| `POST` | `/v1/friends/request` | Send friend request by Runner ID or athlete callsign | Bearer JWT |
 | `PUT` | `/v1/friends/request/{id}`| Accept or decline friend request | Bearer JWT |
-| `DELETE`| `/v1/friends/{id}` | Remove friend from squad | Bearer JWT |
+| `DELETE`| `/v1/friends/{friendID}` | Remove friend from squad | Bearer JWT |
 | `GET` | `/v1/duels` | List active, pending, and past head-to-head duels | Bearer JWT |
 | `POST` | `/v1/duels` | Issue 24-hour head-to-head duel challenge | Bearer JWT |
-| `POST` | `/v1/device-token` | Register FCM push notification token | Bearer JWT |
-| `POST` | `/v1/coach/debrief` | Generate post-run AI coaching analysis | Bearer JWT |
-| `GET` | `/v1/ws` | Real-time WebSocket connection | Bearer JWT |
+| `PUT` | `/v1/duels/{id}/accept` | Accept a pending duel challenge | Bearer JWT |
+| `PUT` | `/v1/duels/{id}/decline`| Decline a pending duel challenge | Bearer JWT |
+| `GET` | `/v1/seasons/current` | Fetch active season details & progress | Bearer JWT |
+| `GET` | `/v1/crews/my` | Retrieve current athlete's runner crew | Bearer JWT |
+| `POST` | `/v1/crews` | Create a new runner crew | Bearer JWT |
+| `POST` | `/v1/crews/join` | Join an existing runner crew | Bearer JWT |
+| `POST` | `/v1/crews/goals` | Create or update a crew goal | Bearer JWT |
 
 #### WebSocket Protocol Frames (`/v1/ws`)
 
@@ -1016,28 +1062,28 @@ Territory Runner enforces strict automated testing across all client and backend
 ┌────────────────────────────────────────────────────────┐
 │                 TEST VERIFICATION SUITE                │
 ├─────────────────────────┬──────────────┬───────────────┤
-│ Domain                  │ Tests        │ Status        │
+│ Domain                  │ Scope        │ Status        │
 ├─────────────────────────┼──────────────┼───────────────┤
-│ Flutter Client (lib/)   │ 465 tests    │ ALL PASS      │
+│ Flutter Client (test/)  │ 632 tests    │ ALL PASS      │
 │ Go Backend (backend/)   │ 11 packages  │ ALL PASS      │
+│ PostGIS Integration     │ store suite  │ CI VERIFIED   │
 │ Integration Test Flow   │ E2E Run Sync │ ALL PASS      │
 │ Shared Golden Parity    │ 7 fixtures   │ <0.5% diff    │
 │ Static Code Analysis    │ 0 issues     │ 100% CLEAN    │
-│ Code Formatting         │ 220 files    │ 100% CLEAN    │
-│ Cross-Language Parity   │ 200 Windows  │ 0 Mismatches  │
-│ AIML Anomaly Detector   │ Tier 1 + 2   │ 0.27 µs inf   │
-│ Total Test Coverage     │ Client+Serv  │ 100% PASS     │
+│ Dart Formatting         │ 277 files    │ 100% CLEAN    │
+│ Go Quality & Security   │ gofmt/vet/vuln│ 100% CLEAN   │
 └─────────────────────────┴──────────────┴───────────────┘
 ```
 
 #### Running the Verification Suites
 
 ```bash
-# 1. Static Analysis (Zero Warnings / Errors)
-flutter analyze
+# 1. Verify Dart Formatting & Strict Static Analysis (CI Gate)
+dart format --output=none --set-exit-if-changed .
+flutter analyze --fatal-infos --fatal-warnings
 
-# 2. Run All Flutter Unit and Widget Tests (465 tests)
-flutter test
+# 2. Run All Flutter Unit and Widget Tests (632 tests)
+flutter test --timeout 120s
 
 # 3. Run End-to-End Offline Sync Integration Test
 flutter test integration_test/run_flow_sync_integration_test.dart
@@ -1049,9 +1095,15 @@ flutter test test/theme/accessibility_test.dart
 flutter test test/u6_polish_and_proof_test.dart
 flutter test test/design_system_test.dart
 
-# 5. Run Go Backend Tests (201 tests across 11 packages)
+# 5. Run Go Backend Quality Checks & Unit Tests (11 packages)
 cd backend
+gofmt -l .
+go vet ./...
 go test -v -race ./...
+
+# 6. Run PostGIS Integration Tests (requires running PostgreSQL + PostGIS)
+TEST_DATABASE_URL="postgres://runner:runnerpass@localhost:5432/territory_runner?sslmode=disable" \
+  go test -v -race -tags=integration ./internal/store/...
 ```
 
 ---
@@ -1063,7 +1115,7 @@ Internet ──► Cloudflare / Reverse Proxy (SSL Termination)
                      │
                      ▼
              Go Chi API (:8080)
-             (Stateless Container on Render / Self-Hosted Docker)
+             (Stateless Container on Render / Railway / Self-Hosted Docker)
                      │
                      ├─► Direct TCP (Port 5432) ──► PostgreSQL 16 + PostGIS 3.4
                      ├─► RS256 JWT Assertion ──► Google FCM HTTP v1
@@ -1075,7 +1127,7 @@ Internet ──► Cloudflare / Reverse Proxy (SSL Termination)
 > When connecting to hosted PostgreSQL (e.g. Supabase, Neon), connect via **Session Mode** or **Direct Connection (Port 5432)**, NOT Transaction-Mode poolers (Port 6543). Transaction-mode poolers break `pg_advisory_xact_lock` and invalidate binary prepared query execution plans in `pgx/v5`.  
 > Recommended pool configuration: `pgxpool.Config{MaxConns: 20, MinConns: 2}`.
 
-See **[Production Deployment Specification](docs/DEPLOYMENT.md)** for Docker multi-stage builds, Render deployment steps, and production Docker Compose configurations.
+See **[Production Deployment Specification](docs/DEPLOYMENT.md)** for Docker multi-stage builds (`backend/Dockerfile`), Render/Railway deployment steps, and production Docker Compose configurations (`backend/docker-compose.prod.yml`), and **[Local Server & Spare-Laptop Recipe](docs/LOCAL_SERVER.md)** for LAN/hotspot field testing.
 
 ---
 
