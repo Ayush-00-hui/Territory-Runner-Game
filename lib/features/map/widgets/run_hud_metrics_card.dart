@@ -194,8 +194,7 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                             ),
                             child: Text(
                               'PAUSED',
-                              style: TextStyle(
-                                fontSize: 8,
+                              style: AppText.labelSmall.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: palette.warning,
                                 letterSpacing: 0.5,

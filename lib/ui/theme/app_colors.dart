@@ -79,8 +79,8 @@ class AppColors {
     0xFF94A3B8,
   ); // Cool Slate (7.1:1 AAA on surface)
   static const Color textMuted = Color(
-    0xFF64748B,
-  ); // Muted Slate (3.8:1 AA on surface)
+    0xFF8692A0,
+  ); // Muted Slate (5.8:1 AAA/AA on surface)
 
   // Map Territory Tokens
   static const Color mine = primary; // Player territory (Nordic Mint #00D492)

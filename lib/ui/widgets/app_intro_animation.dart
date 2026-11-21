@@ -254,8 +254,7 @@ class _AppIntroGateState extends State<AppIntroGate>
                             opacity: (t / 0.20).clamp(0.0, 0.45),
                             child: Text(
                               'TAP TO SKIP',
-                              style: AppText.caption.copyWith(
-                                fontSize: 10,
+                              style: AppText.labelSmall.copyWith(
                                 letterSpacing: 2.5,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.textMuted,
@@ -415,7 +414,11 @@ class _MinimalRunnerIntroPainter extends CustomPainter {
           Paint()..color = AppColors.accent.withValues(alpha: 0.3),
         );
         canvas.drawCircle(currentHead, 3.5, Paint()..color = AppColors.accent);
-        canvas.drawCircle(currentHead, 1.8, Paint()..color = Colors.white);
+        canvas.drawCircle(
+          currentHead,
+          1.8,
+          Paint()..color = AppColors.textPrimary,
+        );
       }
     }
 

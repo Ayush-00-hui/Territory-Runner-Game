@@ -521,7 +521,7 @@ class MapLayers {
     if (lower.contains('gold') ||
         lower.contains('amber') ||
         lower.contains('solar')) {
-      return palette.gold;
+      return palette.accent;
     }
     return palette.rival;
   }

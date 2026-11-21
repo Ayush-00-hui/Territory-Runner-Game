@@ -415,7 +415,7 @@ class _MainScreenState extends State<MainScreen> {
             ),
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.s12,
-              vertical: AppSpacing.s8,
+              vertical: AppSpacing.s6,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -561,11 +561,11 @@ class _CenterRunActionState extends State<_CenterRunAction> {
         child: AnimatedContainer(
           duration: AppMotion.duration(context, AppMotion.fast),
           curve: AppMotion.easeOut,
-          height: 44,
+          height: 48,
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
           decoration: BoxDecoration(
             color: isSelected ? palette.accent : palette.surface2,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: isSelected ? palette.accent : palette.border,
               width: 1.0,
