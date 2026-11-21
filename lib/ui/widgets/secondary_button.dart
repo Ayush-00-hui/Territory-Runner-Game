@@ -143,7 +143,7 @@ class _SecondaryButtonState extends State<SecondaryButton> {
                 minWidth: AppSpacing.touchTarget,
               ),
               height: widget.height,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s20),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
               decoration: BoxDecoration(
                 color: bgColor,
                 borderRadius: AppRadius.br12,
