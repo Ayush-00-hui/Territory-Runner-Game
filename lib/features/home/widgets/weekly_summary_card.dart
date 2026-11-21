@@ -191,14 +191,6 @@ class _WeeklyBarChartPainter extends CustomPainter {
       ..color = AppColors.surface2
       ..style = PaintingStyle.fill;
 
-    final activeBarPaint = Paint()
-      ..color = AppColors.accent
-      ..style = PaintingStyle.fill;
-
-    final pastBarPaint = Paint()
-      ..color = AppColors.accentContainer
-      ..style = PaintingStyle.fill;
-
     for (int i = 0; i < 7; i++) {
       final double x = spacing + i * (barWidth + spacing);
       final double trackY = 0;
@@ -223,8 +215,17 @@ class _WeeklyBarChartPainter extends CustomPainter {
           const Radius.circular(7),
         );
 
-        final paint = (i == currentDayIndex) ? activeBarPaint : pastBarPaint;
-        canvas.drawRRect(barRRect, paint);
+        final barPaint = Paint()..style = PaintingStyle.fill;
+        if (i == currentDayIndex) {
+          barPaint.shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AppColors.accent, AppColors.primary],
+          ).createShader(Rect.fromLTWH(x, barY, barWidth, barH));
+        } else {
+          barPaint.color = AppColors.accentContainer;
+        }
+        canvas.drawRRect(barRRect, barPaint);
       }
 
       // Draw day label
@@ -247,6 +248,14 @@ class _WeeklyBarChartPainter extends CustomPainter {
       final double textX = x + (barWidth - textPainter.width) / 2;
       final double textY = chartHeight + 4;
       textPainter.paint(canvas, Offset(textX, textY));
+
+      if (isToday) {
+        canvas.drawCircle(
+          Offset(x + barWidth / 2, textY + textPainter.height + 4),
+          2.0,
+          Paint()..color = AppColors.accent,
+        );
+      }
     }
   }
 

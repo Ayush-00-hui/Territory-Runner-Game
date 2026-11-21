@@ -98,11 +98,22 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Distance',
-                    style: AppText.labelSmall.copyWith(
-                      color: palette.textSecondary,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.straighten_rounded,
+                        size: 11,
+                        color: palette.textSecondary,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Distance',
+                        style: AppText.labelSmall.copyWith(
+                          color: palette.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 2),
                   FittedBox(
@@ -156,11 +167,39 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                       if (widget.isRunActive && !widget.isAutoPaused) ...[
                         const SizedBox(width: AppSpacing.s4),
                         Container(
-                          width: 6,
-                          height: 6,
+                          width: 7,
+                          height: 7,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: palette.accent,
+                            boxShadow: [
+                              BoxShadow(
+                                color: palette.accent.withValues(alpha: 0.7),
+                                blurRadius: 6,
+                                spreadRadius: 1,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else if (widget.isAutoPaused) ...[
+                        const SizedBox(width: AppSpacing.s4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.warning.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'PAUSED',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w700,
+                              color: palette.warning,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
                       ],
@@ -196,6 +235,12 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      Icon(
+                        Icons.speed_rounded,
+                        size: 11,
+                        color: palette.textSecondary,
+                      ),
+                      const SizedBox(width: 3),
                       Text(
                         'Pace',
                         style: AppText.labelSmall.copyWith(

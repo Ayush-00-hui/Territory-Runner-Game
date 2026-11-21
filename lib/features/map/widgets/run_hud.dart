@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 
 import '../../../models/run_goal.dart';
@@ -108,25 +110,39 @@ class _RunHudState extends State<RunHud> {
           }
         },
         behavior: HitTestBehavior.translucent,
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.s16,
-            AppSpacing.s10,
-            AppSpacing.s16,
-            AppSpacing.s14,
-          ),
-          decoration: BoxDecoration(
-            color: palette.surfaceGlass,
-            borderRadius: AppSpacing.br28,
-            border: Border.all(
-              color: widget.isAutoPaused
-                  ? palette.warning.withValues(alpha: 0.6)
-                  : (isNearClosure ? palette.accent : palette.borderSubtle),
-              width: isNearClosure ? 1.5 : 1.0,
-            ),
-            boxShadow: AppElevation.floating,
-          ),
-          child: Column(
+        child: ClipRRect(
+          borderRadius: AppSpacing.br28,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s16,
+                AppSpacing.s10,
+                AppSpacing.s16,
+                AppSpacing.s14,
+              ),
+              decoration: BoxDecoration(
+                color: palette.surfaceGlass,
+                borderRadius: AppSpacing.br28,
+                border: Border.all(
+                  color: widget.isAutoPaused
+                      ? palette.warning.withValues(alpha: 0.8)
+                      : (isNearClosure
+                          ? palette.accent
+                          : palette.borderSubtle.withValues(alpha: 0.8)),
+                  width: isNearClosure ? 2.0 : 1.0,
+                ),
+                boxShadow: isNearClosure
+                    ? [
+                        BoxShadow(
+                          color: palette.accent.withValues(alpha: 0.25),
+                          blurRadius: 18.0,
+                          spreadRadius: 1.0,
+                        ),
+                      ]
+                    : AppElevation.floating,
+              ),
+              child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Drag Handle Indicator Pill
@@ -362,8 +378,10 @@ class _RunHudState extends State<RunHud> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  ),
+);
+}
 }
 
 class _GhostHudChip extends StatelessWidget {

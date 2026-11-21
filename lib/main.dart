@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -379,61 +380,80 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Widget _buildPremiumBottomNav(BuildContext context) {
+    final palette = context.palette;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.bgElevated,
-        border: Border(
-          top: BorderSide(color: AppColors.borderSubtle, width: 1.0),
-        ),
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.s20,
+        0,
+        AppSpacing.s20,
+        bottomPad > 0 ? bottomPad + AppSpacing.s4 : AppSpacing.s12,
       ),
-      padding: EdgeInsets.only(bottom: bottomPad),
-      child: SizedBox(
-        height: 60.0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.s16,
-            vertical: AppSpacing.s6,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Home Tab
-              Expanded(
-                child: _buildNavTab(
-                  index: 0,
-                  icon: Icons.home_rounded,
-                  label: 'Home',
-                ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(34.0),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0),
+          child: Container(
+            height: 64.0,
+            decoration: BoxDecoration(
+              color: palette.surfaceGlass,
+              borderRadius: BorderRadius.circular(34.0),
+              border: Border.all(
+                color: palette.borderSubtle.withValues(alpha: 0.8),
+                width: 1.0,
               ),
-
-              // Prominent Centre Run Action Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s12),
-                child: Semantics(
-                  container: true,
-                  button: true,
-                  label: 'Start run',
-                  excludeSemantics: true,
-                  child: _CenterRunAction(
-                    isSelected: _selectedIndex == 1,
-                    onTap: () {
-                      _onTabSelected(1);
-                    },
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: palette.isLight ? 0.08 : 0.35),
+                  blurRadius: 20.0,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s12,
+              vertical: AppSpacing.s8,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Home Tab
+                Expanded(
+                  child: _buildNavTab(
+                    index: 0,
+                    icon: Icons.home_rounded,
+                    label: 'Home',
                   ),
                 ),
-              ),
 
-              // Profile Tab
-              Expanded(
-                child: _buildNavTab(
-                  index: 2,
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
+                // Prominent Centre Run Action Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10),
+                  child: Semantics(
+                    container: true,
+                    button: true,
+                    label: 'Start run',
+                    excludeSemantics: true,
+                    child: _CenterRunAction(
+                      isSelected: _selectedIndex == 1,
+                      onTap: () {
+                        _onTabSelected(1);
+                      },
+                    ),
+                  ),
                 ),
-              ),
-            ],
+
+                // Profile Tab
+                Expanded(
+                  child: _buildNavTab(
+                    index: 2,
+                    icon: Icons.person_rounded,
+                    label: 'Profile',
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -445,6 +465,7 @@ class _MainScreenState extends State<MainScreen> {
     required IconData icon,
     required String label,
   }) {
+    final palette = context.palette;
     final bool isSelected = _selectedIndex == index;
 
     return Semantics(
@@ -461,16 +482,18 @@ class _MainScreenState extends State<MainScreen> {
         child: AnimatedContainer(
           duration: AppMotion.duration(context, AppMotion.fast),
           curve: AppMotion.easeOut,
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s6),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.accentContainer : Colors.transparent,
-            borderRadius: AppRadius.brFull,
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.accent.withValues(alpha: 0.3)
-                  : Colors.transparent,
-              width: 1.0,
-            ),
+            color: isSelected
+                ? palette.accent.withValues(alpha: palette.isLight ? 0.15 : 0.20)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(24.0),
+            border: isSelected
+                ? Border.all(
+                    color: palette.accent.withValues(alpha: 0.35),
+                    width: 1.0,
+                  )
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -479,13 +502,14 @@ class _MainScreenState extends State<MainScreen> {
               Icon(
                 icon,
                 size: 20,
-                color: isSelected ? AppColors.accent : AppColors.textMuted,
+                color: isSelected ? palette.accent : palette.textMuted,
               ),
               const SizedBox(width: AppSpacing.s6),
               Text(
                 label,
                 style: AppText.labelSmall.copyWith(
-                  color: isSelected ? AppColors.accent : AppColors.textMuted,
+                  color: isSelected ? palette.accent : palette.textMuted,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                   letterSpacing: 0.2,
                 ),
               ),
@@ -507,11 +531,29 @@ class _CenterRunAction extends StatefulWidget {
   State<_CenterRunAction> createState() => _CenterRunActionState();
 }
 
-class _CenterRunActionState extends State<_CenterRunAction> {
+class _CenterRunActionState extends State<_CenterRunAction>
+    with SingleTickerProviderStateMixin {
   bool _isPressed = false;
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final palette = context.palette;
     final scale = _isPressed ? AppMotion.pressScale : 1.0;
     final isSelected = widget.isSelected;
 
@@ -527,40 +569,54 @@ class _CenterRunActionState extends State<_CenterRunAction> {
         },
         onTapCancel: () => setState(() => _isPressed = false),
         behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: AppMotion.duration(context, AppMotion.fast),
-          curve: AppMotion.easeOut,
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.accent : AppColors.surface2,
-            borderRadius: AppRadius.brFull,
-            border: Border.all(
-              color: isSelected ? AppColors.accent : AppColors.borderSubtle,
-              width: 1.0,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.directions_run_rounded,
-                size: 20,
-                color: isSelected ? AppColors.onAccent : AppColors.accent,
-              ),
-              const SizedBox(width: AppSpacing.s6),
-              Text(
-                'Run',
-                style: AppText.labelMedium.copyWith(
-                  color: isSelected
-                      ? AppColors.onAccent
-                      : AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
+        child: AnimatedBuilder(
+          animation: _pulseController,
+          builder: (context, _) {
+            final double pulse = _pulseController.value;
+            return Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    palette.primary,
+                    isSelected ? palette.accent : const Color(0xFF00E5FF),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.primary.withValues(
+                      alpha: 0.25 + 0.15 * pulse,
+                    ),
+                    blurRadius: 10 + 6 * pulse,
+                    spreadRadius: 1,
+                  ),
+                ],
               ),
-            ],
-          ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.directions_run_rounded,
+                    size: 20,
+                    color: Colors.black,
+                  ),
+                  const SizedBox(width: AppSpacing.s6),
+                  Text(
+                    'Run',
+                    style: AppText.labelMedium.copyWith(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

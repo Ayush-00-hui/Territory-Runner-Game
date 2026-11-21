@@ -221,7 +221,7 @@ class _AppIntroGateState extends State<AppIntroGate>
                                   child: Text(
                                     'TERRITORY RUNNER',
                                     style: AppText.headingLarge.copyWith(
-                                      fontWeight: FontWeight.w800,
+                                      fontWeight: FontWeight.w700,
                                       letterSpacing: letterSpacing,
                                       color: AppColors.textPrimary,
                                       shadows: [
