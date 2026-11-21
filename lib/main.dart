@@ -531,25 +531,8 @@ class _CenterRunAction extends StatefulWidget {
   State<_CenterRunAction> createState() => _CenterRunActionState();
 }
 
-class _CenterRunActionState extends State<_CenterRunAction>
-    with SingleTickerProviderStateMixin {
+class _CenterRunActionState extends State<_CenterRunAction> {
   bool _isPressed = false;
-  late final AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -569,54 +552,38 @@ class _CenterRunActionState extends State<_CenterRunAction>
         },
         onTapCancel: () => setState(() => _isPressed = false),
         behavior: HitTestBehavior.opaque,
-        child: AnimatedBuilder(
-          animation: _pulseController,
-          builder: (context, _) {
-            final double pulse = _pulseController.value;
-            return Container(
-              height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    palette.primary,
-                    isSelected ? palette.accent : const Color(0xFF00E5FF),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+        child: AnimatedContainer(
+          duration: AppMotion.duration(context, AppMotion.fast),
+          curve: AppMotion.easeOut,
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s16),
+          decoration: BoxDecoration(
+            color: isSelected ? palette.accent : palette.surface2,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: isSelected ? palette.accent : palette.border,
+              width: 1.0,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.directions_run_rounded,
+                size: 20,
+                color: isSelected ? palette.onAccent : palette.accent,
+              ),
+              const SizedBox(width: AppSpacing.s6),
+              Text(
+                'Run',
+                style: AppText.labelMedium.copyWith(
+                  color: isSelected ? palette.onAccent : palette.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
                 ),
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: palette.primary.withValues(
-                      alpha: 0.25 + 0.15 * pulse,
-                    ),
-                    blurRadius: 10 + 6 * pulse,
-                    spreadRadius: 1,
-                  ),
-                ],
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.directions_run_rounded,
-                    size: 20,
-                    color: Colors.black,
-                  ),
-                  const SizedBox(width: AppSpacing.s6),
-                  Text(
-                    'Run',
-                    style: AppText.labelMedium.copyWith(
-                      color: Colors.black,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );

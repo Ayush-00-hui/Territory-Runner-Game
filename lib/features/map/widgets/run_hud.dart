@@ -132,15 +132,7 @@ class _RunHudState extends State<RunHud> {
                           : palette.borderSubtle.withValues(alpha: 0.8)),
                   width: isNearClosure ? 2.0 : 1.0,
                 ),
-                boxShadow: isNearClosure
-                    ? [
-                        BoxShadow(
-                          color: palette.accent.withValues(alpha: 0.25),
-                          blurRadius: 18.0,
-                          spreadRadius: 1.0,
-                        ),
-                      ]
-                    : AppElevation.floating,
+                boxShadow: AppElevation.floating,
               ),
               child: Column(
             mainAxisSize: MainAxisSize.min,

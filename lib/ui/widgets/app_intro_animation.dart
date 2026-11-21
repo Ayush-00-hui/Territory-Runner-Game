@@ -224,14 +224,6 @@ class _AppIntroGateState extends State<AppIntroGate>
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: letterSpacing,
                                       color: AppColors.textPrimary,
-                                      shadows: [
-                                        Shadow(
-                                          color: AppColors.accent.withValues(
-                                            alpha: 0.35 * textOpacity,
-                                          ),
-                                          blurRadius: 16,
-                                        ),
-                                      ],
                                     ),
                                   ),
                                 ),
@@ -290,13 +282,6 @@ class _AppIntroGateState extends State<AppIntroGate>
           color: AppColors.accent.withValues(alpha: 0.8),
           width: 2.0,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.accent.withValues(alpha: 0.25),
-            blurRadius: 24,
-            spreadRadius: 2,
-          ),
-        ],
       ),
       child: Icon(
         Icons.shield_rounded,
@@ -409,16 +394,7 @@ class _MinimalRunnerIntroPainter extends CustomPainter {
       );
       tracePath.lineTo(currentHead.dx, currentHead.dy);
 
-      // Soft outer neon glow
-      final glowPaint = Paint()
-        ..color = AppColors.accent.withValues(alpha: 0.25)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 6.0
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round;
-      canvas.drawPath(tracePath, glowPaint);
-
-      // Clean core stroke
+      // Clean crisp core stroke
       final routePaint = Paint()
         ..color = AppColors.accent
         ..style = PaintingStyle.stroke

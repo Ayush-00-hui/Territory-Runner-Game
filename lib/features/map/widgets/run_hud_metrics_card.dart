@@ -167,18 +167,11 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
                       if (widget.isRunActive && !widget.isAutoPaused) ...[
                         const SizedBox(width: AppSpacing.s4),
                         Container(
-                          width: 7,
-                          height: 7,
+                          width: 6,
+                          height: 6,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: palette.accent,
-                            boxShadow: [
-                              BoxShadow(
-                                color: palette.accent.withValues(alpha: 0.7),
-                                blurRadius: 6,
-                                spreadRadius: 1,
-                              ),
-                            ],
                           ),
                         ),
                       ] else if (widget.isAutoPaused) ...[
