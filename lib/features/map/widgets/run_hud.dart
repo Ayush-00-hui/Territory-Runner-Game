@@ -128,252 +128,255 @@ class _RunHudState extends State<RunHud> {
                   color: widget.isAutoPaused
                       ? palette.warning.withValues(alpha: 0.8)
                       : (isNearClosure
-                          ? palette.accent
-                          : palette.borderSubtle.withValues(alpha: 0.8)),
+                            ? palette.accent
+                            : palette.borderSubtle.withValues(alpha: 0.8)),
                   width: isNearClosure ? 2.0 : 1.0,
                 ),
                 boxShadow: AppElevation.floating,
               ),
               child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Drag Handle Indicator Pill
-              GestureDetector(
-                onTap: _toggleExpanded,
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.s8),
-                  child: Center(
-                    child: Container(
-                      width: 36,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: palette.borderSubtle,
-                        borderRadius: AppSpacing.brFull,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Drag Handle Indicator Pill
+                  GestureDetector(
+                    onTap: _toggleExpanded,
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                      child: Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: palette.borderSubtle,
+                            borderRadius: AppSpacing.brFull,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
 
-              // Live Runner Avatar Buddy
-              if (widget.isRunActive)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.s8),
-                  child: Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 240),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.s10,
-                        vertical: AppSpacing.s4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: palette.surface2,
-                        borderRadius: AppSpacing.brFull,
-                        border: Border.all(
-                          color: palette.borderSubtle,
-                          width: 1,
+                  // Live Runner Avatar Buddy
+                  if (widget.isRunActive)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                      child: Center(
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 240),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s10,
+                            vertical: AppSpacing.s4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: palette.surface2,
+                            borderRadius: AppSpacing.brFull,
+                            border: Border.all(
+                              color: palette.borderSubtle,
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AvatarWidget(
+                                size: 20,
+                                isRunning: !widget.isAutoPaused,
+                                semanticsLabel: 'Runner buddy pacing indicator',
+                              ),
+                              const SizedBox(width: AppSpacing.s6),
+                              Flexible(
+                                child: Text(
+                                  widget.isAutoPaused
+                                      ? 'Paused'
+                                      : 'Pacing with you',
+                                  style: AppText.caption.copyWith(
+                                    color: palette.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AvatarWidget(
-                            size: 20,
-                            isRunning: !widget.isAutoPaused,
-                            semanticsLabel: 'Runner buddy pacing indicator',
+                    ),
+
+                  // Auto-Pause Banner
+                  if (widget.isAutoPaused && widget.isRunActive) ...[
+                    Semantics(
+                      liveRegion: true,
+                      label: 'Run tracking auto-paused. Moving speed dropped below 2.5 kilometers per hour.',
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s12,
+                          vertical: AppSpacing.s4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: palette.warning.withValues(alpha: 0.16),
+                          borderRadius: AppSpacing.brFull,
+                          border: Border.all(color: palette.warning, width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.pause_circle_filled_rounded,
+                              color: palette.warning,
+                              size: 14,
+                            ),
+                            const SizedBox(width: AppSpacing.s6),
+                            Text(
+                              'Auto-paused • Speed < 2.5 km/h',
+                              style: AppText.caption.copyWith(
+                                color: palette.warning,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Finding GPS Inline Status
+                  if (widget.isRunActive &&
+                      !widget.isAutoPaused &&
+                      (widget.satelliteAccuracyMeters > 30.0 ||
+                          widget.isSearchingGps)) ...[
+                    Semantics(
+                      liveRegion: true,
+                      label: 'Finding GPS satellite signal',
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s12,
+                          vertical: AppSpacing.s4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: palette.surface2,
+                          borderRadius: AppSpacing.brFull,
+                          border: Border.all(
+                            color: palette.borderSubtle,
+                            width: 1,
                           ),
-                          const SizedBox(width: AppSpacing.s6),
-                          Flexible(
-                            child: Text(
-                              widget.isAutoPaused
-                                  ? 'Paused'
-                                  : 'Pacing with you',
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            InlineLoading(
+                              size: 10,
+                              strokeWidth: 1.5,
+                              color: palette.accent,
+                              semanticsLabel: 'Finding GPS...',
+                            ),
+                            const SizedBox(width: AppSpacing.s6),
+                            Text(
+                              'Finding GPS...',
                               style: AppText.caption.copyWith(
                                 color: palette.textSecondary,
                                 fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
+                  ],
+
+                  // Ghost Runner Live Pacing Chip
+                  if (widget.isRunActive &&
+                      widget.ghostTelemetryNotifier != null) ...[
+                    ValueListenableBuilder<GhostTelemetry?>(
+                      valueListenable: widget.ghostTelemetryNotifier!,
+                      builder: (context, ghost, _) {
+                        if (ghost == null) return const SizedBox.shrink();
+                        return _GhostHudChip(telemetry: ghost);
+                      },
+                    ),
+                  ],
+
+                  // Workout Interval Banner
+                  if (widget.isRunActive &&
+                      widget.workoutSnapshotNotifier != null) ...[
+                    ValueListenableBuilder<IntervalWorkoutSnapshot?>(
+                      valueListenable: widget.workoutSnapshotNotifier!,
+                      builder: (context, workout, _) {
+                        if (workout == null) return const SizedBox.shrink();
+                        return IntervalWorkoutBanner(
+                          snapshot: workout,
+                          onSkipPhase: widget.onSkipWorkoutPhase ?? () {},
+                        );
+                      },
+                    ),
+                  ],
+
+                  // Closure and Goal Bar
+                  RunHudClosureBar(
+                    isRunActive: widget.isRunActive,
+                    distanceKm: widget.distanceKm,
+                    elapsedSeconds: widget.elapsedSeconds,
+                    movingSeconds: widget.movingSeconds,
+                    distanceToClosureMeters: widget.distanceToClosureMeters,
+                    proximityToClosure: widget.proximityToClosure,
+                    runGoal: widget.runGoal,
+                    currentAreaSqm: widget.currentAreaSqm,
+                    onOpenGoalSelector: widget.onOpenGoalSelector,
                   ),
-                ),
 
-              // Auto-Pause Banner
-              if (widget.isAutoPaused && widget.isRunActive) ...[
-                Semantics(
-                  liveRegion: true,
-                  label: 'Run tracking auto-paused. Moving speed dropped below 2.5 kilometers per hour.',
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: AppSpacing.s10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.s12,
-                      vertical: AppSpacing.s4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: palette.warning.withValues(alpha: 0.16),
-                      borderRadius: AppSpacing.brFull,
-                      border: Border.all(color: palette.warning, width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.pause_circle_filled_rounded,
-                          color: palette.warning,
-                          size: 14,
-                        ),
-                        const SizedBox(width: AppSpacing.s6),
-                        Text(
-                          'Auto-paused • Speed < 2.5 km/h',
-                          style: AppText.caption.copyWith(
-                            color: palette.warning,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
+                  // Metrics Card
+                  RunHudMetricsCard(
+                    isRunActive: widget.isRunActive,
+                    isAutoPaused: widget.isAutoPaused,
+                    distanceKm: widget.distanceKm,
+                    elapsedSeconds: widget.elapsedSeconds,
+                    movingSeconds: widget.movingSeconds,
+                    splitPace: widget.splitPace,
+                    targetPace: widget.targetPace,
+                    currentSpeedKmh: widget.currentSpeedKmh,
+                    satelliteAccuracyMeters: widget.satelliteAccuracyMeters,
+                    stepCount: widget.stepCount,
+                    isStepCountEstimated: widget.isStepCountEstimated,
+                    territoriesClaimed: widget.territoriesClaimed,
+                    onToggleExpanded: _toggleExpanded,
                   ),
-                ),
-              ],
 
-              // Finding GPS Inline Status
-              if (widget.isRunActive &&
-                  !widget.isAutoPaused &&
-                  (widget.satelliteAccuracyMeters > 30.0 ||
-                      widget.isSearchingGps)) ...[
-                Semantics(
-                  liveRegion: true,
-                  label: 'Finding GPS satellite signal',
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: AppSpacing.s10),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.s12,
-                      vertical: AppSpacing.s4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: palette.surface2,
-                      borderRadius: AppSpacing.brFull,
-                      border: Border.all(color: palette.borderSubtle, width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        InlineLoading(
-                          size: 10,
-                          strokeWidth: 1.5,
-                          color: palette.accent,
-                          semanticsLabel: 'Finding GPS...',
-                        ),
-                        const SizedBox(width: AppSpacing.s6),
-                        Text(
-                          'Finding GPS...',
-                          style: AppText.caption.copyWith(
-                            color: palette.textSecondary,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
+                  // Extended Drawer
+                  RunHudExpandedDrawer(
+                    isExpanded: _isExpanded,
+                    distanceKm: widget.distanceKm,
+                    elapsedSeconds: widget.elapsedSeconds,
+                    movingSeconds: widget.movingSeconds,
+                    currentAreaSqm: widget.currentAreaSqm,
+                    grade: widget.grade,
+                    elevationGainMeters: widget.elevationGainMeters,
+                    cadenceSpm: widget.cadenceSpm,
+                    strideLengthMeters: widget.strideLengthMeters,
                   ),
-                ),
-              ],
 
-              // Ghost Runner Live Pacing Chip
-              if (widget.isRunActive &&
-                  widget.ghostTelemetryNotifier != null) ...[
-                ValueListenableBuilder<GhostTelemetry?>(
-                  valueListenable: widget.ghostTelemetryNotifier!,
-                  builder: (context, ghost, _) {
-                    if (ghost == null) return const SizedBox.shrink();
-                    return _GhostHudChip(telemetry: ghost);
-                  },
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.s14),
 
-              // Workout Interval Banner
-              if (widget.isRunActive &&
-                  widget.workoutSnapshotNotifier != null) ...[
-                ValueListenableBuilder<IntervalWorkoutSnapshot?>(
-                  valueListenable: widget.workoutSnapshotNotifier!,
-                  builder: (context, workout, _) {
-                    if (workout == null) return const SizedBox.shrink();
-                    return IntervalWorkoutBanner(
-                      snapshot: workout,
-                      onSkipPhase: widget.onSkipWorkoutPhase ?? () {},
-                    );
-                  },
-                ),
-              ],
-
-              // Closure and Goal Bar
-              RunHudClosureBar(
-                isRunActive: widget.isRunActive,
-                distanceKm: widget.distanceKm,
-                elapsedSeconds: widget.elapsedSeconds,
-                movingSeconds: widget.movingSeconds,
-                distanceToClosureMeters: widget.distanceToClosureMeters,
-                proximityToClosure: widget.proximityToClosure,
-                runGoal: widget.runGoal,
-                currentAreaSqm: widget.currentAreaSqm,
-                onOpenGoalSelector: widget.onOpenGoalSelector,
+                  // Controls Bar
+                  RunHudControlsBar(
+                    isRunActive: widget.isRunActive,
+                    isNearClosure: isNearClosure,
+                    closureDist: widget.distanceToClosureMeters,
+                    onToggleRun: widget.onToggleRun,
+                    onSealShape: widget.onSealShape,
+                    onFinishRun: widget.onFinishRun,
+                  ),
+                ],
               ),
-
-              // Metrics Card
-              RunHudMetricsCard(
-                isRunActive: widget.isRunActive,
-                isAutoPaused: widget.isAutoPaused,
-                distanceKm: widget.distanceKm,
-                elapsedSeconds: widget.elapsedSeconds,
-                movingSeconds: widget.movingSeconds,
-                splitPace: widget.splitPace,
-                targetPace: widget.targetPace,
-                currentSpeedKmh: widget.currentSpeedKmh,
-                satelliteAccuracyMeters: widget.satelliteAccuracyMeters,
-                stepCount: widget.stepCount,
-                isStepCountEstimated: widget.isStepCountEstimated,
-                territoriesClaimed: widget.territoriesClaimed,
-                onToggleExpanded: _toggleExpanded,
-              ),
-
-              // Extended Drawer
-              RunHudExpandedDrawer(
-                isExpanded: _isExpanded,
-                distanceKm: widget.distanceKm,
-                elapsedSeconds: widget.elapsedSeconds,
-                movingSeconds: widget.movingSeconds,
-                currentAreaSqm: widget.currentAreaSqm,
-                grade: widget.grade,
-                elevationGainMeters: widget.elevationGainMeters,
-                cadenceSpm: widget.cadenceSpm,
-                strideLengthMeters: widget.strideLengthMeters,
-              ),
-
-              const SizedBox(height: AppSpacing.s14),
-
-              // Controls Bar
-              RunHudControlsBar(
-                isRunActive: widget.isRunActive,
-                isNearClosure: isNearClosure,
-                closureDist: widget.distanceToClosureMeters,
-                onToggleRun: widget.onToggleRun,
-                onSealShape: widget.onSealShape,
-                onFinishRun: widget.onFinishRun,
-              ),
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  ),
-);
-}
+    );
+  }
 }
 
 class _GhostHudChip extends StatelessWidget {

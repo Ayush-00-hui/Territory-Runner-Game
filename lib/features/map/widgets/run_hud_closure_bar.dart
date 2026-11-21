@@ -219,11 +219,9 @@ class _RunHudClosureBarState extends State<RunHudClosureBar>
               final List<BoxShadow>? shadows = isPulsing
                   ? [
                       BoxShadow(
-                        color: AppColors.accent.withValues(
-                          alpha: 0.30 * pulseVal,
-                        ),
-                        blurRadius: 8 * pulseVal + 2,
-                        spreadRadius: 1,
+                        color: Colors.black.withValues(alpha: 0.25 * pulseVal),
+                        blurRadius: 6 * pulseVal + 2,
+                        offset: const Offset(0, 2),
                       ),
                     ]
                   : null;

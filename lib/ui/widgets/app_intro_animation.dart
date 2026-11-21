@@ -164,11 +164,15 @@ class _AppIntroGateState extends State<AppIntroGate>
 
                 // Territory fill & pulse (0.42 -> 0.70)
                 final double fillProgress = ((t - 0.42) / 0.20).clamp(0.0, 1.0);
-                final double pulseProgress = ((t - 0.44) / 0.26).clamp(0.0, 1.0);
+                final double pulseProgress = ((t - 0.44) / 0.26).clamp(
+                  0.0,
+                  1.0,
+                );
 
                 // Runner visibility: smoothly fades out as crest/title take focus (0.50 -> 0.68)
-                final double runnerOpacity =
-                    t < 0.50 ? 1.0 : (1.0 - (t - 0.50) / 0.18).clamp(0.0, 1.0);
+                final double runnerOpacity = t < 0.50
+                    ? 1.0
+                    : (1.0 - (t - 0.50) / 0.18).clamp(0.0, 1.0);
 
                 // Crest reveal (0.50 -> 0.74)
                 final double crestT = ((t - 0.50) / 0.24).clamp(0.0, 1.0);

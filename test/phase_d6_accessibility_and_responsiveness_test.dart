@@ -225,6 +225,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         },
       );
@@ -251,6 +252,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         },
       );
@@ -276,6 +278,7 @@ void main() {
               ),
             ),
           );
+          await tester.pumpAndSettle();
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         },
@@ -316,6 +319,7 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         },
       );
@@ -342,6 +346,7 @@ void main() {
               ),
             ),
           );
+          await tester.pumpAndSettle();
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         },
@@ -390,6 +395,7 @@ void main() {
               ),
             ),
           );
+          await tester.pumpAndSettle();
           await tester.pumpAndSettle();
           expect(tester.takeException(), isNull);
         },

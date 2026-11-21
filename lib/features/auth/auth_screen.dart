@@ -803,26 +803,29 @@ class _AuthScreenState extends State<AuthScreen> {
                   )
                 : null,
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: isSelected ? AppColors.accent : AppColors.textMuted,
-              ),
-              const SizedBox(width: AppSpacing.s6),
-              Text(
-                label,
-                style: AppText.label.copyWith(
-                  color: isSelected
-                      ? AppColors.textPrimary
-                      : AppColors.textMuted,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  fontSize: 11.5,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 14,
+                  color: isSelected ? AppColors.accent : AppColors.textMuted,
                 ),
-              ),
-            ],
+                const SizedBox(width: AppSpacing.s6),
+                Text(
+                  label,
+                  style: AppText.label.copyWith(
+                    color: isSelected
+                        ? AppColors.textPrimary
+                        : AppColors.textMuted,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

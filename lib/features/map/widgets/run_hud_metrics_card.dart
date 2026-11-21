@@ -98,22 +98,26 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.straighten_rounded,
-                        size: 11,
-                        color: palette.textSecondary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        'Distance',
-                        style: AppText.labelSmall.copyWith(
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.straighten_rounded,
+                          size: 11,
                           color: palette.textSecondary,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 3),
+                        Text(
+                          'Distance',
+                          style: AppText.labelSmall.copyWith(
+                            color: palette.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 2),
                   FittedBox(
@@ -155,48 +159,52 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Time',
-                        style: AppText.labelSmall.copyWith(
-                          color: palette.textSecondary,
-                        ),
-                      ),
-                      if (widget.isRunActive && !widget.isAutoPaused) ...[
-                        const SizedBox(width: AppSpacing.s4),
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: palette.accent,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Time',
+                          style: AppText.labelSmall.copyWith(
+                            color: palette.textSecondary,
                           ),
                         ),
-                      ] else if (widget.isAutoPaused) ...[
-                        const SizedBox(width: AppSpacing.s4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: palette.warning.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'PAUSED',
-                            style: TextStyle(
-                              fontSize: 8,
-                              fontWeight: FontWeight.w700,
-                              color: palette.warning,
-                              letterSpacing: 0.5,
+                        if (widget.isRunActive && !widget.isAutoPaused) ...[
+                          const SizedBox(width: AppSpacing.s4),
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: palette.accent,
                             ),
                           ),
-                        ),
+                        ] else if (widget.isAutoPaused) ...[
+                          const SizedBox(width: AppSpacing.s4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.warning.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'PAUSED',
+                              style: TextStyle(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                                color: palette.warning,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 2),
                   FittedBox(
@@ -225,41 +233,45 @@ class _RunHudMetricsCardState extends State<RunHudMetricsCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.speed_rounded,
-                        size: 11,
-                        color: palette.textSecondary,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        'Pace',
-                        style: AppText.labelSmall.copyWith(
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.speed_rounded,
+                          size: 11,
                           color: palette.textSecondary,
                         ),
-                      ),
-                      if (widget.targetPace != null) ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: palette.surface2,
-                            borderRadius: AppSpacing.br8,
-                          ),
-                          child: Text(
-                            'P: ${widget.targetPace}',
-                            style: AppText.labelSmall.copyWith(
-                              color: palette.info,
-                            ),
+                        const SizedBox(width: 3),
+                        Text(
+                          'Pace',
+                          style: AppText.labelSmall.copyWith(
+                            color: palette.textSecondary,
                           ),
                         ),
+                        if (widget.targetPace != null) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: palette.surface2,
+                              borderRadius: AppSpacing.br8,
+                            ),
+                            child: Text(
+                              'P: ${widget.targetPace}',
+                              style: AppText.labelSmall.copyWith(
+                                color: palette.info,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                   const SizedBox(height: 2),
                   FittedBox(

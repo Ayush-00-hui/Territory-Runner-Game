@@ -405,7 +405,9 @@ class _MainScreenState extends State<MainScreen> {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: palette.isLight ? 0.08 : 0.35),
+                  color: Colors.black.withValues(
+                    alpha: palette.isLight ? 0.08 : 0.35,
+                  ),
                   blurRadius: 20.0,
                   offset: const Offset(0, 8),
                 ),
@@ -429,7 +431,9 @@ class _MainScreenState extends State<MainScreen> {
 
                 // Prominent Centre Run Action Button
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.s10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.s10,
+                  ),
                   child: Semantics(
                     container: true,
                     button: true,
@@ -485,7 +489,9 @@ class _MainScreenState extends State<MainScreen> {
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.s8),
           decoration: BoxDecoration(
             color: isSelected
-                ? palette.accent.withValues(alpha: palette.isLight ? 0.15 : 0.20)
+                ? palette.accent.withValues(
+                    alpha: palette.isLight ? 0.15 : 0.20,
+                  )
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(24.0),
             border: isSelected
