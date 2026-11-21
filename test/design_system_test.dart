@@ -20,18 +20,18 @@ void main() {
     test(
       'AppColors token palette definitions (Athletic High-Contrast Palette)',
       () {
-        expect(AppColors.bgDeep, const Color(0xFF0C0E11));
-        expect(AppColors.surface, const Color(0xFF121417));
-        expect(AppColors.primary, const Color(0xFF2D9CDB));
-        expect(AppColors.accent, const Color(0xFFF2C94C));
-        expect(AppColors.mine, const Color(0xFF2D9CDB));
-        expect(AppColors.rival, const Color(0xFFFF6B6B));
-        expect(AppColors.warning, const Color(0xFFF2C94C));
-        expect(AppColors.info, const Color(0xFF2D9CDB));
-        expect(AppColors.error, const Color(0xFFE53935));
-        expect(AppColors.success, const Color(0xFF27AE60));
-        expect(AppColors.gold, const Color(0xFFF2C94C));
-        expect(AppColors.silver, const Color(0xFFE0E6ED));
+        expect(AppColors.bgDeep, const Color(0xFF08090B));
+        expect(AppColors.surface, const Color(0xFF111317));
+        expect(AppColors.primary, const Color(0xFF00E5FF));
+        expect(AppColors.accent, const Color(0xFFD4FF00));
+        expect(AppColors.mine, const Color(0xFF00E5FF));
+        expect(AppColors.rival, const Color(0xFFFF5252));
+        expect(AppColors.warning, const Color(0xFFD4FF00));
+        expect(AppColors.info, const Color(0xFF00E5FF));
+        expect(AppColors.error, const Color(0xFFFF3B30));
+        expect(AppColors.success, const Color(0xFF00E676));
+        expect(AppColors.gold, const Color(0xFFD4FF00));
+        expect(AppColors.silver, const Color(0xFFE2E8F0));
         expect(AppColors.bronze, const Color(0xFFCD7F32));
       },
     );
