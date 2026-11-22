@@ -45,6 +45,7 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000016_add_territory_cooldown.down.sql",
 		"000015_add_user_runner_code.down.sql",
 		"000014_add_seasons_and_crews.down.sql",
 		"000013_add_land_reminders_and_decay_notifications.down.sql",
@@ -85,6 +86,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000013_add_land_reminders_and_decay_notifications.up.sql",
 		"000014_add_seasons_and_crews.up.sql",
 		"000015_add_user_runner_code.up.sql",
+		"000016_add_territory_cooldown.up.sql",
 	}
 
 	for _, uf := range upFiles {
@@ -374,6 +376,48 @@ func TestMigration_000012_AddRunStepCount(t *testing.T) {
 	`).Scan(&colCount)
 	require.NoError(t, err)
 	assert.Equal(t, 1, colCount, "step_count column must exist after re-applying up")
+}
+
+// 2d. Migration 000016: territories.cooldown_until column up and down
+func TestMigration_000016_AddTerritoryCooldown(t *testing.T) {
+	_, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	up16, err := readMigration("000016_add_territory_cooldown.up.sql")
+	require.NoError(t, err)
+	down16, err := readMigration("000016_add_territory_cooldown.down.sql")
+	require.NoError(t, err)
+
+	// Since setupTestStore already runs all migrations up to 16, verify column exists initially
+	var colCount int
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'territories' AND column_name = 'cooldown_until';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, colCount, "cooldown_until column must exist in territories initially")
+
+	// Revert 000016 down
+	_, err = pool.Exec(ctx, down16)
+	require.NoError(t, err, "000016 down should apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'territories' AND column_name = 'cooldown_until';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, colCount, "cooldown_until column must be removed after down")
+
+	// Re-apply 000016 up so subsequent tests have the column
+	_, err = pool.Exec(ctx, up16)
+	require.NoError(t, err, "000016 up should re-apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'territories' AND column_name = 'cooldown_until';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, colCount, "cooldown_until column must exist after re-applying up")
 }
 
 // 3. Loop capture with PostGIS ST_PolygonFromText / ST_MakeValid
@@ -820,6 +864,8 @@ func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, tDefended)
 	assert.InDelta(t, 100.0, tDefended.Strength, 0.01, "strength must be restored to 100.0")
+	require.NotNil(t, tDefended.CooldownUntil)
+	assert.True(t, tDefended.IsShielded(time.Now().UTC()), "fortified territory must be shielded")
 	assert.WithinDuration(t, time.Now().UTC(), tDefended.LastDefendedAt, 5*time.Second, "last_defended_at must be refreshed to now")
 	assert.WithinDuration(t, time.Now().UTC(), tDefended.LastDecayedAt, 5*time.Second, "last_decayed_at must be refreshed to now")
 }
@@ -1177,4 +1223,79 @@ func TestPostgres_RunnerCodeAndFriendSearch(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, resultsAfter, 1)
 	assert.Equal(t, "pending_sent", resultsAfter[0].FriendshipStatus)
+}
+
+// 16. Symmetrical 30-minute territory defense cooldown shield on PostGIS
+func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
+	st, _ := setupTestStore(t)
+	ctx := context.Background()
+
+	// Create defender and attacker users
+	uDef := &store.User{ID: "pg_usr_defender", Username: "ShieldDefender", Faction: "Cyber Vanguard"}
+	require.NoError(t, st.CreateUser(ctx, uDef))
+	uAtt := &store.User{ID: "pg_usr_attacker", Username: "ShieldAttacker", Faction: "Neon Wardens"}
+	require.NoError(t, st.CreateUser(ctx, uAtt))
+
+	now := time.Now().UTC()
+	defenderRing := []geo.Coordinate{
+		{Latitude: 51.500, Longitude: -0.120},
+		{Latitude: 51.502, Longitude: -0.120},
+		{Latitude: 51.502, Longitude: -0.118},
+		{Latitude: 51.500, Longitude: -0.118},
+		{Latitude: 51.500, Longitude: -0.120},
+	}
+	defenderLoop := geo.EnclosedLoop{
+		Polygon:      defenderRing,
+		AreaSqMeters: 1000.0,
+	}
+
+	resDef, err := st.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_pg_def_001",
+		UserID:         "pg_usr_defender",
+		IdempotencyKey: "idem_pg_def_001",
+		CreatedAt:      now,
+	}, []geo.EnclosedLoop{defenderLoop}, nil)
+	require.NoError(t, err)
+	assert.InDelta(t, 1000.0, resDef.AreaClaimedSqm, 1.0)
+
+	// Fetch defender territory and verify shield
+	territories, err := st.GetTerritoriesInBBox(ctx, 51.49, -0.13, 51.51, -0.11)
+	require.NoError(t, err)
+	require.NotEmpty(t, territories)
+	var defT *store.Territory
+	for _, ter := range territories {
+		if ter.OwnerID == "pg_usr_defender" {
+			defT = ter
+			break
+		}
+	}
+	require.NotNil(t, defT)
+	require.NotNil(t, defT.CooldownUntil)
+	assert.True(t, defT.IsShielded(now), "Newly captured territory must be shielded")
+	assert.True(t, defT.IsShielded(now.Add(15*time.Minute)), "Territory remains shielded at +15m")
+	assert.False(t, defT.IsShielded(now.Add(31*time.Minute)), "Shield must expire at +31m")
+
+	// Attacker attempts invasion while defender is shielded
+	attackerLoop := geo.EnclosedLoop{
+		Polygon:      defenderRing,
+		AreaSqMeters: 1000.0,
+	}
+	attResShielded, err := st.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_pg_att_blocked",
+		UserID:         "pg_usr_attacker",
+		IdempotencyKey: "idem_pg_att_blocked",
+		CreatedAt:      now.Add(10 * time.Minute),
+	}, []geo.EnclosedLoop{attackerLoop}, nil)
+	require.NoError(t, err)
+	assert.NotContains(t, attResShielded.RivalsAffected, "pg_usr_defender", "Shielded defender must NOT be affected or carved")
+
+	// Defender fortifies via UpdateTerritoryDefense: resets strength and reactivates 30m shield
+	err = st.UpdateTerritoryDefense(ctx, defT.ID, 100.0)
+	require.NoError(t, err)
+
+	fortifiedT, err := st.GetTerritoryByID(ctx, defT.ID)
+	require.NoError(t, err)
+	assert.InDelta(t, 100.0, fortifiedT.Strength, 0.01)
+	require.NotNil(t, fortifiedT.CooldownUntil)
+	assert.True(t, fortifiedT.IsShielded(time.Now().UTC()), "Fortified territory must have active shield")
 }
