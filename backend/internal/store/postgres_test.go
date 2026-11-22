@@ -596,6 +596,10 @@ func TestPostgres_DifferenceWithRivalTerritory(t *testing.T) {
 	require.NoError(t, err)
 	aliceInitialArea := resAlice.PlayerTotalAreaSqm
 
+	// Expire Alice's shield cooldown so she can be invaded and carved by rivals
+	_, err = pool.Exec(ctx, "UPDATE territories SET cooldown_until = NOW() - INTERVAL '1 minute' WHERE owner_id = $1;", alice.ID)
+	require.NoError(t, err)
+
 	// Bob invades and captures a central chunk of Alice's territory
 	bobRing := []geo.LatLng{
 		{Latitude: 51.5010, Longitude: -0.1190},
@@ -646,6 +650,10 @@ func TestPostgres_DifferenceWithRivalTerritory(t *testing.T) {
 		Status:          "accepted",
 	}
 	_, err = st.CaptureRunAndMutateTerritories(ctx, runCharlie, []geo.EnclosedLoop{{Polygon: charlieRing, AreaSqMeters: charlieArea}}, nil)
+	require.NoError(t, err)
+
+	// Expire Charlie's shield cooldown so territory can be overtaken and swallowed
+	_, err = pool.Exec(ctx, "UPDATE territories SET cooldown_until = NOW() - INTERVAL '1 minute' WHERE owner_id = $1;", charlie.ID)
 	require.NoError(t, err)
 
 	// Bob captures a giant loop strictly enclosing Charlie's entire territory
