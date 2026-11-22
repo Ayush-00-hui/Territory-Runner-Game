@@ -9,6 +9,8 @@ import (
 	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
+	"sync"
+	"sync/atomic"
 	"testing"
 
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/store"
@@ -69,13 +71,13 @@ func TestFCMOAuth2TokenRefreshAndSend(t *testing.T) {
 	parsedPrivKey, err := parseRSAPrivateKey(privKeyPEM)
 	require.NoError(t, err)
 
-	tokenRequestCount := 0
-	fcmRequestCount := 0
+	var tokenRequestCount atomic.Int32
+	var fcmRequestCount atomic.Int32
 
 	// Mock Google OAuth & FCM v1 HTTP Server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/token" {
-			tokenRequestCount++
+			tokenRequestCount.Add(1)
 			assert.Equal(t, "application/x-www-form-urlencoded", r.Header.Get("Content-Type"))
 			_ = r.ParseForm()
 			assert.Equal(t, "urn:ietf:params:oauth:grant-type:jwt-bearer", r.Form.Get("grant_type"))
@@ -91,7 +93,7 @@ func TestFCMOAuth2TokenRefreshAndSend(t *testing.T) {
 		}
 
 		if r.URL.Path == "/v1/projects/test-territory-project/messages:send" {
-			fcmRequestCount++
+			fcmRequestCount.Add(1)
 			assert.Equal(t, "Bearer ya29.mock_oauth2_access_token_abc", r.Header.Get("Authorization"))
 			assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
 
@@ -124,14 +126,14 @@ func TestFCMOAuth2TokenRefreshAndSend(t *testing.T) {
 	// 1. Send first alert — should request OAuth2 token once and send message
 	err = client.SendTerritoryAlert(context.Background(), "test_device_token_xyz", "poly_001", "ViperRunner", 420.0)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, tokenRequestCount)
-	assert.Equal(t, 1, fcmRequestCount)
+	assert.Equal(t, int32(1), tokenRequestCount.Load())
+	assert.Equal(t, int32(1), fcmRequestCount.Load())
 
 	// 2. Send second alert immediately — token is cached, should NOT request token again
 	err = client.SendTerritoryAlert(context.Background(), "test_device_token_xyz", "poly_002", "ViperRunner", 120.0)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, tokenRequestCount, "OAuth token should be reused from TTL cache")
-	assert.Equal(t, 2, fcmRequestCount)
+	assert.Equal(t, int32(1), tokenRequestCount.Load(), "OAuth token should be reused from TTL cache")
+	assert.Equal(t, int32(2), fcmRequestCount.Load())
 }
 
 func TestFCMUserFanoutDelivery(t *testing.T) {
@@ -142,6 +144,7 @@ func TestFCMUserFanoutDelivery(t *testing.T) {
 	_ = memStore.SaveDeviceToken(ctx, victimUID, "token_phone_1")
 	_ = memStore.SaveDeviceToken(ctx, victimUID, "token_tablet_2")
 
+	var mu sync.Mutex
 	deliveredTokens := make([]string, 0)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/token" {
@@ -155,7 +158,9 @@ func TestFCMUserFanoutDelivery(t *testing.T) {
 		if r.URL.Path == "/v1/projects/test-project/messages:send" {
 			var msg FCMMessage
 			_ = json.NewDecoder(r.Body).Decode(&msg)
+			mu.Lock()
 			deliveredTokens = append(deliveredTokens, msg.Message.Token)
+			mu.Unlock()
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -181,7 +186,10 @@ func TestFCMUserFanoutDelivery(t *testing.T) {
 	err = client.SendTerritoryAlertToUser(ctx, victimUID, "poly_victim", "RivalSpeedster", 950.0)
 	assert.NoError(t, err)
 
-	assert.ElementsMatch(t, []string{"token_phone_1", "token_tablet_2"}, deliveredTokens)
+	mu.Lock()
+	tokensCopy := append([]string(nil), deliveredTokens...)
+	mu.Unlock()
+	assert.ElementsMatch(t, []string{"token_phone_1", "token_tablet_2"}, tokensCopy)
 }
 
 func TestMockNotifierRecordsDispatchedAlerts(t *testing.T) {
@@ -195,8 +203,10 @@ func TestMockNotifierRecordsDispatchedAlerts(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, 2, mock.TotalAlerts())
-	assert.Equal(t, "dev_token_1", mock.SentAlerts[0].DeviceToken)
-	assert.Equal(t, 300.0, mock.SentAlerts[0].AreaLost)
-	assert.Equal(t, "user_45", mock.SentAlerts[1].UserID)
-	assert.Equal(t, 750.0, mock.SentAlerts[1].AreaLost)
+	alerts := mock.GetSentAlerts()
+	require.Len(t, alerts, 2)
+	assert.Equal(t, "dev_token_1", alerts[0].DeviceToken)
+	assert.Equal(t, 300.0, alerts[0].AreaLost)
+	assert.Equal(t, "user_45", alerts[1].UserID)
+	assert.Equal(t, 750.0, alerts[1].AreaLost)
 }

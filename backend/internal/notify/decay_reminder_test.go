@@ -3,6 +3,7 @@ package notify_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 )
 
 type mockNotifier struct {
+	mu           sync.Mutex
 	sentAlerts   []landWeakAlertCall
 	failNextSend bool
 }
@@ -36,6 +38,8 @@ func (m *mockNotifier) SendLandWeakAlert(ctx context.Context, deviceToken, terri
 }
 
 func (m *mockNotifier) SendLandWeakAlertToUser(ctx context.Context, userID, territoryID string, currentStrength float64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.failNextSend {
 		return errors.New("fcm network connection failed")
 	}
@@ -45,6 +49,14 @@ func (m *mockNotifier) SendLandWeakAlertToUser(ctx context.Context, userID, terr
 		Strength:    currentStrength,
 	})
 	return nil
+}
+
+func (m *mockNotifier) getSentAlerts() []landWeakAlertCall {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	res := make([]landWeakAlertCall, len(m.sentAlerts))
+	copy(res, m.sentAlerts)
+	return res
 }
 
 func TestDecayReminderEngine_ThresholdsAndWeakestSelection(t *testing.T) {
@@ -100,10 +112,11 @@ func TestDecayReminderEngine_ThresholdsAndWeakestSelection(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 1, sent, "must send exactly 1 alert per owner per evaluation")
 
-	require.Len(t, mockNotif.sentAlerts, 1)
-	assert.Equal(t, ownerID, mockNotif.sentAlerts[0].UserID)
-	assert.Equal(t, "t_crit_weak", mockNotif.sentAlerts[0].TerritoryID, "must pick the weakest territory (25.0 strength)")
-	assert.InDelta(t, 25.0, mockNotif.sentAlerts[0].Strength, 0.1)
+	alerts := mockNotif.getSentAlerts()
+	require.Len(t, alerts, 1)
+	assert.Equal(t, ownerID, alerts[0].UserID)
+	assert.Equal(t, "t_crit_weak", alerts[0].TerritoryID, "must pick the weakest territory (25.0 strength)")
+	assert.InDelta(t, 25.0, alerts[0].Strength, 0.1)
 }
 
 func TestDecayReminderEngine_Deduplication(t *testing.T) {
@@ -139,7 +152,7 @@ func TestDecayReminderEngine_Deduplication(t *testing.T) {
 	sent2, err := engine.ProcessDecayAlerts(ctx, now.Add(1*time.Hour))
 	require.NoError(t, err)
 	assert.Equal(t, 0, sent2, "must not send duplicate push within 24h")
-	assert.Len(t, mockNotif.sentAlerts, 1)
+	assert.Len(t, mockNotif.getSentAlerts(), 1)
 }
 
 func TestDecayReminderEngine_QuietHoursAndTimezone(t *testing.T) {
@@ -172,14 +185,14 @@ func TestDecayReminderEngine_QuietHoursAndTimezone(t *testing.T) {
 	sentMorning, err := engine.ProcessDecayAlerts(ctx, morningUTC)
 	require.NoError(t, err)
 	assert.Equal(t, 0, sentMorning, "must skip delivery during quiet hours (< 09:00 local)")
-	assert.Empty(t, mockNotif.sentAlerts)
+	assert.Empty(t, mockNotif.getSentAlerts())
 
 	// 15:00 UTC corresponds to 10:00 in New York (INSIDE 09:00 - 20:00 allowed hours)
 	daytimeUTC := time.Date(2026, 11, 8, 15, 0, 0, 0, time.UTC)
 	sentDaytime, err := engine.ProcessDecayAlerts(ctx, daytimeUTC)
 	require.NoError(t, err)
 	assert.Equal(t, 1, sentDaytime, "must send alert when inside user's local 09:00 - 20:00 window")
-	assert.Len(t, mockNotif.sentAlerts, 1)
+	assert.Len(t, mockNotif.getSentAlerts(), 1)
 
 	// 02:00 UTC next day corresponds to 21:00 in New York (OUTSIDE quiet hours >= 20:00 local)
 	nightUTC := time.Date(2026, 11, 9, 2, 0, 0, 0, time.UTC)
@@ -254,7 +267,7 @@ func TestDecayReminderEngine_OptOut(t *testing.T) {
 	sent, err := engine.ProcessDecayAlerts(ctx, now)
 	require.NoError(t, err)
 	assert.Equal(t, 0, sent, "must respect land_reminders = false and send 0 alerts")
-	assert.Empty(t, mockNotif.sentAlerts)
+	assert.Empty(t, mockNotif.getSentAlerts())
 }
 
 func TestDecayReminderEngine_FCMFailureRetry(t *testing.T) {
