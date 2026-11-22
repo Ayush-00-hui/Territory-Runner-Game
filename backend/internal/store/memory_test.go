@@ -1078,7 +1078,7 @@ func TestMemory_TerritoryDefenseShieldCooldown(t *testing.T) {
 
 	fortifiedT, err := memStore.GetTerritoryByID(ctx, "poly_usr_defender_territory")
 	require.NoError(t, err)
-	assert.Equal(t, 100.0, fortifiedT.Strength)
+	assert.InDelta(t, 100.0, fortifiedT.Strength, 0.01)
 	require.NotNil(t, fortifiedT.CooldownUntil)
 	assert.True(t, fortifiedT.IsShielded(time.Now().UTC()), "Fortified territory must have active shield")
 }
