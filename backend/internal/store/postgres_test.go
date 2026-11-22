@@ -1232,21 +1232,22 @@ func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
 
 	// Create defender and attacker users
 	uDef := &store.User{ID: "pg_usr_defender", Username: "ShieldDefender", Faction: "Cyber Vanguard"}
-	require.NoError(t, st.CreateUser(ctx, uDef))
+	require.NoError(t, st.UpsertUser(ctx, uDef))
 	uAtt := &store.User{ID: "pg_usr_attacker", Username: "ShieldAttacker", Faction: "Neon Wardens"}
-	require.NoError(t, st.CreateUser(ctx, uAtt))
+	require.NoError(t, st.UpsertUser(ctx, uAtt))
 
 	now := time.Now().UTC()
-	defenderRing := []geo.Coordinate{
-		{Latitude: 51.500, Longitude: -0.120},
-		{Latitude: 51.502, Longitude: -0.120},
-		{Latitude: 51.502, Longitude: -0.118},
-		{Latitude: 51.500, Longitude: -0.118},
-		{Latitude: 51.500, Longitude: -0.120},
+	defenderRing := []geo.LatLng{
+		{Latitude: 51.5000, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1200},
+		{Latitude: 51.5020, Longitude: -0.1180},
+		{Latitude: 51.5000, Longitude: -0.1180},
+		{Latitude: 51.5000, Longitude: -0.1200},
 	}
+	loopArea := geo.ComputeGeodesicShoelaceArea(defenderRing)
 	defenderLoop := geo.EnclosedLoop{
 		Polygon:      defenderRing,
-		AreaSqMeters: 1000.0,
+		AreaSqMeters: loopArea,
 	}
 
 	resDef, err := st.CaptureRunAndMutateTerritories(ctx, &store.Run{
@@ -1256,16 +1257,17 @@ func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
 		CreatedAt:      now,
 	}, []geo.EnclosedLoop{defenderLoop}, nil)
 	require.NoError(t, err)
-	assert.InDelta(t, 1000.0, resDef.AreaClaimedSqm, 1.0)
+	assert.InDelta(t, loopArea, resDef.AreaClaimedSqm, 1.0)
 
 	// Fetch defender territory and verify shield
-	territories, err := st.GetTerritoriesInBBox(ctx, 51.49, -0.13, 51.51, -0.11)
+	territories, err := st.GetTerritoriesInBBox(ctx, -0.13, 51.49, -0.11, 51.51)
 	require.NoError(t, err)
 	require.NotEmpty(t, territories)
 	var defT *store.Territory
 	for _, ter := range territories {
 		if ter.OwnerID == "pg_usr_defender" {
-			defT = ter
+			found := ter
+			defT = &found
 			break
 		}
 	}
@@ -1278,7 +1280,7 @@ func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
 	// Attacker attempts invasion while defender is shielded
 	attackerLoop := geo.EnclosedLoop{
 		Polygon:      defenderRing,
-		AreaSqMeters: 1000.0,
+		AreaSqMeters: loopArea,
 	}
 	attResShielded, err := st.CaptureRunAndMutateTerritories(ctx, &store.Run{
 		ID:             "run_pg_att_blocked",
