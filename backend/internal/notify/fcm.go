@@ -642,3 +642,12 @@ func (m *MockNotifier) TotalAlerts() int {
 	defer m.mu.Unlock()
 	return len(m.SentAlerts)
 }
+
+// GetSentAlerts returns a thread-safe copy of all recorded dispatched alerts.
+func (m *MockNotifier) GetSentAlerts() []SentAlertRecord {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	res := make([]SentAlertRecord, len(m.SentAlerts))
+	copy(res, m.SentAlerts)
+	return res
+}

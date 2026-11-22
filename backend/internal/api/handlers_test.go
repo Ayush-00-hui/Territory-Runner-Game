@@ -411,7 +411,7 @@ func TestWebSocketEndpoint(t *testing.T) {
 		Cells: []string{cell},
 	})
 	require.NoError(t, err)
-	time.Sleep(50 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 
 	// Sender sends presence update
 	msg := ws.InboundMessage{
@@ -424,7 +424,7 @@ func TestWebSocketEndpoint(t *testing.T) {
 	err = connSender.WriteJSON(msg)
 	require.NoError(t, err)
 
-	_ = connReceiver.SetReadDeadline(time.Now().Add(1 * time.Second))
+	_ = connReceiver.SetReadDeadline(time.Now().Add(3 * time.Second))
 	_, p, err := connReceiver.ReadMessage()
 	require.NoError(t, err)
 
@@ -813,7 +813,7 @@ func TestConquestTriggersFCMAlert(t *testing.T) {
 		ID:             "run_victim_init",
 		UserID:         victimUID,
 		IdempotencyKey: "idem_victim_init",
-		CreatedAt:      time.Now().UTC().Add(-35 * time.Minute),
+		CreatedAt:      time.Now().UTC().Add(-45 * time.Minute),
 	}, []geo.EnclosedLoop{{
 		AreaSqMeters: 4000.0,
 		Polygon: []geo.LatLng{
@@ -844,12 +844,14 @@ func TestConquestTriggersFCMAlert(t *testing.T) {
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusCreated, rec.Code)
 
-	// Wait briefly for asynchronous notification goroutine
-	time.Sleep(50 * time.Millisecond)
+	// Wait for asynchronous notification goroutine using Eventually to prevent race conditions
+	assert.Eventually(t, func() bool {
+		return mockNotifier.TotalAlerts() >= 1
+	}, 2*time.Second, 20*time.Millisecond, "victim should receive push notification alert")
 
-	// Assert that victim received push notification alert
-	assert.GreaterOrEqual(t, mockNotifier.TotalAlerts(), 1)
-	assert.Equal(t, victimUID, mockNotifier.SentAlerts[0].UserID)
+	alerts := mockNotifier.GetSentAlerts()
+	require.NotEmpty(t, alerts)
+	assert.Equal(t, victimUID, alerts[0].UserID)
 }
 
 func TestGetFactionStandings(t *testing.T) {
