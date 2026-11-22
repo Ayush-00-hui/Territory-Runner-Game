@@ -354,6 +354,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
               // --- TAB SELECTOR (Google / Email / Phone) ---
               Container(
+                clipBehavior: Clip.antiAlias,
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
@@ -796,12 +797,12 @@ class _AuthScreenState extends State<AuthScreen> {
           decoration: BoxDecoration(
             color: isSelected ? AppColors.surface2 : Colors.transparent,
             borderRadius: AppRadius.br12,
-            border: isSelected
-                ? Border.all(
-                    color: AppColors.accent.withValues(alpha: 0.6),
-                    width: 1.0,
-                  )
-                : null,
+            border: Border.all(
+              color: isSelected
+                  ? AppColors.accent.withValues(alpha: 0.6)
+                  : Colors.transparent,
+              width: 1.0,
+            ),
           ),
           child: FittedBox(
             fit: BoxFit.scaleDown,
