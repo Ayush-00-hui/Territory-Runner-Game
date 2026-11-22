@@ -46,10 +46,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3000),
+      duration: const Duration(milliseconds: 1200),
     );
-    if (widget.autoAnimate) {
+    final bindingName = WidgetsBinding.instance.runtimeType.toString();
+    if (widget.autoAnimate &&
+        !bindingName.contains('TestWidgetsFlutterBinding')) {
       _pulseController.repeat();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (AppMotion.isReducedMotion(context)) {
+      if (_pulseController.isAnimating) {
+        _pulseController.stop();
+        _pulseController.value = 0.5;
+      }
     }
   }
 
@@ -69,8 +82,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void _nextPage() {
     if (_currentPage < 2) {
       _pageController.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeOutCubic,
+        duration: AppMotion.standard,
+        curve: AppMotion.easeOut,
       );
     } else {
       _completeOnboarding();
@@ -213,8 +226,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     children: List.generate(3, (index) {
                       final isActive = _currentPage == index;
                       return AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeOutCubic,
+                        duration: AppMotion.standard,
+                        curve: AppMotion.easeOut,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         width: isActive ? 24 : 8,
                         height: 8,
@@ -238,8 +251,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             label: 'Previous',
                             onPressed: _currentPage > 0
                                 ? () => _pageController.previousPage(
-                                    duration: const Duration(milliseconds: 300),
-                                    curve: Curves.easeOutCubic,
+                                    duration: AppMotion.standard,
+                                    curve: AppMotion.easeOut,
                                   )
                                 : null,
                           ),

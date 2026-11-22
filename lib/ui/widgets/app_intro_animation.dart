@@ -45,7 +45,7 @@ class _AppIntroGateState extends State<AppIntroGate>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2600),
+      duration: const Duration(milliseconds: 580),
     );
 
     _controller.addStatusListener((status) {
@@ -62,14 +62,9 @@ class _AppIntroGateState extends State<AppIntroGate>
     super.didChangeDependencies();
     if (_isDone) return;
     final reduced = AppMotion.isReducedMotion(context);
-    if (reduced != _isReducedMotion) {
-      _isReducedMotion = reduced;
-      _controller.duration = _isReducedMotion
-          ? const Duration(milliseconds: 700)
-          : const Duration(milliseconds: 2600);
-      if (!_controller.isAnimating && !_controller.isCompleted) {
-        _controller.forward();
-      }
+    if (reduced) {
+      _isReducedMotion = true;
+      _skip();
     }
   }
 
@@ -406,19 +401,10 @@ class _MinimalRunnerIntroPainter extends CustomPainter {
         ..strokeJoin = StrokeJoin.round;
       canvas.drawPath(tracePath, routePaint);
 
-      // Leading beacon dot at the head of the loop
+      // Leading beacon dot at the head of the loop (crisp, zero glow)
       if (loopProgress < 1.0) {
-        canvas.drawCircle(
-          currentHead,
-          6.0,
-          Paint()..color = AppColors.accent.withValues(alpha: 0.3),
-        );
         canvas.drawCircle(currentHead, 3.5, Paint()..color = AppColors.accent);
-        canvas.drawCircle(
-          currentHead,
-          1.8,
-          Paint()..color = AppColors.textPrimary,
-        );
+        canvas.drawCircle(currentHead, 1.8, Paint()..color = AppColors.bgDeep);
       }
     }
 
@@ -585,5 +571,239 @@ class _MinimalRunnerIntroPainter extends CustomPainter {
         oldDelegate.fillProgress != fillProgress ||
         oldDelegate.pulseProgress != pulseProgress ||
         oldDelegate.runnerOpacity != runnerOpacity;
+  }
+}
+
+/// Reusable, minimal vector running person with natural athletic kinematics.
+/// Zero glow, zero neon, perfectly styled with [AppColors.accent] and [AppColors.textPrimary].
+class MinimalRunningPerson extends StatefulWidget {
+  final double size;
+  final Color? primaryColor;
+  final Color? accentColor;
+  final bool isRunning;
+
+  const MinimalRunningPerson({
+    super.key,
+    this.size = 48.0,
+    this.primaryColor,
+    this.accentColor,
+    this.isRunning = true,
+  });
+
+  @override
+  State<MinimalRunningPerson> createState() => _MinimalRunningPersonState();
+}
+
+class _MinimalRunningPersonState extends State<MinimalRunningPerson>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 700),
+    );
+    final bindingName = WidgetsBinding.instance.runtimeType.toString();
+    if (widget.isRunning &&
+        !bindingName.contains('TestWidgetsFlutterBinding')) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MinimalRunningPerson oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRunning != oldWidget.isRunning) {
+      if (widget.isRunning) {
+        final bindingName = WidgetsBinding.instance.runtimeType.toString();
+        if (!bindingName.contains('TestWidgetsFlutterBinding')) {
+          _controller.repeat();
+        } else {
+          _controller.value = 0.5;
+        }
+      } else {
+        _controller.stop();
+        _controller.reset();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (AppMotion.isReducedMotion(context)) {
+      return SizedBox(
+        width: widget.size,
+        height: widget.size,
+        child: CustomPaint(
+          painter: _MinimalRunnerKinematicPainter(
+            time: 0.25,
+            primaryColor: widget.primaryColor ?? AppColors.textPrimary,
+            accentColor: widget.accentColor ?? AppColors.accent,
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: widget.size,
+      height: widget.size,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return CustomPaint(
+            painter: _MinimalRunnerKinematicPainter(
+              time: _controller.value,
+              primaryColor: widget.primaryColor ?? AppColors.textPrimary,
+              accentColor: widget.accentColor ?? AppColors.accent,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _MinimalRunnerKinematicPainter extends CustomPainter {
+  final double time;
+  final Color primaryColor;
+  final Color accentColor;
+
+  _MinimalRunnerKinematicPainter({
+    required this.time,
+    required this.primaryColor,
+    required this.accentColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double scale = size.width / 50.0;
+    final Offset center = Offset(size.width / 2.0, size.height / 2.0);
+
+    final double phase = time * math.pi * 2.0;
+    final double bobY = -math.sin(phase * 2.0).abs() * 2.5 * scale;
+    final Offset hip = Offset(
+      center.dx - 1.0 * scale,
+      center.dy + bobY + 3.0 * scale,
+    );
+
+    const double leanAngle = 0.22;
+    final double sinLean = math.sin(leanAngle);
+    final double cosLean = math.cos(leanAngle);
+
+    final double torsoLen = 16.0 * scale;
+    final Offset shoulder = Offset(
+      hip.dx + torsoLen * sinLean,
+      hip.dy - torsoLen * cosLean,
+    );
+
+    final Offset headCenter = Offset(
+      shoulder.dx + 6.0 * scale * sinLean,
+      shoulder.dy - 6.0 * scale * cosLean,
+    );
+    final double headRadius = 4.0 * scale;
+
+    final double thighLen = 13.0 * scale;
+    final double shinLen = 12.0 * scale;
+    final double upperArmLen = 9.0 * scale;
+    final double forearmLen = 8.5 * scale;
+
+    final torsoPaint = Paint()
+      ..color = primaryColor
+      ..strokeWidth = 3.2 * scale
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+
+    final headPaint = Paint()
+      ..color = primaryColor
+      ..style = PaintingStyle.fill;
+
+    final farLimbPaint = Paint()
+      ..color = accentColor.withValues(alpha: 0.45)
+      ..strokeWidth = 2.6 * scale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final nearLimbPaint = Paint()
+      ..color = accentColor
+      ..strokeWidth = 2.8 * scale
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    void drawLeg(double legPhase, Paint paint) {
+      final double thighAngle = 0.60 * math.sin(legPhase) + 0.15;
+      final Offset knee = Offset(
+        hip.dx + thighLen * math.sin(thighAngle),
+        hip.dy + thighLen * math.cos(thighAngle),
+      );
+
+      final double recovery = math.max(0.0, -math.cos(legPhase));
+      final double kneeFlex = 0.25 + (recovery * 1.30);
+
+      final Offset ankle = Offset(
+        knee.dx + shinLen * math.sin(thighAngle - kneeFlex),
+        knee.dy + shinLen * math.cos(thighAngle - kneeFlex),
+      );
+
+      final Offset foot = Offset(
+        ankle.dx + 3.5 * scale,
+        ankle.dy + 1.2 * scale,
+      );
+
+      final legPath = Path()
+        ..moveTo(hip.dx, hip.dy)
+        ..lineTo(knee.dx, knee.dy)
+        ..lineTo(ankle.dx, ankle.dy)
+        ..lineTo(foot.dx, foot.dy);
+      canvas.drawPath(legPath, paint);
+    }
+
+    void drawArm(double armPhase, Paint paint) {
+      final double armAngle = -0.65 * math.sin(armPhase) + 0.20;
+      final Offset elbow = Offset(
+        shoulder.dx + upperArmLen * math.sin(armAngle),
+        shoulder.dy + upperArmLen * math.cos(armAngle),
+      );
+
+      const double elbowBend = 1.40;
+      final Offset hand = Offset(
+        elbow.dx + forearmLen * math.sin(armAngle + elbowBend),
+        elbow.dy + forearmLen * math.cos(armAngle + elbowBend),
+      );
+
+      final armPath = Path()
+        ..moveTo(shoulder.dx, shoulder.dy)
+        ..lineTo(elbow.dx, elbow.dy)
+        ..lineTo(hand.dx, hand.dy);
+      canvas.drawPath(armPath, paint);
+    }
+
+    // Far Limbs
+    drawLeg(phase + math.pi, farLimbPaint);
+    drawArm(phase, farLimbPaint);
+
+    // Torso & Head
+    canvas.drawLine(hip, shoulder, torsoPaint);
+    canvas.drawCircle(headCenter, headRadius, headPaint);
+
+    // Near Limbs
+    drawLeg(phase, nearLimbPaint);
+    drawArm(phase + math.pi, nearLimbPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MinimalRunnerKinematicPainter oldDelegate) {
+    return oldDelegate.time != time ||
+        oldDelegate.primaryColor != primaryColor ||
+        oldDelegate.accentColor != accentColor;
   }
 }

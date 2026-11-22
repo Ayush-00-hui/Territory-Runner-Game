@@ -92,6 +92,9 @@ class RunLogEntry {
   /// Indicates whether dense raw GPS samples were simplified via Douglas-Peucker.
   final bool isSimplified;
 
+  /// Indicates whether this run was executed in simulation/demo mode.
+  final bool simulated;
+
   const RunLogEntry({
     this.version = currentVersion,
     required this.id,
@@ -112,6 +115,7 @@ class RunLogEntry {
     this.xp = 0,
     this.syncStatus = 'synced',
     this.isSimplified = false,
+    this.simulated = false,
   });
 
   /// Average moving pace in seconds per kilometer (0 if distance <= 0).
@@ -146,6 +150,7 @@ class RunLogEntry {
     int? xp,
     String? syncStatus,
     bool? isSimplified,
+    bool? simulated,
   }) {
     return RunLogEntry(
       version: version ?? this.version,
@@ -167,6 +172,7 @@ class RunLogEntry {
       xp: xp ?? this.xp,
       syncStatus: syncStatus ?? this.syncStatus,
       isSimplified: isSimplified ?? this.isSimplified,
+      simulated: simulated ?? this.simulated,
     );
   }
 
@@ -190,6 +196,7 @@ class RunLogEntry {
     'xp': xp,
     'sync': syncStatus,
     'simp': isSimplified,
+    if (simulated) 'sim': true,
   };
 
   factory RunLogEntry.fromJson(Map<String, dynamic> json) {
@@ -220,6 +227,7 @@ class RunLogEntry {
       xp: (json['xp'] as num?)?.toInt() ?? 0,
       syncStatus: json['sync'] as String? ?? 'synced',
       isSimplified: json['simp'] as bool? ?? false,
+      simulated: json['sim'] as bool? ?? false,
     );
   }
 }

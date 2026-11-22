@@ -120,7 +120,7 @@ void main() {
 
       // Verify quests shelf header
       expect(find.text('Active territory quests'), findsOneWidget);
-      expect(find.text('Resets in 14h'), findsOneWidget);
+      expect(find.textContaining('Resets in '), findsOneWidget);
 
       // Verify quests appear
       expect(find.text('Daily distance run'), findsOneWidget);

@@ -137,6 +137,31 @@ func TestSubmitRunValidLoop(t *testing.T) {
 	assert.NotEmpty(t, res.RunID)
 }
 
+func TestSubmitRun_SimulatedRejected(t *testing.T) {
+	router, _ := setupTestServer()
+
+	now := time.Now().UTC()
+	pts, dur, dist := buildRealisticLoop(now)
+	runPayload := api.SubmitRunRequest{
+		IdempotencyKey:  "idem_run_simulated_test",
+		DurationSeconds: dur,
+		DistanceMeters:  dist,
+		Points:          pts,
+		Simulated:       true,
+	}
+
+	body, _ := json.Marshal(runPayload)
+	req := httptest.NewRequest(http.MethodPost, "/v1/runs", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Dev-User", "ayush_runner_sim")
+	rec := httptest.NewRecorder()
+
+	router.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "SIMULATED_RUN_REJECTED")
+}
+
 func TestDuplicateIdempotencyKeyDoesNotDoubleCount(t *testing.T) {
 	router, _ := setupTestServer()
 
@@ -788,7 +813,7 @@ func TestConquestTriggersFCMAlert(t *testing.T) {
 		ID:             "run_victim_init",
 		UserID:         victimUID,
 		IdempotencyKey: "idem_victim_init",
-		CreatedAt:      time.Now().UTC(),
+		CreatedAt:      time.Now().UTC().Add(-35 * time.Minute),
 	}, []geo.EnclosedLoop{{
 		AreaSqMeters: 4000.0,
 		Polygon: []geo.LatLng{

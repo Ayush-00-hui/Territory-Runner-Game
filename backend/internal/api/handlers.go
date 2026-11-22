@@ -494,6 +494,7 @@ type SubmitRunRequest struct {
 	DistanceMeters  float64                  `json:"distance_meters"`
 	ClientPreview   *ClientPreview           `json:"client_preview,omitempty"`
 	MotionWindows   []anticheat.MotionWindow `json:"motion_windows,omitempty"`
+	Simulated       bool                     `json:"simulated,omitempty"`
 }
 
 type ClientPreview struct {
@@ -525,6 +526,12 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 
 	if req.IdempotencyKey == "" {
 		writeError(w, http.StatusBadRequest, "MISSING_KEY", "idempotency_key is required")
+		return
+	}
+
+	// Reject simulated runs immediately: simulation is strictly for local on-device demo
+	if req.Simulated {
+		writeError(w, http.StatusBadRequest, "SIMULATED_RUN_REJECTED", "Simulated and demo runs cannot be synchronized or generate territory")
 		return
 	}
 
@@ -639,6 +646,10 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	runID := "run_" + uuid.New().String()
+	createdAt := time.Now().UTC()
+	if len(req.Points) > 0 && !req.Points[len(req.Points)-1].Timestamp.IsZero() {
+		createdAt = req.Points[len(req.Points)-1].Timestamp.UTC()
+	}
 	runRecord := &store.Run{
 		ID:                 runID,
 		UserID:             uid,
@@ -651,6 +662,7 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		AnomalyReasons:     anomalyRes.Reasons,
 		VerificationStatus: anomalyRes.VerificationStatus,
 		Status:             "accepted",
+		CreatedAt:          createdAt,
 	}
 	if anomalyRes.IsAnomaly {
 		runRecord.Status = "flagged_review"

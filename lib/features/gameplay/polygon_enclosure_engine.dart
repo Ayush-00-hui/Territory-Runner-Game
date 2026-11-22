@@ -123,6 +123,19 @@ class PolygonEnclosureEngine {
   double get minLoopDistanceMeters => effectiveMinLoopDistanceMeters;
   double get minLoopAreaSqMeters => effectiveMinLoopAreaSqMeters;
 
+  /// Dynamically scaled loop closure threshold based on satellite horizontal accuracy dilution.
+  /// Standard phone GPS (~10m accuracy) resolves to exactly [minClosureDistanceMeters] (35.0m).
+  /// Sub-meter / high-precision GNSS (< 5m) tightens down to ~33.0m (minimum 25.0m).
+  /// Urban canyon / multipath accuracy (15-25m) scales gracefully up to 41.0m (capped at 50.0m).
+  double effectiveClosureDistance({double? horizontalAccuracyMeters}) {
+    if (horizontalAccuracyMeters == null || horizontalAccuracyMeters <= 0.0) {
+      return minClosureDistanceMeters;
+    }
+    final scaled =
+        minClosureDistanceMeters + (horizontalAccuracyMeters - 10.0) * 0.4;
+    return scaled.clamp(25.0, 50.0);
+  }
+
   List<LatLng> get currentPath => List.unmodifiable(_path);
   int get pointCount => _path.length;
   String? get lastInvalidReason => _lastInvalidReason;
@@ -212,8 +225,13 @@ class PolygonEnclosureEngine {
   }
 
   /// Ingests a new GPS position and checks for arbitrary polygon loop enclosure.
+  /// Dynamically scales loop closure distance based on [horizontalAccuracyMeters].
   /// Returns [EnclosedLoopEvent] if a valid loop was closed, or null otherwise.
-  EnclosedLoopEvent? addPosition(LatLng position, [DateTime? timestamp]) {
+  EnclosedLoopEvent? addPosition(
+    LatLng position, [
+    DateTime? timestamp,
+    double? horizontalAccuracyMeters,
+  ]) {
     _lastInvalidReason = null;
     final now = timestamp ?? DateTime.now();
 
@@ -401,7 +419,10 @@ class PolygonEnclosureEngine {
       final candidatePoint = _path[i];
       final distance = haversineDistanceMeters(currentPos, candidatePoint);
 
-      if (distance <= minClosureDistanceMeters) {
+      final closureThreshold = effectiveClosureDistance(
+        horizontalAccuracyMeters: horizontalAccuracyMeters,
+      );
+      if (distance <= closureThreshold) {
         final loopPoints = List<LatLng>.from(
           _path.sublist(i, currentIndex + 1),
         );

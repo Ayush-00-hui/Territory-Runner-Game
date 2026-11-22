@@ -35,6 +35,7 @@ class MapHudPanel extends StatelessWidget {
         builder: (context, telemetry, _) {
           return RunHud(
             isRunActive: controller.isRunActive,
+            isSimulated: controller.isSimulated,
             stepCount: telemetry.stepCount ?? controller.stepCount,
             isStepCountEstimated: telemetry.isStepCountEstimated,
             grade: telemetry.grade,

@@ -230,6 +230,30 @@ class TerritoryService {
     final Color activeColor = color ?? AppColors.accent;
     final newPath64 = latLngsToPath64(polygon);
     final box = _territoryBox;
+    final DateTime now = DateTime.now();
+
+    // 0. Sovereign Shield Check: subtract any intersecting rival land that is actively shielded
+    final shieldedRivalPaths = <Path64>[];
+    if (box != null) {
+      for (final t in box.values) {
+        if (t.ownerId != activeOwner && t.isShielded(now: now)) {
+          for (final poly in t.polygons) {
+            if (poly.length >= 3) {
+              shieldedRivalPaths.add(latLngsToPath64(poly));
+            }
+          }
+        }
+      }
+    }
+
+    Paths64 effectiveNewPaths = [newPath64];
+    if (shieldedRivalPaths.isNotEmpty) {
+      effectiveNewPaths = Clipper.difference(
+        subject: [newPath64],
+        clip: shieldedRivalPaths,
+        fillRule: FillRule.nonZero,
+      );
+    }
 
     // 1. Clipper Union: merge with the player's existing captured shapes
     final playerExistingTerritories = box != null
@@ -244,13 +268,15 @@ class TerritoryService {
       }
     }
 
-    final Paths64 mergedPaths = playerExistingPaths.isNotEmpty
-        ? Clipper.union(
-            subject: playerExistingPaths,
-            clip: [newPath64],
-            fillRule: FillRule.nonZero,
-          )
-        : [newPath64];
+    final Paths64 mergedPaths = effectiveNewPaths.isNotEmpty
+        ? (playerExistingPaths.isNotEmpty
+              ? Clipper.union(
+                  subject: playerExistingPaths,
+                  clip: effectiveNewPaths,
+                  fillRule: FillRule.nonZero,
+                )
+              : effectiveNewPaths)
+        : playerExistingPaths;
 
     final List<List<LatLng>> mergedMultiPolys = mergedPaths
         .map(path64ToLatLngs)
@@ -278,8 +304,9 @@ class TerritoryService {
       areaSqMeters: totalUnifiedAreaSqM > 0
           ? totalUnifiedAreaSqM
           : areaSqMeters,
-      capturedAt: DateTime.now(),
-      lastDefendedAt: DateTime.now(),
+      capturedAt: now,
+      lastDefendedAt: now,
+      cooldownUntil: now.add(Territory.defaultShieldDuration),
       strength: Territory.defaultInitialStrength,
       color: activeColor,
       isPendingReview: isPendingReview,
@@ -295,6 +322,10 @@ class TerritoryService {
         : <Territory>[];
 
     for (final rival in rivalTerritories) {
+      if (rival.isShielded(now: now)) {
+        // Shielded rival territory cannot be invaded or damaged
+        continue;
+      }
       final Paths64 rivalPaths = [];
       for (final poly in rival.polygons) {
         if (poly.length >= 3) {
@@ -444,7 +475,9 @@ class TerritoryService {
       polygon: rivalPolygon,
       polygons: [rivalPolygon],
       areaSqMeters: area,
-      capturedAt: DateTime.now(),
+      capturedAt: DateTime.now().subtract(const Duration(minutes: 35)),
+      lastDefendedAt: DateTime.now().subtract(const Duration(minutes: 35)),
+      cooldownUntil: DateTime.now().subtract(const Duration(minutes: 5)),
       color: AppColors.rival, // Muted Crimson
       isPendingReview: false,
     );
@@ -466,15 +499,17 @@ class TerritoryService {
     final territoryId = 'poly_${ownerId}_territory';
     final existing = box.get(territoryId);
     if (existing != null) {
+      final now = DateTime.now();
       final defended = existing.copyWith(
         strength: Territory.defaultInitialStrength,
-        lastDefendedAt: DateTime.now(),
+        lastDefendedAt: now,
+        cooldownUntil: now.add(Territory.defaultShieldDuration),
       );
       await box.put(territoryId, defended);
       _captureEventController.add(defended);
       unawaited(_firebaseService.syncTerritoryToCloud(defended));
       AppLogger.info(
-        'Territory $territoryId fortified to 100% defense!',
+        'Territory $territoryId fortified to 100% defense (30m shield active)!',
         tag: 'TerritoryService',
       );
       return defended;

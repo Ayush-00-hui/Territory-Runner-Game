@@ -25,7 +25,7 @@ class _RunGoCueState extends State<RunGoCue>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: AppMotion.standard,
     );
 
     _scaleAnimation = Tween<double>(

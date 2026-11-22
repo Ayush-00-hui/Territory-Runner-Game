@@ -167,6 +167,7 @@ class RunLogService {
     double claimedAreaSqM = 0.0,
     int xp = 0,
     String syncStatus = 'synced',
+    bool simulated = false,
   }) async {
     // 1. Enforce per-run sample cap with graceful 2x downsampling on overflow
     List<RunSample> effectiveSamples = List<RunSample>.from(samples);
@@ -200,6 +201,7 @@ class RunLogService {
       xp: xp,
       syncStatus: syncStatus,
       isSimplified: false,
+      simulated: simulated,
     );
 
     await _safeBox.put(id, jsonEncode(entry.toJson()));

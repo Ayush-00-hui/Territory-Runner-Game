@@ -75,13 +75,13 @@ class AppTheme {
         ),
       ),
 
-      // Buttons Theme (Electric Blue Primary CTA & Mustard Yellow Accent Details)
+      // Buttons Theme (Calm Moss Primary CTA & Subtle Outlines - Zero Neon / Glow)
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
-          elevation: 2,
-          shadowColor: AppColors.primary.withValues(alpha: 0.35),
+          elevation: 0,
+          shadowColor: Colors.transparent,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
@@ -93,7 +93,7 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary, width: 1.5),
+          side: const BorderSide(color: AppColors.primary, width: 1.0),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12.0),
@@ -112,7 +112,7 @@ class AppTheme {
       floatingActionButtonTheme: const FloatingActionButtonThemeData(
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.onPrimary,
-        elevation: 4,
+        elevation: 0,
       ),
 
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(

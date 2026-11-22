@@ -36,6 +36,16 @@ enum VirtualPacerMode {
   sprinting, // 15.0 km/h (~4.17 m/s)
 }
 
+/// Operational GPS satellite acquisition status.
+enum GpsStatus {
+  ready,
+  findingGps,
+  permissionDenied,
+  permissionDeniedForever,
+  serviceDisabled,
+  error,
+}
+
 class LocationService {
   static final LocationService _instance = LocationService._internal();
   factory LocationService() => _instance;
@@ -44,8 +54,19 @@ class LocationService {
   StreamSubscription<Position>? _positionStreamSubscription;
   final StreamController<Position> _locationController =
       StreamController<Position>.broadcast();
+  final ValueNotifier<GpsStatus> gpsStatusNotifier = ValueNotifier<GpsStatus>(
+    GpsStatus.findingGps,
+  );
 
-  bool isSimulationMode = false;
+  bool _isExplicitSimulation = false;
+  bool get isSimulationMode =>
+      _isExplicitSimulation ||
+      (_pacerMode != VirtualPacerMode.none &&
+          AppPreferences().isDemoModeEnabled);
+  set isSimulationMode(bool val) {
+    _isExplicitSimulation = val;
+  }
+
   VirtualPacerMode _pacerMode = VirtualPacerMode.none;
   GpsTrackingMode _currentTrackingMode = GpsTrackingMode.idle;
   Timer? _simulationTimer;
@@ -78,7 +99,7 @@ class LocationService {
     try {
       final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        isSimulationMode = true;
+        gpsStatusNotifier.value = GpsStatus.serviceDisabled;
         return false;
       }
 
@@ -86,38 +107,37 @@ class LocationService {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          isSimulationMode = true;
+          gpsStatusNotifier.value = GpsStatus.permissionDenied;
           return false;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        isSimulationMode = true;
+        gpsStatusNotifier.value = GpsStatus.permissionDeniedForever;
         return false;
       }
 
-      isSimulationMode = false;
+      gpsStatusNotifier.value = GpsStatus.ready;
       return true;
     } catch (e) {
       AppLogger.warning(
         'Location permission check failed or unsupported: $e',
         tag: 'LocationService',
       );
-      isSimulationMode = true;
+      gpsStatusNotifier.value = GpsStatus.error;
       return false;
     }
   }
 
   Future<Position?> getCurrentLocation() async {
-    if (_pacerMode != VirtualPacerMode.none) {
+    if (isSimulationMode) {
       return _generateSimulatedPosition();
     }
 
     final hasPermission = await requestPermission();
 
-    if (!hasPermission || isSimulationMode) {
-      isSimulationMode = true;
-      return _generateSimulatedPosition();
+    if (!hasPermission) {
+      return null;
     }
 
     try {
@@ -145,8 +165,7 @@ class LocationService {
       if (_lastValidPosition != null) {
         return _lastValidPosition;
       }
-      isSimulationMode = true;
-      return _generateSimulatedPosition();
+      return null;
     }
   }
 
@@ -291,15 +310,15 @@ class LocationService {
       return;
     }
 
-    if (_pacerMode != VirtualPacerMode.none) {
+    if (isSimulationMode) {
       _startSimulation();
       return;
     }
 
     final hasPermission = await requestPermission();
-    if (!hasPermission || isSimulationMode) {
-      isSimulationMode = true;
-      _startSimulation();
+    if (!hasPermission) {
+      _positionStreamSubscription?.cancel();
+      _positionStreamSubscription = null;
       return;
     }
 
@@ -321,36 +340,34 @@ class LocationService {
 
       _positionStreamSubscription?.cancel();
       _positionStreamSubscription =
-          Geolocator.getPositionStream(
-            locationSettings: locationSettings,
-          ).listen(
-            (Position position) {
-              if (isValidFix(
-                position,
-                _lastValidPosition,
-                isZeroG: isZeroG,
-                exerciseActivity: currentActivity,
-              )) {
-                _lastValidPosition = position;
-                _locationController.add(position);
-              }
-            },
-            onError: (e) {
-              AppLogger.warning(
-                'Hardware GPS stream error: $e. Falling back to simulation.',
-                tag: 'LocationService',
+          Geolocator.getPositionStream(locationSettings: locationSettings)
+              .listen(
+                (Position position) {
+                  if (isValidFix(
+                    position,
+                    _lastValidPosition,
+                    isZeroG: isZeroG,
+                    exerciseActivity: currentActivity,
+                  )) {
+                    _lastValidPosition = position;
+                    gpsStatusNotifier.value = GpsStatus.ready;
+                    _locationController.add(position);
+                  }
+                },
+                onError: (e) {
+                  AppLogger.warning(
+                    'Hardware GPS stream error: $e',
+                    tag: 'LocationService',
+                  );
+                  gpsStatusNotifier.value = GpsStatus.error;
+                },
               );
-              isSimulationMode = true;
-              _startSimulation();
-            },
-          );
     } catch (e) {
       AppLogger.warning(
         'Failed to attach location settings: $e',
         tag: 'LocationService',
       );
-      isSimulationMode = true;
-      _startSimulation();
+      gpsStatusNotifier.value = GpsStatus.error;
     }
   }
 
@@ -379,7 +396,7 @@ class LocationService {
   /// Asynchronously pre-warms GNSS and queries last known position
   /// so map and runner location lock instantly without cold-start delay.
   Future<void> warmUpLocation() async {
-    if (_pacerMode != VirtualPacerMode.none || isSimulationMode) {
+    if (isSimulationMode) {
       if (_lastValidPosition == null) {
         final sim = _generateSimulatedPosition();
         _lastValidPosition = sim;

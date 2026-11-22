@@ -310,9 +310,11 @@ class HistoryRunCard extends StatelessWidget {
                       _metricRow(
                         'Verification',
                         (run != null
-                            ? (run!.syncStatus == 'synced'
-                                  ? 'Verified run ✓'
-                                  : 'Saved locally')
+                            ? (run!.simulated
+                                  ? 'Demo run (not submitted)'
+                                  : (run!.syncStatus == 'synced'
+                                        ? 'Verified run ✓'
+                                        : 'Saved locally'))
                             : (territory?.isPendingReview == false
                                   ? 'Verified territory ✓'
                                   : 'Pending Review')),
@@ -519,29 +521,51 @@ class HistoryRunCard extends StatelessWidget {
                         runSpacing: AppSpacing.s4,
                         crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.s8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accent.withValues(alpha: 0.12),
-                              borderRadius: AppRadius.br8,
-                              border: Border.all(
-                                color: AppColors.accent.withValues(alpha: 0.25),
+                          if (run?.simulated == true)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.s8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface2,
+                                borderRadius: AppRadius.br8,
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Text(
+                                'Demo run',
+                                style: AppText.labelSmall.copyWith(
+                                  color: AppColors.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )
+                          else
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.s8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.accent.withValues(alpha: 0.12),
+                                borderRadius: AppRadius.br8,
+                                border: Border.all(
+                                  color: AppColors.accent.withValues(
+                                    alpha: 0.25,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                '+$areaDisplay claimed',
+                                style: AppText.labelSmall.copyWith(
+                                  color: AppColors.accent,
+                                  fontWeight: FontWeight.w700,
+                                  fontFeatures: const [
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
                               ),
                             ),
-                            child: Text(
-                              '+$areaDisplay claimed',
-                              style: AppText.labelSmall.copyWith(
-                                color: AppColors.accent,
-                                fontWeight: FontWeight.w700,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                            ),
-                          ),
                           Text(
                             '${distKm.toStringAsFixed(2)} km • ${AppPreferences().formatCalories(cardCalories)}',
                             style: AppText.bodySmall.copyWith(

@@ -9,14 +9,14 @@ class ChallengesShelf extends StatelessWidget {
   final RunnerProfile profile;
   final int territoriesCount;
   final double totalAreaSqMeters;
-  final String resetCountdown;
+  final String? resetCountdown;
 
   const ChallengesShelf({
     super.key,
     required this.profile,
     required this.territoriesCount,
     required this.totalAreaSqMeters,
-    this.resetCountdown = 'Resets in 14h',
+    this.resetCountdown,
   });
 
   @override
@@ -35,7 +35,9 @@ class ChallengesShelf extends StatelessWidget {
         .where((r) => r.claimedAreaSqM > 0)
         .length;
 
-    final String resetString = resetCountdown;
+    final hoursToMidnight = 24 - now.hour;
+    final String resetString =
+        resetCountdown ?? 'Resets in ${hoursToMidnight}h';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

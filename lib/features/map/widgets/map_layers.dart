@@ -253,15 +253,36 @@ class MapLayers {
       final centroid = computeCentroid(territory.polygon);
       final currentStrength = territory.computeCurrentStrength();
       final isWeak = territory.isWeak();
+      final isShielded = territory.isShielded();
 
-      final Color badgeColor = isWeak
-          ? palette.rival
-          : (currentStrength >= 70 ? palette.mine : palette.warning);
+      final Color badgeColor;
+      final IconData badgeIcon;
+      final String badgeText;
+      final double badgeWidth;
+
+      if (isShielded) {
+        badgeColor = palette.mine;
+        badgeIcon = Icons.shield_rounded;
+        final rem = territory.remainingShieldTime();
+        final mins = rem.inMinutes;
+        badgeText = mins > 0 ? '${mins}m' : '<1m';
+        badgeWidth = 64;
+      } else if (isWeak) {
+        badgeColor = palette.rival;
+        badgeIcon = Icons.warning_amber_rounded;
+        badgeText = '${currentStrength.round()}%';
+        badgeWidth = 68;
+      } else {
+        badgeColor = currentStrength >= 70 ? palette.mine : palette.warning;
+        badgeIcon = Icons.shield_outlined;
+        badgeText = '${currentStrength.round()}%';
+        badgeWidth = 68;
+      }
 
       badges.add(
         Marker(
           point: centroid,
-          width: 68,
+          width: badgeWidth,
           height: 26,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
@@ -277,14 +298,10 @@ class MapLayers {
               mainAxisSize: MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  isWeak ? Icons.warning_amber_rounded : Icons.shield_rounded,
-                  size: 11,
-                  color: badgeColor,
-                ),
+                Icon(badgeIcon, size: 11, color: badgeColor),
                 const SizedBox(width: 3),
                 Text(
-                  '${currentStrength.round()}%',
+                  badgeText,
                   style: TextStyle(
                     color: palette.textPrimary,
                     fontSize: 10,

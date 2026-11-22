@@ -345,6 +345,9 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 
 		for _, t := range m.territories {
 			if t.OwnerID != run.UserID {
+				if t.IsShielded(now) {
+					continue // Shielded territory cannot be invaded or damaged
+				}
 				rivalsAffected = append(rivalsAffected, t.OwnerID)
 				if t.IsWeak(now) {
 					// Rival territory was decayed (< 30.0 strength), granting 1.5x XP bonus
@@ -376,6 +379,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 			if len(loops[0].Polygon) > 0 {
 				geojson = fmt.Sprintf(`{"type":"MultiPolygon","coordinates":[[[[%f,%f]]]]}`, loops[0].Polygon[0].Longitude, loops[0].Polygon[0].Latitude)
 			}
+			cooldown := now.Add(TerritoryShieldDuration)
 			m.territories[tID] = &Territory{
 				ID:             tID,
 				OwnerID:        run.UserID,
@@ -385,6 +389,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 				Strength:       TerritoryDefaultStrength,
 				LastDefendedAt: now,
 				LastDecayedAt:  now,
+				CooldownUntil:  &cooldown,
 				UpdatedAt:      now,
 			}
 		}
@@ -555,9 +560,11 @@ func (m *MemoryStore) UpdateTerritoryDefense(ctx context.Context, territoryID st
 		return fmt.Errorf("territory %s not found", territoryID)
 	}
 	now := time.Now().UTC()
+	cooldown := now.Add(TerritoryShieldDuration)
 	t.Strength = newStrength
 	t.LastDefendedAt = now
 	t.LastDecayedAt = now
+	t.CooldownUntil = &cooldown
 	t.UpdatedAt = now
 	return nil
 }

@@ -12,6 +12,7 @@ import '../../../services/app_preferences.dart';
 import '../../../services/auto_pause_engine.dart';
 import '../../../services/elevation_incline_service.dart';
 import '../../../services/ghost_runner_service.dart';
+import '../../../services/gps_distance_filter.dart';
 import '../../../services/gps_quality_service.dart';
 import '../../../services/interval_workout_service.dart';
 import '../../../services/location_service.dart';
@@ -38,6 +39,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   final ElevationGradePipeline _elevationPipeline;
   final MotionSensorService _motionSensorService;
   final GhostRunnerService _ghostRunnerService;
+  final GpsDistanceFilter _distanceFilter;
 
   // Real-time Notifiers
   final RunTelemetryNotifier telemetryNotifier = RunTelemetryNotifier();
@@ -105,6 +107,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     ElevationGradePipeline? elevationPipeline,
     MotionSensorService? motionSensorService,
     GhostRunnerService? ghostRunnerService,
+    GpsDistanceFilter? distanceFilter,
   }) : _locationService = locationService ?? LocationService(),
        _polygonEngine = polygonEngine ?? PolygonEnclosureEngine(),
        _autoPauseEngine = autoPauseEngine ?? AutoPauseEngine(),
@@ -114,7 +117,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
        _speedPipeline = speedPipeline ?? SpeedSmoothingPipeline(),
        _elevationPipeline = elevationPipeline ?? ElevationGradePipeline(),
        _motionSensorService = motionSensorService ?? MotionSensorService(),
-       _ghostRunnerService = ghostRunnerService ?? GhostRunnerService();
+       _ghostRunnerService = ghostRunnerService ?? GhostRunnerService(),
+       _distanceFilter = distanceFilter ?? GpsDistanceFilter();
 
   // Getters
   bool get isRunActive => _isRunActive;
@@ -140,12 +144,14 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   IntervalWorkoutPlan? get activeWorkoutPlan => _activeWorkoutPlan;
   IntervalWorkoutTimeline? get workoutTimeline => _workoutTimeline;
   RunGoal get activeGoal => _activeGoal;
+  bool get isSimulated => _locationService.isSimulationMode;
   List<LatLng> get runCoordinates => List.unmodifiable(_runCoordinates);
   List<Position> get recentPositions => List.unmodifiable(_recentPositions);
   ExerciseActivityType get selectedActivity => _selectedActivity;
 
   ElevationGradePipeline get elevationPipeline => _elevationPipeline;
   SpeedSmoothingPipeline get speedPipeline => _speedPipeline;
+  GpsDistanceFilter get distanceFilter => _distanceFilter;
   MotionSensorService get motionSensorService => _motionSensorService;
   double get currentGrade => _elevationPipeline.currentGrade;
   double get cumulativeElevationGainMeters =>
@@ -272,6 +278,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     telemetryNotifier.setRunActive(true);
     _speedPipeline.reset();
     _elevationPipeline.reset();
+    _distanceFilter.reset();
     _motionSensorService.start();
     _locationService.setTrackingMode(
       GpsTrackingMode.activeRun,
@@ -384,6 +391,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       'territories': finalTerritories,
       'areaSqm': finalArea,
       'xp': finalXp,
+      'isSimulated': isSimulated,
       'stepCount': stepCount,
       'isStepCountEstimated': isStepCountEstimated,
       'elevationGainMeters': _elevationPipeline.cumulativeGainMeters,
@@ -441,7 +449,14 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     }
     _lastGpsFixTime = now;
 
-    final latLng = LatLng(pos.latitude, pos.longitude);
+    // Ingest into speed-gated 2D Kalman distance pipeline
+    final filterResult = _distanceFilter.processFix(
+      pos,
+      isAutoPaused: _isAutoPaused,
+      smoothedSpeedKmh: _currentSpeedKmh,
+    );
+
+    final latLng = filterResult.filteredLatLng;
     _currentLocation = latLng;
     liveLocationNotifier.value = latLng;
 
@@ -449,8 +464,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       final dMeters = Geolocator.distanceBetween(
         _currentLocation!.latitude,
         _currentLocation!.longitude,
-        latLng.latitude,
-        latLng.longitude,
+        pos.latitude,
+        pos.longitude,
       );
       if (dMeters >= 3.0 &&
           _currentSpeedKmh >= AutoPauseEngine.pauseSpeedCeilingKmh) {
@@ -469,10 +484,10 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       }
 
       if (_runCoordinates.isNotEmpty) {
-        const dist = Distance();
-        final deltaMeters = dist(_runCoordinates.last, latLng);
-        if (deltaMeters >= 2.0) {
-          _runDistanceKm += (deltaMeters / 1000.0);
+        // Accumulate displacement and breadcrumbs only when moving (ZUPT filter rejects stationary wander)
+        if (!filterResult.isStationary &&
+            filterResult.distanceDeltaMeters >= 1.0) {
+          _runDistanceKm += (filterResult.distanceDeltaMeters / 1000.0);
           _workoutTimeline?.tick(
             secondsDelta: 0,
             currentRunDistanceMeters: _runDistanceKm * 1000.0,
@@ -491,14 +506,24 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
               start.longitude,
             );
             _distanceToClosureMeters = distToStart;
+            final closureThreshold = _polygonEngine.effectiveClosureDistance(
+              horizontalAccuracyMeters: pos.accuracy,
+            );
             _proximityToClosure =
-                (1.0 - ((distToStart - 35.0) / (120.0 - 35.0))).clamp(0.0, 1.0);
+                (1.0 -
+                        ((distToStart - closureThreshold) /
+                            (120.0 - closureThreshold)))
+                    .clamp(0.0, 1.0);
           } else {
             _distanceToClosureMeters = null;
             _proximityToClosure = null;
           }
 
-          final loopEvent = _polygonEngine.addPosition(latLng);
+          final loopEvent = _polygonEngine.addPosition(
+            latLng,
+            pos.timestamp,
+            pos.accuracy,
+          );
           if (loopEvent != null) {
             _handleEnclosedLoop(loopEvent);
           } else if (_polygonEngine.lastInvalidReason != null) {
@@ -508,7 +533,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       } else {
         _runCoordinates.add(latLng);
         _recentPositions.add(pos);
-        _polygonEngine.addPosition(latLng);
+        _polygonEngine.addPosition(latLng, pos.timestamp, pos.accuracy);
         _autoPauseEngine.markMovement();
         runPathUpdateNotifier.value++;
       }

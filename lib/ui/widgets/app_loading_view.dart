@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../services/loading_quotes_service.dart';
+import '../motion/motion.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -97,7 +98,7 @@ class _AppLoadingViewState extends State<AppLoadingView>
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 1800),
     )..repeat();
 
     // Asynchronously warm up the quotes dataset for subsequent rotations
@@ -191,9 +192,7 @@ class _AppLoadingViewState extends State<AppLoadingView>
           ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 320),
             child: AnimatedSwitcher(
-              duration: reduceMotion
-                  ? Duration.zero
-                  : const Duration(milliseconds: 350),
+              duration: reduceMotion ? Duration.zero : AppMotion.standard,
               transitionBuilder: (child, animation) {
                 if (reduceMotion) return child;
                 final fadeIn = CurvedAnimation(

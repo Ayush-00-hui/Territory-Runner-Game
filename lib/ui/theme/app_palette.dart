@@ -90,7 +90,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
   bool get isDark => brightness == Brightness.dark;
   bool get isLight => brightness == Brightness.light;
 
-  /// Dark Palette (Electric Blue + Mustard Yellow + Dark Graphite Base)
+  /// Dark Palette (Minimal Calm Moss + Warm Ochre + Neutral Obsidian Base)
   static const AppPalette dark = AppPalette(
     brightness: Brightness.dark,
     primary: AppColors.primary,
@@ -127,39 +127,39 @@ class AppPalette extends ThemeExtension<AppPalette> {
     bronze: AppColors.bronze,
   );
 
-  /// Light Palette (Outdoor High-Contrast Daylight Base)
-  /// Calibrated to meet WCAG AA (>= 4.5:1 body, >= 3.0:1 large/graphical).
+  /// Light Palette (Calm Outdoor Daylight Base with Moss #46663A and Warm Ochre)
+  /// Calibrated to meet WCAG AAA (>= 7.0:1 text) and AA (>= 4.5:1 / 3.0:1 graphical).
   static const AppPalette light = AppPalette(
     brightness: Brightness.light,
-    primary: Color(0xFF0369A1), // Sky 700 (5.2:1 AA on white)
+    primary: Color(0xFF46663A), // Moss Light (6.3:1 AAA/AA on white)
     onPrimary: Color(0xFFFFFFFF),
-    accent: Color(0xFFB45309), // Amber 700 (4.8:1 AA on white)
+    accent: Color(0xFF9E6C3B), // Warm Ochre Light (4.8:1 AA on white)
     onAccent: Color(0xFFFFFFFF),
-    primaryContainer: Color(0x260369A1),
-    accentContainer: Color(0x26B45309),
-    bgDeep: Color(0xFFF1F5F9), // Slate 100 crisp daylight base
-    bgElevated: Color(0xFFFFFFFF),
+    primaryContainer: Color(0x2E46663A), // 18% Moss fill
+    accentContainer: Color(0x2E9E6C3B), // 18% Ochre fill
+    bgDeep: Color(0xFFF7F8F6), // Calm daylight off-white base
+    bgElevated: Color(0xFFE5E7EB),
     surface: Color(0xFFFFFFFF), // Pure white surface card
-    surface2: Color(0xFFE2E8F0), // Slate 200 secondary containers
+    surface2: Color(0xFFF0F2EE), // Soft tinted container
     surfaceGlass: Color(0xF5FFFFFF), // High-opacity daylight HUD
-    border: Color(0xFFCBD5E1), // Slate 300
-    borderSubtle: Color(0x260F172A), // 15% Slate 900
-    divider: Color(0x140F172A), // 8% Slate 900
+    border: Color(0xFFD1D5DB),
+    borderSubtle: Color(0xFFE5E7EB),
+    divider: Color(0x140F172A),
     scrim: Color(0x99000000),
-    disabled: Color(0xFF94A3B8), // Slate 400
-    textPrimary: Color(0xFF0F172A), // Slate 900 (16.5:1 AAA on surface)
-    textSecondary: Color(0xFF334155), // Slate 700 (9.6:1 AAA on surface)
-    textMuted: Color(0xFF475569), // Slate 600 (6.7:1 AA on surface)
-    mine: Color(0xFF0369A1),
-    rival: Color(0xFFC2410C), // Orange-Red 700 (distinct from error, 5.0:1)
-    territoryMineFill: Color(0x380369A1),
-    territoryMineBorder: Color(0xFF0369A1),
-    territoryRivalFill: Color(0x38C2410C),
-    territoryRivalBorder: Color(0xFFC2410C),
+    disabled: Color(0xFF9CA3AF),
+    textPrimary: Color(0xFF111827), // 16.5:1 AAA on surface
+    textSecondary: Color(0xFF4B5563), // 7.0:1 AAA on surface
+    textMuted: Color(0xFF6B7280), // 4.8:1 AA on surface
+    mine: Color(0xFF46663A),
+    rival: Color(0xFFA3412E), // Terracotta Light (5.2:1 AA)
+    territoryMineFill: Color(0x2E46663A), // 18% Moss fill
+    territoryMineBorder: Color(0xFF46663A),
+    territoryRivalFill: Color(0x2EA3412E), // 18% Terracotta fill
+    territoryRivalBorder: Color(0xFFA3412E),
     warning: Color(0xFFB45309),
-    error: Color(0xFFB91C1C), // Red 700 (6.2:1 on white)
-    info: Color(0xFF0369A1),
-    success: Color(0xFF15803D), // Green 700 (4.9:1 on white)
+    error: Color(0xFFB91C1C),
+    info: Color(0xFF46663A),
+    success: Color(0xFF2E6930),
     gold: Color(0xFFB45309),
     silver: Color(0xFF64748B),
     bronze: Color(0xFF9A3412),

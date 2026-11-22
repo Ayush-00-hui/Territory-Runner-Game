@@ -16,6 +16,7 @@ type TrackPoint struct {
 	Altitude  float64   `json:"altitude,omitempty"`
 	Speed     float64   `json:"speed,omitempty"`
 	Heading   float64   `json:"heading,omitempty"`
+	Accuracy  float64   `json:"accuracy,omitempty"`
 	IsMocked  bool      `json:"is_mocked,omitempty"`
 }
 

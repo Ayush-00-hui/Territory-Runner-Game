@@ -1009,3 +1009,76 @@ func TestCaptureRunStepCountIdempotency(t *testing.T) {
 	require.NoError(t, err)
 	assert.Nil(t, resCycling.StepCount)
 }
+
+func TestMemory_TerritoryDefenseShieldCooldown(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+	now := time.Now().UTC()
+
+	// 1. Initial capture by defender
+	defenderLoop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 51.500, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.120},
+			{Latitude: 51.502, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.122},
+			{Latitude: 51.500, Longitude: -0.120},
+		},
+		AreaSqMeters:       1000.0,
+		LoopDistanceMeters: 500.0,
+		ClosedAt:           now,
+	}
+
+	resDef, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_def_001",
+		UserID:         "usr_defender",
+		IdempotencyKey: "idem_def_001",
+		CreatedAt:      now,
+	}, []geo.EnclosedLoop{defenderLoop}, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 1000.0, resDef.AreaClaimedSqm)
+
+	defT, err := memStore.GetTerritoryByID(ctx, "poly_usr_defender_territory")
+	require.NoError(t, err)
+	require.NotNil(t, defT.CooldownUntil)
+	assert.True(t, defT.IsShielded(now), "Newly captured territory must be shielded")
+	assert.True(t, defT.IsShielded(now.Add(15*time.Minute)), "Territory remains shielded at +15m")
+	assert.False(t, defT.IsShielded(now.Add(31*time.Minute)), "Shield must expire at +31m")
+
+	// 2. Attacker attempts invasion while defender is still shielded (+10 min)
+	attackerLoop := geo.EnclosedLoop{
+		Polygon:            defenderLoop.Polygon,
+		AreaSqMeters:       1000.0,
+		LoopDistanceMeters: 500.0,
+		ClosedAt:           now.Add(10 * time.Minute),
+	}
+
+	attResShielded, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_att_blocked",
+		UserID:         "usr_attacker",
+		IdempotencyKey: "idem_att_blocked",
+		CreatedAt:      now.Add(10 * time.Minute),
+	}, []geo.EnclosedLoop{attackerLoop}, nil)
+	require.NoError(t, err)
+	assert.NotContains(t, attResShielded.RivalsAffected, "usr_defender", "Shielded defender must NOT be affected or carved")
+
+	// 3. Attacker invades AFTER shield expired (+35 min)
+	attResExpired, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
+		ID:             "run_att_success",
+		UserID:         "usr_attacker",
+		IdempotencyKey: "idem_att_success",
+		CreatedAt:      now.Add(35 * time.Minute),
+	}, []geo.EnclosedLoop{attackerLoop}, nil)
+	require.NoError(t, err)
+	assert.Contains(t, attResExpired.RivalsAffected, "usr_defender", "Unshielded defender must be affected after cooldown expires")
+
+	// 4. Defender fortifies territory via UpdateTerritoryDefense: resets strength and reactivates 30m shield
+	err = memStore.UpdateTerritoryDefense(ctx, "poly_usr_defender_territory", 100.0)
+	require.NoError(t, err)
+
+	fortifiedT, err := memStore.GetTerritoryByID(ctx, "poly_usr_defender_territory")
+	require.NoError(t, err)
+	assert.Equal(t, 100.0, fortifiedT.Strength)
+	require.NotNil(t, fortifiedT.CooldownUntil)
+	assert.True(t, fortifiedT.IsShielded(time.Now().UTC()), "Fortified territory must have active shield")
+}

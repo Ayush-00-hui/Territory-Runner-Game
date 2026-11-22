@@ -12,6 +12,7 @@ class Territory {
   final double areaSqMeters;
   final DateTime capturedAt;
   final DateTime lastDefendedAt;
+  final DateTime? cooldownUntil;
   final double strength; // 0.0 - 100.0
   final Color color;
   final bool isPendingReview;
@@ -22,6 +23,9 @@ class Territory {
       15.0; // Loses 15.0 points per 24 hours since last defended
   static const double weakThreshold =
       30.0; // Below this threshold, rivals take weak territory with bonus XP
+  static const Duration defaultShieldDuration = Duration(
+    minutes: 30,
+  ); // 30-min protection against rival invasion
 
   Territory({
     required this.id,
@@ -31,11 +35,13 @@ class Territory {
     required this.areaSqMeters,
     required this.capturedAt,
     DateTime? lastDefendedAt,
+    DateTime? cooldownUntil,
     double? strength,
     this.color = AppColors.mine,
     this.isPendingReview = false,
   }) : polygons = polygons ?? (polygon.isNotEmpty ? [polygon] : []),
        lastDefendedAt = lastDefendedAt ?? capturedAt,
+       cooldownUntil = cooldownUntil ?? capturedAt.add(defaultShieldDuration),
        strength = (strength ?? defaultInitialStrength).clamp(0.0, 100.0);
 
   /// Computes real-time dynamic strength factoring in elapsed days since last defense
@@ -52,6 +58,21 @@ class Territory {
   bool isWeak({DateTime? now}) =>
       computeCurrentStrength(now: now) < weakThreshold;
 
+  /// Returns true if territory is currently under active defense shield protection
+  bool isShielded({DateTime? now}) {
+    if (cooldownUntil == null) return false;
+    final currentTime = now ?? DateTime.now();
+    return currentTime.isBefore(cooldownUntil!);
+  }
+
+  /// Returns remaining duration under active defense shield protection
+  Duration remainingShieldTime({DateTime? now}) {
+    if (cooldownUntil == null) return Duration.zero;
+    final currentTime = now ?? DateTime.now();
+    final diff = cooldownUntil!.difference(currentTime);
+    return diff.isNegative ? Duration.zero : diff;
+  }
+
   Territory copyWith({
     String? id,
     String? ownerId,
@@ -60,6 +81,7 @@ class Territory {
     double? areaSqMeters,
     DateTime? capturedAt,
     DateTime? lastDefendedAt,
+    DateTime? cooldownUntil,
     double? strength,
     Color? color,
     bool? isPendingReview,
@@ -72,6 +94,7 @@ class Territory {
       areaSqMeters: areaSqMeters ?? this.areaSqMeters,
       capturedAt: capturedAt ?? this.capturedAt,
       lastDefendedAt: lastDefendedAt ?? this.lastDefendedAt,
+      cooldownUntil: cooldownUntil ?? this.cooldownUntil,
       strength: strength ?? this.strength,
       color: color ?? this.color,
       isPendingReview: isPendingReview ?? this.isPendingReview,
@@ -93,6 +116,7 @@ class Territory {
     'areaSqMeters': areaSqMeters,
     'capturedAt': capturedAt.toIso8601String(),
     'lastDefendedAt': lastDefendedAt.toIso8601String(),
+    'cooldownUntil': cooldownUntil?.toIso8601String(),
     'strength': strength,
     'color': color.toARGB32(),
     'isPendingReview': isPendingReview,
@@ -131,6 +155,9 @@ class Territory {
     final defended = json['lastDefendedAt'] != null
         ? DateTime.parse(json['lastDefendedAt'] as String)
         : captured;
+    final parsedCooldown = json['cooldownUntil'] != null
+        ? DateTime.parse(json['cooldownUntil'] as String)
+        : null;
     final parsedStrength =
         (json['strength'] as num?)?.toDouble() ?? defaultInitialStrength;
 
@@ -144,6 +171,7 @@ class Territory {
       areaSqMeters: (json['areaSqMeters'] as num?)?.toDouble() ?? 15047.0,
       capturedAt: captured,
       lastDefendedAt: defended,
+      cooldownUntil: parsedCooldown,
       strength: parsedStrength,
       color: json['color'] != null
           ? Color(json['color'] as int)
@@ -182,6 +210,9 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
         : capturedAt;
     final strength =
         (fields[8] as num?)?.toDouble() ?? Territory.defaultInitialStrength;
+    final cooldownUntil = fields[9] != null
+        ? DateTime.fromMillisecondsSinceEpoch(fields[9] as int)
+        : null;
 
     return Territory(
       id: fields[0] as String,
@@ -190,6 +221,7 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
       areaSqMeters: (fields[3] as num).toDouble(),
       capturedAt: capturedAt,
       lastDefendedAt: lastDefendedAt,
+      cooldownUntil: cooldownUntil,
       strength: strength,
       color: Color(fields[5] as int),
       isPendingReview: (fields[6] as bool?) ?? false,
@@ -199,7 +231,7 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
   @override
   void write(BinaryWriter writer, Territory obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -221,6 +253,8 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
       ..writeByte(7)
       ..write(obj.lastDefendedAt.millisecondsSinceEpoch)
       ..writeByte(8)
-      ..write(obj.strength);
+      ..write(obj.strength)
+      ..writeByte(9)
+      ..write(obj.cooldownUntil?.millisecondsSinceEpoch);
   }
 }

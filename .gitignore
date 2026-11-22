@@ -90,8 +90,8 @@ backend/server
 *.pdf
 docs/presentation/*.pdf
 docs/presentation/*.html
-docs/presentation/__pycache__/
-__pycache__/
+**/__pycache__/
+*.pyc
 
 # ML Generated Artifacts
 ml/reports/figures/

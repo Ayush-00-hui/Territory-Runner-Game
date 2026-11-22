@@ -237,11 +237,11 @@ void main() {
         // Initially overlay is shown
         expect(find.byType(CustomPaint), findsWidgets);
 
-        // Advance through 2.6s animation scene
-        await tester.pump(const Duration(milliseconds: 1500));
+        // Advance through <= 600ms animation scene
+        await tester.pump(const Duration(milliseconds: 300));
         expect(find.text('TERRITORY RUNNER'), findsOneWidget);
 
-        await tester.pump(const Duration(milliseconds: 1200));
+        await tester.pump(const Duration(milliseconds: 350));
         await tester.pumpAndSettle();
 
         // Child is fully revealed

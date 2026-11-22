@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:territory_runner/core/logging/app_logger.dart';
 
@@ -72,6 +73,19 @@ class MotionSensorService {
   static const double maxCadenceHz = 3.5; // 210 SPM
   static const double minPeakIntervalSec = 1.0 / maxCadenceHz; // ~0.285s
   static const double maxPeakIntervalSec = 1.0 / minCadenceHz; // 1.0s
+  static bool? enableHardwareSensorsOverride;
+
+  static bool get isHardwareSensorsEnabled {
+    if (enableHardwareSensorsOverride != null) {
+      return enableHardwareSensorsOverride!;
+    }
+    if (kIsWeb) return false;
+    final bindingName = WidgetsBinding.instance.runtimeType.toString();
+    if (bindingName.contains('TestWidgetsFlutterBinding')) {
+      return false;
+    }
+    return true;
+  }
 
   static MotionSensorService? _instance;
 
@@ -195,10 +209,9 @@ class MotionSensorService {
     _windowStartTime = DateTime.now();
     _lastSampleTimeSec = 0.0;
 
-    if (customStream == null &&
-        Platform.environment.containsKey('FLUTTER_TEST')) {
+    if (customStream == null && !isHardwareSensorsEnabled) {
       AppLogger.info(
-        'Motion sensor cadence service idle in test environment without mock stream',
+        'Motion sensor cadence service idle without hardware sensor access or mock stream',
         tag: _tag,
       );
       return;

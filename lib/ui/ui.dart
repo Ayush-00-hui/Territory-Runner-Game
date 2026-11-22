@@ -30,5 +30,6 @@ export 'widgets/app_intro_animation.dart';
 export 'widgets/app_loading_view.dart';
 export 'widgets/inline_loading.dart';
 export 'widgets/runner_avatar_painter.dart';
+export 'widgets/map_attribution_sheet.dart';
 export 'theme/app_version.dart';
 export '../core/logging/app_logger.dart';

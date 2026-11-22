@@ -39,6 +39,7 @@ class RunHud extends StatefulWidget {
   final VoidCallback? onToggleAmoledSaver;
   final bool isBatterySaverActive;
   final bool isSearchingGps;
+  final bool isSimulated;
   final ValueNotifier<GhostTelemetry?>? ghostTelemetryNotifier;
   final ValueNotifier<IntervalWorkoutSnapshot?>? workoutSnapshotNotifier;
   final VoidCallback? onSkipWorkoutPhase;
@@ -72,6 +73,7 @@ class RunHud extends StatefulWidget {
     this.onToggleAmoledSaver,
     this.isBatterySaverActive = false,
     this.isSearchingGps = false,
+    this.isSimulated = false,
     this.ghostTelemetryNotifier,
     this.workoutSnapshotNotifier,
     this.onSkipWorkoutPhase,
@@ -234,6 +236,47 @@ class _RunHudState extends State<RunHud> {
                                 color: palette.warning,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Explicit Simulation (Demo Mode) Indicator Chip
+                  if (widget.isRunActive && widget.isSimulated) ...[
+                    Semantics(
+                      label: 'Demo simulation mode active. Run is simulated and will not save to leaderboard.',
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: AppSpacing.s10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s12,
+                          vertical: AppSpacing.s4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: palette.surface2,
+                          borderRadius: AppSpacing.brFull,
+                          border: Border.all(
+                            color: palette.warning.withValues(alpha: 0.6),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.science_rounded,
+                              size: 14,
+                              color: palette.warning,
+                            ),
+                            const SizedBox(width: AppSpacing.s6),
+                            Text(
+                              'SIMULATED (DEMO)',
+                              style: AppText.caption.copyWith(
+                                color: palette.warning,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.6,
                               ),
                             ),
                           ],

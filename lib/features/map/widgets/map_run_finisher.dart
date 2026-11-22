@@ -30,6 +30,8 @@ void handleFinishRun({
   final motionWindows = List<MotionWindow>.from(MotionSensorService().windows);
 
   final summary = controller.stopRun();
+  final isSimulated =
+      (summary['isSimulated'] as bool?) ?? controller.isSimulated;
   final finalSeconds = summary['durationSeconds'] as int;
   final finalDistance = summary['distanceKm'] as double;
   final finalTerritories = summary['territories'] as int;
@@ -40,10 +42,12 @@ void handleFinishRun({
       (summary['elevationGainMeters'] as num?)?.toDouble() ?? 0.0;
   final points = summary['points'] as List<LatLng>;
 
-  TerritoryService().defendTerritory(FirebaseService().currentUserId);
-  TerritoryService().addRunDistance(finalDistance);
-  AppPreferences().recordCompletedRunForBodyProfile();
-  onTerritoriesUpdated();
+  if (!isSimulated) {
+    TerritoryService().defendTerritory(FirebaseService().currentUserId);
+    TerritoryService().addRunDistance(finalDistance);
+    AppPreferences().recordCompletedRunForBodyProfile();
+    onTerritoriesUpdated();
+  }
 
   final calories = AppPreferences().estimateCalories(
     distanceKm: finalDistance,
@@ -108,12 +112,15 @@ void handleFinishRun({
     calories: calories,
     calorieModelVersion: modelVersion,
     elevationGainM: elevationGain,
-    claimedAreaSqM: finalArea,
-    xp: finalXp,
-    syncStatus: points.length >= 3 ? 'pending' : 'local_only',
+    claimedAreaSqM: isSimulated ? 0.0 : finalArea,
+    xp: isSimulated ? 0 : finalXp,
+    simulated: isSimulated,
+    syncStatus: isSimulated
+        ? 'demo_only'
+        : (points.length >= 3 ? 'pending' : 'local_only'),
   );
 
-  if (points.length >= 3) {
+  if (!isSimulated && points.length >= 3) {
     SyncQueueService().enqueueRun(
       idempotencyKey: runId,
       points: points,
@@ -126,6 +133,7 @@ void handleFinishRun({
       stepCount: finalStepCount,
       estimatedCalories: calories,
       calorieModelVersion: modelVersion,
+      simulated: false,
     );
   }
 
@@ -133,17 +141,18 @@ void handleFinishRun({
     context: context,
     distanceKm: finalDistance,
     durationSeconds: finalSeconds,
-    territoriesClaimed: finalTerritories,
+    territoriesClaimed: isSimulated ? 0 : finalTerritories,
     profile: TerritoryService().getProfile(),
     coachService: LLMCoachService(),
     routePoints: points,
     samples: samples,
-    areaSqMeters: finalArea > 0 ? finalArea : null,
+    areaSqMeters: (!isSimulated && finalArea > 0) ? finalArea : null,
     elevationGainMeters: elevationGain,
     ghostResult: summary['ghostResult'] as String?,
     workoutPlan: summary['workoutPlan'] as IntervalWorkoutPlan?,
     workoutExecutions:
         summary['workoutExecutions'] as List<WorkoutPhaseExecution>?,
+    isSimulated: isSimulated,
   );
 
   // Opt-in flow: prompt for notification permissions only after capturing territory

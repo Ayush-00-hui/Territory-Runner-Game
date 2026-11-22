@@ -213,6 +213,7 @@ class ApiClient {
     double? clientPreviewArea,
     int? clientPreviewXp,
     List<MotionWindow>? motionWindows,
+    bool simulated = false,
   }) async {
     final uri = Uri.parse('$baseUrl/v1/runs');
     final headers = await _buildHeaders();
@@ -223,6 +224,7 @@ class ApiClient {
       'activity_type': activityType,
       'duration_seconds': durationSeconds,
       'distance_meters': distanceMeters,
+      if (simulated) 'simulated': true,
       'client_preview': {
         'area_claimed': clientPreviewArea ?? 0.0,
         'xp_awarded': clientPreviewXp ?? 0,

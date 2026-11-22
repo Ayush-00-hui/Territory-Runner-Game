@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -104,10 +105,23 @@ class ElevationGradePipeline {
   double get cumulativeGainMeters => _cumulativeGainMeters;
   bool get isBarometerActive => _isBarometerActive;
 
+  static bool? enableHardwareSensorsOverride;
+
+  static bool get isHardwareSensorsEnabled {
+    if (enableHardwareSensorsOverride != null) {
+      return enableHardwareSensorsOverride!;
+    }
+    if (kIsWeb) return false;
+    final bindingName = WidgetsBinding.instance.runtimeType.toString();
+    if (bindingName.contains('TestWidgetsFlutterBinding')) {
+      return false;
+    }
+    return true;
+  }
+
   /// Initializes the device barometer stream if available.
   void _initBarometer() {
-    if (customBarometerStream == null &&
-        Platform.environment.containsKey('FLUTTER_TEST')) {
+    if (!isHardwareSensorsEnabled && customBarometerStream == null) {
       _isBarometerActive = false;
       return;
     }

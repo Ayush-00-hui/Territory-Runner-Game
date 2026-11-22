@@ -8,16 +8,16 @@ import 'package:flutter/services.dart';
 class AppMotion {
   AppMotion._();
 
-  // Durations (150 - 250 ms)
+  // Durations (80 - 240 ms)
   static const Duration fast = Duration(
-    milliseconds: 150,
-  ); // Micro-interactions, press states, chips
+    milliseconds: 90,
+  ); // Micro-interactions, press states, chips (< 100 ms tap feedback budget)
   static const Duration standard = Duration(
     milliseconds: 220,
-  ); // Tab switches, card reveals, HUD slide
+  ); // Tab switches, card reveals, HUD slide (180 - 240 ms budget)
   static const Duration sheet = Duration(
-    milliseconds: 250,
-  ); // Modal bottom sheets & dialogs
+    milliseconds: 240,
+  ); // Modal bottom sheets & dialogs (180 - 240 ms budget)
   static const Duration countUp = Duration(
     milliseconds: 500,
   ); // Tabular number roll-ups

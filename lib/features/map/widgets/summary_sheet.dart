@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -37,6 +36,8 @@ class SummarySheet extends StatefulWidget {
   final String? ghostResult;
   final IntervalWorkoutPlan? workoutPlan;
   final List<WorkoutPhaseExecution>? workoutExecutions;
+  final bool enableAutoSave;
+  final bool isSimulated;
 
   const SummarySheet({
     super.key,
@@ -53,6 +54,8 @@ class SummarySheet extends StatefulWidget {
     this.ghostResult,
     this.workoutPlan,
     this.workoutExecutions,
+    this.enableAutoSave = true,
+    this.isSimulated = false,
   });
 
   static Future<void> show({
@@ -70,6 +73,7 @@ class SummarySheet extends StatefulWidget {
     String? ghostResult,
     IntervalWorkoutPlan? workoutPlan,
     List<WorkoutPhaseExecution>? workoutExecutions,
+    bool isSimulated = false,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -92,6 +96,7 @@ class SummarySheet extends StatefulWidget {
         ghostResult: ghostResult,
         workoutPlan: workoutPlan,
         workoutExecutions: workoutExecutions,
+        isSimulated: isSimulated,
       ),
     );
   }
@@ -151,7 +156,7 @@ class _SummarySheetState extends State<SummarySheet>
 
   void _triggerAutoSaveRunCard() async {
     try {
-      if (Platform.environment.containsKey('FLUTTER_TEST')) return;
+      if (!widget.enableAutoSave) return;
       final route = widget.routePoints;
       if (route == null || route.length < 3) return;
       if (!AppPreferences().isAutoSaveCardEnabled) return;
@@ -200,6 +205,9 @@ class _SummarySheetState extends State<SummarySheet>
   }
 
   String _buildHeadlineSentence() {
+    if (widget.isSimulated) {
+      return 'Demo Run: ${widget.distanceKm.toStringAsFixed(2)} km completed.';
+    }
     if (widget.rejectionReason != null) {
       return 'Run completed without claiming territory.';
     }
@@ -278,6 +286,73 @@ class _SummarySheetState extends State<SummarySheet>
               profile: widget.profile,
               onClose: () => Navigator.pop(context),
             ),
+
+            if (widget.isSimulated) ...[
+              const SizedBox(height: AppSpacing.s12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s12,
+                  vertical: AppSpacing.s8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: AppSpacing.br8,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.science_rounded,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Text(
+                        'Demo mode: this run was simulated and is not submitted to online leaderboards or territory rankings.',
+                        style: AppText.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (effectiveArea > 0) ...[
+              const SizedBox(height: AppSpacing.s12),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s12,
+                  vertical: AppSpacing.s8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surface2,
+                  borderRadius: AppSpacing.br8,
+                  border: Border.all(
+                    color: AppColors.mine.withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.shield_rounded,
+                      size: 16,
+                      color: AppColors.mine,
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: Text(
+                        'Territory Fortified: 30-minute defense shield active against rival invasion.',
+                        style: AppText.caption.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             if (widget.ghostResult != null) ...[
               const SizedBox(height: AppSpacing.s12),

@@ -1,7 +1,5 @@
-import 'dart:io' show Platform;
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../models/runner_avatar.dart';
@@ -15,14 +13,18 @@ class AvatarWidget extends StatefulWidget {
   final RunnerAvatar? avatar;
   final double size;
   final bool isRunning;
+  final bool autoRepeat;
   final VoidCallback? onTap;
   final String? semanticsLabel;
+
+  static bool? enableRepeatingOverride;
 
   const AvatarWidget({
     super.key,
     this.avatar,
     this.size = 64.0,
     this.isRunning = false,
+    this.autoRepeat = true,
     this.onTap,
     this.semanticsLabel,
   });
@@ -35,20 +37,23 @@ class _AvatarWidgetState extends State<AvatarWidget>
     with SingleTickerProviderStateMixin {
   late final AnimationController _strideController;
 
-  bool get _isTestEnv {
-    if (kIsWeb) return false;
-    try {
-      return Platform.environment.containsKey('FLUTTER_TEST');
-    } catch (_) {
+  bool get _shouldRepeat {
+    if (AvatarWidget.enableRepeatingOverride != null) {
+      return AvatarWidget.enableRepeatingOverride!;
+    }
+    if (!widget.autoRepeat) return false;
+    final bindingName = WidgetsBinding.instance.runtimeType.toString();
+    if (bindingName.contains('TestWidgetsFlutterBinding')) {
       return false;
     }
+    return true;
   }
 
   void _startAnimation() {
-    if (_isTestEnv) {
-      _strideController.forward();
-    } else {
+    if (_shouldRepeat) {
       _strideController.repeat();
+    } else {
+      _strideController.forward();
     }
   }
 

@@ -143,6 +143,24 @@ func (e *Engine) LastInvalidError() error {
 	return e.lastInvalidErr
 }
 
+// effectiveClosureDistance dynamically scales loop closure threshold based on satellite accuracy dilution.
+// High-precision GNSS (< 5m) tightens to ~33.0m (minimum 25.0m).
+// Standard GPS (10m) or missing accuracy (0m) resolves to MinClosureDistanceMeters (35.0m).
+// Urban canyon / multipath accuracy (15-25m) scales gracefully up to 41.0m (capped at 50.0m).
+func (e *Engine) effectiveClosureDistance(accuracy float64) float64 {
+	if accuracy <= 0.0 {
+		return e.cfg.MinClosureDistanceMeters
+	}
+	scaled := e.cfg.MinClosureDistanceMeters + (accuracy-10.0)*0.4
+	if scaled < 25.0 {
+		return 25.0
+	}
+	if scaled > 50.0 {
+		return 50.0
+	}
+	return scaled
+}
+
 // AddPoint ingests a new breadcrumb, performs noise/jitter filtering, and checks for loop closure.
 func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 	e.lastInvalidErr = nil
@@ -289,7 +307,8 @@ func (e *Engine) AddPoint(tp TrackPoint) (*EnclosedLoop, error) {
 		candidatePoint := e.path[i]
 		dist := HaversineDistanceMeters(currentPos, candidatePoint)
 
-		if dist <= e.cfg.MinClosureDistanceMeters {
+		closureThreshold := e.effectiveClosureDistance(tp.Accuracy)
+		if dist <= closureThreshold {
 			loopPoints := append([]LatLng(nil), e.path[i:currentIndex+1]...)
 			loop, err := e.ValidateLoop(loopPoints, now)
 			if err != nil {

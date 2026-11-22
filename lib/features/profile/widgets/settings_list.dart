@@ -877,7 +877,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             icon: Icons.map_outlined,
             title: 'Map Data & Attribution',
             subtitle: AppConstants.tileAttribution,
-            onTap: null,
+            onTap: () => showMapAttributionSheet(context),
           ),
           const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(

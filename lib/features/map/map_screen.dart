@@ -75,12 +75,17 @@ class MapScreen extends StatefulWidget {
 /// Backward compatibility alias for MapScreenFeature
 typedef MapScreenFeature = MapScreen;
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen>
+    with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   final FocusNode _keyboardFocusNode = FocusNode();
   final ValueNotifier<double> _hudHeightNotifier = ValueNotifier<double>(180.0);
   final ValueNotifier<List<Territory>> _territoriesNotifier =
       ValueNotifier<List<Territory>>([]);
+
+  late final AnimationController _cameraAnimationController;
+  Animation<double>? _cameraCurvedAnimation;
+  VoidCallback? _cameraListener;
 
   MapRunController? _localController;
   StreamSubscription<Position>? _positionSub;
@@ -98,6 +103,10 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
+    _cameraAnimationController = AnimationController(
+      vsync: this,
+      duration: AppMotion.standard,
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initMapState();
     });
@@ -118,7 +127,7 @@ class _MapScreenState extends State<MapScreen> {
             onResume: () {
               Navigator.pop(ctx);
               controller.resumeRecoveredRun(snapshot);
-              _mapController.move(snapshot.coordinates.last, 17.0);
+              _animateCameraMove(snapshot.coordinates.last, 17.0);
             },
             onDiscard: () {
               Navigator.pop(ctx);
@@ -133,12 +142,9 @@ class _MapScreenState extends State<MapScreen> {
       if (!mounted) return;
       controller.processPosition(pos);
       if (controller.isCameraFollowLocked) {
-        try {
-          _mapController.move(
-            LatLng(pos.latitude, pos.longitude),
-            _mapController.camera.zoom,
-          );
-        } catch (_) {}
+        final target =
+            controller.currentLocation ?? LatLng(pos.latitude, pos.longitude);
+        _animateCameraMove(target, _mapController.camera.zoom);
       }
     });
 
@@ -150,6 +156,63 @@ class _MapScreenState extends State<MapScreen> {
         _focusOnTerritory(territoryId);
       },
     );
+  }
+
+  /// Smoothly glides the map camera to [destLocation] and [destZoom] over [AppMotion.standard] (220ms).
+  /// Falls back to instant move when reduced motion is preferred or during headless testing.
+  void _animateCameraMove(LatLng destLocation, double destZoom) {
+    final bool isTestEnv = WidgetsBinding.instance.runtimeType
+        .toString()
+        .contains('Test');
+    if (AppMotion.isReducedMotion(context) || isTestEnv) {
+      try {
+        _mapController.move(destLocation, destZoom);
+      } catch (_) {}
+      return;
+    }
+
+    try {
+      final startCenter = _mapController.camera.center;
+      final startZoom = _mapController.camera.zoom;
+      final latTween = Tween<double>(
+        begin: startCenter.latitude,
+        end: destLocation.latitude,
+      );
+      final lngTween = Tween<double>(
+        begin: startCenter.longitude,
+        end: destLocation.longitude,
+      );
+      final zoomTween = Tween<double>(begin: startZoom, end: destZoom);
+
+      if (_cameraCurvedAnimation != null && _cameraListener != null) {
+        _cameraCurvedAnimation!.removeListener(_cameraListener!);
+      }
+      _cameraAnimationController.stop();
+      _cameraAnimationController.reset();
+
+      final curved = CurvedAnimation(
+        parent: _cameraAnimationController,
+        curve: AppMotion.easeOut,
+      );
+      _cameraCurvedAnimation = curved;
+
+      _cameraListener = () {
+        if (!mounted) return;
+        try {
+          _mapController.move(
+            LatLng(latTween.evaluate(curved), lngTween.evaluate(curved)),
+            zoomTween.evaluate(curved),
+          );
+        } catch (_) {}
+      };
+
+      curved.addListener(_cameraListener!);
+      _cameraAnimationController.forward();
+    } catch (_) {
+      try {
+        _mapController.move(destLocation, destZoom);
+      } catch (_) {}
+    }
   }
 
   void _focusOnTerritory(String territoryId) {
@@ -180,9 +243,7 @@ class _MapScreenState extends State<MapScreen> {
         sumLat / target.polygon.length,
         sumLng / target.polygon.length,
       );
-      try {
-        _mapController.move(centroid, 17.0);
-      } catch (_) {}
+      _animateCameraMove(centroid, 17.0);
     }
   }
 
@@ -193,6 +254,10 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   void dispose() {
+    if (_cameraCurvedAnimation != null && _cameraListener != null) {
+      _cameraCurvedAnimation!.removeListener(_cameraListener!);
+    }
+    _cameraAnimationController.dispose();
     _positionSub?.cancel();
     _territoryFocusSub?.cancel();
     _hudHeightNotifier.dispose();
@@ -202,8 +267,89 @@ class _MapScreenState extends State<MapScreen> {
     super.dispose();
   }
 
-  void _startRunSequence(MapRunController controller) {
+  Future<void> _showGpsAlertDialog({
+    required String title,
+    required String message,
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppSpacing.br16,
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: Text(
+          title,
+          style: AppText.titleMedium.copyWith(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          message,
+          style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          SecondaryButton(
+            label: 'Cancel',
+            isFullWidth: false,
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          PrimaryButton(
+            label: actionLabel,
+            isFullWidth: false,
+            onPressed: () {
+              Navigator.pop(ctx);
+              onAction();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _startRunSequence(MapRunController controller) async {
     if (controller.isRunActive) return;
+
+    if (!controller.isSimulated) {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!mounted) return;
+      if (!serviceEnabled) {
+        _showGpsAlertDialog(
+          title: 'Location is off',
+          message: 'Please turn on device location services to track your run and claim territories.',
+          actionLabel: 'Open settings',
+          onAction: () => Geolocator.openLocationSettings(),
+        );
+        return;
+      }
+
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+      }
+      if (!mounted) return;
+
+      if (perm == LocationPermission.deniedForever) {
+        _showGpsAlertDialog(
+          title: 'Location permission needed',
+          message: 'Territory Runner requires location access to map your runs. Please enable it in device settings.',
+          actionLabel: 'Open settings',
+          onAction: () => Geolocator.openAppSettings(),
+        );
+        return;
+      } else if (perm == LocationPermission.denied) {
+        _showGpsAlertDialog(
+          title: 'Location permission needed',
+          message: 'Location access was denied. Enable permission to start tracking your run.',
+          actionLabel: 'Retry',
+          onAction: () => _startRunSequence(controller),
+        );
+        return;
+      }
+    }
+
     final prefs = AppPreferences();
     if (!prefs.hasBodyProfile && !prefs.hasSkippedBodyDetails) {
       BodyDetailsSheet.show(

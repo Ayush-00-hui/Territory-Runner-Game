@@ -31,6 +31,7 @@ class QueuedRun {
   final int? stepCount;
   final int? estimatedCalories;
   final String? calorieModelVersion;
+  final bool simulated;
 
   QueuedRun({
     required this.idempotencyKey,
@@ -46,6 +47,7 @@ class QueuedRun {
     this.stepCount,
     this.estimatedCalories,
     this.calorieModelVersion,
+    this.simulated = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -63,6 +65,7 @@ class QueuedRun {
     if (stepCount != null) 'stepCount': stepCount,
     if (estimatedCalories != null) 'estimatedCalories': estimatedCalories,
     if (calorieModelVersion != null) 'calorieModelVersion': calorieModelVersion,
+    if (simulated) 'simulated': true,
     if (motionWindows != null && motionWindows!.isNotEmpty)
       'motionWindows': motionWindows!.map((w) => w.toJson()).toList(),
   };
@@ -95,6 +98,7 @@ class QueuedRun {
       stepCount: (json['stepCount'] as num?)?.toInt(),
       estimatedCalories: (json['estimatedCalories'] as num?)?.toInt(),
       calorieModelVersion: json['calorieModelVersion'] as String?,
+      simulated: (json['simulated'] as bool?) ?? false,
     );
   }
 
@@ -105,6 +109,7 @@ class QueuedRun {
     int? stepCount,
     int? estimatedCalories,
     String? calorieModelVersion,
+    bool? simulated,
   }) {
     return QueuedRun(
       idempotencyKey: idempotencyKey,
@@ -120,6 +125,7 @@ class QueuedRun {
       stepCount: stepCount ?? this.stepCount,
       estimatedCalories: estimatedCalories ?? this.estimatedCalories,
       calorieModelVersion: calorieModelVersion ?? this.calorieModelVersion,
+      simulated: simulated ?? this.simulated,
     );
   }
 }
@@ -326,8 +332,8 @@ class SyncQueueService {
     int? estimatedCalories,
     String? calorieModelVersion,
     bool autoSync = true,
+    bool simulated = false,
   }) async {
-    final box = await _getBox();
     final key = idempotencyKey ?? _uuid.v4();
 
     final item = QueuedRun(
@@ -343,8 +349,15 @@ class SyncQueueService {
       stepCount: stepCount,
       estimatedCalories: estimatedCalories,
       calorieModelVersion: calorieModelVersion,
+      simulated: simulated,
     );
 
+    // Simulated / demo runs are strictly on-device: never queue for server sync
+    if (simulated) {
+      return item;
+    }
+
+    final box = await _getBox();
     await box.put(key, jsonEncode(item.toJson()));
     _updateUnsettledCount();
 
@@ -385,6 +398,10 @@ class SyncQueueService {
     bool allSucceeded = true;
 
     for (final run in pending) {
+      if (run.simulated) {
+        await box.delete(run.idempotencyKey);
+        continue;
+      }
       try {
         final serverResponse = await _apiClient.submitRun(
           idempotencyKey: run.idempotencyKey,

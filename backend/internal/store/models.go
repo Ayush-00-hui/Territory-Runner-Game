@@ -14,6 +14,9 @@ const (
 	TerritoryWeakThreshold = 30.0
 	// MinCaptureFloorSqm is the minimum new area floor (25 m²) required before awarding XP, league, or duel credit.
 	MinCaptureFloorSqm = 25.0
+	// TerritoryShieldDuration is the post-conquest / post-defense cooldown duration (30 minutes)
+	// during which rival runners cannot conquer or clip the sovereign territory.
+	TerritoryShieldDuration = 30 * time.Minute
 )
 
 // User represents a player profile in the database.
@@ -35,15 +38,16 @@ type User struct {
 
 // Territory represents claimed territory stored as a PostGIS MultiPolygon.
 type Territory struct {
-	ID             string    `json:"id"`
-	OwnerID        string    `json:"owner_id"`
-	Username       string    `json:"username,omitempty"`
-	GeoJSON        string    `json:"geojson"`
-	AreaSqm        float64   `json:"area_sqm"`
-	Strength       float64   `json:"strength"`
-	LastDefendedAt time.Time `json:"last_defended_at"`
-	LastDecayedAt  time.Time `json:"last_decayed_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             string     `json:"id"`
+	OwnerID        string     `json:"owner_id"`
+	Username       string     `json:"username,omitempty"`
+	GeoJSON        string     `json:"geojson"`
+	AreaSqm        float64    `json:"area_sqm"`
+	Strength       float64    `json:"strength"`
+	LastDefendedAt time.Time  `json:"last_defended_at"`
+	LastDecayedAt  time.Time  `json:"last_decayed_at"`
+	CooldownUntil  *time.Time `json:"cooldown_until,omitempty"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 // CalculateEffectiveStrength computes real-time dynamic strength factoring in elapsed days since last defense or decay.
@@ -83,6 +87,32 @@ func (t *Territory) EffectiveStrength(now time.Time) float64 {
 // IsWeak returns true if dynamic strength has fallen below the weak fortification threshold (30.0).
 func (t *Territory) IsWeak(now time.Time) bool {
 	return t.EffectiveStrength(now) < TerritoryWeakThreshold
+}
+
+// IsShielded returns true if the territory is currently protected under active defense cooldown.
+func (t *Territory) IsShielded(now time.Time) bool {
+	if t.CooldownUntil == nil {
+		return false
+	}
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	return now.Before(*t.CooldownUntil)
+}
+
+// RemainingShieldDuration returns time left under active defense cooldown (0 if unshielded or expired).
+func (t *Territory) RemainingShieldDuration(now time.Time) time.Duration {
+	if t.CooldownUntil == nil {
+		return 0
+	}
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	rem := t.CooldownUntil.Sub(now)
+	if rem < 0 {
+		return 0
+	}
+	return rem
 }
 
 // Run records a runner's GPS session and capture result.

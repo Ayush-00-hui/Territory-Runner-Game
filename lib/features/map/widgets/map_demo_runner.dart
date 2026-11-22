@@ -10,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../models/territory.dart';
 import '../../../models/ws_events.dart';
 import '../../../services/firebase_service.dart';
+import '../../../services/location_service.dart';
 import '../../../ui/ui.dart';
 import '../../gameplay/territory_service.dart';
 import '../controllers/map_run_controller.dart';
@@ -34,6 +35,7 @@ class MapDemoRunner {
   });
 
   void runAutomatedLoopDemo() {
+    LocationService().isSimulationMode = true;
     if (!runController.isRunActive) {
       runController.startRun();
     }

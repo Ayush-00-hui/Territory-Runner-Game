@@ -22,6 +22,8 @@ class TileCacheService {
   TileCacheService._internal();
 
   static Directory? _cacheDir;
+  static Directory? overrideCacheDir;
+  static bool skipInvalidationCheck = false;
   static bool _hasCheckedInvalidation = false;
 
   /// Preference key tracking the tile URL template associated with currently cached tiles
@@ -80,13 +82,12 @@ class TileCacheService {
       }
       return _cacheDir!;
     }
-    if (Platform.environment.containsKey('FLUTTER_TEST')) {
-      final dir = Directory('${Directory.systemTemp.path}/test_offline_tiles');
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
+    if (overrideCacheDir != null) {
+      if (!await overrideCacheDir!.exists()) {
+        await overrideCacheDir!.create(recursive: true);
       }
-      _cacheDir = dir;
-      return dir;
+      _cacheDir = overrideCacheDir;
+      return _cacheDir!;
     }
     try {
       final docs = await getApplicationDocumentsDirectory();
@@ -95,7 +96,7 @@ class TileCacheService {
         await dir.create(recursive: true);
       }
       _cacheDir = dir;
-      if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      if (!skipInvalidationCheck) {
         await _checkInvalidationIfNeeded(dir);
       }
       return dir;
@@ -105,7 +106,7 @@ class TileCacheService {
         await dir.create(recursive: true);
       }
       _cacheDir = dir;
-      if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      if (!skipInvalidationCheck) {
         await _checkInvalidationIfNeeded(dir);
       }
       return dir;
