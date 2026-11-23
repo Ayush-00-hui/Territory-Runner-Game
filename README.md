@@ -20,7 +20,7 @@
 
 [![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-661%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-664%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Tests-11%20Packages_Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
 [![Cartography](https://img.shields.io/badge/Cartography-OpenStreetMap_Standard-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
 [![Theme Palette](https://img.shields.io/badge/Theme-Nordic_Moss_&_Pine_Shield-A3C586.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
@@ -76,7 +76,7 @@ This document is organized as a structured **Level 0 to Master** curriculum. Whe
 │ 🤖 Level 6: Machine Learning & Anti-Cheat Pipeline (LightGBM)                          │
 │    └─ Tier 1 deterministic gate | Safe cadence rollout | 22-feature ensemble           │
 │ 🏆 Level 7: Master Level (Testing, Audits, Verification & Production Ops)             │
-│    └─ 661 Flutter + 11 Go package suites | CI/CD gates | Viva defense cheatsheet       │
+│    └─ 664 Flutter + 11 Go package suites | CI/CD gates | Viva defense cheatsheet       │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -308,7 +308,7 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-The server listens on `http://localhost:8080` with PostGIS on port `5432`. Built-in SQL migrations (`000001`–`000015`) run automatically on startup when `RUN_MIGRATIONS=true`.
+The server listens on `http://localhost:8080` (or `http://localhost:8081` when `PORT=8081` is configured in `backend/.env`) with PostGIS on port `5432`. Built-in SQL migrations (`000001`–`000016`) run automatically on startup when `RUN_MIGRATIONS=true`.
 
 ---
 
@@ -1230,7 +1230,7 @@ Territory Runner enforces strict automated testing across all client and backend
 ├─────────────────────────┬──────────────┬───────────────┤
 │ Domain                  │ Scope        │ Status        │
 ├─────────────────────────┼──────────────┼───────────────┤
-│ Flutter Client (test/)  │ 661 tests    │ ALL PASS      │
+│ Flutter Client (test/)  │ 664 tests    │ ALL PASS      │
 │ Go Backend (backend/)   │ 11 packages  │ ALL PASS      │
 │ PostGIS Integration     │ store suite  │ CI VERIFIED   │
 │ Integration Test Flow   │ E2E Run Sync │ ALL PASS      │
@@ -1248,7 +1248,7 @@ Territory Runner enforces strict automated testing across all client and backend
 dart format --output=none --set-exit-if-changed .
 flutter analyze --fatal-infos --fatal-warnings
 
-# 2. Run All Flutter Unit and Widget Tests (661 tests)
+# 2. Run All Flutter Unit and Widget Tests (664 tests)
 flutter test --timeout 120s
 
 # 3. Run Core Verification Suites (GPS, Mechanics, Motion, Theme, Integrity)
