@@ -1376,8 +1376,8 @@ func TestPostgresSocialFeedAndModeration(t *testing.T) {
 	// 3. Insert an accepted run for Alice
 	now := time.Now().UTC()
 	_, err = pool.Exec(ctx, `
-		INSERT INTO runs (id, user_id, status, duration_seconds, distance_meters, area_claimed, created_at)
-		VALUES ('run_pg_alice_feed', 'usr_pg_feed_alice', 'accepted', 180, 500.0, 1000.0, $1);
+		INSERT INTO runs (id, user_id, idempotency_key, status, duration_seconds, distance_meters, area_claimed, created_at)
+		VALUES ('run_pg_alice_feed', 'usr_pg_feed_alice', 'idem_pg_alice_feed', 'accepted', 180, 500.0, 1000.0, $1);
 	`, now)
 	require.NoError(t, err)
 
