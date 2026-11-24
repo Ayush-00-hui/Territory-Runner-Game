@@ -23,6 +23,13 @@ class PrivacyZone {
 
   LatLng get center => LatLng(latitude, longitude);
 
+  /// Checks whether a given lat/lng coordinate falls within this privacy exclusion zone.
+  bool contains(double lat, double lng) {
+    if (!isEnabled) return false;
+    final d = const Distance().as(LengthUnit.Meter, LatLng(lat, lng), center);
+    return d <= radiusMeters;
+  }
+
   PrivacyZone copyWith({
     String? id,
     String? name,
