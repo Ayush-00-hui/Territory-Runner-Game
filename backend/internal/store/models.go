@@ -361,8 +361,8 @@ type FeedItem struct {
 	AreaClaimed     float64        `json:"area_claimed"`
 	CreatedAt       time.Time      `json:"created_at"`
 	RouteThumbnail  [][2]float64   `json:"route_thumbnail,omitempty"` // [lat, lng] pairs with privacy zones masked
-	KudosCounts     map[string]int `json:"kudos_counts"`               // e.g. {"kudos": 2, "fire": 1}
-	MyKudos         string         `json:"my_kudos,omitempty"`         // calling user's reaction if any
+	KudosCounts     map[string]int `json:"kudos_counts"`              // e.g. {"kudos": 2, "fire": 1}
+	MyKudos         string         `json:"my_kudos,omitempty"`        // calling user's reaction if any
 }
 
 // ModerationReport represents a user or content report submitted for moderation.
