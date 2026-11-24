@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -214,7 +215,8 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at), t.cooldown_until, t.updated_at
 		FROM territories t
 		JOIN users u ON t.owner_id = u.id
-		WHERE ST_Intersects(t.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326));
+		WHERE ST_Intersects(t.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326))
+		  AND COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at) >= NOW() - INTERVAL '232 hours';
 	`
 	rows, err := s.pool.Query(ctx, query, minLng, minLat, maxLng, maxLat)
 	if err != nil {
@@ -326,9 +328,8 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	var rivalsAffected []string
 	var weakBonusArea float64
 
-	if len(loops) == 0 {
-		_ = tx.QueryRow(ctx, "SELECT total_area_sqm FROM users WHERE id = $1;", run.UserID).Scan(&playerTotalArea)
-	}
+	var currentUserXP int64
+	_ = tx.QueryRow(ctx, "SELECT COALESCE(xp, 0), COALESCE(total_area_sqm, 0.0) FROM users WHERE id = $1;", run.UserID).Scan(&currentUserXP, &playerTotalArea)
 
 	// 3. Process spatial loop capture for all closed loops
 	for _, loop := range loops {
@@ -342,14 +343,14 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		// ST_Union operates on geometry, cast to ::geography for geodesic area
 		unionQuery := `
 			INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, last_decayed_at, cooldown_until, updated_at)
-			VALUES ($1, $2, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_PolygonFromText($3, 4326)), 3)), ST_Area(ST_MakeValid(ST_PolygonFromText($3, 4326))::geography), 100.0, NOW(), NOW(), NOW() + INTERVAL '30 minutes', NOW())
+			VALUES ($1, $2, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_PolygonFromText($3, 4326)), 3)), ST_Area(ST_MakeValid(ST_PolygonFromText($3, 4326))::geography), 100.0, NOW(), NOW(), NOW() + INTERVAL '120 minutes', NOW())
 			ON CONFLICT (id) DO UPDATE SET
 				geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_PolygonFromText($3, 4326)))), 3)),
 				area_sqm = ST_Area(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_PolygonFromText($3, 4326))))::geography),
 				strength = 100.0,
 				last_defended_at = NOW(),
 				last_decayed_at = NOW(),
-				cooldown_until = NOW() + INTERVAL '30 minutes',
+				cooldown_until = NOW() + INTERVAL '120 minutes',
 				updated_at = NOW()
 			RETURNING ST_AsGeoJSON(geom), area_sqm;
 		`
@@ -363,6 +364,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 			FROM territories
 			WHERE owner_id != $1
 			  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
+			  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
 			  AND ST_Intersects(geom, ST_MakeValid(ST_PolygonFromText($2, 4326)));
 		`
 		if rRows, err := tx.Query(ctx, checkRivalsQuery, run.UserID, polyWKT); err == nil {
@@ -391,6 +393,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 				updated_at = NOW()
 			WHERE owner_id != $2
 			  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
+			  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
 			  AND ST_Intersects(geom, ST_MakeValid(ST_PolygonFromText($1, 4326)))
 			RETURNING owner_id;
 		`
@@ -428,23 +431,79 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 				effectiveXpArea += weakBonusArea
 			}
 			xpAwarded = int(math.Max(5, math.Round(effectiveXpArea/20.0)))
+
+			// Enforce daily XP ceiling (10,000 XP/day)
+			now := time.Now().UTC()
+			if !run.CreatedAt.IsZero() {
+				now = run.CreatedAt
+			}
+			var todayXP int64
+			todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+			_ = tx.QueryRow(ctx, `
+				SELECT COALESCE(SUM(
+					CASE 
+						WHEN area_claimed >= 25.0 THEN GREATEST(5, ROUND(area_claimed / 20.0))
+						ELSE 0 
+					END
+				), 0)::bigint
+				FROM runs
+				WHERE user_id = $1 AND created_at >= $2;
+			`, run.UserID, todayStart).Scan(&todayXP)
+
+			if todayXP >= int64(DailyXpCap) {
+				xpAwarded = 0
+			} else if todayXP+int64(xpAwarded) > int64(DailyXpCap) {
+				xpAwarded = int(int64(DailyXpCap) - todayXP)
+			}
+		} else {
+			areaClaimed = 0.0
+			xpAwarded = 0
+		}
+	} else {
+		if areaClaimed >= MinCaptureFloorSqm {
+			xpAwarded = int(math.Max(5, math.Round(areaClaimed/20.0)))
+			now := time.Now().UTC()
+			if !run.CreatedAt.IsZero() {
+				now = run.CreatedAt
+			}
+			var todayXP int64
+			todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+			_ = tx.QueryRow(ctx, `
+				SELECT COALESCE(SUM(
+					CASE 
+						WHEN area_claimed >= 25.0 THEN GREATEST(5, ROUND(area_claimed / 20.0))
+						ELSE 0 
+					END
+				), 0)::bigint
+				FROM runs
+				WHERE user_id = $1 AND created_at >= $2;
+			`, run.UserID, todayStart).Scan(&todayXP)
+
+			if todayXP >= int64(DailyXpCap) {
+				xpAwarded = 0
+			} else if todayXP+int64(xpAwarded) > int64(DailyXpCap) {
+				xpAwarded = int(int64(DailyXpCap) - todayXP)
+			}
 		} else {
 			areaClaimed = 0.0
 			xpAwarded = 0
 		}
 	}
 
-	// 4. Update user total area and XP
+	// 4. Update user total area, XP, and Level
+	newXP := currentUserXP + int64(xpAwarded)
+	newLevel := CalculateLevelFromXP(newXP)
 	updateUserQuery := `
 		UPDATE users
 		SET
 			total_area_sqm = $1,
-			xp = xp + $2,
+			xp = $2,
+			level = $3,
 			total_runs = total_runs + 1,
 			updated_at = NOW()
-		WHERE id = $3;
+		WHERE id = $4;
 	`
-	if _, err := tx.Exec(ctx, updateUserQuery, playerTotalArea, xpAwarded, run.UserID); err != nil {
+	if _, err := tx.Exec(ctx, updateUserQuery, playerTotalArea, newXP, newLevel, run.UserID); err != nil {
 		return nil, fmt.Errorf("failed to update user stats: %w", err)
 	}
 
@@ -627,7 +686,7 @@ func (s *PostgresStore) UpdateTerritoryDefense(ctx context.Context, territoryID 
 			strength = $1,
 			last_defended_at = NOW(),
 			last_decayed_at = NOW(),
-			cooldown_until = NOW() + INTERVAL '30 minutes',
+			cooldown_until = NOW() + INTERVAL '120 minutes',
 			updated_at = NOW()
 		WHERE id = $2;
 	`
@@ -647,7 +706,8 @@ func (s *PostgresStore) GetTerritoryByID(ctx context.Context, id string) (*Terri
 		SELECT t.id, t.owner_id, u.username, ST_AsGeoJSON(t.geom), t.area_sqm, COALESCE(t.strength, 100.0), COALESCE(t.last_defended_at, t.updated_at), COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at), t.cooldown_until, t.updated_at
 		FROM territories t
 		JOIN users u ON t.owner_id = u.id
-		WHERE t.id = $1;
+		WHERE t.id = $1
+		  AND COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at) >= NOW() - INTERVAL '232 hours';
 	`
 	var t Territory
 	err := s.pool.QueryRow(ctx, query, id).Scan(
@@ -1483,20 +1543,21 @@ func (s *PostgresStore) SetPrivacyZones(ctx context.Context, userID string, zone
 	return nil
 }
 
-// GetUserSettings returns user settings defaulting live_visibility to 'off', timezone to 'UTC', and land_reminders to true.
+// GetUserSettings returns user settings defaulting live_visibility to 'off', timezone to 'UTC', land_reminders to true, and share_runs_with_friends to false.
 func (s *PostgresStore) GetUserSettings(ctx context.Context, userID string) (*UserSettings, error) {
 	var vis, tz string
-	var reminders bool
+	var reminders, shareRuns bool
 	err := s.pool.QueryRow(ctx, `
 		SELECT 
 			COALESCE(live_visibility, 'off'),
 			COALESCE(timezone, 'UTC'),
-			COALESCE(land_reminders, true)
+			COALESCE(land_reminders, true),
+			COALESCE(share_runs_with_friends, false)
 		FROM users WHERE id = $1;
-	`, userID).Scan(&vis, &tz, &reminders)
+	`, userID).Scan(&vis, &tz, &reminders, &shareRuns)
 	if err != nil {
 		// User might not exist yet in users table, default safely
-		return &UserSettings{LiveVisibility: "off", Timezone: "UTC", LandReminders: true}, nil
+		return &UserSettings{LiveVisibility: "off", Timezone: "UTC", LandReminders: true, ShareRunsWithFriends: false}, nil
 	}
 	if vis == "" {
 		vis = "off"
@@ -1504,7 +1565,7 @@ func (s *PostgresStore) GetUserSettings(ctx context.Context, userID string) (*Us
 	if tz == "" {
 		tz = "UTC"
 	}
-	return &UserSettings{LiveVisibility: vis, Timezone: tz, LandReminders: reminders}, nil
+	return &UserSettings{LiveVisibility: vis, Timezone: tz, LandReminders: reminders, ShareRunsWithFriends: shareRuns}, nil
 }
 
 // UpdateUserSettings updates user settings, creating user row if absent.
@@ -1512,6 +1573,7 @@ func (s *PostgresStore) UpdateUserSettings(ctx context.Context, userID string, s
 	vis := "off"
 	tz := "UTC"
 	reminders := true
+	shareRuns := false
 	if settings != nil {
 		if settings.LiveVisibility != "" {
 			vis = settings.LiveVisibility
@@ -1520,19 +1582,21 @@ func (s *PostgresStore) UpdateUserSettings(ctx context.Context, userID string, s
 			tz = settings.Timezone
 		}
 		reminders = settings.LandReminders
+		shareRuns = settings.ShareRunsWithFriends
 	}
 
 	query := `
-		INSERT INTO users (id, runner_code, username, live_visibility, timezone, land_reminders, updated_at)
-		VALUES ($1, $2, $1, $3, $4, $5, NOW())
+		INSERT INTO users (id, runner_code, username, live_visibility, timezone, land_reminders, share_runs_with_friends, updated_at)
+		VALUES ($1, $2, $1, $3, $4, $5, $6, NOW())
 		ON CONFLICT (id) DO UPDATE
 		SET live_visibility = EXCLUDED.live_visibility,
 		    timezone = EXCLUDED.timezone,
 		    land_reminders = EXCLUDED.land_reminders,
+		    share_runs_with_friends = EXCLUDED.share_runs_with_friends,
 		    runner_code = COALESCE(NULLIF(users.runner_code, ''), EXCLUDED.runner_code),
 		    updated_at = NOW();
 	`
-	if _, err := s.pool.Exec(ctx, query, userID, GenerateRunnerCode(), vis, tz, reminders); err != nil {
+	if _, err := s.pool.Exec(ctx, query, userID, GenerateRunnerCode(), vis, tz, reminders, shareRuns); err != nil {
 		return fmt.Errorf("failed to update user settings: %w", err)
 	}
 	return nil
@@ -1946,4 +2010,348 @@ func (s *PostgresStore) GetActiveCrewGoal(ctx context.Context, crewID string, we
 		g.ProgressPercent = math.Min(100.0, (currentVal/g.TargetValue)*100.0)
 	}
 	return &g, nil
+}
+
+// GetActivityFeed returns recent shared runs from accepted friends with privacy zones redacted.
+func (s *PostgresStore) GetActivityFeed(ctx context.Context, userID string, limit, offset int) ([]FeedItem, error) {
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	query := `
+		WITH accepted_friends AS (
+			SELECT CASE WHEN f.requester_id = $1 THEN f.addressee_id ELSE f.requester_id END AS friend_id
+			FROM friendships f
+			WHERE (f.requester_id = $1 OR f.addressee_id = $1)
+			  AND f.status = 'accepted'
+		),
+		allowed_friends AS (
+			SELECT af.friend_id
+			FROM accepted_friends af
+			JOIN users u ON u.id = af.friend_id
+			WHERE u.share_runs_with_friends = TRUE
+			  AND NOT EXISTS (
+				  SELECT 1 FROM user_blocks ub
+				  WHERE (ub.blocker_id = $1 AND ub.blocked_id = af.friend_id)
+				     OR (ub.blocker_id = af.friend_id AND ub.blocked_id = $1)
+			  )
+		)
+		SELECT 
+			r.id, r.user_id, COALESCE(u.username, ''), COALESCE(u.faction, ''),
+			COALESCE(r.activity_type, 'running'), r.duration_seconds, r.distance_meters,
+			r.area_claimed, r.created_at,
+			CASE WHEN r.path IS NOT NULL THEN ST_AsGeoJSON(r.path) ELSE '' END
+		FROM runs r
+		JOIN allowed_friends af ON af.friend_id = r.user_id
+		JOIN users u ON u.id = r.user_id
+		WHERE r.status = 'accepted'
+		  AND NOT EXISTS (
+			  SELECT 1 FROM hidden_posts hp
+			  WHERE hp.user_id = $1 AND hp.run_id = r.id
+		  )
+		ORDER BY r.created_at DESC
+		LIMIT $2 OFFSET $3;
+	`
+
+	rows, err := s.pool.Query(ctx, query, userID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query activity feed: %w", err)
+	}
+	defer rows.Close()
+
+	type rawFeedRow struct {
+		id              string
+		userID          string
+		username        string
+		faction         string
+		activityType    string
+		durationSeconds int
+		distanceMeters  float64
+		areaClaimed     float64
+		createdAt       time.Time
+		pathGeoJSON     string
+	}
+
+	var rawRows []rawFeedRow
+	var runIDs []string
+	authorIDs := make(map[string]bool)
+
+	for rows.Next() {
+		var r rawFeedRow
+		if err := rows.Scan(
+			&r.id, &r.userID, &r.username, &r.faction,
+			&r.activityType, &r.durationSeconds, &r.distanceMeters,
+			&r.areaClaimed, &r.createdAt, &r.pathGeoJSON,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan feed row: %w", err)
+		}
+		rawRows = append(rawRows, r)
+		runIDs = append(runIDs, r.id)
+		authorIDs[r.userID] = true
+	}
+
+	if len(rawRows) == 0 {
+		return []FeedItem{}, nil
+	}
+
+	privacyZonesMap := make(map[string][]PrivacyZone)
+	for aID := range authorIDs {
+		zones, err := s.GetPrivacyZones(ctx, aID)
+		if err == nil {
+			privacyZonesMap[aID] = zones
+		}
+	}
+
+	kudosMap := make(map[string]map[string]int)
+	myKudosMap := make(map[string]string)
+	kudosQuery := `
+		SELECT run_id, user_id, reaction
+		FROM feed_kudos
+		WHERE run_id = ANY($1);
+	`
+	kRows, err := s.pool.Query(ctx, kudosQuery, runIDs)
+	if err == nil {
+		defer kRows.Close()
+		for kRows.Next() {
+			var rID, uID, reaction string
+			if err := kRows.Scan(&rID, &uID, &reaction); err == nil {
+				if kudosMap[rID] == nil {
+					kudosMap[rID] = make(map[string]int)
+				}
+				kudosMap[rID][reaction]++
+				if uID == userID {
+					myKudosMap[rID] = reaction
+				}
+			}
+		}
+	}
+
+	feed := make([]FeedItem, len(rawRows))
+	for i, r := range rawRows {
+		var thumbnail [][2]float64
+		if r.pathGeoJSON != "" {
+			var geom struct {
+				Type        string      `json:"type"`
+				Coordinates [][]float64 `json:"coordinates"`
+			}
+			if err := json.Unmarshal([]byte(r.pathGeoJSON), &geom); err == nil && len(geom.Coordinates) > 0 {
+				pts := make([]geo.LatLng, len(geom.Coordinates))
+				for j, c := range geom.Coordinates {
+					if len(c) >= 2 {
+						pts[j] = geo.LatLng{Latitude: c[1], Longitude: c[0]}
+					}
+				}
+				zones := privacyZonesMap[r.userID]
+				evals := make([]geo.PrivacyZoneEvaluator, len(zones))
+				for j, z := range zones {
+					evals[j] = geo.PrivacyZoneEvaluator{
+						Latitude:     z.Latitude,
+						Longitude:    z.Longitude,
+						RadiusMeters: z.RadiusMeters,
+						IsEnabled:    z.IsEnabled,
+					}
+				}
+				masked := geo.MaskPath(pts, evals)
+				if len(masked) > 50 {
+					step := float64(len(masked)-1) / 49.0
+					sampled := make([]geo.LatLng, 50)
+					for sIdx := 0; sIdx < 50; sIdx++ {
+						idx := int(math.Round(float64(sIdx) * step))
+						if idx >= len(masked) {
+							idx = len(masked) - 1
+						}
+						sampled[sIdx] = masked[idx]
+					}
+					masked = sampled
+				}
+				thumbnail = make([][2]float64, len(masked))
+				for j, pt := range masked {
+					thumbnail[j] = [2]float64{pt.Latitude, pt.Longitude}
+				}
+			}
+		}
+
+		kCounts := kudosMap[r.id]
+		if kCounts == nil {
+			kCounts = make(map[string]int)
+		}
+
+		feed[i] = FeedItem{
+			ID:              r.id,
+			UserID:          r.userID,
+			Username:        r.username,
+			Faction:         r.faction,
+			ActivityType:    r.activityType,
+			DurationSeconds: r.durationSeconds,
+			DistanceMeters:  r.distanceMeters,
+			AreaClaimed:     r.areaClaimed,
+			CreatedAt:       r.createdAt,
+			RouteThumbnail:  thumbnail,
+			KudosCounts:     kCounts,
+			MyKudos:         myKudosMap[r.id],
+		}
+	}
+
+	return feed, nil
+}
+
+// SetRunKudos sets or updates a runner's reaction (kudos, clap, fire, strong) on a shared run.
+func (s *PostgresStore) SetRunKudos(ctx context.Context, runID, userID, reaction string) error {
+	if !IsValidKudosReaction(reaction) {
+		return fmt.Errorf("invalid kudos reaction: %s", reaction)
+	}
+
+	var authorID string
+	err := s.pool.QueryRow(ctx, `SELECT user_id FROM runs WHERE id = $1;`, runID).Scan(&authorID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("run not found")
+		}
+		return fmt.Errorf("failed to verify run: %w", err)
+	}
+
+	if authorID != userID {
+		isBlocked, err := s.IsBlocked(ctx, authorID, userID)
+		if err != nil || isBlocked {
+			return fmt.Errorf("action not permitted")
+		}
+
+		var isFriend bool
+		err = s.pool.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT 1 FROM friendships
+				WHERE status = 'accepted'
+				  AND ((requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1))
+			);
+		`, authorID, userID).Scan(&isFriend)
+		if err != nil || !isFriend {
+			return fmt.Errorf("action not permitted: not friends")
+		}
+	}
+
+	kudosID := fmt.Sprintf("kudo_%s", uuid.New().String())
+	query := `
+		INSERT INTO feed_kudos (id, run_id, user_id, reaction, created_at)
+		VALUES ($1, $2, $3, $4, NOW())
+		ON CONFLICT (run_id, user_id) DO UPDATE
+		SET reaction = EXCLUDED.reaction, created_at = NOW();
+	`
+	if _, err := s.pool.Exec(ctx, query, kudosID, runID, userID, reaction); err != nil {
+		return fmt.Errorf("failed to save kudos: %w", err)
+	}
+	return nil
+}
+
+// RemoveRunKudos removes a runner's reaction from a shared run.
+func (s *PostgresStore) RemoveRunKudos(ctx context.Context, runID, userID string) error {
+	query := `DELETE FROM feed_kudos WHERE run_id = $1 AND user_id = $2;`
+	if _, err := s.pool.Exec(ctx, query, runID, userID); err != nil {
+		return fmt.Errorf("failed to remove kudos: %w", err)
+	}
+	return nil
+}
+
+// HidePost hides a specific shared run from the user's activity feed.
+func (s *PostgresStore) HidePost(ctx context.Context, userID, runID string) error {
+	hideID := fmt.Sprintf("hide_%s", uuid.New().String())
+	query := `
+		INSERT INTO hidden_posts (id, user_id, run_id, created_at)
+		VALUES ($1, $2, $3, NOW())
+		ON CONFLICT (user_id, run_id) DO NOTHING;
+	`
+	if _, err := s.pool.Exec(ctx, query, hideID, userID, runID); err != nil {
+		return fmt.Errorf("failed to hide post: %w", err)
+	}
+	return nil
+}
+
+// BlockUser establishes a mutual block between blockerID and blockedID and dissolves friendship.
+func (s *PostgresStore) BlockUser(ctx context.Context, blockerID, blockedID string) error {
+	if blockerID == blockedID {
+		return fmt.Errorf("cannot block yourself")
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	blockID := fmt.Sprintf("blk_%s", uuid.New().String())
+	blockQuery := `
+		INSERT INTO user_blocks (id, blocker_id, blocked_id, created_at)
+		VALUES ($1, $2, $3, NOW())
+		ON CONFLICT (blocker_id, blocked_id) DO NOTHING;
+	`
+	if _, err := tx.Exec(ctx, blockQuery, blockID, blockerID, blockedID); err != nil {
+		return fmt.Errorf("failed to record user block: %w", err)
+	}
+
+	delFriendshipQuery := `
+		DELETE FROM friendships
+		WHERE (requester_id = $1 AND addressee_id = $2)
+		   OR (requester_id = $2 AND addressee_id = $1);
+	`
+	if _, err := tx.Exec(ctx, delFriendshipQuery, blockerID, blockedID); err != nil {
+		return fmt.Errorf("failed to dissolve friendship: %w", err)
+	}
+
+	declineDuelsQuery := `
+		UPDATE duels
+		SET status = 'declined'
+		WHERE status = 'pending'
+		  AND ((challenger_id = $1 AND opponent_id = $2) OR (challenger_id = $2 AND opponent_id = $1));
+	`
+	if _, err := tx.Exec(ctx, declineDuelsQuery, blockerID, blockedID); err != nil {
+		return fmt.Errorf("failed to decline pending duels: %w", err)
+	}
+
+	return tx.Commit(ctx)
+}
+
+// UnblockUser removes a block between blockerID and blockedID.
+func (s *PostgresStore) UnblockUser(ctx context.Context, blockerID, blockedID string) error {
+	query := `DELETE FROM user_blocks WHERE blocker_id = $1 AND blocked_id = $2;`
+	if _, err := s.pool.Exec(ctx, query, blockerID, blockedID); err != nil {
+		return fmt.Errorf("failed to unblock user: %w", err)
+	}
+	return nil
+}
+
+// IsBlocked checks if either user has blocked the other.
+func (s *PostgresStore) IsBlocked(ctx context.Context, userA, userB string) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1 FROM user_blocks
+			WHERE (blocker_id = $1 AND blocked_id = $2)
+			   OR (blocker_id = $2 AND blocked_id = $1)
+		);
+	`
+	var isBlocked bool
+	if err := s.pool.QueryRow(ctx, query, userA, userB).Scan(&isBlocked); err != nil {
+		return false, fmt.Errorf("failed to check block status: %w", err)
+	}
+	return isBlocked, nil
+}
+
+// ReportContent records a moderation report regarding a user or shared run.
+func (s *PostgresStore) ReportContent(ctx context.Context, report *ModerationReport) error {
+	if report.ID == "" {
+		report.ID = fmt.Sprintf("rep_%s", uuid.New().String())
+	}
+	var runIDParam *string
+	if report.RunID != "" {
+		runIDParam = &report.RunID
+	}
+	query := `
+		INSERT INTO moderation_reports (id, reporter_id, reported_user_id, run_id, reason, details, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW());
+	`
+	if _, err := s.pool.Exec(ctx, query, report.ID, report.ReporterID, report.ReportedUserID, runIDParam, report.Reason, report.Details); err != nil {
+		return fmt.Errorf("failed to record moderation report: %w", err)
+	}
+	return nil
 }

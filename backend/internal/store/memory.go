@@ -25,6 +25,7 @@ type MemoryStore struct {
 	duels              map[string]*Duel
 	privacyZones       map[string][]PrivacyZone
 	userSettings       map[string]*UserSettings
+	dailyXP            map[string]int
 	decayNotifications []*DecayNotification
 	decayLockMu        sync.Mutex
 	isDecayLocked      bool
@@ -35,6 +36,11 @@ type MemoryStore struct {
 	crewMembers        map[string]map[string]*CrewMember
 	userCrew           map[string]string
 	crewGoals          map[string]map[string]*CrewGoal
+	runTracks          map[string][]geo.LatLng
+	feedKudos          map[string]map[string]string // runID -> (userID -> reaction)
+	userBlocks         map[string]map[string]bool   // blockerID -> (blockedID -> true)
+	hiddenPosts        map[string]map[string]bool   // userID -> (runID -> true)
+	moderationReports  []*ModerationReport
 }
 
 // NewMemoryStore initializes an in-memory store.
@@ -49,6 +55,7 @@ func NewMemoryStore() *MemoryStore {
 		duels:              make(map[string]*Duel),
 		privacyZones:       make(map[string][]PrivacyZone),
 		userSettings:       make(map[string]*UserSettings),
+		dailyXP:            make(map[string]int),
 		decayNotifications: make([]*DecayNotification, 0),
 		seasons:            make(map[string]*Season),
 		seasonStandings:    make(map[string]map[string]*SeasonUserStanding),
@@ -57,6 +64,11 @@ func NewMemoryStore() *MemoryStore {
 		crewMembers:        make(map[string]map[string]*CrewMember),
 		userCrew:           make(map[string]string),
 		crewGoals:          make(map[string]map[string]*CrewGoal),
+		runTracks:          make(map[string][]geo.LatLng),
+		feedKudos:          make(map[string]map[string]string),
+		userBlocks:         make(map[string]map[string]bool),
+		hiddenPosts:        make(map[string]map[string]bool),
+		moderationReports:  make([]*ModerationReport, 0),
 	}
 }
 
@@ -255,6 +267,9 @@ func (m *MemoryStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat, 
 	now := time.Now().UTC()
 	var res []Territory
 	for _, t := range m.territories {
+		if t.IsDespawned(now) {
+			continue
+		}
 		cpy := *t
 		cpy.Strength = cpy.EffectiveStrength(now)
 		res = append(res, cpy)
@@ -345,6 +360,9 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 
 		for _, t := range m.territories {
 			if t.OwnerID != run.UserID {
+				if t.IsDespawned(now) {
+					continue // Despawned territory has dissolved into the public commons
+				}
 				if t.IsShielded(now) {
 					continue // Shielded territory cannot be invaded or damaged
 				}
@@ -364,8 +382,20 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 				effectiveXpArea += weakBonusArea
 			}
 			xpAwarded = int(math.Max(5, math.Round(effectiveXpArea/20.0)))
+
+			// Enforce daily XP ceiling (10,000 XP/day)
+			dayKey := fmt.Sprintf("%s:%s", run.UserID, now.Format("2006-01-02"))
+			todayXP := m.dailyXP[dayKey]
+			if todayXP >= DailyXpCap {
+				xpAwarded = 0
+			} else if todayXP+xpAwarded > DailyXpCap {
+				xpAwarded = DailyXpCap - todayXP
+			}
+			m.dailyXP[dayKey] += xpAwarded
+
 			user.TotalAreaSqm += areaClaimed
 			user.XP += int64(xpAwarded)
+			user.Level = CalculateLevelFromXP(user.XP)
 		} else {
 			areaClaimed = 0.0
 			xpAwarded = 0
@@ -396,9 +426,21 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 
 	} else {
 		if areaClaimed >= MinCaptureFloorSqm {
-			user.TotalAreaSqm += areaClaimed
 			xpAwarded = int(math.Max(5, math.Round(areaClaimed/20.0)))
+
+			// Enforce daily XP ceiling (10,000 XP/day)
+			dayKey := fmt.Sprintf("%s:%s", run.UserID, now.Format("2006-01-02"))
+			todayXP := m.dailyXP[dayKey]
+			if todayXP >= DailyXpCap {
+				xpAwarded = 0
+			} else if todayXP+xpAwarded > DailyXpCap {
+				xpAwarded = DailyXpCap - todayXP
+			}
+			m.dailyXP[dayKey] += xpAwarded
+
+			user.TotalAreaSqm += areaClaimed
 			user.XP += int64(xpAwarded)
+			user.Level = CalculateLevelFromXP(user.XP)
 		} else {
 			areaClaimed = 0.0
 			xpAwarded = 0
@@ -424,6 +466,13 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	}
 	m.runs[run.IdempotencyKey] = &runCopy
 	m.runsByOrder = append(m.runsByOrder, run.IdempotencyKey)
+	if len(rawTrack) > 0 {
+		trackPts := make([]geo.LatLng, len(rawTrack))
+		for i, pt := range rawTrack {
+			trackPts[i] = geo.LatLng{Latitude: pt.Latitude, Longitude: pt.Longitude}
+		}
+		m.runTracks[run.ID] = trackPts
+	}
 
 	// Update season progress for current calendar month
 	seasonID := fmt.Sprintf("season_%d_%02d", now.Year(), now.Month())
@@ -597,8 +646,12 @@ func (m *MemoryStore) GetTerritoryByID(ctx context.Context, id string) (*Territo
 	if !ok {
 		return nil, nil
 	}
+	now := time.Now().UTC()
+	if t.IsDespawned(now) {
+		return nil, nil
+	}
 	cpy := *t
-	cpy.Strength = cpy.EffectiveStrength(time.Now().UTC())
+	cpy.Strength = cpy.EffectiveStrength(now)
 	return &cpy, nil
 }
 
@@ -1429,7 +1482,7 @@ func (m *MemoryStore) SetPrivacyZones(ctx context.Context, userID string, zones 
 	return nil
 }
 
-// GetUserSettings returns user settings defaulting live_visibility to 'off', timezone to 'UTC', and land_reminders to true.
+// GetUserSettings returns user settings defaulting live_visibility to 'off', timezone to 'UTC', land_reminders to true, and share_runs_with_friends to false.
 func (m *MemoryStore) GetUserSettings(ctx context.Context, userID string) (*UserSettings, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -1440,9 +1493,10 @@ func (m *MemoryStore) GetUserSettings(ctx context.Context, userID string) (*User
 			tz = "UTC"
 		}
 		return &UserSettings{
-			LiveVisibility: s.LiveVisibility,
-			Timezone:       tz,
-			LandReminders:  s.LandReminders,
+			LiveVisibility:       s.LiveVisibility,
+			Timezone:             tz,
+			LandReminders:        s.LandReminders,
+			ShareRunsWithFriends: s.ShareRunsWithFriends,
 		}, nil
 	}
 	if u, ok := m.users[userID]; ok && u != nil {
@@ -1455,15 +1509,17 @@ func (m *MemoryStore) GetUserSettings(ctx context.Context, userID string) (*User
 			tz = "UTC"
 		}
 		return &UserSettings{
-			LiveVisibility: vis,
-			Timezone:       tz,
-			LandReminders:  u.LandReminders,
+			LiveVisibility:       vis,
+			Timezone:             tz,
+			LandReminders:        u.LandReminders,
+			ShareRunsWithFriends: false,
 		}, nil
 	}
 	return &UserSettings{
-		LiveVisibility: "off",
-		Timezone:       "UTC",
-		LandReminders:  true,
+		LiveVisibility:       "off",
+		Timezone:             "UTC",
+		LandReminders:        true,
+		ShareRunsWithFriends: false,
 	}, nil
 }
 
@@ -1475,6 +1531,7 @@ func (m *MemoryStore) UpdateUserSettings(ctx context.Context, userID string, set
 	vis := "off"
 	tz := "UTC"
 	reminders := true
+	shareRuns := false
 	if settings != nil {
 		if settings.LiveVisibility != "" {
 			vis = settings.LiveVisibility
@@ -1483,12 +1540,14 @@ func (m *MemoryStore) UpdateUserSettings(ctx context.Context, userID string, set
 			tz = settings.Timezone
 		}
 		reminders = settings.LandReminders
+		shareRuns = settings.ShareRunsWithFriends
 	}
 
 	newSettings := &UserSettings{
-		LiveVisibility: vis,
-		Timezone:       tz,
-		LandReminders:  reminders,
+		LiveVisibility:       vis,
+		Timezone:             tz,
+		LandReminders:        reminders,
+		ShareRunsWithFriends: shareRuns,
 	}
 	m.userSettings[userID] = newSettings
 	if u, ok := m.users[userID]; ok && u != nil {
@@ -1906,4 +1965,294 @@ func (m *MemoryStore) GetActiveCrewGoal(ctx context.Context, crewID string, week
 		cpy.ProgressPercent = math.Min(100.0, (currentVal/cpy.TargetValue)*100.0)
 	}
 	return &cpy, nil
+}
+
+// GetActivityFeed returns recent shared runs from accepted friends with privacy zones redacted.
+func (m *MemoryStore) GetActivityFeed(ctx context.Context, userID string, limit, offset int) ([]FeedItem, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if limit <= 0 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	// 1. Gather all accepted friends of userID
+	friendIDs := make(map[string]bool)
+	for _, f := range m.friendships {
+		if f.Status != "accepted" {
+			continue
+		}
+		var other string
+		if f.RequesterID == userID {
+			other = f.AddresseeID
+		} else if f.AddresseeID == userID {
+			other = f.RequesterID
+		}
+		if other != "" {
+			friendIDs[other] = true
+		}
+	}
+
+	// 2. Filter out friends who are blocked (either direction) and who have ShareRunsWithFriends == false
+	allowedFriends := make(map[string]bool)
+	for fid := range friendIDs {
+		if m.isBlockedLocked(userID, fid) {
+			continue
+		}
+		var shareRuns bool
+		if s, ok := m.userSettings[fid]; ok && s != nil {
+			shareRuns = s.ShareRunsWithFriends
+		}
+		if shareRuns {
+			allowedFriends[fid] = true
+		}
+	}
+
+	// 3. Collect accepted runs from allowed friends, excluding hidden posts
+	var candidateRuns []*Run
+	for _, r := range m.runs {
+		if r == nil || r.Status != "accepted" {
+			continue
+		}
+		if !allowedFriends[r.UserID] {
+			continue
+		}
+		if hidden, ok := m.hiddenPosts[userID]; ok && hidden[r.ID] {
+			continue
+		}
+		candidateRuns = append(candidateRuns, r)
+	}
+
+	// Sort candidateRuns by CreatedAt DESC
+	sort.Slice(candidateRuns, func(i, j int) bool {
+		return candidateRuns[i].CreatedAt.After(candidateRuns[j].CreatedAt)
+	})
+
+	if offset >= len(candidateRuns) {
+		return []FeedItem{}, nil
+	}
+	end := offset + limit
+	if end > len(candidateRuns) {
+		end = len(candidateRuns)
+	}
+	sliced := candidateRuns[offset:end]
+
+	feed := make([]FeedItem, 0, len(sliced))
+	for _, r := range sliced {
+		author := m.users[r.UserID]
+		username := ""
+		faction := ""
+		if author != nil {
+			username = author.Username
+			faction = author.Faction
+		}
+
+		// Route thumbnail: extract raw track and apply MaskPath
+		var thumbnail [][2]float64
+		if rawPts, ok := m.runTracks[r.ID]; ok && len(rawPts) > 0 {
+			zones := m.privacyZones[r.UserID]
+			evals := make([]geo.PrivacyZoneEvaluator, len(zones))
+			for i, z := range zones {
+				evals[i] = geo.PrivacyZoneEvaluator{
+					Latitude:     z.Latitude,
+					Longitude:    z.Longitude,
+					RadiusMeters: z.RadiusMeters,
+					IsEnabled:    z.IsEnabled,
+				}
+			}
+			masked := geo.MaskPath(rawPts, evals)
+			if len(masked) > 50 {
+				step := float64(len(masked)-1) / 49.0
+				sampled := make([]geo.LatLng, 50)
+				for i := 0; i < 50; i++ {
+					idx := int(math.Round(float64(i) * step))
+					if idx >= len(masked) {
+						idx = len(masked) - 1
+					}
+					sampled[i] = masked[idx]
+				}
+				masked = sampled
+			}
+			thumbnail = make([][2]float64, len(masked))
+			for i, pt := range masked {
+				thumbnail[i] = [2]float64{pt.Latitude, pt.Longitude}
+			}
+		}
+
+		kudosCounts := make(map[string]int)
+		myKudos := ""
+		if runKudos, ok := m.feedKudos[r.ID]; ok {
+			for u, reaction := range runKudos {
+				kudosCounts[reaction]++
+				if u == userID {
+					myKudos = reaction
+				}
+			}
+		}
+
+		feed = append(feed, FeedItem{
+			ID:              r.ID,
+			UserID:          r.UserID,
+			Username:        username,
+			Faction:         faction,
+			ActivityType:    r.ActivityType,
+			DurationSeconds: r.DurationSeconds,
+			DistanceMeters:  r.DistanceMeters,
+			AreaClaimed:     r.AreaClaimed,
+			CreatedAt:       r.CreatedAt,
+			RouteThumbnail:  thumbnail,
+			KudosCounts:     kudosCounts,
+			MyKudos:         myKudos,
+		})
+	}
+
+	return feed, nil
+}
+
+func (m *MemoryStore) isBlockedLocked(userA, userB string) bool {
+	if blocked, ok := m.userBlocks[userA]; ok && blocked[userB] {
+		return true
+	}
+	if blocked, ok := m.userBlocks[userB]; ok && blocked[userA] {
+		return true
+	}
+	return false
+}
+
+// SetRunKudos sets or updates a runner's reaction on a shared run.
+func (m *MemoryStore) SetRunKudos(ctx context.Context, runID, userID, reaction string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if !IsValidKudosReaction(reaction) {
+		return fmt.Errorf("invalid kudos reaction: %s", reaction)
+	}
+
+	var targetRun *Run
+	for _, r := range m.runs {
+		if r != nil && r.ID == runID {
+			targetRun = r
+			break
+		}
+	}
+	if targetRun == nil {
+		return fmt.Errorf("run not found")
+	}
+
+	if targetRun.UserID != userID {
+		if m.isBlockedLocked(targetRun.UserID, userID) {
+			return fmt.Errorf("action not permitted")
+		}
+		var isFriend bool
+		for _, f := range m.friendships {
+			if f.Status == "accepted" &&
+				((f.RequesterID == userID && f.AddresseeID == targetRun.UserID) ||
+					(f.RequesterID == targetRun.UserID && f.AddresseeID == userID)) {
+				isFriend = true
+				break
+			}
+		}
+		if !isFriend {
+			return fmt.Errorf("action not permitted: not friends")
+		}
+	}
+
+	if m.feedKudos[runID] == nil {
+		m.feedKudos[runID] = make(map[string]string)
+	}
+	m.feedKudos[runID][userID] = reaction
+	return nil
+}
+
+// RemoveRunKudos removes a runner's reaction from a shared run.
+func (m *MemoryStore) RemoveRunKudos(ctx context.Context, runID, userID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if runKudos, ok := m.feedKudos[runID]; ok {
+		delete(runKudos, userID)
+	}
+	return nil
+}
+
+// HidePost hides a specific shared run from the user's activity feed.
+func (m *MemoryStore) HidePost(ctx context.Context, userID, runID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.hiddenPosts[userID] == nil {
+		m.hiddenPosts[userID] = make(map[string]bool)
+	}
+	m.hiddenPosts[userID][runID] = true
+	return nil
+}
+
+// BlockUser establishes a mutual block between blockerID and blockedID and dissolves friendship.
+func (m *MemoryStore) BlockUser(ctx context.Context, blockerID, blockedID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if blockerID == blockedID {
+		return fmt.Errorf("cannot block yourself")
+	}
+
+	if m.userBlocks[blockerID] == nil {
+		m.userBlocks[blockerID] = make(map[string]bool)
+	}
+	m.userBlocks[blockerID][blockedID] = true
+
+	// Dissolve mutual friendship
+	for k, f := range m.friendships {
+		if (f.RequesterID == blockerID && f.AddresseeID == blockedID) ||
+			(f.RequesterID == blockedID && f.AddresseeID == blockerID) {
+			delete(m.friendships, k)
+		}
+	}
+
+	// Cancel/decline pending duels
+	for _, d := range m.duels {
+		if d.Status == "pending" &&
+			((d.ChallengerID == blockerID && d.OpponentID == blockedID) ||
+				(d.ChallengerID == blockedID && d.OpponentID == blockerID)) {
+			d.Status = "declined"
+		}
+	}
+
+	return nil
+}
+
+// UnblockUser removes a block between blockerID and blockedID.
+func (m *MemoryStore) UnblockUser(ctx context.Context, blockerID, blockedID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if blocked, ok := m.userBlocks[blockerID]; ok {
+		delete(blocked, blockedID)
+	}
+	return nil
+}
+
+// IsBlocked checks if either user has blocked the other.
+func (m *MemoryStore) IsBlocked(ctx context.Context, userA, userB string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.isBlockedLocked(userA, userB), nil
+}
+
+// ReportContent records a moderation report regarding a user or shared run.
+func (m *MemoryStore) ReportContent(ctx context.Context, report *ModerationReport) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if report.ID == "" {
+		report.ID = fmt.Sprintf("rep_%d", time.Now().UnixNano())
+	}
+	if report.CreatedAt.IsZero() {
+		report.CreatedAt = time.Now().UTC()
+	}
+	m.moderationReports = append(m.moderationReports, report)
+	return nil
 }

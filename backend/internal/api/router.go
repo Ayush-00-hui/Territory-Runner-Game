@@ -108,6 +108,15 @@ func SetupRouter(api *API, authenticator *auth.Authenticator, allowedOrigins ...
 		v1.Put("/duels/{id}/accept", api.HandleAcceptDuel)
 		v1.Put("/duels/{id}/decline", api.HandleDeclineDuel)
 
+		// Social: Activity Feed, Kudos & Moderation
+		v1.Get("/feed", api.HandleGetActivityFeed)
+		v1.Post("/feed/{id}/kudos", api.HandleSetRunKudos)
+		v1.Delete("/feed/{id}/kudos", api.HandleRemoveRunKudos)
+		v1.Post("/feed/{id}/hide", api.HandleHidePost)
+		v1.Post("/moderation/block", api.HandleBlockUser)
+		v1.Delete("/moderation/block/{id}", api.HandleUnblockUser)
+		v1.Post("/moderation/report", api.HandleReportContent)
+
 		// Seasons & Crews
 		v1.Get("/seasons/current", api.HandleGetCurrentSeason)
 		v1.Get("/crews/my", api.HandleGetMyCrew)

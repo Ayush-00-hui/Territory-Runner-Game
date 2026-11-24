@@ -10,6 +10,7 @@ import '../core/logging/app_logger.dart';
 import '../models/crew.dart';
 import '../models/duel.dart';
 import '../models/faction_standing.dart';
+import '../models/feed_item.dart';
 import '../models/friend.dart';
 import '../models/leaderboard_entry.dart';
 import '../models/league_standing.dart';
@@ -926,5 +927,115 @@ class ApiClient {
       code: data?['error'] as String? ?? 'SET_GOAL_ERROR',
       message: data?['detail'] as String? ?? 'Failed to set crew goal',
     );
+  }
+
+  /// Fetches shared runs activity feed from accepted friends (GET /v1/feed)
+  Future<List<FeedItem>> getActivityFeed({
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/feed?limit=$limit&offset=$offset');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final list = data['feed'] as List<dynamic>? ?? [];
+      return list
+          .map((e) => FeedItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+    return [];
+  }
+
+  /// Sends a reaction / kudos on a shared friend's run (POST /v1/feed/{id}/kudos)
+  Future<bool> sendKudos(String runId, String reaction) async {
+    final uri = Uri.parse('$baseUrl/v1/feed/$runId/kudos');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'reaction': reaction});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Removes a reaction from a shared friend's run (DELETE /v1/feed/{id}/kudos)
+  Future<bool> removeKudos(String runId) async {
+    final uri = Uri.parse('$baseUrl/v1/feed/$runId/kudos');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.delete(uri, headers: headers),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Hides a specific shared run from the current user's activity feed (POST /v1/feed/{id}/hide)
+  Future<bool> hidePost(String runId) async {
+    final uri = Uri.parse('$baseUrl/v1/feed/$runId/hide');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Blocks a user and dissolves any mutual friendship (POST /v1/moderation/block)
+  Future<bool> blockUser(String userId) async {
+    final uri = Uri.parse('$baseUrl/v1/moderation/block');
+    final headers = await _buildHeaders();
+    final body = jsonEncode({'user_id': userId});
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Unblocks a user (DELETE /v1/moderation/block/{id})
+  Future<bool> unblockUser(String userId) async {
+    final uri = Uri.parse('$baseUrl/v1/moderation/block/$userId');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.delete(uri, headers: headers),
+    );
+
+    return response.statusCode == 200;
+  }
+
+  /// Submits a moderation report for inappropriate content or conduct (POST /v1/moderation/report)
+  Future<bool> reportContent({
+    required String reportedUserId,
+    String? runId,
+    required String reason,
+    String details = '',
+  }) async {
+    final uri = Uri.parse('$baseUrl/v1/moderation/report');
+    final headers = await _buildHeaders();
+    final payload = <String, dynamic>{
+      'reported_user_id': reportedUserId,
+      'reason': reason,
+      'details': details,
+    };
+    if (runId != null) {
+      payload['run_id'] = runId;
+    }
+    final body = jsonEncode(payload);
+
+    final response = await _executeWithRetry(
+      () => _httpClient.post(uri, headers: headers, body: body),
+    );
+
+    return response.statusCode == 201;
   }
 }

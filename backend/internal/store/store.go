@@ -156,6 +156,30 @@ type Store interface {
 	// GetActiveCrewGoal returns the active goal for a crew for the given weekStart, with calculated progress.
 	GetActiveCrewGoal(ctx context.Context, crewID string, weekStart time.Time) (*CrewGoal, error)
 
+	// GetActivityFeed returns recent shared runs from accepted friends with privacy zones redacted.
+	GetActivityFeed(ctx context.Context, userID string, limit, offset int) ([]FeedItem, error)
+
+	// SetRunKudos sets or updates a runner's reaction (kudos, clap, fire, strong) on a shared run.
+	SetRunKudos(ctx context.Context, runID, userID, reaction string) error
+
+	// RemoveRunKudos removes a runner's reaction from a shared run.
+	RemoveRunKudos(ctx context.Context, runID, userID string) error
+
+	// HidePost hides a specific shared run from the user's activity feed.
+	HidePost(ctx context.Context, userID, runID string) error
+
+	// BlockUser establishes a mutual block between blockerID and blockedID and dissolves friendship.
+	BlockUser(ctx context.Context, blockerID, blockedID string) error
+
+	// UnblockUser removes a block between blockerID and blockedID.
+	UnblockUser(ctx context.Context, blockerID, blockedID string) error
+
+	// IsBlocked checks if either user has blocked the other.
+	IsBlocked(ctx context.Context, userA, userB string) (bool, error)
+
+	// ReportContent records a moderation report regarding a user or shared run.
+	ReportContent(ctx context.Context, report *ModerationReport) error
+
 	// Ping checks database connectivity.
 	Ping(ctx context.Context) error
 

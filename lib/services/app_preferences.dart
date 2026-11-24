@@ -40,8 +40,11 @@ class AppPreferences {
   static const String _prefWatchCalorieSessionsKey =
       'pref_watch_calorie_sessions_v1';
   static const String _prefThemeModeKey = 'pref_theme_mode';
+  static const String _prefShareRunsWithFriendsKey =
+      'pref_share_runs_with_friends';
 
   bool _isHapticsEnabled = true;
+  bool _isShareRunsWithFriends = false;
   DistanceUnit _unit = DistanceUnit.metric;
   AppThemePreference _themePreference = AppThemePreference.dark;
   bool _isLeftHandedMode = false;
@@ -73,8 +76,12 @@ class AppPreferences {
       ValueNotifier<double?>(null);
   final ValueNotifier<AppThemePreference> themePreferenceNotifier =
       ValueNotifier<AppThemePreference>(AppThemePreference.dark);
+  final ValueNotifier<bool> shareRunsWithFriendsNotifier = ValueNotifier<bool>(
+    false,
+  );
 
   bool get isHapticsEnabled => _isHapticsEnabled;
+  bool get isShareRunsWithFriends => _isShareRunsWithFriends;
   DistanceUnit get unit => _unit;
   AppThemePreference get themePreference => _themePreference;
   ThemeMode get flutterThemeMode {
@@ -138,6 +145,9 @@ class AppPreferences {
       demoUnlockedNotifier.value = _isDemoModeUnlocked;
       _isDemoModeEnabled = prefs.getBool(_prefDemoModeEnabledKey) ?? false;
       demoModeNotifier.value = _isDemoModeEnabled;
+      _isShareRunsWithFriends =
+          prefs.getBool(_prefShareRunsWithFriendsKey) ?? false;
+      shareRunsWithFriendsNotifier.value = _isShareRunsWithFriends;
       _bodyWeightKg = prefs.getDouble(_prefBodyWeightKgKey);
       bodyWeightKgNotifier.value = _bodyWeightKg;
 
@@ -238,6 +248,16 @@ class AppPreferences {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefHapticsKey, enabled);
+    } catch (_) {}
+  }
+
+  /// Toggles opt-in sharing of completed runs with mutual accepted friends (default OFF)
+  Future<void> toggleShareRunsWithFriends(bool enabled) async {
+    _isShareRunsWithFriends = enabled;
+    shareRunsWithFriendsNotifier.value = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefShareRunsWithFriendsKey, enabled);
     } catch (_) {}
   }
 
@@ -765,6 +785,8 @@ class AppPreferences {
   }
 
   /// Preset run vibration patterns
+  Future<void> triggerTabSwitchHaptic() => triggerHaptic([0, 30]);
+  Future<void> triggerOffRouteHaptic() => triggerHaptic([0, 150, 80, 250]);
   Future<void> triggerRunStartHaptic() => triggerHaptic([0, 150, 100, 150]);
   Future<void> triggerMilestoneHaptic() => triggerHaptic([0, 200, 150, 200]);
   Future<void> triggerLoopClosedHaptic() => triggerHaptic([0, 80, 80, 80]);

@@ -1042,37 +1042,37 @@ func TestMemory_TerritoryDefenseShieldCooldown(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, defT.CooldownUntil)
 	assert.True(t, defT.IsShielded(now), "Newly captured territory must be shielded")
-	assert.True(t, defT.IsShielded(now.Add(15*time.Minute)), "Territory remains shielded at +15m")
-	assert.False(t, defT.IsShielded(now.Add(31*time.Minute)), "Shield must expire at +31m")
+	assert.True(t, defT.IsShielded(now.Add(60*time.Minute)), "Territory remains shielded at +60m")
+	assert.False(t, defT.IsShielded(now.Add(121*time.Minute)), "Shield must expire at +121m")
 
-	// 2. Attacker attempts invasion while defender is still shielded (+10 min)
+	// 2. Attacker attempts invasion while defender is still shielded (+30 min)
 	attackerLoop := geo.EnclosedLoop{
 		Polygon:            defenderLoop.Polygon,
 		AreaSqMeters:       1000.0,
 		LoopDistanceMeters: 500.0,
-		ClosedAt:           now.Add(10 * time.Minute),
+		ClosedAt:           now.Add(30 * time.Minute),
 	}
 
 	attResShielded, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
 		ID:             "run_att_blocked",
 		UserID:         "usr_attacker",
 		IdempotencyKey: "idem_att_blocked",
-		CreatedAt:      now.Add(10 * time.Minute),
+		CreatedAt:      now.Add(30 * time.Minute),
 	}, []geo.EnclosedLoop{attackerLoop}, nil)
 	require.NoError(t, err)
 	assert.NotContains(t, attResShielded.RivalsAffected, "usr_defender", "Shielded defender must NOT be affected or carved")
 
-	// 3. Attacker invades AFTER shield expired (+35 min)
+	// 3. Attacker invades AFTER shield expired (+125 min)
 	attResExpired, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
 		ID:             "run_att_success",
 		UserID:         "usr_attacker",
 		IdempotencyKey: "idem_att_success",
-		CreatedAt:      now.Add(35 * time.Minute),
+		CreatedAt:      now.Add(125 * time.Minute),
 	}, []geo.EnclosedLoop{attackerLoop}, nil)
 	require.NoError(t, err)
 	assert.Contains(t, attResExpired.RivalsAffected, "usr_defender", "Unshielded defender must be affected after cooldown expires")
 
-	// 4. Defender fortifies territory via UpdateTerritoryDefense: resets strength and reactivates 30m shield
+	// 4. Defender fortifies territory via UpdateTerritoryDefense: resets strength and reactivates 120m shield
 	err = memStore.UpdateTerritoryDefense(ctx, "poly_usr_defender_territory", 100.0)
 	require.NoError(t, err)
 
@@ -1081,4 +1081,191 @@ func TestMemory_TerritoryDefenseShieldCooldown(t *testing.T) {
 	assert.InDelta(t, 100.0, fortifiedT.Strength, 0.01)
 	require.NotNil(t, fortifiedT.CooldownUntil)
 	assert.True(t, fortifiedT.IsShielded(time.Now().UTC()), "Fortified territory must have active shield")
+}
+
+func TestSocialFeedAndPrivacyZoneMasking(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	// 1. Create User A (Alice) and User B (Bob)
+	alice := &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"}
+	bob := &store.User{ID: "usr_bob", Username: "Bob", Faction: "Neon Nomads"}
+	charlie := &store.User{ID: "usr_charlie", Username: "Charlie", Faction: "Solar Flares"}
+	require.NoError(t, memStore.UpsertUser(ctx, alice))
+	require.NoError(t, memStore.UpsertUser(ctx, bob))
+	require.NoError(t, memStore.UpsertUser(ctx, charlie))
+
+	// 2. Establish friendship Alice <-> Bob
+	req, err := memStore.SendFriendRequest(ctx, "usr_alice", "usr_bob")
+	require.NoError(t, err)
+	_, err = memStore.RespondFriendRequest(ctx, req.ID, "usr_bob", "accept")
+	require.NoError(t, err)
+
+	// 3. Alice configures Privacy Zone (home at lat: 12.9716, lng: 77.5946, radius: 200m)
+	require.NoError(t, memStore.SetPrivacyZones(ctx, "usr_alice", []store.PrivacyZone{
+		{
+			ID:           "pz_home",
+			Name:         "Home",
+			Latitude:     12.9716,
+			Longitude:    77.5946,
+			RadiusMeters: 200.0,
+			IsEnabled:    true,
+			CreatedAt:    time.Now().UTC(),
+		},
+	}))
+
+	// 4. Alice captures a run with points touching home zone and outside home zone
+	// Track: pt0 (home, 0m away), pt1 (park, 600m away), pt2 (park2, 700m away), pt3 (home, 10m away)
+	track := []geo.TrackPoint{
+		{Latitude: 12.9716, Longitude: 77.5946, Timestamp: time.Now().UTC()},                                    // inside zone
+		{Latitude: 12.9760, Longitude: 77.6000, Timestamp: time.Now().UTC().Add(5 * time.Minute)},             // outside zone (~700m)
+		{Latitude: 12.9770, Longitude: 77.6010, Timestamp: time.Now().UTC().Add(10 * time.Minute)},            // outside zone
+		{Latitude: 12.97165, Longitude: 77.59465, Timestamp: time.Now().UTC().Add(15 * time.Minute)},          // inside zone
+	}
+
+	loop := geo.EnclosedLoop{
+		Polygon: []geo.LatLng{
+			{Latitude: 12.9716, Longitude: 77.5946},
+			{Latitude: 12.9760, Longitude: 77.6000},
+			{Latitude: 12.9770, Longitude: 77.6010},
+			{Latitude: 12.9716, Longitude: 77.5946},
+		},
+		AreaSqMeters:       1500.0,
+		LoopDistanceMeters: 800.0,
+		ClosedAt:           time.Now().UTC(),
+	}
+
+	run := &store.Run{
+		ID:              "run_alice_1",
+		UserID:          "usr_alice",
+		IdempotencyKey:  "idem_alice_1",
+		ActivityType:    "running",
+		DurationSeconds: 900,
+		DistanceMeters:  800.0,
+		Status:          "accepted",
+		CreatedAt:       time.Now().UTC(),
+	}
+
+	_, err = memStore.CaptureRunAndMutateTerritories(ctx, run, []geo.EnclosedLoop{loop}, track)
+	require.NoError(t, err)
+
+	// 5. Alice has NOT opted into sharing (default: false)
+	feedBob, err := memStore.GetActivityFeed(ctx, "usr_bob", 20, 0)
+	require.NoError(t, err)
+	assert.Empty(t, feedBob, "When ShareRunsWithFriends is false, runs must NOT appear in friends feed")
+
+	// 6. Alice opts in to share runs
+	require.NoError(t, memStore.UpdateUserSettings(ctx, "usr_alice", &store.UserSettings{
+		ShareRunsWithFriends: true,
+	}))
+
+	// 7. Bob checks feed: Alice's run is now visible, and route thumbnail is privacy-masked
+	feedBob, err = memStore.GetActivityFeed(ctx, "usr_bob", 20, 0)
+	require.NoError(t, err)
+	require.Len(t, feedBob, 1)
+	item := feedBob[0]
+	assert.Equal(t, "run_alice_1", item.ID)
+	assert.Equal(t, "Alice", item.Username)
+	assert.Equal(t, "Cyber Vanguard", item.Faction)
+
+	// Verify route thumbnail masked points:
+	// Points inside home zone (pt0, pt3) must be stripped out; only outside points (pt1, pt2) remain!
+	require.Len(t, item.RouteThumbnail, 2, "Sensitive coordinates within privacy zone must be redacted")
+	assert.InDelta(t, 12.9760, item.RouteThumbnail[0][0], 0.0001)
+	assert.InDelta(t, 77.6000, item.RouteThumbnail[0][1], 0.0001)
+
+	// 8. Charlie (not a friend of Alice) checks feed: must be empty
+	feedCharlie, err := memStore.GetActivityFeed(ctx, "usr_charlie", 20, 0)
+	require.NoError(t, err)
+	assert.Empty(t, feedCharlie, "Non-friends must never see shared runs")
+}
+
+func TestKudosAndModerationFlow(t *testing.T) {
+	ctx := context.Background()
+	memStore := store.NewMemoryStore()
+
+	alice := &store.User{ID: "usr_a", Username: "Alice"}
+	bob := &store.User{ID: "usr_b", Username: "Bob"}
+	require.NoError(t, memStore.UpsertUser(ctx, alice))
+	require.NoError(t, memStore.UpsertUser(ctx, bob))
+
+	// Friend connection
+	req, _ := memStore.SendFriendRequest(ctx, "usr_a", "usr_b")
+	_, _ = memStore.RespondFriendRequest(ctx, req.ID, "usr_b", "accept")
+	require.NoError(t, memStore.UpdateUserSettings(ctx, "usr_a", &store.UserSettings{ShareRunsWithFriends: true}))
+
+	run := &store.Run{
+		ID:             "run_a_1",
+		UserID:         "usr_a",
+		IdempotencyKey: "idem_a_1",
+		Status:         "accepted",
+		CreatedAt:      time.Now().UTC(),
+	}
+	_, err := memStore.CaptureRunAndMutateTerritories(ctx, run, nil, nil)
+	require.NoError(t, err)
+
+	// 1. Kudos reactions
+	// Invalid reaction
+	assert.Error(t, memStore.SetRunKudos(ctx, "run_a_1", "usr_b", "invalid_emoji"))
+
+	// Valid reaction: kudos
+	require.NoError(t, memStore.SetRunKudos(ctx, "run_a_1", "usr_b", "kudos"))
+	feed, err := memStore.GetActivityFeed(ctx, "usr_b", 10, 0)
+	require.NoError(t, err)
+	require.Len(t, feed, 1)
+	assert.Equal(t, 1, feed[0].KudosCounts["kudos"])
+	assert.Equal(t, "kudos", feed[0].MyKudos)
+
+	// Update reaction to 'fire'
+	require.NoError(t, memStore.SetRunKudos(ctx, "run_a_1", "usr_b", "fire"))
+	feed, _ = memStore.GetActivityFeed(ctx, "usr_b", 10, 0)
+	assert.Equal(t, 0, feed[0].KudosCounts["kudos"])
+	assert.Equal(t, 1, feed[0].KudosCounts["fire"])
+	assert.Equal(t, "fire", feed[0].MyKudos)
+
+	// Remove reaction
+	require.NoError(t, memStore.RemoveRunKudos(ctx, "run_a_1", "usr_b"))
+	feed, _ = memStore.GetActivityFeed(ctx, "usr_b", 10, 0)
+	assert.Equal(t, 0, feed[0].KudosCounts["fire"])
+	assert.Empty(t, feed[0].MyKudos)
+
+	// 2. Hide post
+	require.NoError(t, memStore.HidePost(ctx, "usr_b", "run_a_1"))
+	feed, _ = memStore.GetActivityFeed(ctx, "usr_b", 10, 0)
+	assert.Empty(t, feed, "Hidden post must be excluded from caller feed")
+
+	// 3. User block & unblock
+	// Create another run for Alice
+	run2 := &store.Run{
+		ID:             "run_a_2",
+		UserID:         "usr_a",
+		IdempotencyKey: "idem_a_2",
+		Status:         "accepted",
+		CreatedAt:      time.Now().UTC(),
+	}
+	_, _ = memStore.CaptureRunAndMutateTerritories(ctx, run2, nil, nil)
+
+	// Block Alice
+	require.NoError(t, memStore.BlockUser(ctx, "usr_b", "usr_a"))
+	isBlocked, err := memStore.IsBlocked(ctx, "usr_b", "usr_a")
+	require.NoError(t, err)
+	assert.True(t, isBlocked)
+
+	feed, _ = memStore.GetActivityFeed(ctx, "usr_b", 10, 0)
+	assert.Empty(t, feed, "Runs from blocked user must not appear in feed")
+
+	// Verify friendship was dissolved
+	friends, _ := memStore.GetFriends(ctx, "usr_b")
+	assert.Empty(t, friends)
+
+	// 4. Report content
+	report := &store.ModerationReport{
+		ReporterID:     "usr_b",
+		ReportedUserID: "usr_a",
+		RunID:          "run_a_2",
+		Reason:         "inappropriate_shape",
+		Details:        "Drawing offensive route",
+	}
+	require.NoError(t, memStore.ReportContent(ctx, report))
+	assert.NotEmpty(t, report.ID)
 }

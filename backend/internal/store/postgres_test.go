@@ -378,6 +378,48 @@ func TestMigration_000012_AddRunStepCount(t *testing.T) {
 	assert.Equal(t, 1, colCount, "step_count column must exist after re-applying up")
 }
 
+// 2d. Migration 000017: Social feed and moderation tables up and down
+func TestMigration_000017_SocialFeedAndModeration(t *testing.T) {
+	_, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	up17, err := readMigration("000017_add_social_feed_and_moderation.up.sql")
+	require.NoError(t, err)
+	down17, err := readMigration("000017_add_social_feed_and_moderation.down.sql")
+	require.NoError(t, err)
+
+	// Since setupTestStore runs all migrations, verify share_runs_with_friends exists
+	var colCount int
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'users' AND column_name = 'share_runs_with_friends';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, colCount, "share_runs_with_friends column must exist in users initially")
+
+	// Revert 000017 down
+	_, err = pool.Exec(ctx, down17)
+	require.NoError(t, err, "000017 down should apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'users' AND column_name = 'share_runs_with_friends';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, colCount, "share_runs_with_friends column must be removed after down")
+
+	// Re-apply 000017 up
+	_, err = pool.Exec(ctx, up17)
+	require.NoError(t, err, "000017 up should re-apply cleanly")
+
+	err = pool.QueryRow(ctx, `
+		SELECT count(*) FROM information_schema.columns 
+		WHERE table_name = 'users' AND column_name = 'share_runs_with_friends';
+	`).Scan(&colCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, colCount, "share_runs_with_friends column must exist after re-applying up")
+}
+
 // 2d. Migration 000016: territories.cooldown_until column up and down
 func TestMigration_000016_AddTerritoryCooldown(t *testing.T) {
 	_, pool := setupTestStore(t)
@@ -1233,7 +1275,7 @@ func TestPostgres_RunnerCodeAndFriendSearch(t *testing.T) {
 	assert.Equal(t, "pending_sent", resultsAfter[0].FriendshipStatus)
 }
 
-// 16. Symmetrical 30-minute territory defense cooldown shield on PostGIS
+// 16. Symmetrical 2-hour territory defense cooldown shield on PostGIS
 func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
 	st, _ := setupTestStore(t)
 	ctx := context.Background()
@@ -1282,10 +1324,10 @@ func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
 	require.NotNil(t, defT)
 	require.NotNil(t, defT.CooldownUntil)
 	assert.True(t, defT.IsShielded(now), "Newly captured territory must be shielded")
-	assert.True(t, defT.IsShielded(now.Add(15*time.Minute)), "Territory remains shielded at +15m")
-	assert.False(t, defT.IsShielded(now.Add(31*time.Minute)), "Shield must expire at +31m")
+	assert.True(t, defT.IsShielded(now.Add(60*time.Minute)), "Territory remains shielded at +60m")
+	assert.False(t, defT.IsShielded(now.Add(121*time.Minute)), "Shield must expire at +121m")
 
-	// Attacker attempts invasion while defender is shielded
+	// Attacker attempts invasion while defender is shielded (+30m)
 	attackerLoop := geo.EnclosedLoop{
 		Polygon:      defenderRing,
 		AreaSqMeters: loopArea,
@@ -1294,12 +1336,12 @@ func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
 		ID:             "run_pg_att_blocked",
 		UserID:         "pg_usr_attacker",
 		IdempotencyKey: "idem_pg_att_blocked",
-		CreatedAt:      now.Add(10 * time.Minute),
+		CreatedAt:      now.Add(30 * time.Minute),
 	}, []geo.EnclosedLoop{attackerLoop}, nil)
 	require.NoError(t, err)
 	assert.NotContains(t, attResShielded.RivalsAffected, "pg_usr_defender", "Shielded defender must NOT be affected or carved")
 
-	// Defender fortifies via UpdateTerritoryDefense: resets strength and reactivates 30m shield
+	// Defender fortifies via UpdateTerritoryDefense: resets strength and reactivates 120m shield
 	err = st.UpdateTerritoryDefense(ctx, defT.ID, 100.0)
 	require.NoError(t, err)
 
