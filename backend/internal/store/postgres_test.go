@@ -45,6 +45,7 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000017_add_social_feed_and_moderation.down.sql",
 		"000016_add_territory_cooldown.down.sql",
 		"000015_add_user_runner_code.down.sql",
 		"000014_add_seasons_and_crews.down.sql",
@@ -68,7 +69,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 			_, _ = pool.Exec(ctx, sql)
 		}
 	}
-	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS crew_goals, crew_memberships, crews, season_standings, seasons, decay_notifications, duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS moderation_reports, hidden_posts, user_blocks, feed_kudos, crew_goals, crew_memberships, crews, season_standings, seasons, decay_notifications, duels, friendships, privacy_zones, device_tokens, runs, territories, users CASCADE;")
 
 	upFiles := []string{
 		"000001_init_schema.up.sql",
@@ -87,6 +88,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000014_add_seasons_and_crews.up.sql",
 		"000015_add_user_runner_code.up.sql",
 		"000016_add_territory_cooldown.up.sql",
+		"000017_add_social_feed_and_moderation.up.sql",
 	}
 
 	for _, uf := range upFiles {
@@ -1350,4 +1352,86 @@ func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
 	assert.InDelta(t, 100.0, fortifiedT.Strength, 0.01)
 	require.NotNil(t, fortifiedT.CooldownUntil)
 	assert.True(t, fortifiedT.IsShielded(time.Now().UTC()), "Fortified territory must have active shield")
+}
+
+func TestPostgresSocialFeedAndModeration(t *testing.T) {
+	st, pool := setupTestStore(t)
+	ctx := context.Background()
+
+	// 1. Create Alice and Bob in users table
+	_, err := pool.Exec(ctx, `
+		INSERT INTO users (id, username, faction, share_runs_with_friends)
+		VALUES ('usr_pg_feed_alice', 'Alice PG', 'cyber', TRUE),
+		       ('usr_pg_feed_bob', 'Bob PG', 'solaris', TRUE);
+	`)
+	require.NoError(t, err)
+
+	// 2. Establish accepted friendship
+	_, err = pool.Exec(ctx, `
+		INSERT INTO friendships (id, requester_id, addressee_id, status)
+		VALUES ('fr_pg_feed_1', 'usr_pg_feed_alice', 'usr_pg_feed_bob', 'accepted');
+	`)
+	require.NoError(t, err)
+
+	// 3. Insert an accepted run for Alice
+	now := time.Now().UTC()
+	_, err = pool.Exec(ctx, `
+		INSERT INTO runs (id, user_id, status, duration_seconds, distance_meters, area_claimed, created_at)
+		VALUES ('run_pg_alice_feed', 'usr_pg_feed_alice', 'accepted', 180, 500.0, 1000.0, $1);
+	`, now)
+	require.NoError(t, err)
+
+	// 4. Bob queries activity feed
+	feed, err := st.GetActivityFeed(ctx, "usr_pg_feed_bob", 10, 0)
+	require.NoError(t, err)
+	require.Len(t, feed, 1)
+	assert.Equal(t, "run_pg_alice_feed", feed[0].ID)
+	assert.Equal(t, "usr_pg_feed_alice", feed[0].UserID)
+
+	// 5. Kudos: Bob reacts
+	require.NoError(t, st.SetRunKudos(ctx, "run_pg_alice_feed", "usr_pg_feed_bob", "fire"))
+	feed, err = st.GetActivityFeed(ctx, "usr_pg_feed_bob", 10, 0)
+	require.NoError(t, err)
+	assert.Equal(t, 1, feed[0].KudosCounts["fire"])
+	assert.Equal(t, "fire", feed[0].MyKudos)
+
+	// Remove kudos
+	require.NoError(t, st.RemoveRunKudos(ctx, "run_pg_alice_feed", "usr_pg_feed_bob"))
+	feed, err = st.GetActivityFeed(ctx, "usr_pg_feed_bob", 10, 0)
+	require.NoError(t, err)
+	assert.Empty(t, feed[0].MyKudos)
+
+	// 6. Moderation report
+	rep := &store.ModerationReport{
+		ID:             "rep_pg_001",
+		ReporterID:     "usr_pg_feed_bob",
+		ReportedUserID: "usr_pg_feed_alice",
+		RunID:          "run_pg_alice_feed",
+		Reason:         "inappropriate_shape",
+		Details:        "Testing postgres reporting",
+		CreatedAt:      now,
+	}
+	require.NoError(t, st.ReportContent(ctx, rep))
+
+	// 7. Hide post
+	require.NoError(t, st.HidePost(ctx, "usr_pg_feed_bob", "run_pg_alice_feed"))
+	feed, err = st.GetActivityFeed(ctx, "usr_pg_feed_bob", 10, 0)
+	require.NoError(t, err)
+	assert.Empty(t, feed, "Hidden run should not appear in Bob's feed")
+
+	// 8. Blocking
+	isBlocked, err := st.IsBlocked(ctx, "usr_pg_feed_bob", "usr_pg_feed_alice")
+	require.NoError(t, err)
+	assert.False(t, isBlocked)
+
+	require.NoError(t, st.BlockUser(ctx, "usr_pg_feed_bob", "usr_pg_feed_alice"))
+	isBlocked, err = st.IsBlocked(ctx, "usr_pg_feed_bob", "usr_pg_feed_alice")
+	require.NoError(t, err)
+	assert.True(t, isBlocked)
+
+	// Unblock
+	require.NoError(t, st.UnblockUser(ctx, "usr_pg_feed_bob", "usr_pg_feed_alice"))
+	isBlocked, err = st.IsBlocked(ctx, "usr_pg_feed_bob", "usr_pg_feed_alice")
+	require.NoError(t, err)
+	assert.False(t, isBlocked)
 }
