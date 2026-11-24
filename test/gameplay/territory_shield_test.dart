@@ -42,7 +42,7 @@ void main() {
   });
 
   group('Territory Model Defense Shield Mechanics', () {
-    test('New territory receives default 30-minute defense shield', () {
+    test('New territory receives default 2-hour defense shield', () {
       final now = DateTime.now();
       final territory = Territory(
         id: 'poly_test_001',
@@ -58,26 +58,26 @@ void main() {
       );
 
       expect(territory.cooldownUntil, isNotNull);
-      expect(territory.cooldownUntil!.difference(now).inMinutes, equals(30));
+      expect(territory.cooldownUntil!.difference(now).inMinutes, equals(120));
       expect(territory.isShielded(now: now), isTrue);
       expect(
-        territory.isShielded(now: now.add(const Duration(minutes: 15))),
+        territory.isShielded(now: now.add(const Duration(minutes: 60))),
         isTrue,
       );
       expect(
-        territory.isShielded(now: now.add(const Duration(minutes: 31))),
+        territory.isShielded(now: now.add(const Duration(minutes: 121))),
         isFalse,
       );
 
       final remaining = territory.remainingShieldTime(
-        now: now.add(const Duration(minutes: 10)),
+        now: now.add(const Duration(minutes: 30)),
       );
-      expect(remaining.inMinutes, equals(20));
+      expect(remaining.inMinutes, equals(90));
     });
 
     test('toJson and fromJson preserve cooldownUntil timestamp', () {
       final now = DateTime.now();
-      final cooldown = now.add(const Duration(minutes: 30));
+      final cooldown = now.add(const Duration(hours: 2));
       final territory = Territory(
         id: 'poly_json_test',
         ownerId: 'runner_bob',
@@ -117,7 +117,7 @@ void main() {
           ],
           areaSqMeters: 1200.0,
           capturedAt: now,
-          cooldownUntil: now.add(const Duration(minutes: 30)),
+          cooldownUntil: now.add(const Duration(hours: 2)),
         );
 
         await box.put(territory.id, territory);
@@ -128,7 +128,7 @@ void main() {
         expect(readBack.cooldownUntil, isNotNull);
         expect(readBack.isShielded(now: now), isTrue);
         expect(
-          readBack.isShielded(now: now.add(const Duration(minutes: 31))),
+          readBack.isShielded(now: now.add(const Duration(minutes: 121))),
           isFalse,
         );
       },
@@ -136,7 +136,7 @@ void main() {
   });
 
   group('TerritoryService Shield Defense & Conquest Protection', () {
-    test('capturePolygonTerritory activates 30-minute shield', () async {
+    test('capturePolygonTerritory activates 2-hour shield', () async {
       final service = TerritoryService();
       final polygon = const [
         LatLng(51.500, -0.120),
@@ -156,7 +156,7 @@ void main() {
       expect(captured.isShielded(), isTrue);
       expect(
         captured.remainingShieldTime().inMinutes,
-        greaterThanOrEqualTo(29),
+        greaterThanOrEqualTo(118),
       );
     });
 
@@ -217,7 +217,7 @@ void main() {
         LatLng(51.500, -0.122),
         LatLng(51.500, -0.120),
       ];
-      final pastCapture = DateTime.now().subtract(const Duration(minutes: 40));
+      final pastCapture = DateTime.now().subtract(const Duration(hours: 3));
       final initialRivalArea =
           PolygonEnclosureEngine.computeGeodesicShoelaceArea(rivalPoly);
       final rivalTerritory = Territory(
@@ -229,8 +229,8 @@ void main() {
         capturedAt: pastCapture,
         lastDefendedAt: pastCapture,
         cooldownUntil: pastCapture.add(
-          const Duration(minutes: 30),
-        ), // Expired 10 min ago
+          const Duration(hours: 2),
+        ), // Expired 1 hour ago
       );
       await box.put(rivalTerritory.id, rivalTerritory);
       expect(rivalTerritory.isShielded(), isFalse);
@@ -282,7 +282,7 @@ void main() {
           capturedAt: pastCapture,
           lastDefendedAt: pastCapture,
           strength: 25.0,
-          cooldownUntil: pastCapture.add(const Duration(minutes: 30)),
+          cooldownUntil: pastCapture.add(const Duration(hours: 2)),
         );
         await box.put(decayedTerritory.id, decayedTerritory);
         expect(decayedTerritory.isShielded(), isFalse);
@@ -296,7 +296,88 @@ void main() {
         expect(fortified.isShielded(), isTrue);
         expect(
           fortified.remainingShieldTime().inMinutes,
-          greaterThanOrEqualTo(29),
+          greaterThanOrEqualTo(118),
+        );
+      },
+    );
+  });
+
+  group('Territory Commons Despawn & Grace Period', () {
+    test('Territory at 160h (0% strength) remains within 72h grace period', () {
+      final now = DateTime.now();
+      final territory = Territory(
+        id: 'poly_decay_160h',
+        ownerId: 'usr_decay_1',
+        polygon: const [
+          LatLng(51.500, -0.120),
+          LatLng(51.502, -0.120),
+          LatLng(51.502, -0.122),
+          LatLng(51.500, -0.122),
+        ],
+        areaSqMeters: 1000.0,
+        capturedAt: now.subtract(const Duration(hours: 160)),
+      );
+
+      expect(territory.computeCurrentStrength(now: now), equals(0.0));
+      expect(territory.isWeak(now: now), isTrue);
+      expect(territory.isDespawned(now: now), isFalse);
+    });
+
+    test('Territory at 200h remains in grace period without despawning', () {
+      final now = DateTime.now();
+      final territory = Territory(
+        id: 'poly_decay_200h',
+        ownerId: 'usr_decay_2',
+        polygon: const [
+          LatLng(51.500, -0.120),
+          LatLng(51.502, -0.120),
+          LatLng(51.502, -0.122),
+          LatLng(51.500, -0.122),
+        ],
+        areaSqMeters: 1000.0,
+        capturedAt: now.subtract(const Duration(hours: 200)),
+      );
+
+      expect(territory.computeCurrentStrength(now: now), equals(0.0));
+      expect(territory.isDespawned(now: now), isFalse);
+    });
+
+    test(
+      'Territory beyond 232h (160h + 72h grace) despawns into public commons',
+      () async {
+        final now = DateTime.now();
+        final territory = Territory(
+          id: 'poly_despawned',
+          ownerId: 'usr_abandoned',
+          polygon: const [
+            LatLng(51.500, -0.120),
+            LatLng(51.502, -0.120),
+            LatLng(51.502, -0.122),
+            LatLng(51.500, -0.122),
+          ],
+          areaSqMeters: 1000.0,
+          capturedAt: now.subtract(const Duration(hours: 233)),
+        );
+
+        expect(territory.isDespawned(now: now), isTrue);
+
+        final service = TerritoryService();
+        final box = Hive.box<Territory>('territories_v3');
+        await box.put(territory.id, territory);
+
+        // getCapturedTerritoryObjects filters out despawned territories
+        final activeTerritories = service.getCapturedTerritoryObjects();
+        expect(
+          activeTerritories.any((t) => t.id == territory.id),
+          isFalse,
+          reason: 'Despawned territory must be excluded from active objects',
+        );
+
+        final activeIds = service.getCapturedTerritories();
+        expect(
+          activeIds.contains(territory.id),
+          isFalse,
+          reason: 'Despawned territory must be excluded from active IDs',
         );
       },
     );

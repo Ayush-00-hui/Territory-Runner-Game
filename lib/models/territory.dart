@@ -24,8 +24,14 @@ class Territory {
   static const double weakThreshold =
       30.0; // Below this threshold, rivals take weak territory with bonus XP
   static const Duration defaultShieldDuration = Duration(
-    minutes: 30,
-  ); // 30-min protection against rival invasion
+    hours: 2,
+  ); // 2-hour protection against rival invasion
+  static const Duration despawnGracePeriod = Duration(
+    hours: 72,
+  ); // 72-hour grace period after reaching 0% strength
+  static const Duration despawnTotalDuration = Duration(
+    hours: 232,
+  ); // 160h decay + 72h grace = 232h before commons return
 
   Territory({
     required this.id,
@@ -71,6 +77,14 @@ class Territory {
     final currentTime = now ?? DateTime.now();
     final diff = cooldownUntil!.difference(currentTime);
     return diff.isNegative ? Duration.zero : diff;
+  }
+
+  /// Returns true if territory has exceeded 0% strength plus the 72-hour grace period (232 hours total inactivity).
+  bool isDespawned({DateTime? now}) {
+    final currentTime = now ?? DateTime.now();
+    final diff = currentTime.difference(lastDefendedAt);
+    if (diff.isNegative) return false;
+    return diff >= despawnTotalDuration;
   }
 
   Territory copyWith({

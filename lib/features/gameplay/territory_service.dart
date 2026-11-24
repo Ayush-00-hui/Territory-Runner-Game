@@ -205,14 +205,19 @@ class TerritoryService {
   List<String> getCapturedTerritories() {
     final box = _territoryBox;
     if (box == null) return [];
-    return box.values.map((t) => t.id).toList();
+    final now = DateTime.now();
+    return box.values
+        .where((t) => !t.isDespawned(now: now))
+        .map((t) => t.id)
+        .toList();
   }
 
   /// Returns all currently captured Territory model objects
   List<Territory> getCapturedTerritoryObjects() {
     final box = _territoryBox;
     if (box == null) return [];
-    return box.values.toList();
+    final now = DateTime.now();
+    return box.values.where((t) => !t.isDespawned(now: now)).toList();
   }
 
   /// Captures an arbitrary enclosed GPS polygon as player territory.
@@ -236,7 +241,9 @@ class TerritoryService {
     final shieldedRivalPaths = <Path64>[];
     if (box != null) {
       for (final t in box.values) {
-        if (t.ownerId != activeOwner && t.isShielded(now: now)) {
+        if (t.ownerId != activeOwner &&
+            !t.isDespawned(now: now) &&
+            t.isShielded(now: now)) {
           for (final poly in t.polygons) {
             if (poly.length >= 3) {
               shieldedRivalPaths.add(latLngsToPath64(poly));
@@ -318,7 +325,11 @@ class TerritoryService {
 
     // 2. Clipper Difference: contest and clip overlapping rival territories
     final rivalTerritories = box != null
-        ? box.values.where((t) => t.ownerId != activeOwner).toList()
+        ? box.values
+              .where(
+                (t) => t.ownerId != activeOwner && !t.isDespawned(now: now),
+              )
+              .toList()
         : <Territory>[];
 
     for (final rival in rivalTerritories) {
@@ -509,7 +520,7 @@ class TerritoryService {
       _captureEventController.add(defended);
       unawaited(_firebaseService.syncTerritoryToCloud(defended));
       AppLogger.info(
-        'Territory $territoryId fortified to 100% defense (30m shield active)!',
+        'Territory $territoryId fortified to 100% defense (2h shield active)!',
         tag: 'TerritoryService',
       );
       return defended;
