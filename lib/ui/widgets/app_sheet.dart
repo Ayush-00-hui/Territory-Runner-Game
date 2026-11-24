@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../motion/motion.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
 
 /// Standard Bottom Sheet modal with continuous squircle corners (24dp),
-/// centered drag handle, scrim overlay, and safe-area wrapping.
+/// centered drag handle, scrim overlay, spring-physics ease-out animation,
+/// and safe-area wrapping.
 class AppSheet extends StatelessWidget {
   final String? title;
   final String? subtitle;
@@ -27,7 +29,7 @@ class AppSheet extends StatelessWidget {
     ),
   });
 
-  /// Displays the modal sheet using standardized styling tokens
+  /// Displays the modal sheet using standardized styling tokens and spring physics.
   static Future<T?> show<T>({
     required BuildContext context,
     required WidgetBuilder builder,
@@ -40,6 +42,11 @@ class AppSheet extends StatelessWidget {
       isScrollControlled: isScrollControlled,
       isDismissible: isDismissible,
       enableDrag: enableDrag,
+      sheetAnimationStyle: AnimationStyle(
+        duration: AppMotion.duration(context, AppMotion.sheet),
+        reverseDuration: AppMotion.duration(context, AppMotion.sheet),
+        curve: Curves.easeOutCubic,
+      ),
       backgroundColor: AppColors.surface,
       barrierColor: AppColors.scrim,
       elevation: 0,

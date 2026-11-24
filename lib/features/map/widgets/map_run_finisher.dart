@@ -6,14 +6,19 @@ import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../models/interval_workout.dart';
+import '../../../models/lap_split.dart';
 import '../../../models/run_log_entry.dart';
+import '../../../models/saved_loop.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/calorie_model_engine.dart';
+import '../../../services/exploration_service.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/motion_sensor_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/run_log_service.dart';
+import '../../../services/saved_loop_service.dart';
 import '../../../services/sync_queue.dart';
+import '../../../services/tiered_achievement_service.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../gameplay/territory_service.dart';
 import '../controllers/map_run_controller.dart';
@@ -41,11 +46,18 @@ void handleFinishRun({
   final elevationGain =
       (summary['elevationGainMeters'] as num?)?.toDouble() ?? 0.0;
   final points = summary['points'] as List<LatLng>;
+  final laps = summary['laps'] as List<LapSplit>?;
+  final savedLoop = summary['savedLoop'] as SavedLoop?;
 
   if (!isSimulated) {
     TerritoryService().defendTerritory(FirebaseService().currentUserId);
     TerritoryService().addRunDistance(finalDistance);
     AppPreferences().recordCompletedRunForBodyProfile();
+    ExplorationService().recordVisitedPoints(points);
+    TieredAchievementService().evaluateAllAchievements();
+    if (savedLoop != null) {
+      SavedLoopService().recordLoopRun(savedLoop.id, finalSeconds);
+    }
     onTerritoriesUpdated();
   }
 
@@ -152,6 +164,7 @@ void handleFinishRun({
     workoutPlan: summary['workoutPlan'] as IntervalWorkoutPlan?,
     workoutExecutions:
         summary['workoutExecutions'] as List<WorkoutPhaseExecution>?,
+    laps: laps,
     isSimulated: isSimulated,
   );
 

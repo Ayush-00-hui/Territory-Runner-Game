@@ -313,7 +313,7 @@ class SocialDuelsTab extends StatelessWidget {
                 Text(
                   '$theirProgressDisplay / $targetDisplay (${(duel.theirProgressFraction(myUid) * 100).toStringAsFixed(0)}%)',
                   style: const TextStyle(
-                    color: AppColors.secondary,
+                    color: AppColors.accent,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -326,7 +326,7 @@ class SocialDuelsTab extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: duel.theirProgressFraction(myUid),
                 backgroundColor: AppColors.surface2,
-                color: AppColors.secondary,
+                color: AppColors.accent,
                 minHeight: 6,
               ),
             ),

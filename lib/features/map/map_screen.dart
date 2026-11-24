@@ -38,6 +38,7 @@ import 'widgets/run_countdown_overlay.dart';
 import 'widgets/run_go_cue.dart';
 import 'widgets/run_goal_sheet.dart';
 import 'widgets/run_recovery_dialog.dart';
+import 'widgets/saved_loops_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
 import '../profile/widgets/body_details_sheet.dart';
 import '../profile/widgets/offline_maps_sheet.dart';
@@ -444,6 +445,17 @@ class _MapScreenState extends State<MapScreen>
           currentPlan: controller.activeWorkoutPlan,
           onPlanSelected: (plan) {
             controller.setWorkoutPlan(plan);
+          },
+        );
+      },
+      onOpenSavedLoops: () {
+        SavedLoopsSheet.show(
+          context: context,
+          onStartLoop: (loop) {
+            controller.setActiveSavedLoop(loop);
+            if (!controller.isRunActive) {
+              _startRunSequence(controller);
+            }
           },
         );
       },

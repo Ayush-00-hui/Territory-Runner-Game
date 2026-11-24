@@ -131,7 +131,7 @@ class VirtualPacerSheet extends StatelessWidget {
                 title: 'Virtual Run — 10.0 km/h',
                 subtitle: '2.78 m/s standard athletic pacing',
                 icon: Icons.directions_run_rounded,
-                color: AppColors.secondary,
+                color: AppColors.accent,
                 setModalState: setModalState,
               ),
               _buildPacerOption(

@@ -19,6 +19,7 @@ class MapToolsSheet extends StatelessWidget {
   final VoidCallback onTriggerSos;
   final VoidCallback? onOpenGhostRunner;
   final VoidCallback? onOpenIntervalWorkouts;
+  final VoidCallback? onOpenSavedLoops;
   final String? activePacerLabel;
   final String? activeGoalLabel;
   final String? activeGhostLabel;
@@ -36,6 +37,7 @@ class MapToolsSheet extends StatelessWidget {
     required this.onTriggerSos,
     this.onOpenGhostRunner,
     this.onOpenIntervalWorkouts,
+    this.onOpenSavedLoops,
     this.activePacerLabel,
     this.activeGoalLabel,
     this.activeGhostLabel,
@@ -54,6 +56,7 @@ class MapToolsSheet extends StatelessWidget {
     required VoidCallback onTriggerSos,
     VoidCallback? onOpenGhostRunner,
     VoidCallback? onOpenIntervalWorkouts,
+    VoidCallback? onOpenSavedLoops,
     String? activePacerLabel,
     String? activeGoalLabel,
     String? activeGhostLabel,
@@ -98,6 +101,12 @@ class MapToolsSheet extends StatelessWidget {
             ? () {
                 Navigator.pop(ctx);
                 onOpenIntervalWorkouts();
+              }
+            : null,
+        onOpenSavedLoops: onOpenSavedLoops != null
+            ? () {
+                Navigator.pop(ctx);
+                onOpenSavedLoops();
               }
             : null,
         activePacerLabel: activePacerLabel,
@@ -176,6 +185,16 @@ class MapToolsSheet extends StatelessWidget {
                 subtitle: 'Suggested closed loops for territory capture',
                 accentColor: AppColors.info,
                 onTap: onOpenRoutePlanner,
+              ),
+              const SizedBox(height: AppSpacing.s8),
+
+              // 5. Saved Loops
+              _ToolTile(
+                icon: Icons.repeat_rounded,
+                title: 'Saved loops',
+                subtitle: 'Run and beat your personal best on saved routes',
+                accentColor: AppColors.accent,
+                onTap: onOpenSavedLoops ?? () {},
               ),
               const SizedBox(height: AppSpacing.s8),
 
