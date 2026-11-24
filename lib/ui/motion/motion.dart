@@ -8,9 +8,9 @@ import 'package:flutter/services.dart';
 class AppMotion {
   AppMotion._();
 
-  // Durations (80 - 240 ms)
+  // Durations (70 - 240 ms)
   static const Duration fast = Duration(
-    milliseconds: 90,
+    milliseconds: 70,
   ); // Micro-interactions, press states, chips (< 100 ms tap feedback budget)
   static const Duration standard = Duration(
     milliseconds: 220,
@@ -19,11 +19,11 @@ class AppMotion {
     milliseconds: 240,
   ); // Modal bottom sheets & dialogs (180 - 240 ms budget)
   static const Duration countUp = Duration(
-    milliseconds: 500,
-  ); // Tabular number roll-ups
+    milliseconds: 480,
+  ); // Tabular number roll-ups (< 500 ms budget)
   static const Duration capture = Duration(
     milliseconds: 600,
-  ); // Single polygon fill celebration
+  ); // Single polygon fill celebration (<= 800 ms budget)
 
   // Interactive Press State
   static const double pressScale = 0.97;
@@ -54,22 +54,19 @@ class AppMotion {
   /// Global master switch for hardware haptic feedback, kept in sync by [AppPreferences].
   static bool hapticsEnabled = true;
 
-  /// Light selection tick on tap / press (no-op; all 94 UI call sites removed)
-  @Deprecated('Dead code no-op; removed to prevent UI vibration noise')
+  /// Light selection tick (no-op to prevent UI vibration noise on every tap)
   static void selectionTick() {
-    // No-op
+    // No-op to prevent UI vibration fatigue
   }
 
-  /// Light impact tick (no-op; all 94 UI call sites removed)
-  @Deprecated('Dead code no-op; removed to prevent UI vibration noise')
+  /// Gentle impact tick
   static void lightTick() {
-    // No-op
+    // No-op to prevent UI vibration fatigue
   }
 
-  /// Medium impact (no-op; all 94 UI call sites removed)
-  @Deprecated('Dead code no-op; removed to prevent UI vibration noise')
+  /// Medium impact
   static void mediumTick() {
-    // No-op
+    // No-op to prevent UI vibration fatigue
   }
 
   /// Heavy impact for capture celebration / hold-to-finish completion

@@ -90,14 +90,14 @@ class AppPalette extends ThemeExtension<AppPalette> {
   bool get isDark => brightness == Brightness.dark;
   bool get isLight => brightness == Brightness.light;
 
-  /// Dark Palette (Minimal Calm Moss + Warm Ochre + Neutral Obsidian Base)
+  /// Dark Palette (Minimal Calm Moss + Neutral Obsidian Base + Gold Highlights)
   static const AppPalette dark = AppPalette(
     brightness: Brightness.dark,
-    primary: AppColors.primary,
-    onPrimary: AppColors.onPrimary,
+    primary: AppColors.accent,
+    onPrimary: AppColors.onAccent,
     accent: AppColors.accent,
     onAccent: AppColors.onAccent,
-    primaryContainer: AppColors.primaryContainer,
+    primaryContainer: AppColors.accentContainer,
     accentContainer: AppColors.accentContainer,
     bgDeep: AppColors.bgDeep,
     bgElevated: AppColors.bgElevated,
@@ -127,16 +127,16 @@ class AppPalette extends ThemeExtension<AppPalette> {
     bronze: AppColors.bronze,
   );
 
-  /// Light Palette (Calm Outdoor Daylight Base with Moss #46663A and Warm Ochre)
+  /// Light Palette (Calm Outdoor Daylight Base with Single Accent Moss #46663A)
   /// Calibrated to meet WCAG AAA (>= 7.0:1 text) and AA (>= 4.5:1 / 3.0:1 graphical).
   static const AppPalette light = AppPalette(
     brightness: Brightness.light,
     primary: Color(0xFF46663A), // Moss Light (6.3:1 AAA/AA on white)
     onPrimary: Color(0xFFFFFFFF),
-    accent: Color(0xFF9E6C3B), // Warm Ochre Light (4.8:1 AA on white)
+    accent: Color(0xFF46663A), // Single Accent Moss Light
     onAccent: Color(0xFFFFFFFF),
     primaryContainer: Color(0x2E46663A), // 18% Moss fill
-    accentContainer: Color(0x2E9E6C3B), // 18% Ochre fill
+    accentContainer: Color(0x2E46663A), // 18% Moss fill
     bgDeep: Color(0xFFF7F8F6), // Calm daylight off-white base
     bgElevated: Color(0xFFE5E7EB),
     surface: Color(0xFFFFFFFF), // Pure white surface card
@@ -160,7 +160,7 @@ class AppPalette extends ThemeExtension<AppPalette> {
     error: Color(0xFFB91C1C),
     info: Color(0xFF46663A),
     success: Color(0xFF2E6930),
-    gold: Color(0xFFB45309),
+    gold: Color(0xFF9E6C3B), // Warm Ochre / Gold
     silver: Color(0xFF64748B),
     bronze: Color(0xFF9A3412),
   );

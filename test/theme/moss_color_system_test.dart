@@ -43,7 +43,11 @@ void main() {
       'Dark theme tokens match minimal Moss and neutral Obsidian specification',
       () {
         expect(AppColors.primary, const Color(0xFFA3C586)); // Moss Green
-        expect(AppColors.accent, const Color(0xFFD4A373)); // Warm Ochre / Sand
+        expect(
+          AppColors.accent,
+          const Color(0xFFA3C586),
+        ); // Single Accent: Moss Green
+        expect(AppColors.gold, const Color(0xFFD4A373)); // Demoted Ochre / Gold
         expect(AppColors.bgDeep, const Color(0xFF0D0F11)); // Deep Canvas
         expect(
           AppColors.surface,
@@ -68,7 +72,14 @@ void main() {
     test('Light theme palette matches calm daylight specification with Moss #46663A', () {
       const palette = AppPalette.light;
       expect(palette.primary, const Color(0xFF46663A)); // Moss Light
-      expect(palette.accent, const Color(0xFF9E6C3B)); // Warm Ochre Light
+      expect(
+        palette.accent,
+        const Color(0xFF46663A),
+      ); // Single Accent: Moss Light
+      expect(
+        palette.gold,
+        const Color(0xFF9E6C3B),
+      ); // Demoted Ochre / Gold Light
       expect(palette.bgDeep, const Color(0xFFF7F8F6)); // Calm daylight base
       expect(palette.surface, const Color(0xFFFFFFFF)); // Pure white
       expect(palette.surface2, const Color(0xFFF0F2EE)); // Soft container
