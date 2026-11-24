@@ -1117,10 +1117,10 @@ func TestSocialFeedAndPrivacyZoneMasking(t *testing.T) {
 	// 4. Alice captures a run with points touching home zone and outside home zone
 	// Track: pt0 (home, 0m away), pt1 (park, 600m away), pt2 (park2, 700m away), pt3 (home, 10m away)
 	track := []geo.TrackPoint{
-		{Latitude: 12.9716, Longitude: 77.5946, Timestamp: time.Now().UTC()},                                    // inside zone
-		{Latitude: 12.9760, Longitude: 77.6000, Timestamp: time.Now().UTC().Add(5 * time.Minute)},             // outside zone (~700m)
-		{Latitude: 12.9770, Longitude: 77.6010, Timestamp: time.Now().UTC().Add(10 * time.Minute)},            // outside zone
-		{Latitude: 12.97165, Longitude: 77.59465, Timestamp: time.Now().UTC().Add(15 * time.Minute)},          // inside zone
+		{Latitude: 12.9716, Longitude: 77.5946, Timestamp: time.Now().UTC()},                         // inside zone
+		{Latitude: 12.9760, Longitude: 77.6000, Timestamp: time.Now().UTC().Add(5 * time.Minute)},    // outside zone (~700m)
+		{Latitude: 12.9770, Longitude: 77.6010, Timestamp: time.Now().UTC().Add(10 * time.Minute)},   // outside zone
+		{Latitude: 12.97165, Longitude: 77.59465, Timestamp: time.Now().UTC().Add(15 * time.Minute)}, // inside zone
 	}
 
 	loop := geo.EnclosedLoop{
