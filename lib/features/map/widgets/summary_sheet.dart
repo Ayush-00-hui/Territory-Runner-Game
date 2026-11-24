@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../../models/interval_workout.dart';
+import '../../../models/lap_split.dart';
 import '../../../models/run_log_entry.dart';
 import '../../../models/runner_profile.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/elevation_splits_service.dart';
 import '../../../services/gallery_saver_service.dart';
+import '../../../services/saved_loop_service.dart';
 import '../../../ui/ui.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../history/widgets/elevation_profile_chart.dart';
@@ -16,6 +18,7 @@ import '../../history/widgets/run_share_card_modal.dart';
 import '../../history/widgets/splits_table.dart';
 import '../../profile/widgets/body_details_sheet.dart';
 import '../../profile/widgets/calorie_factors_sheet.dart';
+import 'lap_splits_table.dart';
 import 'summary_coach_card.dart';
 import 'summary_route_replay.dart';
 import 'summary_stats_grid.dart';
@@ -36,6 +39,7 @@ class SummarySheet extends StatefulWidget {
   final String? ghostResult;
   final IntervalWorkoutPlan? workoutPlan;
   final List<WorkoutPhaseExecution>? workoutExecutions;
+  final List<LapSplit>? laps;
   final bool enableAutoSave;
   final bool isSimulated;
 
@@ -54,6 +58,7 @@ class SummarySheet extends StatefulWidget {
     this.ghostResult,
     this.workoutPlan,
     this.workoutExecutions,
+    this.laps,
     this.enableAutoSave = true,
     this.isSimulated = false,
   });
@@ -73,6 +78,7 @@ class SummarySheet extends StatefulWidget {
     String? ghostResult,
     IntervalWorkoutPlan? workoutPlan,
     List<WorkoutPhaseExecution>? workoutExecutions,
+    List<LapSplit>? laps,
     bool isSimulated = false,
   }) {
     return showModalBottomSheet(
@@ -96,6 +102,7 @@ class SummarySheet extends StatefulWidget {
         ghostResult: ghostResult,
         workoutPlan: workoutPlan,
         workoutExecutions: workoutExecutions,
+        laps: laps,
         isSimulated: isSimulated,
       ),
     );
@@ -152,6 +159,15 @@ class _SummarySheetState extends State<SummarySheet>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _triggerAutoSaveRunCard();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (AppMotion.isReducedMotion(context)) {
+      _countUpController.value = 1.0;
+      _replayController.value = 1.0;
+    }
   }
 
   void _triggerAutoSaveRunCard() async {
@@ -342,7 +358,7 @@ class _SummarySheetState extends State<SummarySheet>
                     const SizedBox(width: AppSpacing.s8),
                     Expanded(
                       child: Text(
-                        'Territory Fortified: 30-minute defense shield active against rival invasion.',
+                        'Territory Fortified: 2-hour defense shield active against rival invasion.',
                         style: AppText.caption.copyWith(
                           color: AppColors.textPrimary,
                           fontWeight: FontWeight.w600,
@@ -436,6 +452,11 @@ class _SummarySheetState extends State<SummarySheet>
 
             // 3c. Real Splits Table
             SplitsTable(splits: profileData.splits, unit: profileData.unit),
+
+            if (widget.laps != null && widget.laps!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.s14),
+              LapSplitsTable(laps: widget.laps!),
+            ],
 
             const SizedBox(height: AppSpacing.s14),
 
@@ -596,6 +617,15 @@ class _SummarySheetState extends State<SummarySheet>
                     ),
                   ],
                 ),
+              ),
+            ],
+
+            if (!widget.isSimulated && effectivePoints.length >= 4) ...[
+              const SizedBox(height: AppSpacing.s14),
+              _SaveLoopCard(
+                points: effectivePoints,
+                distanceKm: widget.distanceKm,
+                areaSqm: effectiveArea,
               ),
             ],
 
@@ -765,6 +795,107 @@ class _WorkoutPhasesSummaryCard extends StatelessWidget {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+}
+
+class _SaveLoopCard extends StatefulWidget {
+  final List<LatLng> points;
+  final double distanceKm;
+  final double areaSqm;
+
+  const _SaveLoopCard({
+    required this.points,
+    required this.distanceKm,
+    required this.areaSqm,
+  });
+
+  @override
+  State<_SaveLoopCard> createState() => _SaveLoopCardState();
+}
+
+class _SaveLoopCardState extends State<_SaveLoopCard> {
+  bool _isSaved = false;
+  bool _isSaving = false;
+
+  Future<void> _handleSave() async {
+    if (_isSaved || _isSaving) return;
+    setState(() => _isSaving = true);
+    final service = SavedLoopService();
+    final name =
+        'Loop ${DateTime.now().month}/${DateTime.now().day} (${widget.distanceKm.toStringAsFixed(1)}km)';
+    await service.saveLoop(
+      name: name,
+      points: widget.points,
+      distanceMeters: widget.distanceKm * 1000.0,
+      areaSqMeters: widget.areaSqm,
+    );
+    if (mounted) {
+      setState(() {
+        _isSaving = false;
+        _isSaved = true;
+      });
+      AppToast.show(context, 'Loop saved! Run and beat your PB in Run Tools.');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s12,
+        vertical: AppSpacing.s10,
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.s8),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: AppSpacing.br8,
+            ),
+            child: Icon(
+              _isSaved ? Icons.check_circle_rounded : Icons.repeat_rounded,
+              size: 20,
+              color: _isSaved ? AppColors.accent : AppColors.accent,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.s12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _isSaved
+                      ? 'Loop Saved to Library'
+                      : 'Save This Route as a Loop',
+                  style: AppText.labelMedium.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  _isSaved
+                      ? 'Access it anytime from Run Tools on the map.'
+                      : 'Track personal bests and compare future runs.',
+                  style: AppText.caption.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (!_isSaved) ...[
+            const SizedBox(width: AppSpacing.s8),
+            SecondaryButton(
+              label: _isSaving ? 'Saving...' : 'Save loop',
+              isFullWidth: false,
+              height: 38,
+              onPressed: _isSaving ? null : _handleSave,
+            ),
+          ],
         ],
       ),
     );

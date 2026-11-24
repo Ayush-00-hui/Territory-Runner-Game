@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/runner_profile.dart';
 import '../../../ui/ui.dart';
+import 'achievements_sheet.dart';
 import 'profile_dialogs.dart';
 
 class ProfileAchievementsList extends StatelessWidget {
@@ -87,6 +88,12 @@ class ProfileAchievementsList extends StatelessWidget {
                 reward: '+300 XP, 10K Centurion Wings',
               );
             },
+          ),
+          const SizedBox(height: AppSpacing.s12),
+          SecondaryButton(
+            label: 'View tiered milestones',
+            icon: Icons.military_tech_outlined,
+            onPressed: () => AchievementsSheet.show(context: context),
           ),
         ],
       ),

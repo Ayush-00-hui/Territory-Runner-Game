@@ -7,8 +7,12 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../models/activity_type.dart';
 import '../../../models/interval_workout.dart';
+import '../../../models/lap_split.dart';
+import '../../../models/pace_target.dart';
 import '../../../models/run_goal.dart';
+import '../../../models/saved_loop.dart';
 import '../../../services/app_preferences.dart';
+import '../../../services/auto_lap_service.dart';
 import '../../../services/auto_pause_engine.dart';
 import '../../../services/elevation_incline_service.dart';
 import '../../../services/ghost_runner_service.dart';
@@ -18,6 +22,7 @@ import '../../../services/interval_workout_service.dart';
 import '../../../services/location_service.dart';
 import '../../../services/motion_sensor_service.dart';
 import '../../../services/run_recovery_service.dart';
+import '../../../services/saved_loop_service.dart';
 import '../../../services/speed_smoothing_service.dart';
 import '../../gameplay/polygon_enclosure_engine.dart';
 import '../../gameplay/territory_service.dart';
@@ -40,6 +45,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   final MotionSensorService _motionSensorService;
   final GhostRunnerService _ghostRunnerService;
   final GpsDistanceFilter _distanceFilter;
+  final AutoLapService _autoLapService;
+  final SavedLoopService _savedLoopService;
 
   // Real-time Notifiers
   final RunTelemetryNotifier telemetryNotifier = RunTelemetryNotifier();
@@ -54,6 +61,10 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   );
   final ValueNotifier<IntervalWorkoutSnapshot?> workoutSnapshotNotifier =
       ValueNotifier<IntervalWorkoutSnapshot?>(null);
+  final ValueNotifier<SavedLoopProgress?> savedLoopProgressNotifier =
+      ValueNotifier<SavedLoopProgress?>(null);
+  final ValueNotifier<PaceBandEvaluation?> paceBandNotifier =
+      ValueNotifier<PaceBandEvaluation?>(null);
 
   // Run & Telemetry State
   bool _isRunActive = false;
@@ -74,6 +85,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   LatLng? _currentLocation;
   String? _highlightedTerritoryId;
   SuggestedRoute? _activeSuggestedRoute;
+  SavedLoop? _activeSavedLoop;
+  PaceTarget? _activePaceTarget;
   GhostMode _ghostMode = GhostMode.off;
   GhostSelectionResult? _activeGhostResult;
   IntervalWorkoutPlan? _activeWorkoutPlan;
@@ -108,6 +121,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     MotionSensorService? motionSensorService,
     GhostRunnerService? ghostRunnerService,
     GpsDistanceFilter? distanceFilter,
+    AutoLapService? autoLapService,
+    SavedLoopService? savedLoopService,
   }) : _locationService = locationService ?? LocationService(),
        _polygonEngine = polygonEngine ?? PolygonEnclosureEngine(),
        _autoPauseEngine = autoPauseEngine ?? AutoPauseEngine(),
@@ -118,7 +133,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
        _elevationPipeline = elevationPipeline ?? ElevationGradePipeline(),
        _motionSensorService = motionSensorService ?? MotionSensorService(),
        _ghostRunnerService = ghostRunnerService ?? GhostRunnerService(),
-       _distanceFilter = distanceFilter ?? GpsDistanceFilter();
+       _distanceFilter = distanceFilter ?? GpsDistanceFilter(),
+       _autoLapService = autoLapService ?? AutoLapService(),
+       _savedLoopService = savedLoopService ?? SavedLoopService();
 
   // Getters
   bool get isRunActive => _isRunActive;
@@ -148,6 +165,34 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   List<LatLng> get runCoordinates => List.unmodifiable(_runCoordinates);
   List<Position> get recentPositions => List.unmodifiable(_recentPositions);
   ExerciseActivityType get selectedActivity => _selectedActivity;
+
+  AutoLapService get autoLapService => _autoLapService;
+  SavedLoopService get savedLoopService => _savedLoopService;
+  SavedLoop? get activeSavedLoop => _activeSavedLoop;
+  PaceTarget? get activePaceTarget => _activePaceTarget;
+  List<LapSplit> get completedLaps => _autoLapService.completedLaps;
+
+  void setActiveSavedLoop(SavedLoop? loop) {
+    _activeSavedLoop = loop;
+    if (loop != null) {
+      final distKm = loop.distanceMeters / 1000.0;
+      setSuggestedRoute(
+        SuggestedRoute(
+          polyline: loop.points,
+          totalDistanceKm: distKm,
+          targetDistanceKm: distKm,
+          estimatedNewTerritoryAreaSqM: loop.areaSqMeters,
+          targetAreaSqM: loop.areaSqMeters,
+        ),
+      );
+    }
+    notifyListeners();
+  }
+
+  void setPaceTarget(PaceTarget? target) {
+    _activePaceTarget = target;
+    notifyListeners();
+  }
 
   ElevationGradePipeline get elevationPipeline => _elevationPipeline;
   SpeedSmoothingPipeline get speedPipeline => _speedPipeline;
@@ -297,22 +342,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _movingDurationSeconds = 0;
     _goalCompletedAnnounced = false;
     _autoPauseEngine.reset();
-
-    if (_activeWorkoutPlan != null) {
-      _workoutTimeline = IntervalWorkoutTimeline(
-        plan: _activeWorkoutPlan!,
-        initialDistanceM: 0.0,
-      );
-      _workoutTimeline!.onSnapshotUpdated = (snapshot) {
-        workoutSnapshotNotifier.value = snapshot;
-      };
-      workoutSnapshotNotifier.value = _workoutTimeline!.getSnapshot(
-        currentDistanceM: 0.0,
-      );
-    } else {
-      _workoutTimeline = null;
-      workoutSnapshotNotifier.value = null;
-    }
+    _autoLapService.reset();
+    savedLoopProgressNotifier.value = null;
+    paceBandNotifier.value = null;
 
     if (_activeWorkoutPlan != null) {
       _workoutTimeline = IntervalWorkoutTimeline(
@@ -405,6 +437,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       'ghostRun': _activeGhostResult?.matchedRun,
       'workoutPlan': _activeWorkoutPlan,
       'workoutExecutions': _workoutTimeline?.executions,
+      'laps': _autoLapService.completedLaps,
+      'savedLoop': _activeSavedLoop,
     };
   }
 
@@ -477,6 +511,29 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     }
 
     if (_isRunActive && !_isAutoPaused) {
+      _autoLapService.processFix(
+        totalDistanceMeters: _runDistanceKm * 1000.0,
+        movingDurationSeconds: _movingDurationSeconds,
+        totalElevationGainMeters: _elevationPipeline.cumulativeGainMeters,
+      );
+      if (_activeSavedLoop != null) {
+        final previousProg = savedLoopProgressNotifier.value;
+        final prog = _savedLoopService.computeProgress(
+          latLng,
+          _activeSavedLoop!.points,
+        );
+        savedLoopProgressNotifier.value = prog;
+        if (prog.isOffRoute &&
+            (previousProg == null || !previousProg.isOffRoute)) {
+          _appPrefs.triggerOffRouteHaptic();
+        }
+      }
+      if (_activePaceTarget != null) {
+        paceBandNotifier.value = _activePaceTarget!.evaluateSpeed(
+          _currentSpeedKmh,
+        );
+      }
+
       // Coarse fix (> 30m): update visual position but preserve polygon anti-cheat accuracy
       if (pos.accuracy > 30.0 && _runCoordinates.isNotEmpty) {
         _updateTelemetryMetrics();
@@ -707,6 +764,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     telemetryNotifier.dispose();
     liveLocationNotifier.dispose();
     runPathUpdateNotifier.dispose();
+    savedLoopProgressNotifier.dispose();
+    paceBandNotifier.dispose();
     super.dispose();
   }
 }

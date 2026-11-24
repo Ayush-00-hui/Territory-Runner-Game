@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../services/app_preferences.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
@@ -42,6 +43,7 @@ class PremiumBottomNav extends StatelessWidget {
         child: GestureDetector(
           onTap: () {
             if (selectedIndex != index) {
+              AppPreferences().triggerTabSwitchHaptic();
               onTabSelected(index);
             }
           },

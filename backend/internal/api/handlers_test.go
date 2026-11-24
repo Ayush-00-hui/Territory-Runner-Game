@@ -813,7 +813,7 @@ func TestConquestTriggersFCMAlert(t *testing.T) {
 		ID:             "run_victim_init",
 		UserID:         victimUID,
 		IdempotencyKey: "idem_victim_init",
-		CreatedAt:      time.Now().UTC().Add(-45 * time.Minute),
+		CreatedAt:      time.Now().UTC().Add(-135 * time.Minute),
 	}, []geo.EnclosedLoop{{
 		AreaSqMeters: 4000.0,
 		Polygon: []geo.LatLng{
@@ -2202,4 +2202,160 @@ func TestUniqueRunnerIDAssignmentAndFriendSearchFlow(t *testing.T) {
 	rec = httptest.NewRecorder()
 	router.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestActivityFeedAndKudosAPI(t *testing.T) {
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+
+	// 1. Create users
+	alice := &store.User{ID: "usr_alice", Username: "Alice", Faction: "Cyber Vanguard"}
+	bob := &store.User{ID: "usr_bob", Username: "Bob", Faction: "Neon Nomads"}
+	require.NoError(t, memStore.UpsertUser(ctx, alice))
+	require.NoError(t, memStore.UpsertUser(ctx, bob))
+
+	// 2. Mutual friendship
+	reqFriend, err := memStore.SendFriendRequest(ctx, "usr_alice", "usr_bob")
+	require.NoError(t, err)
+	_, err = memStore.RespondFriendRequest(ctx, reqFriend.ID, "usr_bob", "accept")
+	require.NoError(t, err)
+
+	// 3. Alice completes a run
+	run := &store.Run{
+		ID:              "run_alice_shared",
+		UserID:          "usr_alice",
+		IdempotencyKey:  "idem_alice_shared",
+		ActivityType:    "running",
+		DurationSeconds: 1200,
+		DistanceMeters:  5000.0,
+		AreaClaimed:     2500.0,
+		Status:          "accepted",
+		CreatedAt:       time.Now().UTC(),
+	}
+	_, err = memStore.CaptureRunAndMutateTerritories(ctx, run, nil, []geo.TrackPoint{
+		{Latitude: 12.9716, Longitude: 77.5946},
+		{Latitude: 12.9760, Longitude: 77.6000},
+	})
+	require.NoError(t, err)
+
+	// 4. Bob fetches feed: initially empty (sharing defaults to OFF)
+	req := httptest.NewRequest(http.MethodGet, "/v1/feed", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var feedResp api.ActivityFeedResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &feedResp))
+	assert.Empty(t, feedResp.Feed, "Feed must be empty when sharing is off")
+
+	// 5. Alice opts in via PUT /v1/me/settings
+	shareTrue := true
+	setReqBody, _ := json.Marshal(map[string]interface{}{
+		"share_runs_with_friends": shareTrue,
+	})
+	req = httptest.NewRequest(http.MethodPut, "/v1/me/settings", bytes.NewReader(setReqBody))
+	req.Header.Set("X-Dev-User", "usr_alice")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// 6. Bob fetches feed again: Alice's run is visible!
+	req = httptest.NewRequest(http.MethodGet, "/v1/feed", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &feedResp))
+	require.Len(t, feedResp.Feed, 1)
+	assert.Equal(t, "run_alice_shared", feedResp.Feed[0].ID)
+	assert.Equal(t, "Alice", feedResp.Feed[0].Username)
+	assert.Equal(t, 5000.0, feedResp.Feed[0].DistanceMeters)
+
+	// 7. Bob gives kudos reaction "clap"
+	kudoBody, _ := json.Marshal(map[string]string{"reaction": "clap"})
+	req = httptest.NewRequest(http.MethodPost, "/v1/feed/run_alice_shared/kudos", bytes.NewReader(kudoBody))
+	req.Header.Set("X-Dev-User", "usr_bob")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Check feed reflects reaction
+	req = httptest.NewRequest(http.MethodGet, "/v1/feed", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &feedResp))
+	assert.Equal(t, "clap", feedResp.Feed[0].MyKudos)
+	assert.Equal(t, 1, feedResp.Feed[0].KudosCounts["clap"])
+
+	// 8. Bob removes reaction
+	req = httptest.NewRequest(http.MethodDelete, "/v1/feed/run_alice_shared/kudos", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// 9. Bob hides the post
+	req = httptest.NewRequest(http.MethodPost, "/v1/feed/run_alice_shared/hide", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Post is now hidden from Bob's feed
+	req = httptest.NewRequest(http.MethodGet, "/v1/feed", nil)
+	req.Header.Set("X-Dev-User", "usr_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &feedResp))
+	assert.Empty(t, feedResp.Feed)
+}
+
+func TestModerationEndpointsAPI(t *testing.T) {
+	router, memStore := setupTestServer()
+	ctx := context.Background()
+
+	alice := &store.User{ID: "usr_mod_alice", Username: "Alice"}
+	bob := &store.User{ID: "usr_mod_bob", Username: "Bob"}
+	require.NoError(t, memStore.UpsertUser(ctx, alice))
+	require.NoError(t, memStore.UpsertUser(ctx, bob))
+
+	// 1. Block user
+	blockBody, _ := json.Marshal(map[string]string{"user_id": "usr_mod_alice"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/moderation/block", bytes.NewReader(blockBody))
+	req.Header.Set("X-Dev-User", "usr_mod_bob")
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	isBlocked, _ := memStore.IsBlocked(ctx, "usr_mod_bob", "usr_mod_alice")
+	assert.True(t, isBlocked)
+
+	// 2. Unblock user
+	req = httptest.NewRequest(http.MethodDelete, "/v1/moderation/block/usr_mod_alice", nil)
+	req.Header.Set("X-Dev-User", "usr_mod_bob")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	isBlocked, _ = memStore.IsBlocked(ctx, "usr_mod_bob", "usr_mod_alice")
+	assert.False(t, isBlocked)
+
+	// 3. File moderation report
+	repBody, _ := json.Marshal(map[string]string{
+		"reported_user_id": "usr_mod_alice",
+		"reason":           "harassment",
+		"details":          "Spamming friend requests",
+	})
+	req = httptest.NewRequest(http.MethodPost, "/v1/moderation/report", bytes.NewReader(repBody))
+	req.Header.Set("X-Dev-User", "usr_mod_bob")
+	req.Header.Set("Content-Type", "application/json")
+	rec = httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusCreated, rec.Code)
 }

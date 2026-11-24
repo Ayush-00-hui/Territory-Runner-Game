@@ -33,7 +33,7 @@ double _calculateContrast(Color foreground, Color background) {
 }
 
 void main() {
-  group('WCAG AA Contrast Ratios for Nordic Mint + Solar Blaze + Smoked Obsidian Palette', () {
+  group('WCAG AA Contrast Ratios for Calm Moss + Neutral Obsidian Palette', () {
     test('Body text contrast >= 4.5:1 on surfaces', () {
       final textPrimaryOnSurface = _calculateContrast(
         AppColors.textPrimary,

@@ -484,41 +484,17 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   horizontal: AppSpacing.s24,
                   vertical: AppSpacing.s48,
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.borderSubtle),
-                      ),
-                      child: const Icon(
-                        Icons.directions_run_rounded,
-                        color: AppColors.textMuted,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s16),
-                    Text(
-                      'No runs in range',
-                      style: AppText.titleSmall.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.s6),
-                    Text(
-                      'Try changing your filters or start a new run to claim territory.',
-                      textAlign: TextAlign.center,
-                      style: AppText.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
+                child: EmptyState(
+                  icon: Icons.directions_run_rounded,
+                  title: 'No runs in range',
+                  message: 'Try changing your filters or start a new run to claim territory.',
+                  actionLabel: 'Start run',
+                  onAction: () {
+                    final nav = Navigator.maybeOf(context);
+                    if (nav != null && nav.canPop()) {
+                      nav.pop();
+                    }
+                  },
                 ),
               ),
             )

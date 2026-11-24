@@ -41,11 +41,11 @@ func TestEmbeddedMigrationsCompleteness(t *testing.T) {
 		assert.NotEmpty(t, content, "migration file must not be empty: %s", file)
 	}
 
-	assert.Equal(t, 16, len(upFiles), "expected exactly 16 up migration files")
-	assert.Equal(t, 16, len(downFiles), "expected exactly 16 down migration files")
+	assert.Equal(t, 17, len(upFiles), "expected exactly 17 up migration files")
+	assert.Equal(t, 17, len(downFiles), "expected exactly 17 down migration files")
 
-	// Ensure sequential continuity 1..16
-	for i := 1; i <= 16; i++ {
+	// Ensure sequential continuity 1..17
+	for i := 1; i <= 17; i++ {
 		assert.Contains(t, upFiles, i, "missing up migration for sequence %d", i)
 		assert.Contains(t, downFiles, i, "missing down migration for sequence %d", i)
 	}

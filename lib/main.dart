@@ -288,6 +288,7 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     setState(() {
+      AppPreferences().triggerTabSwitchHaptic();
       _selectedIndex = index;
       _loadedTabs.add(index);
     });
@@ -346,19 +347,28 @@ class _MainScreenState extends State<MainScreen> {
             body: IndexedStack(
               index: _selectedIndex,
               children: [
-                _loadedTabs.contains(0)
-                    ? HomeScreen(
-                        isActive: _selectedIndex == 0,
-                        onStartRun: () => _onTabSelected(1),
-                        scrollController: _homeScrollController,
-                      )
-                    : const SizedBox.shrink(),
-                _loadedTabs.contains(1)
-                    ? MapScreenFeature(isActive: _selectedIndex == 1)
-                    : const SizedBox.shrink(),
-                _loadedTabs.contains(2)
-                    ? ProfilePage(scrollController: _profileScrollController)
-                    : const SizedBox.shrink(),
+                TickerMode(
+                  enabled: _selectedIndex == 0,
+                  child: _loadedTabs.contains(0)
+                      ? HomeScreen(
+                          isActive: _selectedIndex == 0,
+                          onStartRun: () => _onTabSelected(1),
+                          scrollController: _homeScrollController,
+                        )
+                      : const SizedBox.shrink(),
+                ),
+                TickerMode(
+                  enabled: _selectedIndex == 1,
+                  child: _loadedTabs.contains(1)
+                      ? MapScreenFeature(isActive: _selectedIndex == 1)
+                      : const SizedBox.shrink(),
+                ),
+                TickerMode(
+                  enabled: _selectedIndex == 2,
+                  child: _loadedTabs.contains(2)
+                      ? ProfilePage(scrollController: _profileScrollController)
+                      : const SizedBox.shrink(),
+                ),
               ],
             ),
             bottomNavigationBar: AnimatedSlide(

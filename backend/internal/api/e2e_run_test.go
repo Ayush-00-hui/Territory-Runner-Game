@@ -53,7 +53,7 @@ func TestE2EFullRunLifecycle(t *testing.T) {
 	require.NoError(t, st.UpsertUser(ctx, rivalUser))
 	require.NoError(t, st.UpsertUser(ctx, runnerUser))
 
-	now := time.Now().UTC().Add(-45 * time.Minute)
+	now := time.Now().UTC().Add(-135 * time.Minute)
 
 	// 2. Rival submits initial territory run (~30,000 m² box)
 	rivalCorners := [][2]float64{

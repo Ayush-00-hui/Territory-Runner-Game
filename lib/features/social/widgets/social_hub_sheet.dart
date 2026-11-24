@@ -11,14 +11,17 @@ import '../../gameplay/territory_service.dart';
 import 'friend_requests_inbox_sheet.dart';
 import 'social_duel_creator_sheet.dart';
 import 'social_duels_tab.dart';
+import 'social_feed_tab.dart';
 import 'social_hub_cache.dart';
 import 'social_hub_header.dart';
 import 'social_squad_tab.dart';
 
 export 'friend_requests_inbox_sheet.dart';
+export 'report_dialog.dart';
 export 'social_add_friend_dialog.dart';
 export 'social_duel_creator_sheet.dart';
 export 'social_duels_tab.dart';
+export 'social_feed_tab.dart';
 export 'social_hub_header.dart';
 export 'social_squad_tab.dart';
 
@@ -308,6 +311,17 @@ class _SocialHubViewState extends State<SocialHubView> {
     );
   }
 
+  Widget _buildTabContent({required bool embedded}) {
+    switch (_activeTab) {
+      case SocialTab.feed:
+        return SocialFeedTab(apiClient: _apiClient, currentUserId: _myUid);
+      case SocialTab.squad:
+        return _buildSquadTab(embedded: embedded);
+      case SocialTab.duels:
+        return _buildDuelsTab(embedded: embedded);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final incomingPendingCount = _requests
@@ -387,18 +401,16 @@ class _SocialHubViewState extends State<SocialHubView> {
           ),
         const SizedBox(height: AppSpacing.s12),
         widget.isEmbedded
-            ? (_activeTab == SocialTab.squad
-                  ? _buildSquadTab(embedded: true)
-                  : _buildDuelsTab(embedded: true))
+            ? _buildTabContent(embedded: true)
             : Expanded(
-                child: RefreshIndicator(
-                  color: AppColors.accent,
-                  backgroundColor: AppColors.surface,
-                  onRefresh: _refreshData,
-                  child: _activeTab == SocialTab.squad
-                      ? _buildSquadTab(embedded: false)
-                      : _buildDuelsTab(embedded: false),
-                ),
+                child: _activeTab == SocialTab.feed
+                    ? _buildTabContent(embedded: false)
+                    : RefreshIndicator(
+                        color: AppColors.accent,
+                        backgroundColor: AppColors.surface,
+                        onRefresh: _refreshData,
+                        child: _buildTabContent(embedded: false),
+                      ),
               ),
       ],
     );

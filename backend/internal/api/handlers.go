@@ -945,9 +945,10 @@ func (a *API) HandleGetSettings(w http.ResponseWriter, r *http.Request) {
 
 // UpdateSettingsRequest defines payload for updating settings.
 type UpdateSettingsRequest struct {
-	LiveVisibility string `json:"live_visibility,omitempty"`
-	Timezone       string `json:"timezone,omitempty"`
-	LandReminders  *bool  `json:"land_reminders,omitempty"`
+	LiveVisibility       string `json:"live_visibility,omitempty"`
+	Timezone             string `json:"timezone,omitempty"`
+	LandReminders        *bool  `json:"land_reminders,omitempty"`
+	ShareRunsWithFriends *bool  `json:"share_runs_with_friends,omitempty"`
 }
 
 // HandleUpdateSettings handles PUT /v1/me/settings.
@@ -967,9 +968,10 @@ func (a *API) HandleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 	existing, err := a.store.GetUserSettings(r.Context(), uid)
 	if err != nil || existing == nil {
 		existing = &store.UserSettings{
-			LiveVisibility: "off",
-			Timezone:       "UTC",
-			LandReminders:  true,
+			LiveVisibility:       "off",
+			Timezone:             "UTC",
+			LandReminders:        true,
+			ShareRunsWithFriends: false,
 		}
 	}
 
@@ -992,6 +994,10 @@ func (a *API) HandleUpdateSettings(w http.ResponseWriter, r *http.Request) {
 
 	if req.LandReminders != nil {
 		existing.LandReminders = *req.LandReminders
+	}
+
+	if req.ShareRunsWithFriends != nil {
+		existing.ShareRunsWithFriends = *req.ShareRunsWithFriends
 	}
 
 	if err := a.store.UpdateUserSettings(r.Context(), uid, existing); err != nil {
@@ -1769,6 +1775,258 @@ func (a *API) HandleSetCrewGoal(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, goal)
+}
+
+// ActivityFeedResponse encapsulates activity feed items.
+type ActivityFeedResponse struct {
+	Feed []store.FeedItem `json:"feed"`
+}
+
+// HandleGetActivityFeed handles GET /v1/feed.
+func (a *API) HandleGetActivityFeed(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	limit := 20
+	if lStr := r.URL.Query().Get("limit"); lStr != "" {
+		if l, err := strconv.Atoi(lStr); err == nil && l > 0 {
+			limit = min(l, 50)
+		}
+	}
+	offset := 0
+	if oStr := r.URL.Query().Get("offset"); oStr != "" {
+		if o, err := strconv.Atoi(oStr); err == nil && o >= 0 {
+			offset = o
+		}
+	}
+
+	items, err := a.store.GetActivityFeed(r.Context(), uid, limit, offset)
+	if err != nil {
+		a.logger.Error("failed to retrieve activity feed", "user_id", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve activity feed")
+		return
+	}
+	if items == nil {
+		items = []store.FeedItem{}
+	}
+
+	writeJSON(w, http.StatusOK, ActivityFeedResponse{Feed: items})
+}
+
+// KudosPayload represents the reaction payload for a shared run.
+type KudosPayload struct {
+	Reaction string `json:"reaction"`
+}
+
+// HandleSetRunKudos handles POST /v1/feed/{id}/kudos.
+func (a *API) HandleSetRunKudos(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	runID := chi.URLParam(r, "id")
+	if runID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing run ID")
+		return
+	}
+
+	var payload KudosPayload
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	reaction := strings.ToLower(strings.TrimSpace(payload.Reaction))
+	if !store.IsValidKudosReaction(reaction) {
+		writeError(w, http.StatusBadRequest, "INVALID_REACTION", fmt.Sprintf("Reaction must be one of: %s", strings.Join(store.AllowedKudosReactions, ", ")))
+		return
+	}
+
+	if err := a.store.SetRunKudos(r.Context(), runID, uid, reaction); err != nil {
+		a.logger.Warn("failed to set run kudos", "run_id", runID, "user_id", uid, "error", err)
+		writeError(w, http.StatusBadRequest, "KUDOS_FAILED", err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":   "ok",
+		"run_id":   runID,
+		"reaction": reaction,
+	})
+}
+
+// HandleRemoveRunKudos handles DELETE /v1/feed/{id}/kudos.
+func (a *API) HandleRemoveRunKudos(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	runID := chi.URLParam(r, "id")
+	if runID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing run ID")
+		return
+	}
+
+	if err := a.store.RemoveRunKudos(r.Context(), runID, uid); err != nil {
+		a.logger.Error("failed to remove run kudos", "run_id", runID, "user_id", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to remove kudos")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "removed",
+		"run_id": runID,
+	})
+}
+
+// HandleHidePost handles POST /v1/feed/{id}/hide.
+func (a *API) HandleHidePost(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	runID := chi.URLParam(r, "id")
+	if runID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing run ID")
+		return
+	}
+
+	if err := a.store.HidePost(r.Context(), uid, runID); err != nil {
+		a.logger.Error("failed to hide post", "run_id", runID, "user_id", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to hide post")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "hidden",
+		"run_id": runID,
+	})
+}
+
+// BlockUserRequest represents payload to block a user.
+type BlockUserRequest struct {
+	UserID string `json:"user_id"`
+}
+
+// HandleBlockUser handles POST /v1/moderation/block.
+func (a *API) HandleBlockUser(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var req BlockUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	targetID := strings.TrimSpace(req.UserID)
+	if targetID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing user_id")
+		return
+	}
+	if targetID == uid {
+		writeError(w, http.StatusBadRequest, "CANNOT_BLOCK_SELF", "Cannot block yourself")
+		return
+	}
+
+	if err := a.store.BlockUser(r.Context(), uid, targetID); err != nil {
+		a.logger.Error("failed to block user", "blocker", uid, "blocked", targetID, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to block user")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "blocked",
+		"user_id": targetID,
+	})
+}
+
+// HandleUnblockUser handles DELETE /v1/moderation/block/{id}.
+func (a *API) HandleUnblockUser(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	targetID := chi.URLParam(r, "id")
+	if targetID == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "Missing user ID parameter")
+		return
+	}
+
+	if err := a.store.UnblockUser(r.Context(), uid, targetID); err != nil {
+		a.logger.Error("failed to unblock user", "blocker", uid, "target", targetID, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to unblock user")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "unblocked",
+		"user_id": targetID,
+	})
+}
+
+// ModerationReportRequest represents report payload.
+type ModerationReportRequest struct {
+	ReportedUserID string `json:"reported_user_id"`
+	RunID          string `json:"run_id,omitempty"`
+	Reason         string `json:"reason"`
+	Details        string `json:"details,omitempty"`
+}
+
+// HandleReportContent handles POST /v1/moderation/report.
+func (a *API) HandleReportContent(w http.ResponseWriter, r *http.Request) {
+	uid := auth.GetUserID(r.Context())
+	if uid == "" {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Missing user context")
+		return
+	}
+
+	var req ModerationReportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed request body")
+		return
+	}
+
+	reportedUser := strings.TrimSpace(req.ReportedUserID)
+	reason := strings.TrimSpace(req.Reason)
+	if reportedUser == "" || reason == "" {
+		writeError(w, http.StatusBadRequest, "BAD_REQUEST", "reported_user_id and reason are required")
+		return
+	}
+
+	report := &store.ModerationReport{
+		ReporterID:     uid,
+		ReportedUserID: reportedUser,
+		RunID:          strings.TrimSpace(req.RunID),
+		Reason:         reason,
+		Details:        strings.TrimSpace(req.Details),
+		CreatedAt:      time.Now().UTC(),
+	}
+
+	if err := a.store.ReportContent(r.Context(), report); err != nil {
+		a.logger.Error("failed to file moderation report", "reporter", uid, "error", err)
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to file report")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]interface{}{
+		"status": "reported",
+		"id":     report.ID,
+	})
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {

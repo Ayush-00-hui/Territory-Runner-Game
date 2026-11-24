@@ -268,7 +268,7 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                             preset.title,
                             style: TextStyle(
                               color: isSelected
-                                  ? AppColors.secondary
+                                  ? AppColors.accent
                                   : AppColors.textSecondary,
                               fontWeight: FontWeight.w700,
                               fontSize: 10,
@@ -313,13 +313,13 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
                   color: AppColors.surface,
                   borderRadius: AppSpacing.br8,
                   border: Border.all(
-                    color: AppColors.secondary.withValues(alpha: 0.5),
+                    color: AppColors.accent.withValues(alpha: 0.5),
                   ),
                 ),
                 child: Text(
                   '${_targetAreaSqM.toStringAsFixed(0)} m²',
                   style: const TextStyle(
-                    color: AppColors.secondary,
+                    color: AppColors.accent,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),
@@ -329,10 +329,10 @@ class _ClaimPlannerSheetState extends State<ClaimPlannerSheet> {
           ),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: AppColors.secondary,
+              activeTrackColor: AppColors.accent,
               inactiveTrackColor: AppColors.surface,
-              thumbColor: AppColors.secondary,
-              overlayColor: AppColors.secondary.withValues(alpha: 0.2),
+              thumbColor: AppColors.accent,
+              overlayColor: AppColors.accent.withValues(alpha: 0.2),
               trackHeight: 4.0,
             ),
             child: Slider(

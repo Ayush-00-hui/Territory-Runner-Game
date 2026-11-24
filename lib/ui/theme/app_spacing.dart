@@ -59,6 +59,7 @@ class AppSpacing {
   }) => const [];
 
   // Squircle radii tokens
+  static const Radius r4 = AppRadius.r4;
   static const Radius r8 = AppRadius.r8;
   static const Radius r12 = AppRadius.r12;
   static const Radius r14 = AppRadius.r12;
@@ -68,6 +69,7 @@ class AppSpacing {
   static const Radius r28 = AppRadius.r24;
   static const Radius rFull = AppRadius.rFull;
 
+  static final BorderRadius br4 = AppRadius.br4;
   static final BorderRadius br8 = AppRadius.br8;
   static final BorderRadius br10 = AppRadius.br12;
   static final BorderRadius br12 = AppRadius.br12;
@@ -83,12 +85,14 @@ class AppSpacing {
 class AppRadius {
   AppRadius._();
 
+  static const Radius r4 = Radius.circular(4.0);
   static const Radius r8 = Radius.circular(8.0);
   static const Radius r12 = Radius.circular(12.0);
   static const Radius r16 = Radius.circular(16.0);
   static const Radius r24 = Radius.circular(24.0);
   static const Radius rFull = Radius.circular(999.0);
 
+  static final BorderRadius br4 = BorderRadius.circular(4.0);
   static final BorderRadius br8 = BorderRadius.circular(8.0);
   static final BorderRadius br12 = BorderRadius.circular(12.0);
   static final BorderRadius br16 = BorderRadius.circular(16.0);

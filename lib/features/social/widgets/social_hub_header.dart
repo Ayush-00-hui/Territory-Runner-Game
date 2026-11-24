@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../ui/ui.dart';
 import 'friend_requests_inbox_sheet.dart';
 
-enum SocialTab { squad, duels }
+enum SocialTab { feed, squad, duels }
 
 /// Header with Social title, inbox + add-friend actions, refresh button, and Squad/Duels tab switcher.
 class SocialHubHeader extends StatelessWidget {
@@ -89,6 +89,13 @@ class SocialHubHeader extends StatelessWidget {
             ),
             child: Row(
               children: [
+                Expanded(
+                  child: _buildSubTab(
+                    tab: SocialTab.feed,
+                    label: 'Feed',
+                    icon: Icons.dynamic_feed_rounded,
+                  ),
+                ),
                 Expanded(
                   child: _buildSubTab(
                     tab: SocialTab.squad,

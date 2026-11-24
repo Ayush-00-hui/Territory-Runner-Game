@@ -47,7 +47,7 @@ Future<void> showCreateDuelSheet(
                   children: [
                     const Icon(
                       Icons.sports_kabaddi_rounded,
-                      color: AppColors.secondary,
+                      color: AppColors.accent,
                       size: 22,
                     ),
                     const SizedBox(width: AppSpacing.s8),
@@ -254,7 +254,7 @@ Future<void> showCreateDuelSheet(
                     return ChoiceChip(
                       label: Text('+$stake XP'),
                       selected: xpStake == stake,
-                      selectedColor: AppColors.secondary,
+                      selectedColor: AppColors.accent,
                       backgroundColor: AppColors.surface2,
                       labelStyle: TextStyle(
                         color: xpStake == stake

@@ -14,10 +14,30 @@ const (
 	TerritoryWeakThreshold = 30.0
 	// MinCaptureFloorSqm is the minimum new area floor (25 m²) required before awarding XP, league, or duel credit.
 	MinCaptureFloorSqm = 25.0
-	// TerritoryShieldDuration is the post-conquest / post-defense cooldown duration (30 minutes)
+	// TerritoryShieldDuration is the post-conquest / post-defense cooldown duration (2 hours / 120 minutes)
 	// during which rival runners cannot conquer or clip the sovereign territory.
-	TerritoryShieldDuration = 30 * time.Minute
+	TerritoryShieldDuration = 120 * time.Minute
+	// DailyXpCap is the ceiling on daily XP gain (10,000 XP per 24-hour UTC day).
+	// Runs beyond this ceiling continue to claim area and record runs unhindered, but pause XP accumulation.
+	DailyXpCap = 10000
+	// TerritoryDespawnGracePeriod is the grace period after reaching 0% strength before territory despawns (72 hours).
+	TerritoryDespawnGracePeriod = 72 * time.Hour
+	// TerritoryDespawnTotalDuration is the total inactive duration before a territory dissolves into commons (160h decay + 72h grace = 232h).
+	TerritoryDespawnTotalDuration = 232 * time.Hour
 )
+
+// CalculateLevelFromXP returns the player's level given cumulative XP.
+// Progression formula: cumulative XP(L) = 125 * (L - 1) * L.
+func CalculateLevelFromXP(totalXP int64) int {
+	if totalXP <= 0 {
+		return 1
+	}
+	level := int(math.Floor((1.0 + math.Sqrt(1.0+(float64(4*totalXP)/125.0))) / 2.0))
+	if level < 1 {
+		return 1
+	}
+	return level
+}
 
 // User represents a player profile in the database.
 type User struct {
@@ -113,6 +133,21 @@ func (t *Territory) RemainingShieldDuration(now time.Time) time.Duration {
 		return 0
 	}
 	return rem
+}
+
+// IsDespawned returns true if territory has exceeded 0% strength plus the 72-hour grace period (232 hours total inactivity).
+func (t *Territory) IsDespawned(now time.Time) bool {
+	refTime := t.LastDecayedAt
+	if refTime.IsZero() {
+		refTime = t.LastDefendedAt
+	}
+	if refTime.IsZero() {
+		return false
+	}
+	if now.IsZero() {
+		now = time.Now().UTC()
+	}
+	return now.Sub(refTime) >= TerritoryDespawnTotalDuration
 }
 
 // Run records a runner's GPS session and capture result.
@@ -295,9 +330,50 @@ type PrivacyZone struct {
 
 // UserSettings represents a user's privacy and operational preferences.
 type UserSettings struct {
-	LiveVisibility string `json:"live_visibility"`
-	Timezone       string `json:"timezone,omitempty"`
-	LandReminders  bool   `json:"land_reminders"`
+	LiveVisibility       string `json:"live_visibility"`
+	Timezone             string `json:"timezone,omitempty"`
+	LandReminders        bool   `json:"land_reminders"`
+	ShareRunsWithFriends bool   `json:"share_runs_with_friends"`
+}
+
+// AllowedKudosReactions defines the fixed set of valid kudos reaction tokens.
+var AllowedKudosReactions = []string{"kudos", "clap", "fire", "strong"}
+
+// IsValidKudosReaction checks if the given reaction is among the allowed set.
+func IsValidKudosReaction(reaction string) bool {
+	for _, r := range AllowedKudosReactions {
+		if r == reaction {
+			return true
+		}
+	}
+	return false
+}
+
+// FeedItem represents a shared completed run in the friends activity feed.
+type FeedItem struct {
+	ID              string         `json:"id"`
+	UserID          string         `json:"user_id"`
+	Username        string         `json:"username"`
+	Faction         string         `json:"faction,omitempty"`
+	ActivityType    string         `json:"activity_type"`
+	DurationSeconds int            `json:"duration_seconds"`
+	DistanceMeters  float64        `json:"distance_meters"`
+	AreaClaimed     float64        `json:"area_claimed"`
+	CreatedAt       time.Time      `json:"created_at"`
+	RouteThumbnail  [][2]float64   `json:"route_thumbnail,omitempty"` // [lat, lng] pairs with privacy zones masked
+	KudosCounts     map[string]int `json:"kudos_counts"`               // e.g. {"kudos": 2, "fire": 1}
+	MyKudos         string         `json:"my_kudos,omitempty"`         // calling user's reaction if any
+}
+
+// ModerationReport represents a user or content report submitted for moderation.
+type ModerationReport struct {
+	ID             string    `json:"id"`
+	ReporterID     string    `json:"reporter_id"`
+	ReportedUserID string    `json:"reported_user_id"`
+	RunID          string    `json:"run_id,omitempty"`
+	Reason         string    `json:"reason"`
+	Details        string    `json:"details,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 // DecayNotification represents a recorded push notification alerting an owner of territory decay.

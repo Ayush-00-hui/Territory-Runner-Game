@@ -722,6 +722,37 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             },
           ),
           const Divider(height: 1, color: AppColors.border),
+          ValueListenableBuilder<bool>(
+            valueListenable: _appPrefs.shareRunsWithFriendsNotifier,
+            builder: (context, isSharing, _) {
+              return ProfileOptionTile(
+                icon: Icons.share_rounded,
+                title: 'Share runs with friends',
+                subtitle: isSharing
+                    ? 'Sharing active (friends can view your runs in feed)'
+                    : 'Private (default: Off)',
+                trailing: Text(
+                  isSharing ? 'On' : 'Off',
+                  style: AppText.labelMedium.copyWith(
+                    color: isSharing
+                        ? AppColors.accent
+                        : AppColors.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onTap: () async {
+                  final next = !isSharing;
+                  await _appPrefs.toggleShareRunsWithFriends(next);
+                  try {
+                    await ApiClient().updateSettings({
+                      'share_runs_with_friends': next,
+                    });
+                  } catch (_) {}
+                },
+              );
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
           ProfileOptionTile(
             icon: Icons.emergency_rounded,
             title: 'Emergency contact & SOS',

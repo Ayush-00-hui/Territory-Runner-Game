@@ -11,6 +11,8 @@ import 'widgets/needs_defending_row.dart';
 import 'widgets/offline_sync_banner.dart';
 import 'widgets/quick_launch_hero.dart';
 import 'widgets/recent_activity_feed.dart';
+import 'widgets/today_workout_card.dart';
+import 'widgets/weekly_recap_card.dart';
 import 'widgets/weekly_summary_card.dart';
 import '../history/run_history_screen.dart';
 
@@ -146,6 +148,17 @@ class HomeScreen extends StatelessWidget {
 
                       // Needs Defending Row (Appears when claimed land falls <= 50% strength)
                       NeedsDefendingRow(territories: territories),
+
+                      // Today's Structured Workout (Zero-shame training plan card)
+                      TodayWorkoutCard(
+                        onStartWorkout: (plan) {
+                          onStartRun?.call();
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.s12),
+
+                      // Weekly Performance Recap (Sundays or active weeks)
+                      const WeeklyRecapCard(),
 
                       // Weekly Performance Summary Header & Card
                       const SectionHeader(title: 'Weekly summary'),

@@ -206,26 +206,30 @@ class HistoryRunCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.s16),
 
                 // Large Map Preview
-                Container(
-                  height: 180,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: AppSpacing.br20,
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: AppSpacing.br20,
-                    child: ValueListenableBuilder<LatLng?>(
-                      valueListenable: scrubNotifier,
-                      builder: (context, scrubPt, _) {
-                        return CustomPaint(
-                          painter: _HistoryPolygonPainter(
-                            points: _effectivePoints,
-                            scrubPoint: scrubPt,
-                          ),
-                        );
-                      },
+                Hero(
+                  tag:
+                      'run-poly-${run?.id ?? territory?.id ?? _effectiveDate.millisecondsSinceEpoch}',
+                  child: Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: AppSpacing.br20,
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: AppSpacing.br20,
+                      child: ValueListenableBuilder<LatLng?>(
+                        valueListenable: scrubNotifier,
+                        builder: (context, scrubPt, _) {
+                          return CustomPaint(
+                            painter: _HistoryPolygonPainter(
+                              points: _effectivePoints,
+                              scrubPoint: scrubPt,
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
@@ -467,18 +471,24 @@ class HistoryRunCard extends StatelessWidget {
             child: Row(
               children: [
                 // Mini polygon vector preview
-                Container(
-                  height: 64,
-                  width: 64,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: AppSpacing.br14,
-                    border: Border.all(color: AppColors.borderSubtle),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: AppSpacing.br14,
-                    child: CustomPaint(
-                      painter: _HistoryPolygonPainter(points: _effectivePoints),
+                Hero(
+                  tag:
+                      'run-poly-${run?.id ?? territory?.id ?? _effectiveDate.millisecondsSinceEpoch}',
+                  child: Container(
+                    height: 64,
+                    width: 64,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: AppSpacing.br14,
+                      border: Border.all(color: AppColors.borderSubtle),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: AppSpacing.br14,
+                      child: CustomPaint(
+                        painter: _HistoryPolygonPainter(
+                          points: _effectivePoints,
+                        ),
+                      ),
                     ),
                   ),
                 ),

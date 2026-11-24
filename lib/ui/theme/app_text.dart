@@ -214,11 +214,44 @@ class AppText {
     fontFeatures: [FontFeature.tabularFigures()],
   );
 
+  // ==========================================
+  // SEMANTIC SCALE MAPPINGS
+  // (Heading 1-4, Body, Label, Stat, Micro)
+  // ==========================================
+
+  /// Heading 1 (24sp Bold)
+  static const TextStyle heading1 = headlineLarge;
+
+  /// Heading 2 (22sp SemiBold)
+  static const TextStyle heading2 = titleLarge;
+
+  /// Heading 3 (18sp SemiBold)
+  static const TextStyle heading3 = titleMedium;
+
+  /// Heading 4 (15sp SemiBold)
+  static const TextStyle heading4 = titleSmall;
+
+  /// Primary Body (13sp Regular)
+  static const TextStyle body = bodyMedium;
+
+  /// Primary Label (10sp SemiBold Tracking +0.8)
+  static const TextStyle label = labelSmall;
+
+  /// Primary Stat (36sp Bold Tabular)
+  static const TextStyle stat = displayMedium;
+
+  /// Micro style (9sp SemiBold Tracking +0.5) for compact badges/tags
+  static const TextStyle micro = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 9.0,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.5,
+    color: AppColors.textMuted,
+  );
+
   static const TextStyle headingLarge = headlineLarge;
   static const TextStyle headingMedium = headlineMedium;
   static const TextStyle headingSmall = headlineSmall;
-  static const TextStyle body = bodyMedium;
-  static const TextStyle label = labelSmall;
 
   static const TextStyle labelAccent = TextStyle(
     fontFamily: fontFamily,
