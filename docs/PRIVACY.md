@@ -202,5 +202,29 @@ Under the Digital Personal Data Protection (DPDP) Act, 2023 (India) and the Gene
    - Ghost Runner functions fully offline in remote areas without cellular or Wi-Fi connectivity.
    - Ghost replay rendering respects low-power display modes, battery saver settings, and OS reduced-motion preferences without degrading battery endurance.
 
+---
+
+## 13. Activity Feed, Run Sharing & Social Moderation (Phase G4)
+
+1. **Opt-In Sharing (Default OFF)**:
+   - Run sharing with friends defaults strictly to `false` (`share_runs_with_friends = false`).
+   - Unless a runner explicitly toggles **Share runs with friends** in **Profile > Settings > Privacy & safety**, zero completed run activities, distances, times, or territories are visible to anyone in the activity feed.
+2. **Authoritative Privacy Zone Masking on Shared Routes**:
+   - When a runner opts in to share runs, their route thumbnail is sanitized authoritatively before being served to friends (`geo.MaskPath`).
+   - Any GPS coordinates falling within the runner's configured privacy zone radiuses ($d \le R$, e.g., home, office, school) are permanently stripped from the route thumbnail.
+   - Friends only see the non-sensitive portion of the run; home origins and destinations are never exposed.
+3. **Mutual Friends Only & Block Enforcement**:
+   - Shared runs are strictly limited to accepted mutual friends (`status = 'accepted'`). Public feeds, global discovery feeds, and stranger profiling do not exist.
+   - If either user blocks the other (`POST /v1/moderation/block`):
+     - The mutual friendship is immediately dissolved.
+     - All runs from the blocked party are instantly removed from the blocker's feed and vice versa.
+     - All pending duel challenges between the two runners are declined and cancelled.
+4. **Post Hiding & Moderation Reports**:
+   - Any runner can privately hide an individual post from their feed (`POST /v1/feed/{id}/hide`).
+   - Content and conduct violations can be reported to moderators (`POST /v1/moderation/report`) with structured violation reasons (harassment, offensive route geometry, suspected vehicular movement, spam).
+5. **Fixed Set Kudos (Reactions)**:
+   - Reactions are restricted to a calm, fixed set of athletic tokens: `kudos` (👍), `clap` (👏), `fire` (🔥), and `strong` (💪).
+   - Only accepted friends can react to a shared run. Reactions are rate-limited to prevent abuse.
+
 
 
