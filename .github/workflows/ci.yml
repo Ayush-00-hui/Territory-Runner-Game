@@ -5,12 +5,14 @@ on:
     branches:
       - main
       - industry-level
+      - growth-and-polish
       - 'release/**'
       - 'feature/**'
   pull_request:
     branches:
       - main
       - industry-level
+      - growth-and-polish
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -146,7 +148,15 @@ jobs:
         working-directory: backend
         env:
           TEST_DATABASE_URL: "postgres://runner:runnerpass@localhost:5432/territory_runner?sslmode=disable"
-        run: go test -v -race -tags=integration ./internal/store/...
+        run: |
+          set -o pipefail
+          go test -v -race -tags=integration ./internal/store/... 2>&1 | tee test_output.log || {
+            echo "### Integration Test Failure" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            tail -n 100 test_output.log >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            exit 1
+          }
 
   docker_build:
     name: Backend Docker Container Build
