@@ -5,12 +5,14 @@ on:
     branches:
       - main
       - industry-level
+      - growth-and-polish
       - 'release/**'
       - 'feature/**'
   pull_request:
     branches:
       - main
       - industry-level
+      - growth-and-polish
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
