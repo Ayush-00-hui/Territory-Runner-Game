@@ -48,15 +48,15 @@ class MapControlsRail extends StatelessWidget {
         // 3. Recenter / Camera Lock Button
         AppIconButton(
           icon: isCameraLocked
-              ? Icons.my_location_rounded
-              : Icons.pan_tool_rounded,
+              ? Icons.navigation_rounded
+              : Icons.my_location_rounded,
           iconColor: isCameraLocked
-              ? AppColors.accent
-              : AppColors.textSecondary,
-          tooltip: isCameraLocked ? 'Recenter map' : 'Lock camera follow',
+              ? AppColors.textSecondary
+              : AppColors.accent,
+          tooltip: isCameraLocked ? 'Lock camera follow' : 'Recenter map',
           semanticLabel: isCameraLocked
-              ? 'Recenter map on your position'
-              : 'Lock camera to follow your movement',
+              ? 'Lock camera to follow your movement'
+              : 'Recenter map on your position',
           onTap: onRecenter,
         ),
       ],

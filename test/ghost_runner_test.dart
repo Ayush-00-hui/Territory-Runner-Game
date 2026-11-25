@@ -362,6 +362,60 @@ void main() {
         expect(telemFinished.statusText, contains('Ghost finished'));
       },
     );
+
+    test('interpolateGhostPosition smoothly interpolates between discrete time offsets', () {
+      final samples = [
+        const RunSample(timeOffsetMs: 0, lat: 10.0, lng: 20.0),
+        const RunSample(timeOffsetMs: 100000, lat: 10.0, lng: 20.100),
+      ];
+
+      // t = 0s -> start
+      final at0 = GhostRunnerService.interpolateGhostPosition(
+        ghostSamples: samples,
+        elapsedSeconds: 0,
+      );
+      expect(at0?.latitude, equals(10.0));
+      expect(at0?.longitude, equals(20.0));
+
+      // t = 50s -> exact midpoint (10.0, 20.050)
+      final at50 = GhostRunnerService.interpolateGhostPosition(
+        ghostSamples: samples,
+        elapsedSeconds: 50,
+      );
+      expect(at50?.latitude, equals(10.0));
+      expect(at50?.longitude, closeTo(20.050, 0.00001));
+
+      // t = 100s -> exact endpoint
+      final at100 = GhostRunnerService.interpolateGhostPosition(
+        ghostSamples: samples,
+        elapsedSeconds: 100,
+      );
+      expect(at100?.latitude, equals(10.0));
+      expect(at100?.longitude, equals(20.100));
+
+      // Boundary: past end locks to last sample
+      final at200 = GhostRunnerService.interpolateGhostPosition(
+        ghostSamples: samples,
+        elapsedSeconds: 200,
+      );
+      expect(at200?.longitude, equals(20.100));
+
+      // Boundary: negative or 0 before start locks to first sample
+      final atNeg = GhostRunnerService.interpolateGhostPosition(
+        ghostSamples: samples,
+        elapsedSeconds: -10,
+      );
+      expect(atNeg?.longitude, equals(20.0));
+
+      // Empty samples returns null
+      expect(
+        GhostRunnerService.interpolateGhostPosition(
+          ghostSamples: [],
+          elapsedSeconds: 10,
+        ),
+        isNull,
+      );
+    });
   });
 
   group('Task F3: Widget Tests', () {

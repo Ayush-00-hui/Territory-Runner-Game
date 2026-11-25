@@ -612,9 +612,15 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
         }
       }
       if (_activePaceTarget != null) {
-        paceBandNotifier.value = _activePaceTarget!.evaluateSpeed(
-          _currentSpeedKmh,
-        );
+        final eval = _activePaceTarget!.evaluateSpeed(_currentSpeedKmh);
+        final prevEval = paceBandNotifier.value;
+        paceBandNotifier.value = eval;
+        if (_isRunActive && !_isAutoPaused && !_isManualPaused) {
+          if (eval.status != PaceBandStatus.onPace &&
+              (prevEval == null || prevEval.status != eval.status)) {
+            _appPrefs.triggerPaceBandAlertHaptic();
+          }
+        }
       }
 
       // Coarse fix (> 30m): update visual position but preserve polygon anti-cheat accuracy

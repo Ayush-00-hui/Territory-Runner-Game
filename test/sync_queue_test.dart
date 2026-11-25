@@ -471,5 +471,24 @@ void main() {
       expect(sentPayload.containsKey('step_count'), isFalse);
       expect(sentPayload.containsKey('stepCount'), isFalse);
     });
+
+    test('SyncQueueService.computeBackoffDelay implements exponential backoff with 60s cap', () {
+      expect(SyncQueueService.computeBackoffDelay(0), equals(Duration.zero));
+      expect(SyncQueueService.computeBackoffDelay(-1), equals(Duration.zero));
+
+      final d1 = SyncQueueService.computeBackoffDelay(1);
+      expect(d1.inMilliseconds, greaterThanOrEqualTo(1500));
+      expect(d1.inMilliseconds, lessThanOrEqualTo(2500));
+
+      final d2 = SyncQueueService.computeBackoffDelay(2);
+      expect(d2.inMilliseconds, greaterThanOrEqualTo(3000));
+      expect(d2.inMilliseconds, lessThanOrEqualTo(5000));
+
+      final d6 = SyncQueueService.computeBackoffDelay(6);
+      expect(d6.inSeconds, lessThanOrEqualTo(60));
+
+      final d10 = SyncQueueService.computeBackoffDelay(10);
+      expect(d10.inSeconds, equals(60));
+    });
   });
 }

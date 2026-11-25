@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -232,6 +233,17 @@ class SyncQueueService {
       }
     }
     return false;
+  }
+
+  /// Calculates exponential backoff duration with random jitter (2s doubling to 60s max).
+  static Duration computeBackoffDelay(int attempts, {math.Random? random}) {
+    if (attempts <= 0) return Duration.zero;
+    final r = random ?? math.Random();
+    final exp = math.min(attempts, 6);
+    final baseSeconds = math.pow(2, exp).toDouble();
+    final jitter = (r.nextDouble() * 0.5) - 0.25;
+    final delaySeconds = (baseSeconds * (1.0 + jitter)).clamp(1.0, 60.0);
+    return Duration(milliseconds: (delaySeconds * 1000).round());
   }
 
   factory SyncQueueService({

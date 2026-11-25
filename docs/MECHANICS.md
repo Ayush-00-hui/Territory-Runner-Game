@@ -333,5 +333,31 @@ Standings partition all weekly active participants into four competitive tiers b
 | **Tiered Badges (F6)** | Client Local | Bronze, Silver, Gold cosmetic wardrobe progression | Local-only | `lib/services/tiered_achievement_service.dart` |
 | **Streak Freeze (Local)** | Client Local | Earned 1 per 7 active days, max 2 stored | Local-only | `lib/services/app_preferences.dart` |
 | **Biometrics & Calories** | Client Local | Strictly on-device (weight, height, age, surrogate ML) | Local-only | `lib/services/calorie_model_engine.dart` |
+| **Offline Sync Backoff** | Client Local | Base 2s exponential doubling to 60s cap with ±25% jitter | Local-only | `lib/services/sync_queue.dart` |
+| **Camera Recenter Gesture**| Client Local | Touch gesture auto-unlocks camera follow, surfaces Recenter pill | Local-only | `lib/features/map/widgets/map_floating_controls.dart` |
+| **Pace Alert Debounce** | Client Local | Minimum 30s cooldown, state transition only | Local-only | `lib/services/app_preferences.dart` |
+
+---
+
+## 12. Economy & Balance Simulation Report (Phase M)
+
+### Simulation Configuration (`scripts/balance_simulation.py`)
+A 4-week longitudinal simulation was executed across three core athlete archetypes under the net accounting engine:
+
+1. **Casual Athlete (2 runs/week, 3.5 km/run, 1 loop of 15,000 m²)**:
+   - *Week 1*: Raw 30,000 m² | Net New 24,750 m² | Stolen 1,000 m² | League Gained 25,750 m² | XP 1,313 | Level 3 | Owned Land 24,607 m² | Strength 61.5%.
+   - *Week 4*: Raw 30,000 m² | Net New 19,500 m² | Stolen 1,000 m² | League Gained 20,500 m² | XP 1,050 | Level 6 | Owned Land 82,507 m² | Strength 3.2% (Enters Weak status, ripe for local rival competition).
+   - *Finding*: Casual athletes make steady progress to Level 6 in a month without feeling overwhelmed. 15%/day decay ensures unused land becomes contestable.
+
+2. **Daily Athlete (5 runs/week, 6.0 km/run, 2 loops of 25,000 m²)**:
+   - *Week 1*: Raw 250,000 m² | Net New 148,750 m² | Stolen 15,000 m² | League Gained 163,750 m² | XP 8,183 | Level 8 | Owned Land 144,464 m² | Strength 58.9%.
+   - *Week 4*: Raw 250,000 m² | Net New 137,500 m² | Stolen 15,000 m² | League Gained 152,500 m² | XP 7,620 | Level 16 | Owned Land 541,964 m² | Strength 0.0% on undisturbed edges.
+   - *Finding*: Daily runners maintain high weekly league volume (~150,000 m²). Peripheral parcels decay naturally unless actively defended, preventing static map lockouts.
+
+3. **Power Athlete (7 runs/week, 12.0 km/run, 3 loops of 45,000 m²)**:
+   - *Week 1*: Raw 945,000 m² | Net New 450,000 m² | Stolen 84,000 m² | League Gained 534,000 m² | XP 28,790 | Level 15 | Owned Land 432,857 m² | Strength 74.6%.
+   - *Week 4*: Raw 945,000 m² | Net New 425,250 m² | Stolen 84,000 m² | League Gained 509,250 m² | XP 27,552 | Level 30 | Owned Land 1,648,607 m² | Strength 8.1%.
+   - *Finding*: Daily XP averages ~4,000 XP/day, comfortably within the proposed 10,000 XP/day ceiling while preventing bot or vehicular exploitation.
+
 
 

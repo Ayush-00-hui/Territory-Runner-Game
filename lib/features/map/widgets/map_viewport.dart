@@ -38,6 +38,11 @@ class MapViewport extends StatelessWidget {
           interactionOptions: const InteractionOptions(
             flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
           ),
+          onPositionChanged: (MapCamera camera, bool hasGesture) {
+            if (hasGesture && controller.isCameraFollowLocked) {
+              controller.setCameraFollow(false);
+            }
+          },
         ),
         children: [
           MapLayers.buildTileLayer(isLight: isLight),

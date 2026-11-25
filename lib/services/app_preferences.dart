@@ -799,6 +799,21 @@ class AppPreferences {
   /// Interval workout phase transition haptics
   Future<void> triggerIntervalRunHaptic() => triggerHaptic([0, 160, 80, 160]);
   Future<void> triggerIntervalWalkHaptic() => triggerHaptic([0, 90]);
+
+  DateTime? _lastPaceAlertTime;
+  static const Duration paceAlertDebounceWindow = Duration(seconds: 30);
+
+  /// Pacing alert haptic debounced by at least 30 seconds to prevent vibration chatter
+  Future<void> triggerPaceBandAlertHaptic() async {
+    final now = DateTime.now();
+    if (_lastPaceAlertTime != null &&
+        now.difference(_lastPaceAlertTime!) < paceAlertDebounceWindow) {
+      return;
+    }
+    _lastPaceAlertTime = now;
+    await triggerHaptic([0, 100]);
+  }
+
   // Auto-pause and auto-resume haptics removed to prevent sensory vibration clutter
   Future<void> triggerAutoPauseHaptic() async {}
   Future<void> triggerAutoResumeHaptic() async {}
