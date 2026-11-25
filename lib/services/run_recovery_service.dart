@@ -168,13 +168,13 @@ class RunRecoveryService {
     }
   }
 
-  Box<String> get _safeBox {
+  Box<String>? get _boxOrNull {
     if (_box != null && _box!.isOpen) return _box!;
     if (Hive.isBoxOpen(boxName)) {
       _box = Hive.box<String>(boxName);
       return _box!;
     }
-    throw StateError('RunRecoveryService box not opened. Call init() first.');
+    return null;
   }
 
   /// Persists the active run state to Hive.
@@ -190,6 +190,14 @@ class RunRecoveryService {
     required int accumulatedPreviewXp,
   }) async {
     try {
+      final box = _boxOrNull;
+      if (box == null) {
+        AppLogger.warning(
+          'Cannot persist active run: recovery storage not initialized',
+          tag: 'RunRecoveryService',
+        );
+        return;
+      }
       final snapshot = ActiveRunSnapshot(
         positions: positions,
         coordinates: coordinates,
@@ -203,7 +211,7 @@ class RunRecoveryService {
         lastSavedAt: DateTime.now().toUtc(),
       );
       final jsonStr = jsonEncode(snapshot.toMap());
-      await _safeBox.put(activeKey, jsonStr);
+      await box.put(activeKey, jsonStr);
     } catch (e) {
       AppLogger.error(
         'Failed to persist active run: $e',
@@ -216,7 +224,9 @@ class RunRecoveryService {
   /// Returns true if an unfinished run was recorded within the last 24 hours.
   bool hasRecoverableRun() {
     try {
-      final raw = _safeBox.get(activeKey);
+      final box = _boxOrNull;
+      if (box == null) return false;
+      final raw = box.get(activeKey);
       if (raw == null || raw.isEmpty) return false;
 
       final map = jsonDecode(raw) as Map<String, dynamic>;
@@ -242,7 +252,9 @@ class RunRecoveryService {
   /// Retrieves the persisted active run snapshot, if valid.
   ActiveRunSnapshot? getRecoverableRun() {
     try {
-      final raw = _safeBox.get(activeKey);
+      final box = _boxOrNull;
+      if (box == null) return null;
+      final raw = box.get(activeKey);
       if (raw == null || raw.isEmpty) return null;
 
       final map = jsonDecode(raw) as Map<String, dynamic>;
@@ -260,7 +272,9 @@ class RunRecoveryService {
   /// Clears the recovery cache once the run is successfully finished or explicitly discarded.
   Future<void> clearRecovery() async {
     try {
-      await _safeBox.delete(activeKey);
+      final box = _boxOrNull;
+      if (box == null) return;
+      await box.delete(activeKey);
     } catch (e) {
       AppLogger.error(
         'Error clearing recovery: $e',
