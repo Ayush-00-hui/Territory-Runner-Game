@@ -87,6 +87,8 @@ void main() {
 
         // Chronological headers
         expect(find.text('Current week'), findsOneWidget);
+        await tester.drag(find.byType(CustomScrollView), const Offset(0, -300));
+        await tester.pumpAndSettle();
         expect(find.text('Last week'), findsOneWidget);
 
         // Tap Loops filter

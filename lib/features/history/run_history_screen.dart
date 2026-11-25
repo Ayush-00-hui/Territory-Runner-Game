@@ -709,21 +709,13 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
   }
 
   void _showUndoDeleteSnackBar(BuildContext context, RunLogEntry run) {
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Run deleted',
-          style: AppText.bodyMedium.copyWith(color: AppColors.textPrimary),
-        ),
-        backgroundColor: AppColors.surface2,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: 'Undo',
-          textColor: AppColors.accent,
-          onPressed: () => _handleRestoreRun(run),
-        ),
-      ),
+    AppToast.show(
+      context,
+      'Run deleted',
+      type: AppToastType.info,
+      duration: const Duration(seconds: 4),
+      actionLabel: 'Undo',
+      onAction: () => _handleRestoreRun(run),
     );
   }
 

@@ -53,7 +53,7 @@ class MapControlsRail extends StatelessWidget {
           iconColor: isCameraLocked
               ? AppColors.textSecondary
               : AppColors.accent,
-          tooltip: isCameraLocked ? 'Lock camera follow' : 'Recenter map',
+          tooltip: 'Recenter map',
           semanticLabel: isCameraLocked
               ? 'Lock camera to follow your movement'
               : 'Recenter map on your position',

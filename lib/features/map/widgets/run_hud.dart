@@ -209,7 +209,7 @@ class _RunHudState extends State<RunHud> {
                   if (widget.isAutoPaused && widget.isRunActive) ...[
                     Semantics(
                       liveRegion: true,
-                      label: 'Run tracking paused. Tap resume button to continue tracking.',
+                      label: 'Run tracking auto-paused. Tap resume button to continue tracking.',
                       child: Container(
                         margin: const EdgeInsets.only(bottom: AppSpacing.s10),
                         padding: const EdgeInsets.symmetric(

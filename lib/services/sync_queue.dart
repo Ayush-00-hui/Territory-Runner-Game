@@ -238,9 +238,11 @@ class SyncQueueService {
   /// Calculates exponential backoff duration with random jitter (2s doubling to 60s max).
   static Duration computeBackoffDelay(int attempts, {math.Random? random}) {
     if (attempts <= 0) return Duration.zero;
+    if (attempts >= 6) {
+      return const Duration(seconds: 60);
+    }
     final r = random ?? math.Random();
-    final exp = math.min(attempts, 6);
-    final baseSeconds = math.pow(2, exp).toDouble();
+    final baseSeconds = math.pow(2, attempts).toDouble();
     final jitter = (r.nextDouble() * 0.5) - 0.25;
     final delaySeconds = (baseSeconds * (1.0 + jitter)).clamp(1.0, 60.0);
     return Duration(milliseconds: (delaySeconds * 1000).round());

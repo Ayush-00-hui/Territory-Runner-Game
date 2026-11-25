@@ -113,6 +113,38 @@ Decaying territory strength lazily on read (`strength = max(0, 100.0 - 15.0 * dt
 
 ---
 
+### Q2.5: How does Territory Runner enforce Net New vs. Stolen area accounting, and why is this critical for game balance?
+**Examiner Defense Rationale (2-3 lines):**
+Captures evaluate $gained = net\_new + stolen$, where $net\_new = area(new) - area(old)$ and $stolen = \sum rival\_loss$. Re-running an identical loop or running inside one's own territory yields $net\_new = 0.0\text{ m}^2$ and $0\text{ XP}$, completely preventing athletes from farming unlimited XP or leaderboard ranks by running the same 400m block.
+
+**Deep Defense:**
+- In naive territory games, runners receive credit for the raw enclosure area of every closed loop. A runner who runs around their local park 10 times in a single session receives 10x the park area.
+- In Territory Runner, the server and client calculate the geodesic difference between the new MultiPolygon and the existing territory MultiPolygon.
+- If $gained < 25.0\text{ m}^2$, the server rejects the capture before any database mutation (`runs.area_claimed = 0`, `runs.area_stolen = 0`, $0\text{ XP}$).
+- In migration `000018_add_area_stolen_and_net_accounting`, `runs.area_claimed` was migrated to store true net new area, while `runs.area_stolen` tracks rival acreage peeled away.
+
+---
+
+### Q2.6: How do you prevent sovereign territory overlap when invading a rival with an active 120-minute sovereign defense shield?
+**Examiner Defense Rationale (2-3 lines):**
+Before unioning an enclosed loop into the player's territory, the server and client execute a geometric difference (`ST_Difference(loop, shielded_rivals_union)`). Shielded ground is clipped away prior to union, guaranteeing that two athletes can never simultaneously hold or be credited for the same physical ground.
+
+---
+
+### Q2.7: How does the area-weighted strength model prevent multi-kilometer land resets from a single trivial loop?
+**Examiner Defense Rationale (2-3 lines):**
+Instead of setting `strength = 100.0` across the athlete's entire multi-kilometer empire on any claim, the system calculates an area-weighted average:
+$$\text{NewStrength} = \frac{\text{OldEffectiveStrength} \times \text{UndisturbedArea} + 100.0 \times (\text{DefendedArea} + \text{NetNewArea})}{\text{TotalArea}}$$
+Faraway undisturbed sectors continue to decay naturally ($15\text{ pts/day}$); defending weak land requires physically running through or around that specific sector.
+
+---
+
+### Q2.8: How are out-and-back spurs and thin needle-like loops detected and rejected?
+**Examiner Defense Rationale (2-3 lines):**
+The kinematics engine detects both proper crossings and collinear overlapping segments. Out-and-back spurs create collinear overlapping lines that trigger self-intersection detection (`"Loop crossed itself — try again"`). Additionally, an isoperimetric quotient filter ($Q = \frac{4\pi A}{P^2} \ge 0.02$) evaluates loop circularity, rejecting thin needle-like loops with `"Loop too thin"`.
+
+---
+
 ## 3. Mobile Lifecycle, Battery Longevity & Real-World GPS
 
 ### Q3.1: How does Territory Runner maintain continuous background GPS tracking without being terminated by Android Doze mode or iOS background limits?

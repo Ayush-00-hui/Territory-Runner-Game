@@ -20,7 +20,7 @@
 
 [![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game)
-[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-701%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
+[![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-726%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Tests-11%20Packages_Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
 [![Cartography](https://img.shields.io/badge/Cartography-OpenStreetMap_Standard-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
 [![Theme Palette](https://img.shields.io/badge/Theme-Nordic_Moss_&_Pine_Shield-A3C586.svg?style=flat-square)](lib/ui/theme/app_colors.dart)

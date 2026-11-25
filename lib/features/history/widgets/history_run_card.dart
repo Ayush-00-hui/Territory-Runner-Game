@@ -402,7 +402,7 @@ class HistoryRunCard extends StatelessWidget {
                     const SizedBox(width: AppSpacing.s8),
                     Expanded(
                       child: SecondaryButton(
-                        label: 'Share',
+                        label: 'Share run',
                         icon: Icons.share_rounded,
                         onPressed: () {
                           Navigator.pop(ctx);

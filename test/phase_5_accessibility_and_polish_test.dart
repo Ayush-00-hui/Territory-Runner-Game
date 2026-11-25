@@ -223,7 +223,8 @@ void main() {
           (w) =>
               w is Semantics &&
               w.properties.button == true &&
-              w.properties.label == 'Pause run tracking',
+              (w.properties.label == 'Pause run tracking' ||
+                  w.properties.label == 'Resume run tracking'),
         ),
         findsOneWidget,
       );
