@@ -220,6 +220,12 @@ class ApiClient {
     final headers = await _buildHeaders();
 
     final now = DateTime.now();
+    final effectiveDuration =
+        durationSeconds > 0 ? durationSeconds : points.length;
+    final double stepSeconds =
+        points.length > 1 ? effectiveDuration / (points.length - 1) : 1.0;
+    final startTime = now.subtract(Duration(seconds: effectiveDuration));
+
     final Map<String, dynamic> payload = {
       'idempotency_key': idempotencyKey,
       'activity_type': activityType,
@@ -233,10 +239,13 @@ class ApiClient {
       'points': points.asMap().entries.map((entry) {
         final idx = entry.key;
         final p = entry.value;
+        final ptTime = startTime.add(
+          Duration(milliseconds: (idx * stepSeconds * 1000).round()),
+        );
         return {
           'latitude': p.latitude,
           'longitude': p.longitude,
-          'timestamp': now.add(Duration(seconds: idx)).toIso8601String(),
+          'timestamp': ptTime.toIso8601String(),
           'speed': 2.7,
           'heading': 0.0,
           'is_mocked': false,

@@ -207,5 +207,33 @@ void main() {
         );
       },
     );
+
+    test('findNearestClosureCandidate identifies intermediate closure point', () {
+      final engine = PolygonEnclosureEngine(minClosureDistanceMeters: 35.0);
+      // Run stem 100m from p0 to p1
+      final p0 = LatLng(51.50000, -0.12000);
+      final p1 = LatLng(51.50090, -0.12000); // 100m north (loop start)
+      final p2 = LatLng(51.50090, -0.12140); // 100m west
+      final p3 = LatLng(51.50000, -0.12140); // 100m south
+
+      engine.addPosition(p0);
+      engine.addPosition(p1);
+      engine.addPosition(p2);
+      engine.addPosition(p3);
+
+      // Current point is at (51.50085, -0.12005), which is ~7m from p1 and ~95m from p0
+      final pNearP1 = LatLng(51.50085, -0.12005);
+      final candidate = engine.findNearestClosureCandidate(pNearP1);
+
+      expect(candidate, isNotNull);
+      expect(candidate!.candidateIndex, equals(1)); // p1
+      expect(candidate.distanceMeters, lessThan(15.0));
+      expect(candidate.proximity, greaterThan(0.8));
+
+      // Test sealing to this intermediate candidate
+      final sealed = engine.sealCurrentPath(candidateIndex: candidate.candidateIndex);
+      expect(sealed, isNotNull);
+      expect(sealed!.areaSqMeters, greaterThan(4500.0));
+    });
   });
 }

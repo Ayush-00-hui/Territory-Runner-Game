@@ -406,8 +406,28 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 
 		if areaClaimed > 0 {
 			tID := fmt.Sprintf("poly_%s_territory", run.UserID)
-			if len(loops[0].Polygon) > 0 {
-				geojson = fmt.Sprintf(`{"type":"MultiPolygon","coordinates":[[[[%f,%f]]]]}`, loops[0].Polygon[0].Longitude, loops[0].Polygon[0].Latitude)
+			if len(loops) > 0 && len(loops[0].Polygon) > 0 {
+				var sb strings.Builder
+				sb.WriteString(`{"type":"MultiPolygon","coordinates":[[`)
+				for lIdx, loop := range loops {
+					if lIdx > 0 {
+						sb.WriteString(`],[`)
+					}
+					ring := append([]geo.LatLng(nil), loop.Polygon...)
+					if len(ring) > 0 && (ring[0].Latitude != ring[len(ring)-1].Latitude || ring[0].Longitude != ring[len(ring)-1].Longitude) {
+						ring = append(ring, ring[0])
+					}
+					sb.WriteString(`[`)
+					for pIdx, pt := range ring {
+						if pIdx > 0 {
+							sb.WriteString(`,`)
+						}
+						sb.WriteString(fmt.Sprintf(`[%f,%f]`, pt.Longitude, pt.Latitude))
+					}
+					sb.WriteString(`]`)
+				}
+				sb.WriteString(`]]}`)
+				geojson = sb.String()
 			}
 			cooldown := now.Add(TerritoryShieldDuration)
 			m.territories[tID] = &Territory{

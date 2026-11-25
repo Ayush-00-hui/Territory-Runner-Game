@@ -39,7 +39,7 @@ void main() {
         expect(find.text("5'12\""), findsOneWidget);
         expect(find.text('25:00'), findsOneWidget);
         expect(find.text('Ready to close loop'), findsOneWidget);
-        expect(find.text('18 m to start'), findsOneWidget);
+        expect(find.text('18 m to close'), findsOneWidget);
         expect(find.text('Close loop'), findsOneWidget);
       },
     );

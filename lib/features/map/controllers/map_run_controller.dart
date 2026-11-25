@@ -82,6 +82,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   double? _satelliteAccuracyMeters;
   double? _distanceToClosureMeters;
   double? _proximityToClosure;
+  LatLng? _nearestClosurePoint;
   LatLng? _currentLocation;
   String? _highlightedTerritoryId;
   SuggestedRoute? _activeSuggestedRoute;
@@ -108,6 +109,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   VoidCallback? onGoalCompleted;
   ValueChanged<String>? onSpeedAnomalyDetected;
   ValueChanged<String>? onLoopRejected;
+  void Function(EnclosedLoopEvent loop, double netAreaSqM, int xpAwarded)?
+  onLoopCaptured;
 
   MapRunController({
     LocationService? locationService,
@@ -153,6 +156,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   double? get satelliteAccuracyMeters => _satelliteAccuracyMeters;
   double? get distanceToClosureMeters => _distanceToClosureMeters;
   double? get proximityToClosure => _proximityToClosure;
+  LatLng? get nearestClosurePoint => _nearestClosurePoint;
   LatLng? get currentLocation => _currentLocation;
   String? get highlightedTerritoryId => _highlightedTerritoryId;
   SuggestedRoute? get activeSuggestedRoute => _activeSuggestedRoute;
@@ -449,6 +453,11 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       _handleEnclosedLoop(loopEvent);
       runPathUpdateNotifier.value++;
       notifyListeners();
+    } else {
+      onLoopRejected?.call(
+        _polygonEngine.lastInvalidReason ??
+            'Path must form a loop of at least ${_polygonEngine.effectiveMinLoopDistanceMeters.toStringAsFixed(0)}m without crossing itself',
+      );
     }
   }
 
@@ -555,25 +564,23 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
           runPathUpdateNotifier.value++;
 
           if (_polygonEngine.currentPath.length >= 3) {
-            final start = _polygonEngine.currentPath.first;
-            final distToStart = Geolocator.distanceBetween(
-              latLng.latitude,
-              latLng.longitude,
-              start.latitude,
-              start.longitude,
-            );
-            _distanceToClosureMeters = distToStart;
-            final closureThreshold = _polygonEngine.effectiveClosureDistance(
+            final candidate = _polygonEngine.findNearestClosureCandidate(
+              latLng,
               horizontalAccuracyMeters: pos.accuracy,
             );
-            _proximityToClosure =
-                (1.0 -
-                        ((distToStart - closureThreshold) /
-                            (120.0 - closureThreshold)))
-                    .clamp(0.0, 1.0);
+            if (candidate != null) {
+              _distanceToClosureMeters = candidate.distanceMeters;
+              _proximityToClosure = candidate.proximity;
+              _nearestClosurePoint = candidate.candidatePoint;
+            } else {
+              _distanceToClosureMeters = null;
+              _proximityToClosure = null;
+              _nearestClosurePoint = null;
+            }
           } else {
             _distanceToClosureMeters = null;
             _proximityToClosure = null;
+            _nearestClosurePoint = null;
           }
 
           final loopEvent = _polygonEngine.addPosition(
@@ -583,7 +590,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
           );
           if (loopEvent != null) {
             _handleEnclosedLoop(loopEvent);
-          } else if (_polygonEngine.lastInvalidReason != null) {
+          } else if (_polygonEngine.lastInvalidReason ==
+              PolygonEnclosureEngine.signalGapReason) {
             onLoopRejected?.call(_polygonEngine.lastInvalidReason!);
           }
         }
@@ -598,21 +606,31 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _updateTelemetryMetrics();
   }
 
-  void _handleEnclosedLoop(EnclosedLoopEvent loopEvent) {
+  Future<void> _handleEnclosedLoop(EnclosedLoopEvent loopEvent) async {
     _distanceToClosureMeters = null;
     _proximityToClosure = null;
+    _nearestClosurePoint = null;
     final area = loopEvent.areaSqMeters;
-    final int xp = (area / 10.0).round().clamp(50, 1000);
 
     _territoriesClaimedThisRun++;
-    _accumulatedRunPreviewArea += area;
-    _accumulatedRunPreviewXp += xp;
 
-    _territoryService.capturePolygonTerritory(
+    await _territoryService.capturePolygonTerritory(
       polygon: loopEvent.polygon,
       areaSqMeters: area,
     );
+
+    final int xp = _territoryService.lastCaptureXp;
+    final double netArea = _territoryService.lastCaptureNetAreaSqM > 0
+        ? _territoryService.lastCaptureNetAreaSqM
+        : area;
+
+    _accumulatedRunPreviewArea += netArea;
+    _accumulatedRunPreviewXp += xp;
+
     _appPrefs.triggerLoopClosedHaptic();
+    onLoopCaptured?.call(loopEvent, netArea, xp);
+    runPathUpdateNotifier.value++;
+    notifyListeners();
   }
 
   void _startRunTimer() {

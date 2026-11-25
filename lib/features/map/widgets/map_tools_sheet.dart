@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
+import '../../social/widgets/social_hub_sheet.dart';
 
 /// Bottom sheet presenting secondary tools during an active or idle run:
 /// - Virtual Pacer (Demo mode)
@@ -20,6 +21,7 @@ class MapToolsSheet extends StatelessWidget {
   final VoidCallback? onOpenGhostRunner;
   final VoidCallback? onOpenIntervalWorkouts;
   final VoidCallback? onOpenSavedLoops;
+  final VoidCallback? onOpenSocialHub;
   final String? activePacerLabel;
   final String? activeGoalLabel;
   final String? activeGhostLabel;
@@ -38,6 +40,7 @@ class MapToolsSheet extends StatelessWidget {
     this.onOpenGhostRunner,
     this.onOpenIntervalWorkouts,
     this.onOpenSavedLoops,
+    this.onOpenSocialHub,
     this.activePacerLabel,
     this.activeGoalLabel,
     this.activeGhostLabel,
@@ -57,6 +60,7 @@ class MapToolsSheet extends StatelessWidget {
     VoidCallback? onOpenGhostRunner,
     VoidCallback? onOpenIntervalWorkouts,
     VoidCallback? onOpenSavedLoops,
+    VoidCallback? onOpenSocialHub,
     String? activePacerLabel,
     String? activeGoalLabel,
     String? activeGhostLabel,
@@ -107,6 +111,12 @@ class MapToolsSheet extends StatelessWidget {
             ? () {
                 Navigator.pop(ctx);
                 onOpenSavedLoops();
+              }
+            : null,
+        onOpenSocialHub: onOpenSocialHub != null
+            ? () {
+                Navigator.pop(ctx);
+                onOpenSocialHub();
               }
             : null,
         activePacerLabel: activePacerLabel,
@@ -220,7 +230,20 @@ class MapToolsSheet extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.s8),
 
-              // 6. Emergency SOS Trigger
+              // 6. Social & Duels Hub
+              _ToolTile(
+                icon: Icons.sports_kabaddi_rounded,
+                title: 'Social & duels',
+                subtitle: 'Activity feed, kudos, rival duels & squad',
+                accentColor: AppColors.accent,
+                onTap: onOpenSocialHub ??
+                    () {
+                      showSocialHubSheet(context);
+                    },
+              ),
+              const SizedBox(height: AppSpacing.s8),
+
+              // 7. Emergency SOS Trigger
               _ToolTile(
                 icon: Icons.emergency_rounded,
                 title: 'Emergency SOS',
