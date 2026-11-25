@@ -236,7 +236,8 @@ class MapToolsSheet extends StatelessWidget {
                 title: 'Social & duels',
                 subtitle: 'Activity feed, kudos, rival duels & squad',
                 accentColor: AppColors.accent,
-                onTap: onOpenSocialHub ??
+                onTap:
+                    onOpenSocialHub ??
                     () {
                       showSocialHubSheet(context);
                     },

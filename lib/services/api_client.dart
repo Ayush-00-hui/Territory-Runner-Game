@@ -220,10 +220,12 @@ class ApiClient {
     final headers = await _buildHeaders();
 
     final now = DateTime.now();
-    final effectiveDuration =
-        durationSeconds > 0 ? durationSeconds : points.length;
-    final double stepSeconds =
-        points.length > 1 ? effectiveDuration / (points.length - 1) : 1.0;
+    final effectiveDuration = durationSeconds > 0
+        ? durationSeconds
+        : points.length;
+    final double stepSeconds = points.length > 1
+        ? effectiveDuration / (points.length - 1)
+        : 1.0;
     final startTime = now.subtract(Duration(seconds: effectiveDuration));
 
     final Map<String, dynamic> payload = {

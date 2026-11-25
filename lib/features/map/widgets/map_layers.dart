@@ -373,9 +373,7 @@ class MapLayers {
             strokeWidth: 2.0,
           ),
         // Live Loop Closure Snap Chord Guide (subtle dashed guidance line to closure point)
-        if (isRunActive &&
-            closureSnapPoint != null &&
-            currentLocation != null)
+        if (isRunActive && closureSnapPoint != null && currentLocation != null)
           Polyline(
             points: [currentLocation, closureSnapPoint],
             color: palette.accent.withValues(alpha: 0.80),
@@ -420,10 +418,7 @@ class MapLayers {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: palette.surface,
-                border: Border.all(
-                  color: palette.accent,
-                  width: 2.0,
-                ),
+                border: Border.all(color: palette.accent, width: 2.0),
               ),
               child: Center(
                 child: Container(

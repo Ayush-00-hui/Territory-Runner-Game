@@ -194,10 +194,11 @@ class PolygonEnclosureEngine {
       final dist = haversineDistanceMeters(currentPos, candidatePoint);
       if (dist < minDistance) {
         minDistance = dist;
-        final proximity = (1.0 -
-                ((dist - closureThreshold) /
-                    (maxDetectionDistanceMeters - closureThreshold)))
-            .clamp(0.0, 1.0);
+        final proximity =
+            (1.0 -
+                    ((dist - closureThreshold) /
+                        (maxDetectionDistanceMeters - closureThreshold)))
+                .clamp(0.0, 1.0);
         best = ClosureProximityCandidate(
           candidateIndex: i,
           candidatePoint: candidatePoint,
