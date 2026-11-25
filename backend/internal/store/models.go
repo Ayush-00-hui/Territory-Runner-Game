@@ -3,6 +3,8 @@ package store
 import (
 	"math"
 	"time"
+
+	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 )
 
 const (
@@ -58,16 +60,17 @@ type User struct {
 
 // Territory represents claimed territory stored as a PostGIS MultiPolygon.
 type Territory struct {
-	ID             string     `json:"id"`
-	OwnerID        string     `json:"owner_id"`
-	Username       string     `json:"username,omitempty"`
-	GeoJSON        string     `json:"geojson"`
-	AreaSqm        float64    `json:"area_sqm"`
-	Strength       float64    `json:"strength"`
-	LastDefendedAt time.Time  `json:"last_defended_at"`
-	LastDecayedAt  time.Time  `json:"last_decayed_at"`
-	CooldownUntil  *time.Time `json:"cooldown_until,omitempty"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ID             string         `json:"id"`
+	OwnerID        string         `json:"owner_id"`
+	Username       string         `json:"username,omitempty"`
+	GeoJSON        string         `json:"geojson"`
+	AreaSqm        float64        `json:"area_sqm"`
+	Strength       float64        `json:"strength"`
+	LastDefendedAt time.Time      `json:"last_defended_at"`
+	LastDecayedAt  time.Time      `json:"last_decayed_at"`
+	CooldownUntil  *time.Time     `json:"cooldown_until,omitempty"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	Polygons       [][]geo.LatLng `json:"polygons,omitempty"`
 }
 
 // CalculateEffectiveStrength computes real-time dynamic strength factoring in elapsed days since last defense or decay.
@@ -160,6 +163,8 @@ type Run struct {
 	DurationSeconds    int       `json:"duration_seconds"`
 	DistanceMeters     float64   `json:"distance_meters"`
 	AreaClaimed        float64   `json:"area_claimed"`
+	AreaStolen         float64   `json:"area_stolen"`
+	Legacy             bool      `json:"legacy"`
 	AnomalyScore       float64   `json:"anomaly_score"`
 	AnomalyReasons     []string  `json:"anomaly_reasons"`
 	VerificationStatus string    `json:"verification_status,omitempty"`
@@ -179,6 +184,8 @@ type CaptureResult struct {
 	AnomalyReasons     []string `json:"anomaly_reasons"`
 	LoopDetected       bool     `json:"loop_detected"`
 	AreaClaimedSqm     float64  `json:"area_claimed_sqm"`
+	AreaStolenSqm      float64  `json:"area_stolen_sqm"`
+	AreaGainedSqm      float64  `json:"area_gained_sqm"`
 	XpAwarded          int      `json:"xp_awarded"`
 	PlayerTotalAreaSqm float64  `json:"player_total_area_sqm"`
 	TerritoryGeoJSON   string   `json:"territory_geojson,omitempty"`

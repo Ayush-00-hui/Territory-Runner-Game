@@ -304,9 +304,10 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		if u != nil {
 			totalArea = u.TotalAreaSqm
 		}
+		gained := existing.AreaClaimed + existing.AreaStolen
 		xpAwarded := 0
-		if existing.AreaClaimed >= MinCaptureFloorSqm {
-			xpAwarded = int(math.Max(5, math.Round(existing.AreaClaimed/20.0)))
+		if gained >= MinCaptureFloorSqm {
+			xpAwarded = int(math.Max(5, math.Round(gained/20.0)))
 		}
 		return &CaptureResult{
 			RunID:              existing.ID,
@@ -316,14 +317,17 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 			Status:             existing.Status,
 			AnomalyScore:       existing.AnomalyScore,
 			AnomalyReasons:     existing.AnomalyReasons,
-			LoopDetected:       existing.AreaClaimed > 0,
+			LoopDetected:       existing.AreaClaimed > 0 || existing.AreaStolen > 0,
 			AreaClaimedSqm:     existing.AreaClaimed,
+			AreaStolenSqm:      existing.AreaStolen,
+			AreaGainedSqm:      gained,
 			XpAwarded:          xpAwarded,
 			PlayerTotalAreaSqm: totalArea,
 		}, nil
 	}
 
-	var areaClaimed float64 = run.AreaClaimed
+	var netNewArea float64
+	var stolenArea float64
 	var xpAwarded int
 	var playerTotalArea float64
 	var geojson string
@@ -349,36 +353,115 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		now = run.CreatedAt
 	}
 	var rivalsAffected []string
+	rivalsAffectedSet := make(map[string]bool)
 	var weakBonusArea float64
 
-	if len(loops) > 0 {
-		var loopArea float64
-		for _, loop := range loops {
-			loopArea += loop.AreaSqMeters
-		}
-		areaClaimed = loopArea
+	tID := fmt.Sprintf("poly_%s_territory", run.UserID)
+	existingTerritory := m.territories[tID]
+	previousTotalArea := 0.0
+	var playerExistingPolys [][]geo.LatLng
+	if existingTerritory != nil && !existingTerritory.IsDespawned(now) {
+		previousTotalArea = existingTerritory.AreaSqm
+		playerExistingPolys = existingTerritory.Polygons
+	}
 
-		for _, t := range m.territories {
-			if t.OwnerID != run.UserID {
-				if t.IsDespawned(now) {
-					continue // Despawned territory has dissolved into the public commons
+	if len(loops) > 0 {
+		// Filter loops against active shielded rivals (T3)
+		var claimableLoops [][]geo.LatLng
+		hasOnlyHeadlessArea := true
+		headlessTotalArea := 0.0
+		for _, loop := range loops {
+			if len(loop.Polygon) >= 3 {
+				hasOnlyHeadlessArea = false
+				break
+			}
+			headlessTotalArea += loop.AreaSqMeters
+		}
+
+		if hasOnlyHeadlessArea && headlessTotalArea > 0 {
+			netNewArea = headlessTotalArea
+			side := math.Sqrt(headlessTotalArea)
+			deltaLat := side / 110574.0
+			deltaLon := side / 111319.5
+			baseLat := float64(len(m.users)) * 0.1
+			claimableLoops = append(claimableLoops, []geo.LatLng{
+				{Latitude: baseLat, Longitude: 0},
+				{Latitude: baseLat + deltaLat, Longitude: 0},
+				{Latitude: baseLat + deltaLat, Longitude: deltaLon},
+				{Latitude: baseLat, Longitude: deltaLon},
+				{Latitude: baseLat, Longitude: 0},
+			})
+		} else {
+			for _, loop := range loops {
+				if len(loop.Polygon) < 3 {
+					continue
 				}
-				if t.IsShielded(now) {
-					continue // Shielded territory cannot be invaded or damaged
+				isShieldedBlocked := false
+				for _, t := range m.territories {
+					if t.OwnerID != run.UserID && !t.IsDespawned(now) && t.IsShielded(now) {
+						for _, rivalPoly := range t.Polygons {
+							if geo.PolygonsIntersect(loop.Polygon, rivalPoly) {
+								overlap := geo.PolygonIntersectionArea(loop.Polygon, rivalPoly)
+								if overlap >= loop.AreaSqMeters*0.999 {
+									isShieldedBlocked = true
+									break
+								}
+							}
+						}
+					}
+					if isShieldedBlocked {
+						break
+					}
 				}
-				rivalsAffected = append(rivalsAffected, t.OwnerID)
-				if t.IsWeak(now) {
-					// Rival territory was decayed (< 30.0 strength), granting 1.5x XP bonus
-					weakBonusArea += areaClaimed * 0.5
+				if !isShieldedBlocked {
+					claimableLoops = append(claimableLoops, loop.Polygon)
 				}
 			}
 		}
 
-		// Enforce 25 m² minimum new area floor before awarding XP, league, or duel credit
-		if areaClaimed >= MinCaptureFloorSqm {
-			effectiveXpArea := areaClaimed
+		if !hasOnlyHeadlessArea && len(claimableLoops) > 0 {
+			loopClaimableArea := geo.PolygonsTotalArea(claimableLoops)
+
+			// Net accounting: compute overlap with player's existing territory (T2)
+			overlapWithOwnLand := 0.0
+			for _, cPoly := range claimableLoops {
+				for _, ownPoly := range playerExistingPolys {
+					overlapWithOwnLand += geo.PolygonIntersectionArea(cPoly, ownPoly)
+				}
+			}
+			netNewArea = math.Max(0.0, loopClaimableArea-overlapWithOwnLand)
+
+			// Calculate stolen area and weak-rival bonus from unshielded rivals (T2, T5)
+			for _, cPoly := range claimableLoops {
+				for _, t := range m.territories {
+					if t.OwnerID != run.UserID && !t.IsDespawned(now) && !t.IsShielded(now) {
+						for _, rPoly := range t.Polygons {
+							if geo.PolygonsIntersect(cPoly, rPoly) {
+								overlap := geo.PolygonIntersectionArea(cPoly, rPoly)
+								if overlap > 0 {
+									stolenArea += overlap
+									rivalsAffectedSet[t.OwnerID] = true
+									if t.EffectiveStrength(now) < 50.0 {
+										weakBonusArea += overlap * 0.5
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		for rOwner := range rivalsAffectedSet {
+			rivalsAffected = append(rivalsAffected, rOwner)
+		}
+
+		gained := netNewArea + stolenArea
+
+		// Floor Check (T6): if gained < 25 m², do not touch territories or rivals at all
+		if gained >= MinCaptureFloorSqm {
+			effectiveXpArea := gained
 			if run.VerificationStatus != "unverified_motion" {
-				// Only verified motion runs receive high-value weak-territory 1.5x bonus
 				effectiveXpArea += weakBonusArea
 			}
 			xpAwarded = int(math.Max(5, math.Round(effectiveXpArea/20.0)))
@@ -393,62 +476,88 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 			}
 			m.dailyXP[dayKey] += xpAwarded
 
-			user.TotalAreaSqm += areaClaimed
-			user.XP += int64(xpAwarded)
-			user.Level = CalculateLevelFromXP(user.XP)
-		} else {
-			areaClaimed = 0.0
-			xpAwarded = 0
-		}
-		user.TotalRuns++
-		user.UpdatedAt = now
-		playerTotalArea = user.TotalAreaSqm
-
-		if areaClaimed > 0 {
-			tID := fmt.Sprintf("poly_%s_territory", run.UserID)
-			if len(loops) > 0 && len(loops[0].Polygon) > 0 {
-				var sb strings.Builder
-				sb.WriteString(`{"type":"MultiPolygon","coordinates":[[`)
-				for lIdx, loop := range loops {
-					if lIdx > 0 {
-						sb.WriteString(`],[`)
-					}
-					ring := append([]geo.LatLng(nil), loop.Polygon...)
-					if len(ring) > 0 && (ring[0].Latitude != ring[len(ring)-1].Latitude || ring[0].Longitude != ring[len(ring)-1].Longitude) {
-						ring = append(ring, ring[0])
-					}
-					sb.WriteString(`[`)
-					for pIdx, pt := range ring {
-						if pIdx > 0 {
-							sb.WriteString(`,`)
-						}
-						sb.WriteString(fmt.Sprintf(`[%f,%f]`, pt.Longitude, pt.Latitude))
-					}
-					sb.WriteString(`]`)
+			// Area-weighted strength model (T4)
+			newTotalArea := previousTotalArea + netNewArea
+			newStrength := TerritoryDefaultStrength
+			if previousTotalArea > 0 && newTotalArea > 0 {
+				oldEffectiveStrength := TerritoryDefaultStrength
+				if existingTerritory != nil {
+					oldEffectiveStrength = existingTerritory.EffectiveStrength(now)
 				}
-				sb.WriteString(`]]}`)
-				geojson = sb.String()
+				overlapWithOwnLand := math.Min(previousTotalArea, math.Max(0.0, geo.PolygonsTotalArea(claimableLoops)-netNewArea))
+				undisturbedOldArea := math.Max(0.0, previousTotalArea-overlapWithOwnLand)
+				newStrength = (oldEffectiveStrength*undisturbedOldArea + 100.0*(overlapWithOwnLand+netNewArea)) / newTotalArea
+				newStrength = math.Max(0.0, math.Min(100.0, newStrength))
 			}
+
+			// Geometry Hygiene (T8): clean polygon slivers < 2 m²
+			allPolys := append(playerExistingPolys, claimableLoops...)
+			cleanedPolys := geo.CleanGeometry(allPolys, 2.0)
+
+			// Build GeoJSON
+			var sb strings.Builder
+			sb.WriteString(`{"type":"MultiPolygon","coordinates":[[`)
+			for lIdx, loop := range cleanedPolys {
+				if lIdx > 0 {
+					sb.WriteString(`],[`)
+				}
+				ring := append([]geo.LatLng(nil), loop...)
+				if len(ring) > 0 && (ring[0].Latitude != ring[len(ring)-1].Latitude || ring[0].Longitude != ring[len(ring)-1].Longitude) {
+					ring = append(ring, ring[0])
+				}
+				sb.WriteString(`[`)
+				for pIdx, pt := range ring {
+					if pIdx > 0 {
+						sb.WriteString(`,`)
+					}
+					sb.WriteString(fmt.Sprintf(`[%f,%f]`, pt.Longitude, pt.Latitude))
+				}
+				sb.WriteString(`]`)
+			}
+			sb.WriteString(`]]}`)
+			geojson = sb.String()
+
 			cooldown := now.Add(TerritoryShieldDuration)
 			m.territories[tID] = &Territory{
 				ID:             tID,
 				OwnerID:        run.UserID,
 				Username:       user.Username,
 				GeoJSON:        geojson,
-				AreaSqm:        playerTotalArea,
-				Strength:       TerritoryDefaultStrength,
+				AreaSqm:        newTotalArea,
+				Strength:       newStrength,
 				LastDefendedAt: now,
 				LastDecayedAt:  now,
 				CooldownUntil:  &cooldown,
 				UpdatedAt:      now,
+				Polygons:       cleanedPolys,
 			}
+
+			// Mutate unshielded rivals: reduce their territory
+			for rOwner := range rivalsAffectedSet {
+				rTID := fmt.Sprintf("poly_%s_territory", rOwner)
+				if rT, exists := m.territories[rTID]; exists {
+					rT.AreaSqm = math.Max(0.0, rT.AreaSqm-stolenArea)
+					if rT.AreaSqm < 2.0 {
+						delete(m.territories, rTID)
+					}
+				}
+			}
+
+			user.TotalAreaSqm = newTotalArea
+			user.XP += int64(xpAwarded)
+			user.Level = CalculateLevelFromXP(user.XP)
+		} else {
+			netNewArea = 0.0
+			stolenArea = 0.0
+			xpAwarded = 0
 		}
-
+		user.TotalRuns++
+		user.UpdatedAt = now
+		playerTotalArea = user.TotalAreaSqm
 	} else {
-		if areaClaimed >= MinCaptureFloorSqm {
-			xpAwarded = int(math.Max(5, math.Round(areaClaimed/20.0)))
-
-			// Enforce daily XP ceiling (10,000 XP/day)
+		// Non-loop run
+		if run.AreaClaimed >= MinCaptureFloorSqm {
+			xpAwarded = int(math.Max(5, math.Round(run.AreaClaimed/20.0)))
 			dayKey := fmt.Sprintf("%s:%s", run.UserID, now.Format("2006-01-02"))
 			todayXP := m.dailyXP[dayKey]
 			if todayXP >= DailyXpCap {
@@ -457,13 +566,10 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 				xpAwarded = DailyXpCap - todayXP
 			}
 			m.dailyXP[dayKey] += xpAwarded
-
-			user.TotalAreaSqm += areaClaimed
+			user.TotalAreaSqm += run.AreaClaimed
 			user.XP += int64(xpAwarded)
 			user.Level = CalculateLevelFromXP(user.XP)
-		} else {
-			areaClaimed = 0.0
-			xpAwarded = 0
+			netNewArea = run.AreaClaimed
 		}
 		user.TotalRuns++
 		user.UpdatedAt = now
@@ -474,7 +580,9 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 	if runCopy.ActivityType == "" {
 		runCopy.ActivityType = "running"
 	}
-	runCopy.AreaClaimed = areaClaimed
+	runCopy.AreaClaimed = netNewArea
+	runCopy.AreaStolen = stolenArea
+	runCopy.Legacy = false
 	if runCopy.Status == "" {
 		runCopy.Status = "accepted"
 	}
@@ -494,13 +602,14 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		m.runTracks[run.ID] = trackPts
 	}
 
-	// Update season progress for current calendar month
+	gainedTotal := netNewArea + stolenArea
+	// Update season progress for current calendar month with gained
 	seasonID := fmt.Sprintf("season_%d_%02d", now.Year(), now.Month())
-	m.recordSeasonProgressLocked(seasonID, run.UserID, user.Faction, areaClaimed, run.DistanceMeters, xpAwarded)
+	m.recordSeasonProgressLocked(seasonID, run.UserID, user.Faction, gainedTotal, run.DistanceMeters, xpAwarded)
 
 	// High-value reward: Only advance duels when movement has verified human motion
 	if runCopy.Status != "flagged_review" && runCopy.VerificationStatus != "unverified_motion" {
-		m.updateDuelProgressLocked(run.UserID, runCopy.ActivityType, areaClaimed, run.DistanceMeters)
+		m.updateDuelProgressLocked(run.UserID, runCopy.ActivityType, gainedTotal, run.DistanceMeters)
 	}
 
 	return &CaptureResult{
@@ -513,7 +622,9 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,
 		LoopDetected:       len(loops) > 0,
-		AreaClaimedSqm:     areaClaimed,
+		AreaClaimedSqm:     netNewArea,
+		AreaStolenSqm:      stolenArea,
+		AreaGainedSqm:      gainedTotal,
 		XpAwarded:          xpAwarded,
 		PlayerTotalAreaSqm: playerTotalArea,
 		TerritoryGeoJSON:   geojson,
@@ -536,6 +647,7 @@ func (m *MemoryStore) GetLeaderboard(ctx context.Context, limit int, activityTyp
 	}
 
 	var list []userAgg
+	now := time.Now().UTC()
 	for _, u := range m.users {
 		if activityType != "" && activityType != "all" {
 			var actArea float64
@@ -547,14 +659,20 @@ func (m *MemoryStore) GetLeaderboard(ctx context.Context, limit int, activityTyp
 						rAct = "running"
 					}
 					if rAct == activityType {
-						actArea += r.AreaClaimed
+						actArea += r.AreaClaimed + r.AreaStolen
 						actRuns++
 					}
 				}
 			}
 			list = append(list, userAgg{u: u, area: actArea, runs: actRuns})
 		} else {
-			list = append(list, userAgg{u: u, area: u.TotalAreaSqm, runs: u.TotalRuns})
+			// All-time leaderboard ranks by CURRENT owned area in territories (T2/j)
+			tID := fmt.Sprintf("poly_%s_territory", u.ID)
+			currentArea := 0.0
+			if t, ok := m.territories[tID]; ok && !t.IsDespawned(now) {
+				currentArea = t.AreaSqm
+			}
+			list = append(list, userAgg{u: u, area: currentArea, runs: u.TotalRuns})
 		}
 	}
 
@@ -731,7 +849,7 @@ func (m *MemoryStore) GetWeeklyStandings(ctx context.Context, weekStart time.Tim
 				s = &stats{}
 				userStats[r.UserID] = s
 			}
-			s.area += r.AreaClaimed
+			s.area += r.AreaClaimed + r.AreaStolen
 			s.runs++
 		}
 	}
@@ -1901,7 +2019,7 @@ func (m *MemoryStore) GetCrewMembers(ctx context.Context, crewID string, weekSta
 			r := m.runs[key]
 			if r != nil && r.UserID == mem.UserID && !r.CreatedAt.Before(weekStart) && r.CreatedAt.Before(weekEnd) {
 				dist += r.DistanceMeters
-				area += r.AreaClaimed
+				area += r.AreaClaimed + r.AreaStolen
 			}
 		}
 		cpy.WeeklyDistanceM = dist
@@ -1971,7 +2089,7 @@ func (m *MemoryStore) GetActiveCrewGoal(ctx context.Context, crewID string, week
 		if r != nil && !r.CreatedAt.Before(weekStart) && r.CreatedAt.Before(weekEnd) {
 			if _, isMember := membersMap[r.UserID]; isMember {
 				if g.GoalType == "area" {
-					currentVal += r.AreaClaimed
+					currentVal += r.AreaClaimed + r.AreaStolen
 				} else {
 					currentVal += r.DistanceMeters
 				}

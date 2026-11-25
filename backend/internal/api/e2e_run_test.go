@@ -164,7 +164,7 @@ func TestE2EFullRunLifecycle(t *testing.T) {
 	require.True(t, rivalFound, "Rival territory exists in database")
 	assert.InDelta(t, 100.0, runnerStrength, 0.01, "Freshly captured territory has 100% strength")
 	assert.Greater(t, runnerArea, 0.0)
-	assert.Equal(t, rivalInitialArea, rivalArea, "Rival territory area tracked in database")
+	assert.InDelta(t, rivalInitialArea-runnerResult.AreaStolenSqm, rivalArea, 2.0, "Rival territory area reduced by stolen area in database")
 
 	// 8. Verify GET /v1/me profile reflects updated telemetry
 	req = httptest.NewRequest(http.MethodGet, "/v1/me", nil)

@@ -17,8 +17,10 @@ var (
 	ErrLoopAreaTooSmall = errors.New("Loop area below minimum threshold")
 	// ErrLoopTooFewPoints is returned when candidate path has fewer than minimum vertices.
 	ErrLoopTooFewPoints = errors.New("Loop vertices below minimum threshold (4 points)")
-	// ErrLoopAreaTooLarge is returned when a loop exceeds maximum single human capture area.
+	// ErrLoopTooLarge is returned when a loop exceeds maximum single human capture area.
 	ErrLoopAreaTooLarge = errors.New("Loop area exceeds maximum allowable single run threshold (5000000 m²)")
+	// ErrLoopTooThin is returned when the isoperimetric quotient of a loop is under 0.02.
+	ErrLoopTooThin = errors.New("Loop too thin")
 	// ErrSignalGapDetected is returned when a GPS signal gap exceeds the maximum allowed time.
 	ErrSignalGapDetected = errors.New("GPS signal interrupted (>15s gap) — path reset to prevent inaccurate enclosure")
 )
@@ -372,6 +374,17 @@ func ProcessTrackWithActivity(points []TrackPoint, activity string) ([]EnclosedL
 	return eng.ProcessTrack(points)
 }
 
+// CalculateThinness computes the isoperimetric quotient (4 * pi * Area / Perimeter^2).
+// Returns 0.0 if perimeter is non-positive.
+func CalculateThinness(points []LatLng) float64 {
+	p := CalculatePathDistanceMeters(points)
+	if p <= 0 {
+		return 0.0
+	}
+	a := ComputeGeodesicShoelaceArea(points)
+	return (4.0 * math.Pi * a) / (p * p)
+}
+
 // ValidateLoop verifies that a closed loop satisfies all geometrical integrity rules.
 func (e *Engine) ValidateLoop(points []LatLng, closedAt time.Time) (*EnclosedLoop, error) {
 	if len(points) < e.cfg.MinPointsRequired {
@@ -383,7 +396,7 @@ func (e *Engine) ValidateLoop(points []LatLng, closedAt time.Time) (*EnclosedLoo
 		return nil, ErrLoopPerimeterTooSmall
 	}
 
-	// Check self-intersection (strict CCW interior crossings)
+	// Check self-intersection (strict CCW interior crossings & foldback spurs)
 	if HasSelfIntersection(points) {
 		return nil, ErrLoopSelfIntersecting
 	}
@@ -394,6 +407,12 @@ func (e *Engine) ValidateLoop(points []LatLng, closedAt time.Time) (*EnclosedLoo
 	}
 	if areaSqM > e.cfg.MaxLoopAreaSqM {
 		return nil, fmt.Errorf("%w: %.1f m² > %.1f m²", ErrLoopAreaTooLarge, areaSqM, e.cfg.MaxLoopAreaSqM)
+	}
+
+	// Check thinness: reject sliver out-and-back tracks (thinness < 0.02)
+	thinness := CalculateThinness(points)
+	if thinness < 0.02 {
+		return nil, ErrLoopTooThin
 	}
 
 	if closedAt.IsZero() {

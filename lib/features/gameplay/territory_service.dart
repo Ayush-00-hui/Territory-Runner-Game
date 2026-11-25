@@ -285,15 +285,113 @@ class TerritoryService {
               : effectiveNewPaths)
         : playerExistingPaths;
 
-    final List<List<LatLng>> mergedMultiPolys = mergedPaths
+    final List<List<LatLng>> rawMultiPolys = mergedPaths
         .map(path64ToLatLngs)
         .toList();
+
+    // Geometry hygiene (T8): drop sliver components < 2 m²
+    final List<List<LatLng>> mergedMultiPolys = rawMultiPolys
+        .where(
+          (poly) =>
+              PolygonEnclosureEngine.computeGeodesicShoelaceArea(poly) >= 2.0,
+        )
+        .toList();
+
     final double previousTotalAreaSqM = playerExistingTerritories.fold(
       0.0,
       (acc, t) => acc + t.areaSqMeters,
     );
     final double totalUnifiedAreaSqM = _netAreaOf(mergedMultiPolys);
-    double stolenAreaSqM = 0.0;
+
+    // Calculate rival area stolen before committing mutations
+    final rivalTerritories = box != null
+        ? box.values
+              .where(
+                (t) => t.ownerId != activeOwner && !t.isDespawned(now: now),
+              )
+              .toList()
+        : <Territory>[];
+
+    double precalculatedStolenSqM = 0.0;
+    for (final rival in rivalTerritories) {
+      if (rival.isShielded(now: now)) continue;
+      final Paths64 rPaths = [];
+      for (final poly in rival.polygons) {
+        if (poly.length >= 3) rPaths.add(latLngsToPath64(poly));
+      }
+      if (rPaths.isNotEmpty && effectiveNewPaths.isNotEmpty) {
+        final Paths64 overlap = Clipper.intersect(
+          subject: rPaths,
+          clip: effectiveNewPaths,
+          fillRule: FillRule.nonZero,
+        );
+        if (overlap.isNotEmpty) {
+          final double overlapArea = _netAreaOf(
+            overlap.map(path64ToLatLngs).toList(),
+          );
+          precalculatedStolenSqM += overlapArea;
+        }
+      }
+    }
+
+    final double rawNetGain = totalUnifiedAreaSqM - previousTotalAreaSqM;
+    final double netGainedSqM = rawNetGain > 0 ? rawNetGain : 0.0;
+    final double claimableSqM = netGainedSqM + precalculatedStolenSqM;
+
+    // Floor check (T6): if gained < 25 m², do not touch territories or rivals at all
+    if (claimableSqM < minClaimAreaSqMeters) {
+      lastCaptureXp = 0;
+      lastCaptureNetAreaSqM = 0.0;
+      lastCaptureStolenAreaSqM = 0.0;
+      AppLogger.info(
+        'Capture below 25 m² floor (${claimableSqM.toStringAsFixed(1)}m²) — territories untouched, 0 XP awarded',
+        tag: 'TerritoryService',
+      );
+      return playerExistingTerritories.isNotEmpty
+          ? playerExistingTerritories.first
+          : Territory(
+              id: 'poly_${activeOwner}_territory',
+              ownerId: activeOwner,
+              polygon: polygon,
+              polygons: [polygon],
+              areaSqMeters: 0.0,
+              capturedAt: now,
+              lastDefendedAt: now,
+              cooldownUntil: now,
+              strength: 100.0,
+              color: activeColor,
+            );
+    }
+
+    // Calculate area-weighted strength (T4)
+    double calculatedStrength = Territory.defaultInitialStrength;
+    if (playerExistingTerritories.isNotEmpty && totalUnifiedAreaSqM > 0) {
+      final oldTerritory = playerExistingTerritories.first;
+      final double oldEffectiveStrength = oldTerritory.computeCurrentStrength();
+
+      final Paths64 defendedPaths =
+          effectiveNewPaths.isNotEmpty && playerExistingPaths.isNotEmpty
+          ? Clipper.intersect(
+              subject: playerExistingPaths,
+              clip: effectiveNewPaths,
+              fillRule: FillRule.nonZero,
+            )
+          : <Path64>[];
+      final double defendedOverlapArea = _netAreaOf(
+        defendedPaths.map(path64ToLatLngs).toList(),
+      );
+      final double undisturbedOldArea =
+          (previousTotalAreaSqM - defendedOverlapArea).clamp(
+            0.0,
+            double.infinity,
+          );
+
+      calculatedStrength =
+          ((oldEffectiveStrength * undisturbedOldArea) +
+              (100.0 * (defendedOverlapArea + netGainedSqM))) /
+          totalUnifiedAreaSqM;
+      calculatedStrength = calculatedStrength.clamp(0.0, 100.0);
+    }
 
     // Remove previous fragmented territories for this player to store the unified MultiPolygon
     if (box != null) {
@@ -314,7 +412,7 @@ class TerritoryService {
       capturedAt: now,
       lastDefendedAt: now,
       cooldownUntil: now.add(Territory.defaultShieldDuration),
-      strength: Territory.defaultInitialStrength,
+      strength: calculatedStrength,
       color: activeColor,
       isPendingReview: isPendingReview,
     );
@@ -323,15 +421,9 @@ class TerritoryService {
       await box.put(territoryId, unifiedTerritory);
     }
 
-    // 2. Clipper Difference: contest and clip overlapping rival territories
-    final rivalTerritories = box != null
-        ? box.values
-              .where(
-                (t) => t.ownerId != activeOwner && !t.isDespawned(now: now),
-              )
-              .toList()
-        : <Territory>[];
+    double stolenAreaSqM = 0.0;
 
+    // 2. Clipper Difference: contest and clip overlapping rival territories
     for (final rival in rivalTerritories) {
       if (rival.isShielded(now: now)) {
         // Shielded rival territory cannot be invaded or damaged
@@ -344,10 +436,10 @@ class TerritoryService {
         }
       }
 
-      if (rivalPaths.isNotEmpty) {
+      if (rivalPaths.isNotEmpty && effectiveNewPaths.isNotEmpty) {
         final Paths64 clippedRivalPaths = Clipper.difference(
           subject: rivalPaths,
-          clip: [newPath64],
+          clip: effectiveNewPaths,
           fillRule: FillRule.nonZero,
         );
 
@@ -362,47 +454,48 @@ class TerritoryService {
             tag: 'TerritoryService',
           );
         } else {
-          final List<List<LatLng>> clippedMultiPolys = clippedRivalPaths
+          final List<List<LatLng>> rawClippedPolys = clippedRivalPaths
               .map(path64ToLatLngs)
               .toList();
-          final double remainingArea = _netAreaOf(clippedMultiPolys);
-          final double lostByRival = rival.areaSqMeters - remainingArea;
+          final List<List<LatLng>> clippedMultiPolys = rawClippedPolys
+              .where(
+                (poly) =>
+                    PolygonEnclosureEngine.computeGeodesicShoelaceArea(poly) >=
+                    2.0,
+              )
+              .toList();
 
-          // Weak Territory Vulnerability Rule:
-          // If rival territory is decayed (isWeak()), its defensive fortifications have collapsed.
-          // Slicing it inflicts direct structural damage and awards the attacker a 1.5x bonus.
-          // Furthermore, if the remaining decayed fragment drops below 50 m², it collapses entirely.
-          final bool rivalIsWeak = rival.isWeak();
-          if (lostByRival > 0) {
-            stolenAreaSqM += rivalIsWeak ? (lostByRival * 1.5) : lostByRival;
-          }
-
-          if (rivalIsWeak && remainingArea < 50.0) {
-            // Decayed fragment collapses completely into the conqueror's domain
-            stolenAreaSqM += remainingArea;
-            if (box != null) {
-              await box.delete(rival.id);
-            }
-            AppLogger.info(
-              'Weak rival territory ${rival.id} completely collapsed (<50m²)',
-              tag: 'TerritoryService',
-            );
+          if (clippedMultiPolys.isEmpty) {
+            stolenAreaSqM += rival.areaSqMeters;
+            if (box != null) await box.delete(rival.id);
           } else {
-            final double currentRivalStrength = rival.computeCurrentStrength();
-            final updatedRival = rival.copyWith(
-              polygon: clippedMultiPolys.first,
-              polygons: clippedMultiPolys,
-              areaSqMeters: remainingArea,
-              strength: (currentRivalStrength - 25.0).clamp(0.0, 100.0),
-              lastDefendedAt: rival.lastDefendedAt,
-            );
-            if (box != null) {
-              await box.put(rival.id, updatedRival);
+            final double remainingArea = _netAreaOf(clippedMultiPolys);
+            final double lostByRival = rival.areaSqMeters - remainingArea;
+
+            final bool rivalIsWeak = rival.isWeak();
+            if (lostByRival > 0) {
+              stolenAreaSqM += rivalIsWeak ? (lostByRival * 1.5) : lostByRival;
             }
-            AppLogger.debug(
-              'Rival territory ${rival.id} clipped to ${remainingArea.toStringAsFixed(1)} m² (strength: ${updatedRival.strength.toStringAsFixed(0)}%)',
-              tag: 'TerritoryService',
-            );
+
+            if (rivalIsWeak && remainingArea < 50.0) {
+              stolenAreaSqM += remainingArea;
+              if (box != null) {
+                await box.delete(rival.id);
+              }
+            } else {
+              final double currentRivalStrength = rival
+                  .computeCurrentStrength();
+              final updatedRival = rival.copyWith(
+                polygon: clippedMultiPolys.first,
+                polygons: clippedMultiPolys,
+                areaSqMeters: remainingArea,
+                strength: (currentRivalStrength - 25.0).clamp(0.0, 100.0),
+                lastDefendedAt: rival.lastDefendedAt,
+              );
+              if (box != null) {
+                await box.put(rival.id, updatedRival);
+              }
+            }
           }
         }
       }
@@ -410,13 +503,11 @@ class TerritoryService {
 
     // 3. Award XP only for land that is genuinely NEW (net gain over your existing
     //    territory + area taken from rivals). Looping inside your own land earns nothing.
-    final double rawNetGain = totalUnifiedAreaSqM - previousTotalAreaSqM;
-    final double netGainedSqM = rawNetGain > 0 ? rawNetGain : 0.0;
-    final double claimableSqM = netGainedSqM + stolenAreaSqM;
+    final double claimableForXp = netGainedSqM + stolenAreaSqM;
     int gainedXp = 0;
-    if (claimableSqM >= minClaimAreaSqMeters) {
+    if (claimableForXp >= minClaimAreaSqMeters) {
       final profile = getProfile();
-      gainedXp = profile.claimPolygonArea(claimableSqM);
+      gainedXp = profile.claimPolygonArea(claimableForXp);
       await saveProfile(profile);
     }
     lastCaptureXp = gainedXp;

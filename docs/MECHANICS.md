@@ -57,41 +57,79 @@ This document serves as the authoritative source of truth for core game mechanic
 - **Cooldown Window**:
   - Whenever an athlete captures a new territory or defends an existing one, the territory receives an authoritative **2-hour defense shield** (`cooldown_until = NOW() + INTERVAL '2 hours'`).
   - During this 120-minute window, the territory is strictly immune to rival conquest, slicing, or structural damage.
-- **Invasion Preemption & Non-Overlapping Sovereignty**:
+- **Invasion Preemption & Non-Overlapping Sovereignty (Phase T3)**:
   - If a rival athlete attempts to run a loop enclosing or intersecting a shielded territory:
-    1. The rival cannot carve out or overwrite the shielded area (`ST_Difference` excludes territories where `cooldown_until > NOW()`).
-    2. Any portion of the rival's loop intersecting shielded territory is subtracted from the rival's claimable polygon.
-    3. If the rival's entire loop lies within the shielded territory, the rival gains 0 m² new area and receives no territory or XP.
-- **Fortification & Re-runs**:
-  - The owning athlete can re-run and fortify their own sovereign territory at any time, immediately resetting the defense shield to `+2 hours` (120 minutes) and restoring strength to 100%.
+    1. The shielded rival territory geometry is subtracted from the candidate loop *prior to union* via `ST_Difference` (Postgres) and polygon clipping (Go MemoryStore / Dart client).
+    2. Only genuinely unshielded ground can be claimed. Two owners can never simultaneously hold or be credited for the same physical ground.
+    3. If the candidate loop lies entirely inside shielded rival ground, the claimable loop collapses (`area = 0.0 m²`), awarding $0\text{ XP}$ and performing zero mutations.
+- **Area-Weighted Strength Model (Phase T4)**:
+  - Capturing or defending a parcel no longer resets the athlete's entire multi-kilometer territory to 100% strength.
+  - Strength is updated according to geographic area weighting:
+    $$\text{NewStrength} = \frac{\text{OldEffectiveStrength} \times \text{UndisturbedOldArea} + 100.0 \times (\text{DefendedOverlapArea} + \text{NetNewArea})}{\text{NewTotalArea}}$$
+    where:
+    - $\text{OldEffectiveStrength} = \max\left(0.0, \text{StoredStrength} - \frac{\Delta t_{\text{hours}}}{24.0} \times 15.0\right)$
+    - $\text{UndisturbedOldArea} = \max(0.0, \text{PlayerExistingArea} - \text{DefendedOverlapArea})$
+    - $\text{NewTotalArea} = \text{PlayerExistingArea} + \text{NetNewArea}$
+    - $\text{LastDecayedAt}$ is reset to $\text{NOW}()$.
+  - Defending weak land requires physically running through or around that specific sector.
 - **Shield Expiration & Natural Decay**:
   - Once the 2-hour cooldown elapses (`cooldown_until <= NOW()`), the shield lifts automatically.
-  - The territory becomes vulnerable to rival invasion and enters standard lazy decay (15.0 strength lost per 24 hours).
-  - Territories below the weak threshold (< 30.0% strength) grant an invading rival a 1.5x XP bonus and collapse if reduced below 50 m².
+  - The territory enters lazy decay at $15.0\text{ strength points per 24 hours}$.
+  - Territories below the weak threshold ($< 30.0\%$ strength) grant invaders a proportional XP bonus.
 - **Client & Server Parity**:
-  - Go Backend: `store.TerritoryShieldDuration = 120 * time.Minute`, `Territory.IsShielded()`, and SQL migration `000016_add_territory_cooldown.up.sql`.
-  - Flutter Client: `Territory.defaultShieldDuration = Duration(hours: 2)`, `Territory.isShielded()`, `Territory.remainingShieldTime()`, and `TerritoryService.capturePolygonTerritory`.
-- **Calm UI Presentation**:
-  - Map Markers: Shielded territories render `Icons.shield_rounded` with remaining countdown (`1h 59m`) in calm moss green (`palette.mine`). Unshielded healthy territories display `Icons.shield_outlined`, while decayed territories render `Icons.warning_amber_rounded` in muted crimson.
-  - Run Summary: A quiet banner confirms 2-hour defense shield activation upon successful territory capture.
-
-
-
+  - Go Backend: `store.TerritoryShieldDuration = 120 * time.Minute`, `Territory.IsShielded()`, area-weighted strength calculation in `postgres.go` and `memory.go`.
+  - Flutter Client: `TerritoryService.capturePolygonTerritory` area-weighted strength model and shield pre-clipping parity fixtures.
 
 ---
 
-## 4. XP Economy, Leveling Curve & Daily XP Cap
+## 4. XP Economy, Net Accounting & Daily XP Cap
 
-### Area-to-XP Conversion Formula
-- **Minimum Capture Floor**: $25.0\text{ m}^2$ (`MinCaptureFloorSqm`).
-  - Loops yielding less than $25.0\text{ m}^2$ of net new territory award **$0\text{ XP}$** and create no territory record.
+### Net Accounting (Phase T2)
+- **Net New vs. Stolen Accounting**:
+  - Every capture calculates:
+    - $\text{NetNewArea} = \text{Area}(\text{NewGeometry}) - \text{Area}(\text{OldGeometry})$ (geodesic geography)
+    - $\text{AreaStolen} = \sum_{\text{rivals}} \text{RivalAreaReduction}$
+    - $\text{GainedTotal} = \text{NetNewArea} + \text{AreaStolen}$
+  - Re-running an identical loop yields $\text{NetNewArea} = 0.0\text{ m}^2$.
+  - Running a loop fully inside one's existing sovereign territory yields $\text{NetNewArea} = 0.0\text{ m}^2$.
+  - Overlapping loops within the same run are unioned before area evaluation, preventing double-counting.
+- **Pre-Mutation Floor Check (Phase T6)**:
+  - If $\text{GainedTotal} < 25.0\text{ m}^2$, the server and client reject the capture before any database or memory mutation.
+  - Zero XP is awarded, zero area is credited, and no rival geometries are modified.
+- **Proportional Weak-Rival Bonus (Phase T5)**:
+  - Invading weak rival territory ($< 30.0\%$ strength) awards a bonus strictly proportional to the actual overlapped parcel area:
+    $$\text{WeakBonusArea} = \sum_{\text{weak rivals}} (\text{OverlapArea} \times 0.5)$$
+  - The whole loop area is never used for rival bonuses.
 - **Base XP Reward**:
-  $$\text{XP}_{\text{base}} = \max\left(5, \text{round}\left(\frac{\text{Net Area Claimed (m}^2)}{20.0}\right)\right)$$
-  - Every $20\text{ m}^2$ of sovereign land awards $1\text{ XP}$.
-  - Any valid claim ($\ge 25\text{ m}^2$) is guaranteed at least $5\text{ XP}$.
-- **Weak Territory Conquest Bonus**:
-  - Invading and capturing rival territory whose strength has decayed below $30.0\%$ grants a $1.5\times$ effective area multiplier for XP calculation:
-  $$\text{XP}_{\text{weak}} = \max\left(5, \text{round}\left(\frac{1.5 \times \text{Net Area Claimed (m}^2)}{20.0}\right)\right)$$
+  - Awarded only when $\text{GainedTotal} \ge 25.0\text{ m}^2$:
+    $$\text{EffectiveXpArea} = \text{GainedTotal} + \text{WeakBonusArea}$$
+    $$\text{XP}_{\text{awarded}} = \max\left(5, \text{round}\left(\frac{\text{EffectiveXpArea}}{20.0}\right)\right)$$
+- **Rankings & Quantities (Phase T2)**:
+  - **All-Time Leaderboard**: Ranks by **CURRENT owned territory area** (`SUM(territories.area_sqm)`), preventing retired runners from squatting at the top forever based on summed historic runs.
+  - **Weekly League Standings**: Sums $\text{GainedTotal} = \text{runs.area_claimed} + \text{runs.area_stolen}$ for runs completed during the active week.
+  - **Crew Goals & Social Duels**: Sums $\text{GainedTotal}$.
+- **Database Schema**:
+  - `runs.area_claimed` stores $\text{NetNewArea}$.
+  - `runs.area_stolen` stores $\text{AreaStolen}$ (Migration `000018_add_area_stolen_and_net_accounting`).
+  - `runs.legacy` boolean flag marks legacy pre-migration records.
+
+---
+
+## 4.1 Shape Quality, Thinness & Geometry Hygiene (Phase T7 & T8)
+
+### Shape Thinness & Out-and-Back Spur Rejection
+- **Collinear Overlap Detection**:
+  - `geo.DoSegmentsIntersect` and `PolygonEnclosureEngine._doSegmentsIntersect` detect both proper crossings and collinear overlapping segments.
+  - Foldback out-and-back spurs create self-intersections and are rejected (`"Loop crossed itself — try again"`).
+- **Isoperimetric Quotient Floor**:
+  - Loops must enclose a genuine 2D polygon with minimum circularity:
+    $$Q = \frac{4 \pi \times \text{Area}}{\text{Perimeter}^2} \ge 0.02$$
+  - Thin needle-like loops ($Q < 0.02$) are rejected with authoritative error `"Loop too thin"`.
+
+### Geometry Hygiene & Cleaning (Phase T8)
+- After spatial `ST_Union` or `ST_Difference`:
+  - Sliver polygon components smaller than $2.0\text{ m}^2$ are purged (`CleanGeometry(polygons, 2.0)` / `DELETE FROM territories WHERE area_sqm < 2.0`).
+  - Interior holes smaller than $10.0\text{ m}^2$ are dissolved.
 
 ### Level Progression Curve
 - **Progression Step**:

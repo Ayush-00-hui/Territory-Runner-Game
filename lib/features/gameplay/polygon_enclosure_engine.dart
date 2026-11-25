@@ -75,6 +75,7 @@ class PolygonEnclosureEngine {
       'Loop area below minimum threshold';
   static const String signalGapReason =
       'GPS signal interrupted (>15s gap) — path reset to prevent inaccurate enclosure';
+  static const String loopTooThinReason = 'Loop too thin';
 
   PolygonEnclosureEngine({
     this.minClosureDistanceMeters = 35.0,
@@ -271,6 +272,17 @@ class PolygonEnclosureEngine {
 
     if (areaSqM > maxLoopAreaSqMeters) {
       _lastInvalidReason = loopTooLargeReason;
+      AppLogger.debug(
+        'Manual seal rejected: $_lastInvalidReason',
+        tag: 'PolygonEnclosureEngine',
+      );
+      return null;
+    }
+
+    // Isoperimetric quotient check: reject loops with thinness < 0.02
+    final thinness = computeThinness(closedPoints);
+    if (thinness < 0.02) {
+      _lastInvalidReason = loopTooThinReason;
       AppLogger.debug(
         'Manual seal rejected: $_lastInvalidReason',
         tag: 'PolygonEnclosureEngine',
@@ -534,6 +546,12 @@ class PolygonEnclosureEngine {
           continue;
         }
 
+        final thinness = computeThinness(loopPoints);
+        if (thinness < 0.02) {
+          candidateFailureReason = loopTooThinReason;
+          continue;
+        }
+
         if (areaSqM > maxProximityArea) {
           maxProximityArea = areaSqM;
           bestProximityEvent = EnclosedLoopEvent(
@@ -600,7 +618,19 @@ class PolygonEnclosureEngine {
     return null;
   }
 
-  /// Checks if line segments (p1->p2) and (p3->p4) properly cross
+  /// Computes the isoperimetric quotient thinness: 4 * pi * Area / Perimeter^2.
+  static double computeThinness(List<LatLng> points) {
+    if (points.length < 3) return 0.0;
+    double perimeter = 0.0;
+    for (int i = 0; i < points.length - 1; i++) {
+      perimeter += haversineDistanceMeters(points[i], points[i + 1]);
+    }
+    if (perimeter <= 0.0) return 0.0;
+    final area = computeGeodesicShoelaceArea(points);
+    return (4.0 * math.pi * area) / (perimeter * perimeter);
+  }
+
+  /// Checks if line segments (p1->p2) and (p3->p4) properly cross or overlap collinearly
   static bool doSegmentsIntersect(LatLng p1, LatLng p2, LatLng p3, LatLng p4) {
     double ccw(LatLng a, LatLng b, LatLng c) {
       return (b.longitude - a.longitude) * (c.latitude - a.latitude) -
@@ -616,13 +646,59 @@ class PolygonEnclosureEngine {
         ((d3 > 1e-9 && d4 < -1e-9) || (d3 < -1e-9 && d4 > 1e-9))) {
       return true;
     }
+
+    // Collinear overlap check
+    if (d1.abs() <= 1e-9 &&
+        d2.abs() <= 1e-9 &&
+        d3.abs() <= 1e-9 &&
+        d4.abs() <= 1e-9) {
+      final dx = p2.longitude - p1.longitude;
+      final dy = p2.latitude - p1.latitude;
+      final lenSq = dx * dx + dy * dy;
+      if (lenSq > 1e-18) {
+        final t3 =
+            ((p3.longitude - p1.longitude) * dx +
+                (p3.latitude - p1.latitude) * dy) /
+            lenSq;
+        final t4 =
+            ((p4.longitude - p1.longitude) * dx +
+                (p4.latitude - p1.latitude) * dy) /
+            lenSq;
+        final minT = math.min(t3, t4);
+        final maxT = math.max(t3, t4);
+        final overlapStart = math.max(0.0, minT);
+        final overlapEnd = math.min(1.0, maxT);
+        if (overlapEnd - overlapStart > 1e-6) {
+          return true;
+        }
+      }
+    }
+
     return false;
   }
 
-  /// Validates whether a closed or open polygon path contains self-intersections
+  /// Validates whether a closed or open polygon path contains self-intersections or foldback spurs
   static bool hasSelfIntersection(List<LatLng> polygon) {
-    if (polygon.length < 4) return false;
+    if (polygon.length < 3) return false;
     final int n = polygon.length;
+
+    // 1. Check for 180-degree foldbacks on adjacent segments
+    for (int i = 0; i < n - 2; i++) {
+      final p1 = polygon[i];
+      final p2 = polygon[i + 1];
+      final p3 = polygon[i + 2];
+      final dx1 = p2.longitude - p1.longitude;
+      final dy1 = p2.latitude - p1.latitude;
+      final dx2 = p3.longitude - p2.longitude;
+      final dy2 = p3.latitude - p2.latitude;
+      final cross = dx1 * dy2 - dy1 * dx2;
+      final dot = dx1 * dx2 + dy1 * dy2;
+      if (cross.abs() < 1e-12 && dot < -1e-12) {
+        return true; // 180-degree foldback spur
+      }
+    }
+
+    // 2. Check for intersections and collinear overlaps between non-adjacent segments
     for (int i = 0; i < n - 1; i++) {
       final p1 = polygon[i];
       final p2 = polygon[i + 1];

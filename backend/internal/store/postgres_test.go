@@ -45,6 +45,7 @@ func readMigration(filename string) (string, error) {
 
 func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	downFiles := []string{
+		"000018_add_area_stolen_and_net_accounting.down.sql",
 		"000017_add_social_feed_and_moderation.down.sql",
 		"000016_add_territory_cooldown.down.sql",
 		"000015_add_user_runner_code.down.sql",
@@ -89,6 +90,7 @@ func resetSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		"000015_add_user_runner_code.up.sql",
 		"000016_add_territory_cooldown.up.sql",
 		"000017_add_social_feed_and_moderation.up.sql",
+		"000018_add_area_stolen_and_net_accounting.up.sql",
 	}
 
 	for _, uf := range upFiles {

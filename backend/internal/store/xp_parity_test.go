@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"context"
+	"math"
 	"testing"
 	"time"
 
@@ -10,6 +11,38 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func makeAccurateSquareLoop(lat, lon, area float64, t time.Time) geo.EnclosedLoop {
+	side := math.Sqrt(area)
+	deltaLat := side / 110574.388
+	deltaLon := side / 111319.491
+	poly := []geo.LatLng{
+		{Latitude: lat, Longitude: lon},
+		{Latitude: lat + deltaLat, Longitude: lon},
+		{Latitude: lat + deltaLat, Longitude: lon + deltaLon},
+		{Latitude: lat, Longitude: lon + deltaLon},
+		{Latitude: lat, Longitude: lon},
+	}
+	actualArea := geo.ComputeGeodesicShoelaceArea(poly)
+	if actualArea > 0 {
+		scale := math.Sqrt(area / actualArea)
+		deltaLat *= scale
+		deltaLon *= scale
+		poly = []geo.LatLng{
+			{Latitude: lat, Longitude: lon},
+			{Latitude: lat + deltaLat, Longitude: lon},
+			{Latitude: lat + deltaLat, Longitude: lon + deltaLon},
+			{Latitude: lat, Longitude: lon + deltaLon},
+			{Latitude: lat, Longitude: lon},
+		}
+	}
+	return geo.EnclosedLoop{
+		Polygon:            poly,
+		AreaSqMeters:       area,
+		LoopDistanceMeters: side * 4,
+		ClosedAt:           t,
+	}
+}
 
 func TestXP_ProportionalScalingAndAntiFarmingFloor(t *testing.T) {
 	ctx := context.Background()
@@ -70,18 +103,7 @@ func TestXP_ProportionalScalingAndAntiFarmingFloor(t *testing.T) {
 			userID := "athlete_xp_" + tc.name
 			runID := "run_" + tc.name
 
-			loop := geo.EnclosedLoop{
-				Polygon: []geo.LatLng{
-					{Latitude: 51.500, Longitude: -0.120},
-					{Latitude: 51.501, Longitude: -0.120},
-					{Latitude: 51.501, Longitude: -0.121},
-					{Latitude: 51.500, Longitude: -0.121},
-					{Latitude: 51.500, Longitude: -0.120},
-				},
-				AreaSqMeters:       tc.areaSqm,
-				LoopDistanceMeters: 400.0,
-				ClosedAt:           time.Now().UTC(),
-			}
+			loop := makeAccurateSquareLoop(0.0, 0.0, tc.areaSqm, time.Now().UTC())
 
 			run := &store.Run{
 				ID:             runID,
@@ -95,7 +117,7 @@ func TestXP_ProportionalScalingAndAntiFarmingFloor(t *testing.T) {
 			assert.Equal(t, tc.expectedXP, result.XpAwarded)
 
 			if tc.expectClaim {
-				assert.Equal(t, tc.areaSqm, result.AreaClaimedSqm)
+				assert.InDelta(t, tc.areaSqm, result.AreaClaimedSqm, 1.0)
 			} else {
 				assert.Equal(t, 0.0, result.AreaClaimedSqm)
 			}
@@ -152,18 +174,7 @@ func TestDailyXpCapEnforcement(t *testing.T) {
 	baseTime := time.Date(2026, 11, 24, 8, 0, 0, 0, time.UTC)
 
 	// Run 1: Claims 180,000 sqm -> 9,000 XP
-	loop1 := geo.EnclosedLoop{
-		Polygon: []geo.LatLng{
-			{Latitude: 51.500, Longitude: -0.120},
-			{Latitude: 51.510, Longitude: -0.120},
-			{Latitude: 51.510, Longitude: -0.130},
-			{Latitude: 51.500, Longitude: -0.130},
-			{Latitude: 51.500, Longitude: -0.120},
-		},
-		AreaSqMeters:       180000.0,
-		LoopDistanceMeters: 5000.0,
-		ClosedAt:           baseTime,
-	}
+	loop1 := makeAccurateSquareLoop(1.0, 1.0, 180000.0, baseTime)
 	res1, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
 		ID:             "run_day_1",
 		UserID:         userID,
@@ -173,7 +184,7 @@ func TestDailyXpCapEnforcement(t *testing.T) {
 	}, []geo.EnclosedLoop{loop1}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 9000, res1.XpAwarded)
-	assert.Equal(t, 180000.0, res1.AreaClaimedSqm)
+	assert.InDelta(t, 180000.0, res1.AreaClaimedSqm, 1.0)
 
 	user1, err := memStore.GetUser(ctx, userID)
 	require.NoError(t, err)
@@ -181,18 +192,7 @@ func TestDailyXpCapEnforcement(t *testing.T) {
 	assert.Equal(t, 9, user1.Level) // 9,000 XP -> Level 9 (needs 11,250 for Level 10)
 
 	// Run 2: Same day, claims 40,000 sqm -> would normally be 2,000 XP, but capped to remaining 1,000 XP
-	loop2 := geo.EnclosedLoop{
-		Polygon: []geo.LatLng{
-			{Latitude: 51.510, Longitude: -0.120},
-			{Latitude: 51.520, Longitude: -0.120},
-			{Latitude: 51.520, Longitude: -0.130},
-			{Latitude: 51.510, Longitude: -0.130},
-			{Latitude: 51.510, Longitude: -0.120},
-		},
-		AreaSqMeters:       40000.0,
-		LoopDistanceMeters: 2000.0,
-		ClosedAt:           baseTime.Add(2 * time.Hour),
-	}
+	loop2 := makeAccurateSquareLoop(2.0, 2.0, 40000.0, baseTime.Add(2*time.Hour))
 	res2, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
 		ID:             "run_day_2",
 		UserID:         userID,
@@ -202,19 +202,14 @@ func TestDailyXpCapEnforcement(t *testing.T) {
 	}, []geo.EnclosedLoop{loop2}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1000, res2.XpAwarded, "XP must be clamped to the 10,000 daily cap")
-	assert.Equal(t, 40000.0, res2.AreaClaimedSqm, "Area claim must NOT be blocked by XP cap")
+	assert.InDelta(t, 40000.0, res2.AreaClaimedSqm, 1.0, "Area claim must NOT be blocked by XP cap")
 
 	user2, err := memStore.GetUser(ctx, userID)
 	require.NoError(t, err)
 	assert.Equal(t, int64(10000), user2.XP)
 
 	// Run 3: Same day, claims 20,000 sqm -> 0 XP awarded, but full 20,000 sqm claimed
-	loop3 := geo.EnclosedLoop{
-		Polygon:            loop2.Polygon,
-		AreaSqMeters:       20000.0,
-		LoopDistanceMeters: 1000.0,
-		ClosedAt:           baseTime.Add(4 * time.Hour),
-	}
+	loop3 := makeAccurateSquareLoop(3.0, 3.0, 20000.0, baseTime.Add(4*time.Hour))
 	res3, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
 		ID:             "run_day_3",
 		UserID:         userID,
@@ -224,16 +219,11 @@ func TestDailyXpCapEnforcement(t *testing.T) {
 	}, []geo.EnclosedLoop{loop3}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 0, res3.XpAwarded, "XP award must be 0 once 10,000 daily cap is reached")
-	assert.Equal(t, 20000.0, res3.AreaClaimedSqm, "Area claim continues unhindered")
+	assert.InDelta(t, 20000.0, res3.AreaClaimedSqm, 1.0, "Area claim continues unhindered")
 
 	// Run 4: Next UTC day (00:00:00+ next day), claims 10,000 sqm -> cap resets, awards 500 XP
 	nextDayTime := baseTime.Add(24 * time.Hour)
-	loop4 := geo.EnclosedLoop{
-		Polygon:            loop1.Polygon,
-		AreaSqMeters:       10000.0,
-		LoopDistanceMeters: 1000.0,
-		ClosedAt:           nextDayTime,
-	}
+	loop4 := makeAccurateSquareLoop(4.0, 4.0, 10000.0, nextDayTime)
 	res4, err := memStore.CaptureRunAndMutateTerritories(ctx, &store.Run{
 		ID:             "run_next_day",
 		UserID:         userID,
@@ -243,6 +233,7 @@ func TestDailyXpCapEnforcement(t *testing.T) {
 	}, []geo.EnclosedLoop{loop4}, nil)
 	require.NoError(t, err)
 	assert.Equal(t, 500, res4.XpAwarded, "Daily XP cap resets on next UTC day")
+	assert.InDelta(t, 10000.0, res4.AreaClaimedSqm, 1.0)
 
 	user4, err := memStore.GetUser(ctx, userID)
 	require.NoError(t, err)

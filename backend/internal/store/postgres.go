@@ -284,11 +284,11 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	// 2. Idempotency Check:
 	var existing Run
 	err = tx.QueryRow(ctx, `
-		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
+		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), duration_seconds, distance_meters, area_claimed, COALESCE(area_stolen, 0.0), anomaly_score, anomaly_reasons, status, created_at
 		FROM runs WHERE idempotency_key = $1;
 	`, run.IdempotencyKey).Scan(
 		&existing.ID, &existing.UserID, &existing.IdempotencyKey, &existing.ActivityType, &existing.DurationSeconds,
-		&existing.DistanceMeters, &existing.AreaClaimed, &existing.AnomalyScore,
+		&existing.DistanceMeters, &existing.AreaClaimed, &existing.AreaStolen, &existing.AnomalyScore,
 		&existing.AnomalyReasons, &existing.Status, &existing.CreatedAt,
 	)
 	if err == nil {
@@ -300,9 +300,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		territoryID := fmt.Sprintf("poly_%s_territory", existing.UserID)
 		_ = tx.QueryRow(ctx, "SELECT ST_AsGeoJSON(geom) FROM territories WHERE id = $1;", territoryID).Scan(&geojson)
 
+		gained := existing.AreaClaimed + existing.AreaStolen
 		xpAwarded := 0
-		if existing.AreaClaimed >= MinCaptureFloorSqm {
-			xpAwarded = int(math.Max(5, math.Round(existing.AreaClaimed/20.0)))
+		if gained >= MinCaptureFloorSqm {
+			xpAwarded = int(math.Max(5, math.Round(gained/20.0)))
 		}
 		return &CaptureResult{
 			RunID:              existing.ID,
@@ -311,8 +312,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 			Status:             existing.Status,
 			AnomalyScore:       existing.AnomalyScore,
 			AnomalyReasons:     existing.AnomalyReasons,
-			LoopDetected:       existing.AreaClaimed > 0,
+			LoopDetected:       existing.AreaClaimed > 0 || existing.AreaStolen > 0,
 			AreaClaimedSqm:     existing.AreaClaimed,
+			AreaStolenSqm:      existing.AreaStolen,
+			AreaGainedSqm:      gained,
 			XpAwarded:          xpAwarded,
 			PlayerTotalAreaSqm: userTotalArea,
 			TerritoryGeoJSON:   geojson,
@@ -323,155 +326,229 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 
 	var territoryGeoJSON string
 	var playerTotalArea float64
-	var areaClaimed float64
+	var netNewArea float64
+	var stolenArea float64
+	var gainedTotal float64
 	var xpAwarded int
 	var rivalsAffected []string
+	rivalsAffectedSet := make(map[string]bool)
 	var weakBonusArea float64
+	now := time.Now().UTC()
+	if !run.CreatedAt.IsZero() {
+		now = run.CreatedAt
+	}
 
 	var currentUserXP int64
 	_ = tx.QueryRow(ctx, "SELECT COALESCE(xp, 0), COALESCE(total_area_sqm, 0.0) FROM users WHERE id = $1;", run.UserID).Scan(&currentUserXP, &playerTotalArea)
 
 	// 3. Process spatial loop capture for all closed loops
+	var loopWKTs []string
 	for _, loop := range loops {
-		if len(loop.Polygon) < 3 {
-			continue
+		poly := loop.Polygon
+		if len(poly) < 3 && loop.AreaSqMeters > 0 {
+			side := math.Sqrt(loop.AreaSqMeters)
+			deltaLat := side / 110574.0
+			deltaLon := side / 111319.5
+			poly = []geo.LatLng{
+				{Latitude: 0, Longitude: 0},
+				{Latitude: deltaLat, Longitude: 0},
+				{Latitude: deltaLat, Longitude: deltaLon},
+				{Latitude: 0, Longitude: deltaLon},
+				{Latitude: 0, Longitude: 0},
+			}
 		}
-		polyWKT := polygonToWKT(loop.Polygon)
-		territoryID := fmt.Sprintf("poly_%s_territory", run.UserID)
-
-		// A. Union into player's territory:
-		// ST_Union operates on geometry, cast to ::geography for geodesic area
-		unionQuery := `
-			INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, last_decayed_at, cooldown_until, updated_at)
-			VALUES ($1, $2, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_PolygonFromText($3, 4326)), 3)), ST_Area(ST_MakeValid(ST_PolygonFromText($3, 4326))::geography), 100.0, NOW(), NOW(), NOW() + INTERVAL '120 minutes', NOW())
-			ON CONFLICT (id) DO UPDATE SET
-				geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_PolygonFromText($3, 4326)))), 3)),
-				area_sqm = ST_Area(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_PolygonFromText($3, 4326))))::geography),
-				strength = 100.0,
-				last_defended_at = NOW(),
-				last_decayed_at = NOW(),
-				cooldown_until = NOW() + INTERVAL '120 minutes',
-				updated_at = NOW()
-			RETURNING ST_AsGeoJSON(geom), area_sqm;
-		`
-		if err := tx.QueryRow(ctx, unionQuery, territoryID, run.UserID, polyWKT).Scan(&territoryGeoJSON, &playerTotalArea); err != nil {
-			return nil, fmt.Errorf("failed to union owner territory: %w", err)
+		if len(poly) >= 3 {
+			loopWKTs = append(loopWKTs, polygonToWKT(poly))
 		}
+	}
 
-		// Check for weak rivals before clipping to award 1.5x XP bonus (only unshielded rivals)
-		checkRivalsQuery := `
-			SELECT owner_id, COALESCE(strength, 100.0), COALESCE(last_defended_at, updated_at)
-			FROM territories
-			WHERE owner_id != $1
-			  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
-			  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
-			  AND ST_Intersects(geom, ST_MakeValid(ST_PolygonFromText($2, 4326)));
-		`
-		if rRows, err := tx.Query(ctx, checkRivalsQuery, run.UserID, polyWKT); err == nil {
-			now := time.Now().UTC()
-			for rRows.Next() {
-				var rOwner string
-				var rStrength float64
-				var rLastDefended time.Time
-				if rRows.Scan(&rOwner, &rStrength, &rLastDefended) == nil {
-					rivalsAffected = append(rivalsAffected, rOwner)
-					effStr := CalculateEffectiveStrength(rStrength, rLastDefended, now)
-					if effStr < TerritoryWeakThreshold {
-						weakBonusArea += loop.AreaSqMeters * 0.5
+	if len(loopWKTs) > 0 {
+		var candidateGeom string
+		err = tx.QueryRow(ctx, `
+			SELECT ST_AsText(ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(geom_array)), 3)))
+			FROM (
+				SELECT array_agg(ST_MakeValid(ST_PolygonFromText(elem, 4326))) AS geom_array
+				FROM unnest($1::text[]) AS elem
+			) sub;
+		`, loopWKTs).Scan(&candidateGeom)
+
+		if err == nil && candidateGeom != "" && candidateGeom != "MULTIPOLYGON EMPTY" {
+			// Sovereign Shield Check (T3): Subtract active shielded rival territories from candidate loop
+			var claimableGeom string
+			clipShieldQuery := `
+				SELECT ST_AsText(
+					ST_Multi(ST_CollectionExtract(ST_MakeValid(
+						ST_Difference(
+							ST_GeomFromText($1, 4326),
+							COALESCE((
+								SELECT ST_Union(geom)
+								FROM territories
+								WHERE owner_id != $2
+								  AND cooldown_until > NOW()
+								  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
+								  AND ST_Intersects(geom, ST_GeomFromText($1, 4326))
+							), ST_GeomFromText('POLYGON EMPTY', 4326))
+						)
+					), 3))
+				);
+			`
+			_ = tx.QueryRow(ctx, clipShieldQuery, candidateGeom, run.UserID).Scan(&claimableGeom)
+
+			if claimableGeom != "" && claimableGeom != "MULTIPOLYGON EMPTY" {
+				territoryID := fmt.Sprintf("poly_%s_territory", run.UserID)
+				var playerExistingGeom *string
+				var playerExistingArea float64
+				var playerExistingStrength float64
+				var playerLastDecayed time.Time
+
+				_ = tx.QueryRow(ctx, `
+					SELECT ST_AsText(geom), area_sqm, COALESCE(strength, 100.0), COALESCE(last_decayed_at, last_defended_at, updated_at)
+					FROM territories WHERE id = $1;
+				`, territoryID).Scan(&playerExistingGeom, &playerExistingArea, &playerExistingStrength, &playerLastDecayed)
+
+				// Compute net_new (T2)
+				if playerExistingGeom != nil && *playerExistingGeom != "" {
+					_ = tx.QueryRow(ctx, `
+						SELECT ST_Area(ST_MakeValid(ST_Difference(ST_GeomFromText($1, 4326), ST_GeomFromText($2, 4326)))::geography);
+					`, claimableGeom, *playerExistingGeom).Scan(&netNewArea)
+				} else {
+					_ = tx.QueryRow(ctx, `SELECT ST_Area(ST_GeomFromText($1, 4326)::geography);`, claimableGeom).Scan(&netNewArea)
+				}
+
+				// Compute stolen area & weak bonus from unshielded rivals (T2, T5)
+				checkRivalsQuery := `
+					SELECT id, owner_id, ST_Area(ST_MakeValid(ST_Intersection(geom, ST_GeomFromText($1, 4326)))::geography),
+					       COALESCE(strength, 100.0), COALESCE(last_decayed_at, last_defended_at, updated_at)
+					FROM territories
+					WHERE owner_id != $2
+					  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
+					  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
+					  AND ST_Intersects(geom, ST_GeomFromText($1, 4326));
+				`
+				if rRows, err := tx.Query(ctx, checkRivalsQuery, claimableGeom, run.UserID); err == nil {
+					for rRows.Next() {
+						var rID, rOwner string
+						var rOverlapArea, rStrength float64
+						var rLastDecayed time.Time
+						if rRows.Scan(&rID, &rOwner, &rOverlapArea, &rStrength, &rLastDecayed) == nil {
+							if rOverlapArea > 0 {
+								stolenArea += rOverlapArea
+								rivalsAffectedSet[rOwner] = true
+								effStr := CalculateEffectiveStrength(rStrength, rLastDecayed, now)
+								if effStr < TerritoryWeakThreshold {
+									weakBonusArea += rOverlapArea * 0.5
+								}
+							}
+						}
 					}
+					rRows.Close()
+				}
+
+				gainedTotal = netNewArea + stolenArea
+
+				// Floor check (T6): if gained < 25 m², do not touch territories or rivals at all
+				if gainedTotal >= MinCaptureFloorSqm {
+					// Area-weighted strength model (T4)
+					var defendedOverlapArea float64
+					if playerExistingGeom != nil && *playerExistingGeom != "" {
+						_ = tx.QueryRow(ctx, `
+							SELECT ST_Area(ST_MakeValid(ST_Intersection(ST_GeomFromText($1, 4326), ST_GeomFromText($2, 4326)))::geography);
+						`, *playerExistingGeom, claimableGeom).Scan(&defendedOverlapArea)
+					}
+					oldEffectiveStrength := TerritoryDefaultStrength
+					if playerExistingGeom != nil {
+						oldEffectiveStrength = CalculateEffectiveStrength(playerExistingStrength, playerLastDecayed, now)
+					}
+					undisturbedOldArea := math.Max(0.0, playerExistingArea-defendedOverlapArea)
+					newTotalArea := playerExistingArea + netNewArea
+					newStrength := TerritoryDefaultStrength
+					if playerExistingArea > 0 && newTotalArea > 0 {
+						newStrength = (oldEffectiveStrength*undisturbedOldArea + 100.0*(defendedOverlapArea+netNewArea)) / newTotalArea
+						newStrength = math.Max(0.0, math.Min(100.0, newStrength))
+					}
+
+					// Union into player territory with geometry hygiene (T8)
+					unionQuery := `
+						INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, last_decayed_at, cooldown_until, updated_at)
+						VALUES ($1, $2, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(COALESCE((SELECT geom FROM territories WHERE id = $1), ST_GeomFromText('POLYGON EMPTY', 4326)), ST_GeomFromText($3, 4326))), 3)), ST_Area(ST_MakeValid(ST_Union(COALESCE((SELECT geom FROM territories WHERE id = $1), ST_GeomFromText('POLYGON EMPTY', 4326)), ST_GeomFromText($3, 4326)))::geography), $4, NOW(), NOW(), NOW() + INTERVAL '120 minutes', NOW())
+						ON CONFLICT (id) DO UPDATE SET
+							geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(territories.geom, ST_GeomFromText($3, 4326))), 3)),
+							area_sqm = ST_Area(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_GeomFromText($3, 4326))))::geography),
+							strength = $4,
+							last_defended_at = NOW(),
+							last_decayed_at = NOW(),
+							cooldown_until = NOW() + INTERVAL '120 minutes',
+							updated_at = NOW()
+						RETURNING ST_AsGeoJSON(geom), area_sqm;
+					`
+					if err := tx.QueryRow(ctx, unionQuery, territoryID, run.UserID, claimableGeom, newStrength).Scan(&territoryGeoJSON, &playerTotalArea); err != nil {
+						return nil, fmt.Errorf("failed to union owner territory: %w", err)
+					}
+
+					// Clip unshielded rivals
+					diffQuery := `
+						UPDATE territories
+						SET
+							geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Difference(geom, ST_GeomFromText($1, 4326))), 3)),
+							area_sqm = ST_Area(ST_MakeValid(ST_Difference(geom, ST_GeomFromText($1, 4326)))::geography),
+							updated_at = NOW()
+						WHERE owner_id != $2
+						  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
+						  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
+						  AND ST_Intersects(geom, ST_GeomFromText($1, 4326));
+					`
+					_, _ = tx.Exec(ctx, diffQuery, claimableGeom, run.UserID)
+
+					// Clean up empty or sliver rival territories (< 2 m²)
+					_, _ = tx.Exec(ctx, `
+						DELETE FROM territories
+						WHERE owner_id != $1
+						  AND (ST_IsEmpty(geom) OR area_sqm < 2.0);
+					`, run.UserID)
+
+					effectiveXpArea := gainedTotal
+					if run.VerificationStatus != "unverified_motion" {
+						effectiveXpArea += weakBonusArea
+					}
+					xpAwarded = int(math.Max(5, math.Round(effectiveXpArea/20.0)))
+
+					// Enforce daily XP ceiling (10,000 XP/day)
+					var todayXP int64
+					todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+					_ = tx.QueryRow(ctx, `
+						SELECT COALESCE(SUM(
+							CASE 
+								WHEN (area_claimed + COALESCE(area_stolen, 0.0)) >= 25.0 THEN GREATEST(5, ROUND((area_claimed + COALESCE(area_stolen, 0.0)) / 20.0))
+								ELSE 0 
+							END
+						), 0)::bigint
+						FROM runs
+						WHERE user_id = $1 AND created_at >= $2;
+					`, run.UserID, todayStart).Scan(&todayXP)
+
+					if todayXP >= int64(DailyXpCap) {
+						xpAwarded = 0
+					} else if todayXP+int64(xpAwarded) > int64(DailyXpCap) {
+						xpAwarded = int(int64(DailyXpCap) - todayXP)
+					}
+				} else {
+					netNewArea = 0.0
+					stolenArea = 0.0
+					gainedTotal = 0.0
+					xpAwarded = 0
 				}
 			}
-			rRows.Close()
-		}
-
-		// B. ST_Difference against rival territories (only unshielded rivals):
-		diffQuery := `
-			UPDATE territories
-			SET
-				geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Difference(geom, ST_MakeValid(ST_PolygonFromText($1, 4326)))), 3)),
-				area_sqm = ST_Area(ST_MakeValid(ST_Difference(geom, ST_MakeValid(ST_PolygonFromText($1, 4326))))::geography),
-				updated_at = NOW()
-			WHERE owner_id != $2
-			  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
-			  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
-			  AND ST_Intersects(geom, ST_MakeValid(ST_PolygonFromText($1, 4326)))
-			RETURNING owner_id;
-		`
-		rows, err := tx.Query(ctx, diffQuery, polyWKT, run.UserID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to clip rival territories: %w", err)
-		}
-		for rows.Next() {
-			var rOwner string
-			if scanErr := rows.Scan(&rOwner); scanErr == nil && rOwner != "" {
-				rivalsAffected = append(rivalsAffected, rOwner)
-			}
-		}
-		rows.Close()
-
-		areaClaimed += loop.AreaSqMeters
-	}
-
-	if len(loops) > 0 {
-		// Clean up overtaken rival territories
-		cleanupQuery := `
-			DELETE FROM territories
-			WHERE owner_id != $1
-			  AND (ST_IsEmpty(geom) OR area_sqm <= 0.001);
-		`
-		if _, err := tx.Exec(ctx, cleanupQuery, run.UserID); err != nil {
-			return nil, fmt.Errorf("failed to clean empty rival territories: %w", err)
-		}
-
-		// Enforce 25 m² minimum new area floor before awarding XP, league, or duel credit
-		if areaClaimed >= MinCaptureFloorSqm {
-			effectiveXpArea := areaClaimed
-			if run.VerificationStatus != "unverified_motion" {
-				// Only verified motion runs receive high-value weak-territory 1.5x bonus
-				effectiveXpArea += weakBonusArea
-			}
-			xpAwarded = int(math.Max(5, math.Round(effectiveXpArea/20.0)))
-
-			// Enforce daily XP ceiling (10,000 XP/day)
-			now := time.Now().UTC()
-			if !run.CreatedAt.IsZero() {
-				now = run.CreatedAt
-			}
-			var todayXP int64
-			todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-			_ = tx.QueryRow(ctx, `
-				SELECT COALESCE(SUM(
-					CASE 
-						WHEN area_claimed >= 25.0 THEN GREATEST(5, ROUND(area_claimed / 20.0))
-						ELSE 0 
-					END
-				), 0)::bigint
-				FROM runs
-				WHERE user_id = $1 AND created_at >= $2;
-			`, run.UserID, todayStart).Scan(&todayXP)
-
-			if todayXP >= int64(DailyXpCap) {
-				xpAwarded = 0
-			} else if todayXP+int64(xpAwarded) > int64(DailyXpCap) {
-				xpAwarded = int(int64(DailyXpCap) - todayXP)
-			}
-		} else {
-			areaClaimed = 0.0
-			xpAwarded = 0
 		}
 	} else {
-		if areaClaimed >= MinCaptureFloorSqm {
-			xpAwarded = int(math.Max(5, math.Round(areaClaimed/20.0)))
-			now := time.Now().UTC()
-			if !run.CreatedAt.IsZero() {
-				now = run.CreatedAt
-			}
+		// Non-loop run
+		if run.AreaClaimed >= MinCaptureFloorSqm {
+			xpAwarded = int(math.Max(5, math.Round(run.AreaClaimed/20.0)))
 			var todayXP int64
 			todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 			_ = tx.QueryRow(ctx, `
 				SELECT COALESCE(SUM(
 					CASE 
-						WHEN area_claimed >= 25.0 THEN GREATEST(5, ROUND(area_claimed / 20.0))
+						WHEN (area_claimed + COALESCE(area_stolen, 0.0)) >= 25.0 THEN GREATEST(5, ROUND((area_claimed + COALESCE(area_stolen, 0.0)) / 20.0))
 						ELSE 0 
 					END
 				), 0)::bigint
@@ -484,13 +561,16 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 			} else if todayXP+int64(xpAwarded) > int64(DailyXpCap) {
 				xpAwarded = int(int64(DailyXpCap) - todayXP)
 			}
-		} else {
-			areaClaimed = 0.0
-			xpAwarded = 0
+			netNewArea = run.AreaClaimed
+			gainedTotal = run.AreaClaimed
 		}
 	}
 
-	// 4. Update user total area, XP, and Level
+	for rOwner := range rivalsAffectedSet {
+		rivalsAffected = append(rivalsAffected, rOwner)
+	}
+
+	// 4. Update user total area (set to CURRENT owned area), XP, and Level
 	newXP := currentUserXP + int64(xpAwarded)
 	newLevel := CalculateLevelFromXP(newXP)
 	updateUserQuery := `
@@ -520,8 +600,8 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	}
 
 	insertRunQuery := `
-		INSERT INTO runs (id, user_id, idempotency_key, activity_type, step_count, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, path, status, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $11::text IS NOT NULL THEN ST_GeomFromText($11, 4326) ELSE NULL END, $12, $13);
+		INSERT INTO runs (id, user_id, idempotency_key, activity_type, step_count, duration_seconds, distance_meters, area_claimed, area_stolen, legacy, anomaly_score, anomaly_reasons, path, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, false, $10, $11, CASE WHEN $12::text IS NOT NULL THEN ST_GeomFromText($12, 4326) ELSE NULL END, $13, $14);
 	`
 	anomalyReasons := run.AnomalyReasons
 	if anomalyReasons == nil {
@@ -538,7 +618,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 
 	if _, err := tx.Exec(ctx, insertRunQuery,
 		run.ID, run.UserID, run.IdempotencyKey, activityType, run.StepCount, run.DurationSeconds, run.DistanceMeters,
-		areaClaimed, run.AnomalyScore, anomalyReasons, pathWKT, status, createdAt,
+		netNewArea, stolenArea, run.AnomalyScore, anomalyReasons, pathWKT, status, createdAt,
 	); err != nil {
 		return nil, fmt.Errorf("failed to insert run: %w", err)
 	}
@@ -568,7 +648,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 					xp = season_standings.xp + EXCLUDED.xp,
 					faction = CASE WHEN EXCLUDED.faction != '' THEN EXCLUDED.faction ELSE season_standings.faction END,
 					updated_at = NOW();
-			`, seasonID, run.UserID, areaClaimed, run.DistanceMeters, xpAwarded)
+			`, seasonID, run.UserID, gainedTotal, run.DistanceMeters, xpAwarded)
 		}
 
 		if errSeason != nil {
@@ -583,7 +663,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	}
 
 	if run.Status != "flagged_review" && run.Status != "unverified_motion" && run.VerificationStatus != "unverified_motion" {
-		_ = s.UpdateDuelProgress(ctx, run.UserID, activityType, areaClaimed, run.DistanceMeters)
+		_ = s.UpdateDuelProgress(ctx, run.UserID, activityType, gainedTotal, run.DistanceMeters)
 	}
 
 	return &CaptureResult{
@@ -596,7 +676,9 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		AnomalyScore:       run.AnomalyScore,
 		AnomalyReasons:     run.AnomalyReasons,
 		LoopDetected:       len(loops) > 0,
-		AreaClaimedSqm:     areaClaimed,
+		AreaClaimedSqm:     netNewArea,
+		AreaStolenSqm:      stolenArea,
+		AreaGainedSqm:      gainedTotal,
 		XpAwarded:          xpAwarded,
 		PlayerTotalAreaSqm: playerTotalArea,
 		TerritoryGeoJSON:   territoryGeoJSON,
@@ -615,7 +697,7 @@ func (s *PostgresStore) GetLeaderboard(ctx context.Context, limit int, activityT
 
 	if activityType != "" && activityType != "all" {
 		query = `
-			SELECT u.id, u.username, u.faction, COALESCE(SUM(r.area_claimed), 0.0) AS total_area_sqm, u.level, COUNT(r.id) AS total_runs
+			SELECT u.id, u.username, u.faction, COALESCE(SUM(r.area_claimed + r.area_stolen), 0.0) AS total_area_sqm, u.level, COUNT(r.id) AS total_runs
 			FROM users u
 			JOIN runs r ON u.id = r.user_id AND r.status = 'accepted' AND r.activity_type = $1
 			GROUP BY u.id, u.username, u.faction, u.level
@@ -624,9 +706,11 @@ func (s *PostgresStore) GetLeaderboard(ctx context.Context, limit int, activityT
 		`
 		args = []interface{}{activityType, limit}
 	} else {
+		// All-time leaderboard ranks by CURRENT owned area in territories (T2/j)
 		query = `
-			SELECT id, username, faction, total_area_sqm, level, total_runs
-			FROM users
+			SELECT u.id, u.username, u.faction, COALESCE(t.area_sqm, 0.0) AS total_area_sqm, u.level, u.total_runs
+			FROM users u
+			LEFT JOIN territories t ON t.owner_id = u.id AND COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at) >= NOW() - INTERVAL '232 hours'
 			ORDER BY total_area_sqm DESC
 			LIMIT $1;
 		`
@@ -766,7 +850,7 @@ func (s *PostgresStore) GetWeeklyStandings(ctx context.Context, weekStart time.T
 
 	if activityType != "" && activityType != "all" {
 		query = `
-			SELECT r.user_id, u.username, u.faction, COALESCE(SUM(r.area_claimed), 0.0) AS weekly_area, COUNT(r.id) AS weekly_runs
+			SELECT r.user_id, u.username, u.faction, COALESCE(SUM(r.area_claimed + r.area_stolen), 0.0) AS weekly_area, COUNT(r.id) AS weekly_runs
 			FROM runs r
 			JOIN users u ON u.id = r.user_id
 			WHERE r.created_at >= $1
@@ -778,7 +862,7 @@ func (s *PostgresStore) GetWeeklyStandings(ctx context.Context, weekStart time.T
 		args = []interface{}{weekStart, activityType}
 	} else {
 		query = `
-			SELECT r.user_id, u.username, u.faction, COALESCE(SUM(r.area_claimed), 0.0) AS weekly_area, COUNT(r.id) AS weekly_runs
+			SELECT r.user_id, u.username, u.faction, COALESCE(SUM(r.area_claimed + r.area_stolen), 0.0) AS weekly_area, COUNT(r.id) AS weekly_runs
 			FROM runs r
 			JOIN users u ON u.id = r.user_id
 			WHERE r.created_at >= $1
@@ -1921,7 +2005,7 @@ func (s *PostgresStore) GetCrewMembers(ctx context.Context, crewID string, weekS
 			cm.role,
 			cm.joined_at,
 			COALESCE(SUM(r.distance_meters), 0) as weekly_distance_m,
-			COALESCE(SUM(r.area_claimed), 0) as weekly_area_sqm
+			COALESCE(SUM(r.area_claimed + r.area_stolen), 0) as weekly_area_sqm
 		FROM crew_memberships cm
 		LEFT JOIN users u ON u.id = cm.user_id
 		LEFT JOIN runs r ON r.user_id = cm.user_id AND r.created_at >= $2 AND r.created_at < $3
@@ -1996,7 +2080,7 @@ func (s *PostgresStore) GetActiveCrewGoal(ctx context.Context, crewID string, we
 
 	progressQuery := `
 		SELECT
-			COALESCE(SUM(CASE WHEN $3 = 'area' THEN r.area_claimed ELSE r.distance_meters END), 0)
+			COALESCE(SUM(CASE WHEN $3 = 'area' THEN (r.area_claimed + r.area_stolen) ELSE r.distance_meters END), 0)
 		FROM runs r
 		JOIN crew_memberships cm ON cm.user_id = r.user_id
 		WHERE cm.crew_id = $1 AND r.created_at >= $2 AND r.created_at < $4;
