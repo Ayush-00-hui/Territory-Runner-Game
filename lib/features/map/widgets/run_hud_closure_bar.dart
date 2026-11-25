@@ -277,7 +277,7 @@ class _RunHudClosureBarState extends State<RunHudClosureBar>
                                   fit: BoxFit.scaleDown,
                                   alignment: Alignment.centerRight,
                                   child: Text(
-                                    '${closureDist.round()} m to start',
+                                    '${closureDist.round()} m to close',
                                     style: AppText.labelSmall.copyWith(
                                       color: isNearClosure
                                           ? AppColors.accent

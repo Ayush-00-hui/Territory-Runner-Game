@@ -22,6 +22,25 @@ class EnclosedLoopEvent {
   });
 }
 
+/// Real-time proximity candidate information for live UI closure guidance.
+class ClosureProximityCandidate {
+  final int candidateIndex;
+  final LatLng candidatePoint;
+  final double distanceMeters;
+  final double closureThresholdMeters;
+  final double loopPathDistanceMeters;
+  final double proximity; // 0.0 (far / 120m) to 1.0 (at closure threshold)
+
+  const ClosureProximityCandidate({
+    required this.candidateIndex,
+    required this.candidatePoint,
+    required this.distanceMeters,
+    required this.closureThresholdMeters,
+    required this.loopPathDistanceMeters,
+    required this.proximity,
+  });
+}
+
 /// Arbitrary Shape Polygon Territory Enclosure Engine
 /// Continuously tracks GPS breadcrumbs, detects loop closures (<= 35m),
 /// filters satellite multipath outliers (> 35 km/h for running, 60 km/h for cycling, 15 km/h for walking),
@@ -148,14 +167,70 @@ class PolygonEnclosureEngine {
     _lastInvalidReason = null;
   }
 
+  /// Scans active path vertices to locate the nearest eligible candidate vertex for closing a loop.
+  /// An eligible candidate is an earlier vertex whose path distance to [currentPos] satisfies
+  /// [effectiveMinLoopDistanceMeters]. Returns null if no eligible candidate is within [maxDetectionDistanceMeters] (default: 120m).
+  ClosureProximityCandidate? findNearestClosureCandidate(
+    LatLng currentPos, {
+    double? horizontalAccuracyMeters,
+    double maxDetectionDistanceMeters = 120.0,
+  }) {
+    if (_path.length < minPointsRequired) return null;
+    final int n = _path.length;
+    final double closureThreshold = effectiveClosureDistance(
+      horizontalAccuracyMeters: horizontalAccuracyMeters,
+    );
+
+    ClosureProximityCandidate? best;
+    double minDistance = maxDetectionDistanceMeters;
+    double accumulatedLoopDist = 0.0;
+
+    for (int i = n - 2; i >= 0; i--) {
+      accumulatedLoopDist += haversineDistanceMeters(_path[i], _path[i + 1]);
+      if (accumulatedLoopDist < effectiveMinLoopDistanceMeters) {
+        continue;
+      }
+      final candidatePoint = _path[i];
+      final dist = haversineDistanceMeters(currentPos, candidatePoint);
+      if (dist < minDistance) {
+        minDistance = dist;
+        final proximity = (1.0 -
+                ((dist - closureThreshold) /
+                    (maxDetectionDistanceMeters - closureThreshold)))
+            .clamp(0.0, 1.0);
+        best = ClosureProximityCandidate(
+          candidateIndex: i,
+          candidatePoint: candidatePoint,
+          distanceMeters: dist,
+          closureThresholdMeters: closureThreshold,
+          loopPathDistanceMeters: accumulatedLoopDist,
+          proximity: proximity,
+        );
+      }
+    }
+    return best;
+  }
+
   /// Manual "SEAL CURRENT SHAPE" override action.
   /// Force-closes the active GPS path into a player territory polygon.
-  EnclosedLoopEvent? sealCurrentPath() {
+  /// If [candidateIndex] is specified, seals the loop from [candidateIndex] to the current end.
+  /// Otherwise, if a near candidate is detected, seals to that candidate; else seals back to start.
+  EnclosedLoopEvent? sealCurrentPath({int? candidateIndex}) {
     _lastInvalidReason = null;
     if (_path.length < 3) return null;
 
     final now = DateTime.now();
-    final List<LatLng> closedPoints = List<LatLng>.from(_path);
+    int startIdx = candidateIndex ?? 0;
+    if (candidateIndex == null && _path.length >= minPointsRequired) {
+      final candidate = findNearestClosureCandidate(_path.last);
+      if (candidate != null && candidate.candidateIndex > 0) {
+        startIdx = candidate.candidateIndex;
+      }
+    }
+
+    final List<LatLng> closedPoints = List<LatLng>.from(
+      startIdx == 0 ? _path : _path.sublist(startIdx),
+    );
     // Connect back to the first vertex if not already adjacent
     if (closedPoints.first.latitude != closedPoints.last.latitude ||
         closedPoints.first.longitude != closedPoints.last.longitude) {
@@ -216,10 +291,19 @@ class PolygonEnclosureEngine {
     );
 
     final lastPos = _path.last;
-    _path.clear();
-    _timestamps.clear();
-    _path.add(lastPos);
-    _timestamps.add(now);
+    if (startIdx > 0) {
+      final remainingPath = _path.sublist(0, startIdx + 1);
+      final remainingTimestamps = _timestamps.sublist(0, startIdx + 1);
+      _path.clear();
+      _timestamps.clear();
+      _path.addAll(remainingPath);
+      _timestamps.addAll(remainingTimestamps);
+    } else {
+      _path.clear();
+      _timestamps.clear();
+      _path.add(lastPos);
+      _timestamps.add(now);
+    }
 
     return event;
   }

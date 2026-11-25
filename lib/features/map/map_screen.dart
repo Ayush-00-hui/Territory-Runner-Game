@@ -24,6 +24,7 @@ import 'widgets/amoled_battery_saver_overlay.dart';
 import 'widgets/claim_planner_sheet.dart';
 import 'widgets/ghost_runner_picker_sheet.dart';
 import 'widgets/interval_workout_picker_sheet.dart';
+import 'widgets/loop_celebration_overlay.dart';
 import 'widgets/map_demo_runner.dart';
 import 'widgets/map_exit_dialog.dart';
 import 'widgets/map_floating_controls.dart';
@@ -42,6 +43,7 @@ import 'widgets/saved_loops_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
 import '../profile/widgets/body_details_sheet.dart';
 import '../profile/widgets/offline_maps_sheet.dart';
+import '../social/widgets/social_hub_sheet.dart';
 
 export 'controllers/map_run_controller.dart';
 export 'widgets/summary_sheet.dart';
@@ -116,6 +118,25 @@ class _MapScreenState extends State<MapScreen>
   void _initMapState() {
     final controller = _resolveController();
     _refreshTerritoryCache();
+
+    controller.onLoopCaptured = (loop, netArea, xp) {
+      if (!mounted) return;
+      LoopCelebrationOverlay.show(
+        context,
+        areaSqMeters: netArea,
+        xpAwarded: xp,
+      );
+    };
+
+    controller.onLoopRejected = (reason) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        reason,
+        icon: Icons.info_outline,
+        type: AppToastType.warning,
+      );
+    };
 
     if (controller.hasRecoverableRun()) {
       final snapshot = controller.getRecoverableRun();
@@ -459,6 +480,7 @@ class _MapScreenState extends State<MapScreen>
           },
         );
       },
+      onOpenSocialHub: () => showSocialHubSheet(context),
       activeGhostLabel: controller.ghostMode != GhostMode.off
           ? controller.ghostMode.label
           : null,

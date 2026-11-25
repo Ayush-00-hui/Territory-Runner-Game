@@ -17,22 +17,34 @@ class LoopCelebrationOverlay extends StatefulWidget {
     required this.onDismissed,
   });
 
+  static OverlayEntry? _activeEntry;
+
   static void show(
     BuildContext context, {
     required double areaSqMeters,
     required int xpAwarded,
   }) {
+    _activeEntry?.remove();
+    _activeEntry = null;
+
+    final overlay = Overlay.maybeOf(context);
+    if (overlay == null) return;
+
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (context) => LoopCelebrationOverlay(
         areaSqMeters: areaSqMeters,
         xpAwarded: xpAwarded,
         onDismissed: () {
-          entry.remove();
+          if (_activeEntry == entry) {
+            entry.remove();
+            _activeEntry = null;
+          }
         },
       ),
     );
-    Overlay.of(context).insert(entry);
+    _activeEntry = entry;
+    overlay.insert(entry);
   }
 
   @override

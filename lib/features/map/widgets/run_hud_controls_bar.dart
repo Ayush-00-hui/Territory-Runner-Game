@@ -49,7 +49,7 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
             label: isNearClosure
                 ? 'Close loop. Ready to claim territory.'
                 : (isRunActive
-                      ? 'Close loop. Available when near your route start.'
+                      ? 'Close loop. Available when near your route path.'
                       : 'Close loop. Disabled. Start a run first.'),
             child: GestureDetector(
               onTapDown: (_) => setState(() => _isSealPressed = true),
@@ -66,7 +66,7 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                       : '';
                   AppToast.show(
                     context,
-                    'Run back near your start point$distText to close the loop',
+                    'Run closer to your route$distText to close the loop',
                   );
                   return;
                 }

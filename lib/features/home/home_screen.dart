@@ -15,6 +15,7 @@ import 'widgets/today_workout_card.dart';
 import 'widgets/weekly_recap_card.dart';
 import 'widgets/weekly_summary_card.dart';
 import '../history/run_history_screen.dart';
+import '../social/widgets/social_hub_sheet.dart';
 
 /// Athlete Home Screen - Performance First Conquest Dashboard
 class HomeScreen extends StatelessWidget {
@@ -185,6 +186,73 @@ class HomeScreen extends StatelessWidget {
                       RecentActivityFeed(
                         territories: territories,
                         onStartRun: onStartRun,
+                      ),
+
+                      const SizedBox(height: AppSpacing.s16),
+
+                      // Community Feed & Duels Banner
+                      InkWell(
+                        onTap: () => showSocialHubSheet(context),
+                        borderRadius: AppRadius.br16,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.s16,
+                            vertical: AppSpacing.s12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: AppRadius.br16,
+                            border: Border.all(color: AppColors.borderSubtle),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                height: 38,
+                                width: 38,
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withValues(
+                                    alpha: 0.12,
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.sports_kabaddi_rounded,
+                                    color: AppColors.accent,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.s12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Community & duels',
+                                      style: AppText.bodyMedium.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Feed, kudos, friend duels & squad',
+                                      style: AppText.caption.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(
+                                Icons.chevron_right_rounded,
+                                color: AppColors.textMuted,
+                                size: 20,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),

@@ -339,6 +339,8 @@ class MapLayers {
     List<LatLng>? suggestedRouteCoordinates,
     Map<String, List<LatLng>>? rivalBreadcrumbs,
     Map<String, RunnerPresenceEvent>? activeRivalRunners,
+    LatLng? closureSnapPoint,
+    LatLng? currentLocation,
     AppPalette palette = AppPalette.dark,
   }) {
     return PolylineLayer(
@@ -370,6 +372,16 @@ class MapLayers {
             color: palette.info,
             strokeWidth: 2.0,
           ),
+        // Live Loop Closure Snap Chord Guide (subtle dashed guidance line to closure point)
+        if (isRunActive &&
+            closureSnapPoint != null &&
+            currentLocation != null)
+          Polyline(
+            points: [currentLocation, closureSnapPoint],
+            color: palette.accent.withValues(alpha: 0.80),
+            strokeWidth: 2.0,
+            pattern: StrokePattern.dashed(segments: const [6.0, 4.0]),
+          ),
         // AI Suggested Route: Clean 2.5px line, NO glow
         if (suggestedRouteCoordinates != null &&
             suggestedRouteCoordinates.length >= 2)
@@ -387,11 +399,47 @@ class MapLayers {
     required LatLng? currentLocation,
     required Map<String, RunnerPresenceEvent> activeRivalRunners,
     LatLng? ghostLocation,
+    LatLng? closureSnapPoint,
     bool isBatterySaverActive = false,
     bool isReducedMotion = false,
     AppPalette palette = AppPalette.dark,
   }) {
     final List<Marker> markers = [];
+
+    // Loop Closure Snap Target Marker: Clean target ring node
+    if (closureSnapPoint != null) {
+      markers.add(
+        Marker(
+          point: closureSnapPoint,
+          width: 24,
+          height: 24,
+          child: Center(
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: palette.surface,
+                border: Border.all(
+                  color: palette.accent,
+                  width: 2.0,
+                ),
+              ),
+              child: Center(
+                child: Container(
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: palette.accent,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     // Ghost Runner Marker: Neutral circular node with dashed ring, zero glow
     if (ghostLocation != null) {

@@ -67,6 +67,8 @@ class MapViewport extends StatelessWidget {
                   controller.activeSuggestedRoute?.polyline,
               rivalBreadcrumbs: controller.rivalBreadcrumbs,
               activeRivalRunners: controller.activeRivalRunners,
+              closureSnapPoint: controller.nearestClosurePoint,
+              currentLocation: controller.currentLocation,
               palette: palette,
             ),
           ),
@@ -78,6 +80,9 @@ class MapViewport extends StatelessWidget {
                 currentLocation: loc ?? controller.currentLocation,
                 activeRivalRunners: controller.activeRivalRunners,
                 ghostLocation: ghostLoc,
+                closureSnapPoint: controller.isRunActive
+                    ? controller.nearestClosurePoint
+                    : null,
                 isBatterySaverActive: controller.isBatterySaverActive,
                 isReducedMotion:
                     MediaQuery.maybeOf(context)?.disableAnimations ?? false,
