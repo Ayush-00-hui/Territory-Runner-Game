@@ -94,9 +94,13 @@ void main() {
   });
 
   tearDownAll(() async {
-    await Hive.close();
     try {
-      tempDir.deleteSync(recursive: true);
+      await Hive.close().timeout(const Duration(seconds: 2));
+    } catch (_) {}
+    try {
+      if (tempDir.existsSync()) {
+        tempDir.deleteSync(recursive: true);
+      }
     } catch (_) {}
   });
 
@@ -326,6 +330,10 @@ void main() {
         // Stop run
         controller.stopRun();
         await tester.pump(const Duration(milliseconds: 200));
+
+        // Cleanly unmount MapScreen to cancel active tickers and listeners
+        await tester.pumpWidget(const SizedBox());
+        controller.dispose();
       },
     );
 
@@ -351,6 +359,7 @@ void main() {
           expect(find.text('Total Distance'), findsOneWidget);
           expect(find.text('Active Streak'), findsOneWidget);
         }
+        await tester.pumpWidget(const SizedBox());
       },
     );
   });
