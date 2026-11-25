@@ -43,7 +43,7 @@ class MapHudPanel extends StatelessWidget {
             cadenceSpm: telemetry.cadenceSpm,
             strideLengthMeters: telemetry.strideLengthMeters,
             isSearchingGps: controller.currentLocation == null,
-            isAutoPaused: telemetry.isAutoPaused,
+            isAutoPaused: telemetry.isAutoPaused || controller.isPaused,
             distanceKm: telemetry.distanceKm,
             elapsedSeconds: telemetry.elapsedSeconds,
             movingSeconds: telemetry.movingSeconds,

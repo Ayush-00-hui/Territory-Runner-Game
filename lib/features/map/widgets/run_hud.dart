@@ -205,16 +205,16 @@ class _RunHudState extends State<RunHud> {
                       ),
                     ),
 
-                  // Auto-Pause Banner
+                  // Paused Overlay Banner with Prominent Resume Button
                   if (widget.isAutoPaused && widget.isRunActive) ...[
                     Semantics(
                       liveRegion: true,
-                      label: 'Run tracking auto-paused. Moving speed dropped below 2.5 kilometers per hour.',
+                      label: 'Run tracking paused. Tap resume button to continue tracking.',
                       child: Container(
                         margin: const EdgeInsets.only(bottom: AppSpacing.s10),
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.s12,
-                          vertical: AppSpacing.s4,
+                          vertical: AppSpacing.s6,
                         ),
                         decoration: BoxDecoration(
                           color: palette.warning.withValues(alpha: 0.16),
@@ -227,15 +227,48 @@ class _RunHudState extends State<RunHud> {
                             Icon(
                               Icons.pause_circle_filled_rounded,
                               color: palette.warning,
-                              size: 14,
+                              size: 16,
                             ),
                             const SizedBox(width: AppSpacing.s6),
                             Text(
-                              'Auto-paused • Speed < 2.5 km/h',
+                              'Run paused',
                               style: AppText.caption.copyWith(
                                 color: palette.warning,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.3,
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s8),
+                            GestureDetector(
+                              onTap: widget.onToggleRun,
+                              behavior: HitTestBehavior.opaque,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.s8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: palette.warning,
+                                  borderRadius: AppSpacing.brFull,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.play_arrow_rounded,
+                                      color: palette.surface,
+                                      size: 14,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      'Resume',
+                                      style: AppText.caption.copyWith(
+                                        color: palette.surface,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -406,6 +439,7 @@ class _RunHudState extends State<RunHud> {
                   // Controls Bar
                   RunHudControlsBar(
                     isRunActive: widget.isRunActive,
+                    isPaused: widget.isAutoPaused,
                     isNearClosure: isNearClosure,
                     closureDist: widget.distanceToClosureMeters,
                     onToggleRun: widget.onToggleRun,

@@ -39,6 +39,41 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
 
   HistoryFilter _timeFilter = HistoryFilter.all;
   HistorySortOption _sortOption = HistorySortOption.newest;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+  List<RunLogEntry>? _localRuns;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialRuns != null) {
+      _localRuns = List<RunLogEntry>.from(widget.initialRuns!);
+    }
+  }
+
+  void _handleDeleteRun(RunLogEntry run) {
+    _runLogService.deleteRun(run.id);
+    if (_localRuns != null) {
+      setState(() {
+        _localRuns!.removeWhere((r) => r.id == run.id);
+      });
+    }
+  }
+
+  void _handleRestoreRun(RunLogEntry run) {
+    _runLogService.restoreRun(run);
+    if (_localRuns != null) {
+      setState(() {
+        _localRuns!.add(run);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   double _estimateDistanceKm(List<LatLng> points) {
     if (points.length < 2) return 0.0;
@@ -55,6 +90,19 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
     final now = DateTime.now();
 
     final filtered = rawList.where((r) {
+      if (_searchQuery.isNotEmpty) {
+        final q = _searchQuery.toLowerCase();
+        final title = (r.title ?? '').toLowerCase();
+        final notes = (r.notes ?? '').toLowerCase();
+        final group = _groupKeyForDate(r.startedAt).toLowerCase();
+        final act = r.activityType.toLowerCase();
+        if (!title.contains(q) &&
+            !notes.contains(q) &&
+            !group.contains(q) &&
+            !act.contains(q)) {
+          return false;
+        }
+      }
       switch (_timeFilter) {
         case HistoryFilter.all:
           return true;
@@ -159,8 +207,8 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               widget.initialProfile ?? _territoryService.getProfile();
 
           final List<RunLogEntry> effectiveRuns;
-          if (widget.initialRuns != null) {
-            effectiveRuns = widget.initialRuns!;
+          if (_localRuns != null) {
+            effectiveRuns = _localRuns!;
           } else if (widget.initialTerritories != null &&
               widget.initialTerritories!.isNotEmpty) {
             effectiveRuns = widget.initialTerritories!.map((t) {
@@ -385,6 +433,61 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
             ),
           ),
 
+          // Search Bar Sliver
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.s16,
+                0,
+                AppSpacing.s16,
+                AppSpacing.s12,
+              ),
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppSpacing.br12,
+                  border: Border.all(color: AppColors.borderSubtle),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  style: AppText.bodyMedium.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
+                  onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                  decoration: InputDecoration(
+                    hintText: 'Search by title, notes, or date...',
+                    hintStyle: AppText.bodySmall.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search_rounded,
+                      size: 20,
+                      color: AppColors.textMuted,
+                    ),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.clear_rounded,
+                              size: 18,
+                              color: AppColors.textMuted,
+                            ),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.s10,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
           // Filter chips row
           SliverToBoxAdapter(
             child: SingleChildScrollView(
@@ -418,9 +521,14 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${runs.length} ${runs.length == 1 ? 'session' : 'sessions'}',
-                    style: AppText.caption.copyWith(color: AppColors.textMuted),
+                  Expanded(
+                    child: Text(
+                      '${runs.length} ${runs.length == 1 ? 'session' : 'sessions'}',
+                      style: AppText.caption.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   PopupMenuButton<HistorySortOption>(
                     initialValue: _sortOption,
@@ -526,11 +634,10 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final run = entry.value[index];
-                      return HistoryRunCard(
+                      return _buildDismissibleRunCard(
+                        context: context,
                         run: run,
-                        callsign: profile.username,
-                        faction: profile.faction,
-                        onDelete: () => _runLogService.deleteRun(run.id),
+                        profile: profile,
                       );
                     }, childCount: entry.value.length),
                   ),
@@ -548,11 +655,10 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final run = runs[index];
-                  return HistoryRunCard(
+                  return _buildDismissibleRunCard(
+                    context: context,
                     run: run,
-                    callsign: profile.username,
-                    faction: profile.faction,
-                    onDelete: () => _runLogService.deleteRun(run.id),
+                    profile: profile,
                   );
                 }, childCount: runs.length),
               ),
@@ -560,6 +666,63 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
 
           const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.s32)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDismissibleRunCard({
+    required BuildContext context,
+    required RunLogEntry run,
+    required RunnerProfile profile,
+  }) {
+    return Dismissible(
+      key: ValueKey('run-dismiss-${run.id}'),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: AppSpacing.s12),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: AppSpacing.s20),
+        decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.16),
+          borderRadius: AppSpacing.br20,
+        ),
+        child: const Icon(
+          Icons.delete_outline_rounded,
+          color: AppColors.error,
+          size: 24,
+        ),
+      ),
+      onDismissed: (_) {
+        _handleDeleteRun(run);
+        _showUndoDeleteSnackBar(context, run);
+      },
+      child: HistoryRunCard(
+        run: run,
+        callsign: profile.username,
+        faction: profile.faction,
+        onDelete: () {
+          _handleDeleteRun(run);
+          _showUndoDeleteSnackBar(context, run);
+        },
+      ),
+    );
+  }
+
+  void _showUndoDeleteSnackBar(BuildContext context, RunLogEntry run) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Run deleted',
+          style: AppText.bodyMedium.copyWith(color: AppColors.textPrimary),
+        ),
+        backgroundColor: AppColors.surface2,
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: AppColors.accent,
+          onPressed: () => _handleRestoreRun(run),
+        ),
       ),
     );
   }

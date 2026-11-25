@@ -14,6 +14,7 @@ import '../../../models/saved_loop.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/auto_lap_service.dart';
 import '../../../services/auto_pause_engine.dart';
+import '../../../services/battery_saver_service.dart';
 import '../../../services/elevation_incline_service.dart';
 import '../../../services/ghost_runner_service.dart';
 import '../../../services/gps_distance_filter.dart';
@@ -65,13 +66,19 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       ValueNotifier<SavedLoopProgress?>(null);
   final ValueNotifier<PaceBandEvaluation?> paceBandNotifier =
       ValueNotifier<PaceBandEvaluation?>(null);
+  final ValueNotifier<bool> lowBatteryPromptNotifier = ValueNotifier<bool>(
+    false,
+  );
 
   // Run & Telemetry State
   bool _isRunActive = false;
   bool _isAutoPaused = false;
+  bool _isManualPaused = false;
   bool _isCountingDown = false;
   bool _isCameraFollowLocked = true;
   bool _isBatterySaverActive = false;
+  bool _hasPromptedLowBattery = false;
+  bool _wasGpsLost = false;
   int _elapsedDurationSeconds = 0;
   int _movingDurationSeconds = 0;
   double _runDistanceKm = 0.0;
@@ -107,6 +114,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
   // Callbacks for UI presentation
   VoidCallback? onGoalCompleted;
+  VoidCallback? onGpsSignalRestored;
   ValueChanged<String>? onSpeedAnomalyDetected;
   ValueChanged<String>? onLoopRejected;
   void Function(EnclosedLoopEvent loop, double netAreaSqM, int xpAwarded)?
@@ -143,6 +151,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   // Getters
   bool get isRunActive => _isRunActive;
   bool get isAutoPaused => _isAutoPaused;
+  bool get isManualPaused => _isManualPaused;
+  bool get isPaused => _isAutoPaused || _isManualPaused;
   bool get isCountingDown => _isCountingDown;
   bool get isCameraFollowLocked => _isCameraFollowLocked;
   bool get isBatterySaverActive => _isBatterySaverActive;
@@ -254,6 +264,58 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     notifyListeners();
   }
 
+  void pauseRun() {
+    if (!_isRunActive || _isManualPaused) return;
+    _isManualPaused = true;
+    _locationService.setTrackingMode(GpsTrackingMode.paused);
+    telemetryNotifier.setAutoPaused(true);
+    _workoutTimeline?.pause();
+    notifyListeners();
+  }
+
+  void resumeRun() {
+    if (!_isRunActive || !_isManualPaused) return;
+    _isManualPaused = false;
+    _isAutoPaused = false;
+    _autoPauseEngine.forceResume();
+    _locationService.setTrackingMode(GpsTrackingMode.activeRun);
+    telemetryNotifier.setAutoPaused(false);
+    _workoutTimeline?.resume();
+    notifyListeners();
+  }
+
+  void togglePauseResume() {
+    if (isPaused) {
+      resumeRun();
+    } else {
+      pauseRun();
+    }
+  }
+
+  void checkBatteryLevel(int percentage) {
+    if (percentage <= 15 &&
+        !_hasPromptedLowBattery &&
+        !BatterySaverService().isBatterySaverEnabled) {
+      _hasPromptedLowBattery = true;
+      lowBatteryPromptNotifier.value = true;
+      notifyListeners();
+    }
+  }
+
+  void dismissLowBatteryPrompt() {
+    lowBatteryPromptNotifier.value = false;
+    notifyListeners();
+  }
+
+  void enableEnduranceFromPrompt() {
+    lowBatteryPromptNotifier.value = false;
+    BatterySaverService().setBatterySaver(true);
+    if (!_isBatterySaverActive) {
+      toggleBatterySaver();
+    }
+    notifyListeners();
+  }
+
   void setSuggestedRoute(SuggestedRoute? route) {
     _activeSuggestedRoute = route;
     notifyListeners();
@@ -337,6 +399,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
     _isRunActive = true;
     _isAutoPaused = false;
+    _isManualPaused = false;
+    _hasPromptedLowBattery = false;
+    _wasGpsLost = false;
     _currentSpeedKmh = 0.0;
     _territoriesClaimedThisRun = 0;
     _accumulatedRunPreviewArea = 0.0;
@@ -382,6 +447,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _autoPauseEngine.reset();
     _locationService.setTrackingMode(GpsTrackingMode.idle);
     telemetryNotifier.setRunActive(false);
+    _isManualPaused = false;
+    lowBatteryPromptNotifier.value = false;
 
     final finalSeconds = _movingDurationSeconds > 0
         ? _movingDurationSeconds
@@ -479,6 +546,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
     if (_lastGpsFixTime != null &&
         GpsQualityService.isSignalGap(_lastGpsFixTime!, now)) {
+      _wasGpsLost = true;
       if (_runCoordinates.isNotEmpty) {
         final lastCoord = _runCoordinates.last;
         final newCoord = LatLng(pos.latitude, pos.longitude);
@@ -489,13 +557,16 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
           return;
         }
       }
+    } else if (_wasGpsLost && pos.accuracy <= 30.0) {
+      _wasGpsLost = false;
+      onGpsSignalRestored?.call();
     }
     _lastGpsFixTime = now;
 
     // Ingest into speed-gated 2D Kalman distance pipeline
     final filterResult = _distanceFilter.processFix(
       pos,
-      isAutoPaused: _isAutoPaused,
+      isAutoPaused: isPaused,
       smoothedSpeedKmh: _currentSpeedKmh,
     );
 
@@ -503,7 +574,10 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _currentLocation = latLng;
     liveLocationNotifier.value = latLng;
 
-    if (_isRunActive && _isAutoPaused && _currentLocation != null) {
+    if (_isRunActive &&
+        _isAutoPaused &&
+        !_isManualPaused &&
+        _currentLocation != null) {
       final dMeters = Geolocator.distanceBetween(
         _currentLocation!.latitude,
         _currentLocation!.longitude,
@@ -519,7 +593,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       }
     }
 
-    if (_isRunActive && !_isAutoPaused) {
+    if (_isRunActive && !_isAutoPaused && !_isManualPaused) {
       _autoLapService.processFix(
         totalDistanceMeters: _runDistanceKm * 1000.0,
         movingDurationSeconds: _movingDurationSeconds,
@@ -638,6 +712,12 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _runTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!_isRunActive) return;
       _elapsedDurationSeconds++;
+
+      if (_isManualPaused) {
+        telemetryNotifier.tick(isAutoPaused: true);
+        _updateGhostTelemetry();
+        return;
+      }
 
       final transition = (_elapsedDurationSeconds <= startupGraceSeconds)
           ? AutoPauseTransition.none

@@ -95,6 +95,12 @@ class RunLogEntry {
   /// Indicates whether this run was executed in simulation/demo mode.
   final bool simulated;
 
+  /// User-customized title for the run session.
+  final String? title;
+
+  /// Optional personal training notes or route commentary.
+  final String? notes;
+
   const RunLogEntry({
     this.version = currentVersion,
     required this.id,
@@ -116,6 +122,8 @@ class RunLogEntry {
     this.syncStatus = 'synced',
     this.isSimplified = false,
     this.simulated = false,
+    this.title,
+    this.notes,
   });
 
   /// Average moving pace in seconds per kilometer (0 if distance <= 0).
@@ -151,6 +159,8 @@ class RunLogEntry {
     String? syncStatus,
     bool? isSimplified,
     bool? simulated,
+    String? title,
+    String? notes,
   }) {
     return RunLogEntry(
       version: version ?? this.version,
@@ -173,6 +183,8 @@ class RunLogEntry {
       syncStatus: syncStatus ?? this.syncStatus,
       isSimplified: isSimplified ?? this.isSimplified,
       simulated: simulated ?? this.simulated,
+      title: title ?? this.title,
+      notes: notes ?? this.notes,
     );
   }
 
@@ -197,6 +209,8 @@ class RunLogEntry {
     'sync': syncStatus,
     'simp': isSimplified,
     if (simulated) 'sim': true,
+    if (title != null) 'title': title,
+    if (notes != null) 'notes': notes,
   };
 
   factory RunLogEntry.fromJson(Map<String, dynamic> json) {
@@ -228,6 +242,8 @@ class RunLogEntry {
       syncStatus: json['sync'] as String? ?? 'synced',
       isSimplified: json['simp'] as bool? ?? false,
       simulated: json['sim'] as bool? ?? false,
+      title: json['title'] as String?,
+      notes: json['notes'] as String?,
     );
   }
 }

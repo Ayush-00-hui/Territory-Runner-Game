@@ -7,6 +7,8 @@ import '../../../models/run_log_entry.dart';
 import '../../../models/territory.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/elevation_splits_service.dart';
+import '../../../services/export_service.dart';
+import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
 import '../../profile/widgets/calorie_factors_sheet.dart';
 import 'elevation_profile_chart.dart';
@@ -170,16 +172,52 @@ class HistoryRunCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Run dossier',
-                      style: AppText.titleSmall.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            run?.title?.isNotEmpty == true
+                                ? run!.title!
+                                : 'Run dossier',
+                            style: AppText.titleSmall.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (run?.notes?.isNotEmpty == true)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                run!.notes!,
+                                style: AppText.caption.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        if (run != null)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              color: AppColors.textSecondary,
+                              size: 20,
+                            ),
+                            tooltip: 'Edit details',
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _showEditMetadataDialog(context);
+                            },
+                          ),
                         if (onDelete != null)
                           IconButton(
                             icon: const Icon(
@@ -346,7 +384,25 @@ class HistoryRunCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: SecondaryButton(
-                        label: 'Share run',
+                        label: 'GPX',
+                        icon: Icons.download_rounded,
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          try {
+                            await ExportService().exportAndShareGpx(
+                              runTitle:
+                                  run?.title ??
+                                  'Territory Run - ${_formatDate(_effectiveDate)}',
+                              coordinates: _effectivePoints,
+                            );
+                          } catch (_) {}
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                    Expanded(
+                      child: SecondaryButton(
+                        label: 'Share',
                         icon: Icons.share_rounded,
                         onPressed: () {
                           Navigator.pop(ctx);
@@ -363,7 +419,7 @@ class HistoryRunCard extends StatelessWidget {
                         },
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.s12),
+                    const SizedBox(width: AppSpacing.s8),
                     Expanded(
                       child: PrimaryButton(
                         label: 'Done',
@@ -377,6 +433,104 @@ class HistoryRunCard extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+
+  void _showEditMetadataDialog(BuildContext context) {
+    if (run == null) return;
+    final titleController = TextEditingController(text: run!.title ?? '');
+    final notesController = TextEditingController(text: run!.notes ?? '');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: AppSpacing.br16,
+          side: const BorderSide(color: AppColors.border),
+        ),
+        title: Text(
+          'Edit run details',
+          style: AppText.titleMedium.copyWith(color: AppColors.textPrimary),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Title',
+                style: AppText.caption.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.s4),
+              TextField(
+                controller: titleController,
+                style: AppText.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Morning River Loop',
+                  hintStyle: AppText.bodyMedium.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.surface2,
+                  border: OutlineInputBorder(
+                    borderRadius: AppSpacing.br12,
+                    borderSide: const BorderSide(color: AppColors.borderSubtle),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.s12),
+              Text(
+                'Notes',
+                style: AppText.caption.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: AppSpacing.s4),
+              TextField(
+                controller: notesController,
+                maxLines: 3,
+                style: AppText.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Add workout notes or thoughts...',
+                  hintStyle: AppText.bodyMedium.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.surface2,
+                  border: OutlineInputBorder(
+                    borderRadius: AppSpacing.br12,
+                    borderSide: const BorderSide(color: AppColors.borderSubtle),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          SecondaryButton(
+            label: 'Cancel',
+            isFullWidth: false,
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          PrimaryButton(
+            label: 'Save',
+            isFullWidth: false,
+            onPressed: () {
+              final t = titleController.text.trim();
+              final n = notesController.text.trim();
+              RunLogService().updateRunMetadata(
+                run!.id,
+                title: t.isEmpty ? null : t,
+                notes: n.isEmpty ? null : n,
+              );
+              Navigator.pop(ctx);
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -502,14 +656,17 @@ class HistoryRunCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Flexible(
+                          Expanded(
                             child: Text(
                               run != null
-                                  ? (run!.claimedAreaSqM > 0
-                                        ? 'Closed loop'
-                                        : '${run!.activityType.toUpperCase()} RUN')
+                                  ? (run!.title?.isNotEmpty == true
+                                        ? run!.title!
+                                        : (run!.claimedAreaSqM > 0
+                                              ? 'Closed loop'
+                                              : '${run!.activityType.toUpperCase()} RUN'))
                                   : 'Closed loop',
                               overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                               style: AppText.labelLarge.copyWith(
                                 fontWeight: FontWeight.w700,
                                 color: AppColors.textPrimary,
@@ -517,10 +674,14 @@ class HistoryRunCard extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.s4),
-                          Text(
-                            _formatDate(_effectiveDate),
-                            style: AppText.labelSmall.copyWith(
-                              color: AppColors.textMuted,
+                          Flexible(
+                            child: Text(
+                              _formatDate(_effectiveDate),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.labelSmall.copyWith(
+                                color: AppColors.textMuted,
+                              ),
                             ),
                           ),
                         ],

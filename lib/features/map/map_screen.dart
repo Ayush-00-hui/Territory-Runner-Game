@@ -138,6 +138,13 @@ class _MapScreenState extends State<MapScreen>
       );
     };
 
+    controller.onGpsSignalRestored = () {
+      if (!mounted) return;
+      AppToast.show(context, 'GPS signal restored', type: AppToastType.success);
+    };
+
+    LocationService().gpsStatusNotifier.addListener(_onGpsStatusChanged);
+
     if (controller.hasRecoverableRun()) {
       final snapshot = controller.getRecoverableRun();
       if (snapshot != null) {
@@ -274,8 +281,25 @@ class _MapScreenState extends State<MapScreen>
         .getCapturedTerritoryObjects();
   }
 
+  void _onGpsStatusChanged() {
+    if (!mounted) return;
+    final status = LocationService().gpsStatusNotifier.value;
+    final controller = _resolveController();
+    if (controller.isRunActive &&
+        (status == GpsStatus.permissionDenied ||
+            status == GpsStatus.permissionDeniedForever ||
+            status == GpsStatus.serviceDisabled)) {
+      AppToast.show(
+        context,
+        'Location access interrupted. Active run coordinates preserved.',
+        type: AppToastType.warning,
+      );
+    }
+  }
+
   @override
   void dispose() {
+    LocationService().gpsStatusNotifier.removeListener(_onGpsStatusChanged);
     if (_cameraCurvedAnimation != null && _cameraListener != null) {
       _cameraCurvedAnimation!.removeListener(_cameraListener!);
     }
@@ -606,7 +630,7 @@ class _MapScreenState extends State<MapScreen>
                   hudHeightNotifier: _hudHeightNotifier,
                   onToggleRun: () {
                     if (controller.isRunActive) {
-                      _stopRun(controller);
+                      controller.togglePauseResume();
                     } else {
                       _startRunSequence(controller);
                     }
@@ -658,6 +682,82 @@ class _MapScreenState extends State<MapScreen>
                             BatterySaverService().setAmoledHudActive(false),
                       );
                     },
+                  );
+                },
+              ),
+
+              // 7. Low Battery Endurance Prompt
+              ValueListenableBuilder<bool>(
+                valueListenable: controller.lowBatteryPromptNotifier,
+                builder: (context, showPrompt, _) {
+                  if (!showPrompt || !controller.isRunActive) {
+                    return const SizedBox.shrink();
+                  }
+                  return Positioned(
+                    top: MediaQuery.paddingOf(context).top + 12,
+                    left: 16,
+                    right: 16,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.s14,
+                        vertical: AppSpacing.s10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceGlass,
+                        borderRadius: AppSpacing.br16,
+                        border: Border.all(
+                          color: AppColors.warning,
+                          width: 1.5,
+                        ),
+                        boxShadow: AppElevation.floating,
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.battery_alert_rounded,
+                            color: AppColors.warning,
+                            size: 24,
+                          ),
+                          const SizedBox(width: AppSpacing.s10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Battery below 15%',
+                                  style: AppText.labelLarge.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                Text(
+                                  'Enable Endurance Saver to extend tracking?',
+                                  style: AppText.caption.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: controller.dismissLowBatteryPrompt,
+                            child: Text(
+                              'Dismiss',
+                              style: AppText.caption.copyWith(
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          PrimaryButton(
+                            label: 'Enable',
+                            isFullWidth: false,
+                            onPressed: controller.enableEnduranceFromPrompt,
+                          ),
+                        ],
+                      ),
+                    ),
                   );
                 },
               ),

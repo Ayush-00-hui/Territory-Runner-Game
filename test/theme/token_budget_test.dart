@@ -122,5 +122,36 @@ void main() {
       const defaultDuration = Duration(seconds: 3);
       expect(defaultDuration.inSeconds, lessThanOrEqualTo(4));
     });
+
+    test('Hard-coded fontSize declarations outside lib/ui/theme do not exceed baseline', () {
+      final libDir = Directory('lib');
+      expect(libDir.existsSync(), isTrue);
+
+      int fontSizeCount = 0;
+      final fontSizePattern = RegExp(r'fontSize\s*:');
+
+      for (final entity in libDir.listSync(recursive: true)) {
+        if (entity is File && entity.path.endsWith('.dart')) {
+          final normalizedPath = entity.path.replaceAll('\\', '/');
+          if (!normalizedPath.contains('lib/ui/theme')) {
+            final lines = entity.readAsLinesSync();
+            for (final line in lines) {
+              if (fontSizePattern.hasMatch(line) &&
+                  !line.trim().startsWith('//')) {
+                fontSizeCount++;
+              }
+            }
+          }
+        }
+      }
+
+      // Current baseline ceiling is 314; any NEW hard-coded fontSize will fail this test
+      expect(
+        fontSizeCount,
+        lessThanOrEqualTo(314),
+        reason:
+            'NEW hard-coded fontSize introduced outside lib/ui/theme! Found: $fontSizeCount (max: 314). Use AppText tokens instead.',
+      );
+    });
   });
 }

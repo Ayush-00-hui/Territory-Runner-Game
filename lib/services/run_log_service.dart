@@ -255,6 +255,30 @@ class RunLogService {
     AppLogger.info('Deleted RunLogEntry $id', tag: 'RunLogService');
   }
 
+  /// Restores a previously deleted run (e.g. for Undo after swipe-to-delete)
+  Future<void> restoreRun(RunLogEntry entry) async {
+    await _safeBox.put(entry.id, jsonEncode(entry.toJson()));
+    _loadRunsFromBox();
+    AppLogger.info('Restored RunLogEntry ${entry.id}', tag: 'RunLogService');
+  }
+
+  /// Updates title or notes on a stored run
+  Future<void> updateRunMetadata(
+    String id, {
+    String? title,
+    String? notes,
+  }) async {
+    final entry = getRun(id);
+    if (entry == null) return;
+    final updated = entry.copyWith(title: title, notes: notes);
+    await _safeBox.put(id, jsonEncode(updated.toJson()));
+    _loadRunsFromBox();
+    AppLogger.info(
+      'Updated metadata for RunLogEntry $id',
+      tag: 'RunLogService',
+    );
+  }
+
   /// Clears all stored runs (used during "Delete my data" and account deletion)
   Future<void> clearAllRuns() async {
     await _safeBox.clear();

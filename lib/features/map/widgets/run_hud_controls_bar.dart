@@ -6,6 +6,7 @@ import 'hold_to_finish_button.dart';
 /// Bottom action controls row for RunHud: Seal Shape, Giant Play/Pause, and HoldToFinish.
 class RunHudControlsBar extends StatefulWidget {
   final bool isRunActive;
+  final bool isPaused;
   final bool isNearClosure;
   final double? closureDist;
   final VoidCallback onToggleRun;
@@ -15,6 +16,7 @@ class RunHudControlsBar extends StatefulWidget {
   const RunHudControlsBar({
     super.key,
     required this.isRunActive,
+    this.isPaused = false,
     required this.isNearClosure,
     this.closureDist,
     required this.onToggleRun,
@@ -137,7 +139,9 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
         // Center Confident Matte Play/Pause Action Button
         Semantics(
           button: true,
-          label: isRunActive ? 'Pause run tracking' : 'Start run tracking',
+          label: isRunActive
+              ? (widget.isPaused ? 'Resume run tracking' : 'Pause run tracking')
+              : 'Start run tracking',
           child: GestureDetector(
             onTapDown: (_) => setState(() => _isPlayPressed = true),
             onTapUp: (_) => setState(() => _isPlayPressed = false),
@@ -158,7 +162,9 @@ class _RunHudControlsBarState extends State<RunHudControlsBar> {
                 child: Center(
                   child: Icon(
                     isRunActive
-                        ? Icons.pause_rounded
+                        ? (widget.isPaused
+                              ? Icons.play_arrow_rounded
+                              : Icons.pause_rounded)
                         : Icons.play_arrow_rounded,
                     color: palette.onAccent,
                     size: 34,
