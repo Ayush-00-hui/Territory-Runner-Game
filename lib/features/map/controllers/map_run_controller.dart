@@ -79,6 +79,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   bool _isBatterySaverActive = false;
   bool _hasPromptedLowBattery = false;
   bool _wasGpsLost = false;
+  bool _isDisposed = false;
   int _elapsedDurationSeconds = 0;
   int _movingDurationSeconds = 0;
   double _runDistanceKm = 0.0;
@@ -433,7 +434,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
     _startRunTimer();
     _updateGhostTelemetry();
-    WakelockPlus.enable();
+    unawaited(WakelockPlus.enable().catchError((_) {}));
     _appPrefs.triggerRunStartHaptic();
     MapScreenFeature.isRunActiveNotifier.value = true;
     notifyListeners();
@@ -441,7 +442,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
   Map<String, dynamic> stopRun() {
     _runTimer?.cancel();
-    WakelockPlus.disable();
+    unawaited(WakelockPlus.disable().catchError((_) {}));
     _motionSensorService.stop();
     _runRecoveryService.clearRecovery();
     _autoPauseEngine.reset();
@@ -707,10 +708,13 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _accumulatedRunPreviewArea += netArea;
     _accumulatedRunPreviewXp += xp;
 
+    if (_isDisposed) return;
     _appPrefs.triggerLoopClosedHaptic();
     onLoopCaptured?.call(loopEvent, netArea, xp);
-    runPathUpdateNotifier.value++;
-    notifyListeners();
+    if (!_isDisposed) {
+      runPathUpdateNotifier.value++;
+      notifyListeners();
+    }
   }
 
   void _startRunTimer() {
@@ -861,6 +865,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _runTimer?.cancel();
     _elevationPipeline.dispose();
     _motionSensorService.stop();
