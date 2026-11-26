@@ -365,34 +365,28 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	if len(loopWKTs) > 0 {
 		var candidateGeom string
 		err = tx.QueryRow(ctx, `
-			SELECT ST_AsText(ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(geom_array)), 3)))
-			FROM (
-				SELECT array_agg(ST_MakeValid(ST_PolygonFromText(elem, 4326))) AS geom_array
-				FROM unnest($1::text[]) AS elem
-			) sub;
+			SELECT ST_AsText(ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(ST_MakeValid(ST_PolygonFromText(elem, 4326)))), 3)))
+			FROM unnest($1::text[]) AS elem;
 		`, loopWKTs).Scan(&candidateGeom)
 
 		if err == nil && candidateGeom != "" && candidateGeom != "MULTIPOLYGON EMPTY" {
 			// Sovereign Shield Check (T3): Subtract active shielded rival territories from candidate loop
-			var claimableGeom string
-			clipShieldQuery := `
-				SELECT ST_AsText(
-					ST_Multi(ST_CollectionExtract(ST_MakeValid(
-						ST_Difference(
-							ST_GeomFromText($1::text, 4326),
-							COALESCE((
-								SELECT ST_Union(geom)
-								FROM territories
-								WHERE owner_id != $2::text
-								  AND cooldown_until > NOW()
-								  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
-								  AND ST_Intersects(geom, ST_GeomFromText($1::text, 4326))
-							), ST_GeomFromText('POLYGON EMPTY', 4326))
-						)
-					), 3))
-				);
-			`
-			_ = tx.QueryRow(ctx, clipShieldQuery, candidateGeom, run.UserID).Scan(&claimableGeom)
+			var shieldedRivalGeom *string
+			_ = tx.QueryRow(ctx, `
+				SELECT ST_AsText(ST_Union(geom))
+				FROM territories
+				WHERE owner_id != $1::text
+				  AND cooldown_until > NOW()
+				  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
+				  AND ST_Intersects(geom, ST_GeomFromText($2::text, 4326));
+			`, run.UserID, candidateGeom).Scan(&shieldedRivalGeom)
+
+			claimableGeom := candidateGeom
+			if shieldedRivalGeom != nil && *shieldedRivalGeom != "" && *shieldedRivalGeom != "GEOMETRYCOLLECTION EMPTY" && *shieldedRivalGeom != "MULTIPOLYGON EMPTY" {
+				_ = tx.QueryRow(ctx, `
+					SELECT ST_AsText(ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Difference(ST_GeomFromText($1::text, 4326), ST_GeomFromText($2::text, 4326))), 3)));
+				`, candidateGeom, *shieldedRivalGeom).Scan(&claimableGeom)
+			}
 
 			if claimableGeom != "" && claimableGeom != "MULTIPOLYGON EMPTY" {
 				territoryID := fmt.Sprintf("poly_%s_territory", run.UserID)
