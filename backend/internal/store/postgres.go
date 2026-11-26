@@ -379,14 +379,14 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 				SELECT ST_AsText(
 					ST_Multi(ST_CollectionExtract(ST_MakeValid(
 						ST_Difference(
-							ST_GeomFromText($1, 4326),
+							ST_GeomFromText($1::text, 4326),
 							COALESCE((
 								SELECT ST_Union(geom)
 								FROM territories
-								WHERE owner_id != $2
+								WHERE owner_id != $2::text
 								  AND cooldown_until > NOW()
 								  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
-								  AND ST_Intersects(geom, ST_GeomFromText($1, 4326))
+								  AND ST_Intersects(geom, ST_GeomFromText($1::text, 4326))
 							), ST_GeomFromText('POLYGON EMPTY', 4326))
 						)
 					), 3))
@@ -403,27 +403,27 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 
 				_ = tx.QueryRow(ctx, `
 					SELECT ST_AsText(geom), area_sqm, COALESCE(strength, 100.0), COALESCE(last_decayed_at, last_defended_at, updated_at)
-					FROM territories WHERE id = $1;
+					FROM territories WHERE id = $1::text;
 				`, territoryID).Scan(&playerExistingGeom, &playerExistingArea, &playerExistingStrength, &playerLastDecayed)
 
 				// Compute net_new (T2)
 				if playerExistingGeom != nil && *playerExistingGeom != "" {
 					_ = tx.QueryRow(ctx, `
-						SELECT ST_Area(ST_MakeValid(ST_Difference(ST_GeomFromText($1, 4326), ST_GeomFromText($2, 4326)))::geography);
+						SELECT ST_Area(ST_MakeValid(ST_Difference(ST_GeomFromText($1::text, 4326), ST_GeomFromText($2::text, 4326)))::geography);
 					`, claimableGeom, *playerExistingGeom).Scan(&netNewArea)
 				} else {
-					_ = tx.QueryRow(ctx, `SELECT ST_Area(ST_GeomFromText($1, 4326)::geography);`, claimableGeom).Scan(&netNewArea)
+					_ = tx.QueryRow(ctx, `SELECT ST_Area(ST_GeomFromText($1::text, 4326)::geography);`, claimableGeom).Scan(&netNewArea)
 				}
 
 				// Compute stolen area & weak bonus from unshielded rivals (T2, T5)
 				checkRivalsQuery := `
-					SELECT id, owner_id, ST_Area(ST_MakeValid(ST_Intersection(geom, ST_GeomFromText($1, 4326)))::geography),
+					SELECT id, owner_id, ST_Area(ST_MakeValid(ST_Intersection(geom, ST_GeomFromText($1::text, 4326)))::geography),
 					       COALESCE(strength, 100.0), COALESCE(last_decayed_at, last_defended_at, updated_at)
 					FROM territories
-					WHERE owner_id != $2
+					WHERE owner_id != $2::text
 					  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
 					  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
-					  AND ST_Intersects(geom, ST_GeomFromText($1, 4326));
+					  AND ST_Intersects(geom, ST_GeomFromText($1::text, 4326));
 				`
 				if rRows, err := tx.Query(ctx, checkRivalsQuery, claimableGeom, run.UserID); err == nil {
 					for rRows.Next() {
@@ -470,11 +470,21 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 					// Union into player territory with geometry hygiene (T8)
 					unionQuery := `
 						INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, last_decayed_at, cooldown_until, updated_at)
-						VALUES ($1, $2, ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(COALESCE((SELECT geom FROM territories WHERE id = $1), ST_GeomFromText('POLYGON EMPTY', 4326)), ST_GeomFromText($3, 4326))), 3)), ST_Area(ST_MakeValid(ST_Union(COALESCE((SELECT geom FROM territories WHERE id = $1), ST_GeomFromText('POLYGON EMPTY', 4326)), ST_GeomFromText($3, 4326)))::geography), $4, NOW(), NOW(), NOW() + INTERVAL '120 minutes', NOW())
+						VALUES (
+							$1::text,
+							$2::text,
+							ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_GeomFromText($3::text, 4326)), 3)),
+							ST_Area(ST_MakeValid(ST_GeomFromText($3::text, 4326))::geography),
+							$4::double precision,
+							NOW(),
+							NOW(),
+							NOW() + INTERVAL '120 minutes',
+							NOW()
+						)
 						ON CONFLICT (id) DO UPDATE SET
-							geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(territories.geom, ST_GeomFromText($3, 4326))), 3)),
-							area_sqm = ST_Area(ST_MakeValid(ST_Union(territories.geom, ST_MakeValid(ST_GeomFromText($3, 4326))))::geography),
-							strength = $4,
+							geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Union(territories.geom, ST_GeomFromText($3::text, 4326))), 3)),
+							area_sqm = ST_Area(ST_MakeValid(ST_Union(territories.geom, ST_GeomFromText($3::text, 4326)))::geography),
+							strength = $4::double precision,
 							last_defended_at = NOW(),
 							last_decayed_at = NOW(),
 							cooldown_until = NOW() + INTERVAL '120 minutes',
@@ -489,20 +499,20 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 					diffQuery := `
 						UPDATE territories
 						SET
-							geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Difference(geom, ST_GeomFromText($1, 4326))), 3)),
-							area_sqm = ST_Area(ST_MakeValid(ST_Difference(geom, ST_GeomFromText($1, 4326)))::geography),
+							geom = ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Difference(geom, ST_GeomFromText($1::text, 4326))), 3)),
+							area_sqm = ST_Area(ST_MakeValid(ST_Difference(geom, ST_GeomFromText($1::text, 4326)))::geography),
 							updated_at = NOW()
-						WHERE owner_id != $2
+						WHERE owner_id != $2::text
 						  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
 						  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
-						  AND ST_Intersects(geom, ST_GeomFromText($1, 4326));
+						  AND ST_Intersects(geom, ST_GeomFromText($1::text, 4326));
 					`
 					_, _ = tx.Exec(ctx, diffQuery, claimableGeom, run.UserID)
 
 					// Clean up empty or sliver rival territories (< 2 m²)
 					_, _ = tx.Exec(ctx, `
 						DELETE FROM territories
-						WHERE owner_id != $1
+						WHERE owner_id != $1::text
 						  AND (ST_IsEmpty(geom) OR area_sqm < 2.0);
 					`, run.UserID)
 
