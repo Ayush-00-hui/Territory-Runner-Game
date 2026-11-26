@@ -452,7 +452,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 					var defendedOverlapArea float64
 					if playerExistingGeom != nil && *playerExistingGeom != "" {
 						_ = tx.QueryRow(ctx, `
-							SELECT ST_Area(ST_MakeValid(ST_Intersection(ST_GeomFromText($1, 4326), ST_GeomFromText($2, 4326)))::geography);
+							SELECT ST_Area(ST_MakeValid(ST_Intersection(ST_GeomFromText($1::text, 4326), ST_GeomFromText($2::text, 4326)))::geography);
 						`, *playerExistingGeom, claimableGeom).Scan(&defendedOverlapArea)
 					}
 					oldEffectiveStrength := TerritoryDefaultStrength

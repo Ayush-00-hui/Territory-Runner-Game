@@ -153,10 +153,18 @@ jobs:
           go test -v -race -tags=integration ./internal/store/... 2>&1 | tee test_output.log || {
             echo "### Integration Test Failure" >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 100 test_output.log >> $GITHUB_STEP_SUMMARY
+            grep -E -B 2 -A 30 "FAIL:" test_output.log >> $GITHUB_STEP_SUMMARY || tail -n 120 test_output.log >> $GITHUB_STEP_SUMMARY
             echo '```' >> $GITHUB_STEP_SUMMARY
             exit 1
           }
+
+      - name: Upload PostGIS Test Log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgis-test-log
+          path: backend/test_output.log
+          if-no-files-found: ignore
 
   docker_build:
     name: Backend Docker Container Build
