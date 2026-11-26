@@ -5,11 +5,13 @@ import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../../models/runner_profile.dart';
 import '../../../models/territory.dart';
+import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
 
 /// Athlete Weekly Performance Summary Card
 /// Displays real distance, territory area, and run count from the past 7 days.
-/// Zero synthetic preview data.
+/// Uses [RunLogService] for all real completed runs and falls back to [territories]
+/// when run logs are not yet initialized. Zero synthetic preview data.
 class WeeklySummaryCard extends StatelessWidget {
   final RunnerProfile profile;
   final List<Territory> territories;
@@ -22,109 +24,158 @@ class WeeklySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    const distance = Distance();
+    return ValueListenableBuilder(
+      valueListenable: RunLogService().runsNotifier,
+      builder: (context, _, _) {
+        final now = DateTime.now();
+        final todayStart = DateTime(now.year, now.month, now.day);
+        final weekStart = todayStart.subtract(const Duration(days: 6));
+        const distance = Distance();
 
-    // 1. Filter territories captured in the last 7 days
-    final List<Territory> weekTerritories = [];
-    final List<double> dayVolumes = List.filled(7, 0.0);
-    final dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-    double weeklyDistanceKm = 0.0;
-    double weeklyAreaM2 = 0.0;
+        final List<Territory> weekTerritories = [];
+        final List<double> dayVolumes = List.filled(7, 0.0);
+        final dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+        double territoryDistanceKm = 0.0;
+        double territoryAreaM2 = 0.0;
 
-    for (final t in territories) {
-      final diff = now.difference(t.capturedAt).inDays;
-      if (diff >= 0 && diff < 7) {
-        weekTerritories.add(t);
-        weeklyAreaM2 += t.areaSqMeters;
-        final dayIndex = (t.capturedAt.weekday - 1) % 7;
-        dayVolumes[dayIndex] += t.areaSqMeters;
+        for (final t in territories) {
+          final diff = now.difference(t.capturedAt).inDays;
+          if (diff >= 0 && diff < 7) {
+            weekTerritories.add(t);
+            territoryAreaM2 += t.areaSqMeters;
+            final dayIndex = (t.capturedAt.weekday - 1) % 7;
+            dayVolumes[dayIndex] += t.areaSqMeters;
 
-        if (t.polygon.length >= 2) {
-          double meters = 0.0;
-          for (int i = 0; i < t.polygon.length - 1; i++) {
-            meters += distance(t.polygon[i], t.polygon[i + 1]);
+            if (t.polygon.length >= 2) {
+              double meters = 0.0;
+              for (int i = 0; i < t.polygon.length - 1; i++) {
+                meters += distance(t.polygon[i], t.polygon[i + 1]);
+              }
+              meters += distance(t.polygon.last, t.polygon.first);
+              territoryDistanceKm += meters / 1000.0;
+            }
           }
-          meters += distance(t.polygon.last, t.polygon.first);
-          weeklyDistanceKm += meters / 1000.0;
         }
-      }
-    }
 
-    final int weeklyRunsCount = weekTerritories.length;
+        double weeklyDistanceKm = territoryDistanceKm;
+        double weeklyAreaM2 = territoryAreaM2;
+        int weeklyRunsCount = weekTerritories.length;
 
-    final String territoryDisplay = weeklyAreaM2 >= 10000
-        ? '${(weeklyAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
-        : (weeklyAreaM2 > 0 ? '${weeklyAreaM2.toStringAsFixed(0)} m²' : '0 m²');
+        if (RunLogService().isBoxOpen) {
+          final realRuns = RunLogService()
+              .getAllRuns()
+              .where((r) => !r.simulated)
+              .toList();
+          if (realRuns.isNotEmpty) {
+            final weekRuns = realRuns
+                .where((r) => !r.startedAt.isBefore(weekStart))
+                .toList();
+            double loggedKm = 0.0;
+            double loggedArea = 0.0;
+            final List<double> runVolumes = List.filled(7, 0.0);
 
-    final double maxVolume = dayVolumes.fold(1.0, math.max);
-    final bool hasWeeklyData = weeklyRunsCount > 0 || weeklyAreaM2 > 0;
+            for (final r in weekRuns) {
+              loggedKm += r.distanceM / 1000.0;
+              loggedArea += r.claimedAreaSqM;
+              final dayIndex = (r.startedAt.weekday - 1) % 7;
+              runVolumes[dayIndex] += r.claimedAreaSqM > 0
+                  ? r.claimedAreaSqM
+                  : r.distanceM;
+            }
 
-    return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.s20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 3 Big Real Athletic Numbers
-          Row(
+            weeklyDistanceKm = math.max(loggedKm, territoryDistanceKm);
+            weeklyAreaM2 = math.max(loggedArea, territoryAreaM2);
+            weeklyRunsCount = math.max(weekRuns.length, weekTerritories.length);
+            for (int i = 0; i < 7; i++) {
+              dayVolumes[i] = math.max(dayVolumes[i], runVolumes[i]);
+            }
+          }
+        }
+
+        final String territoryDisplay = weeklyAreaM2 >= 10000
+            ? '${(weeklyAreaM2 / 1000000.0).toStringAsFixed(2)} km²'
+            : (weeklyAreaM2 > 0
+                  ? '${weeklyAreaM2.toStringAsFixed(0)} m²'
+                  : '0 m²');
+
+        final double maxVolume = dayVolumes.fold(1.0, math.max);
+        final bool hasWeeklyData = weeklyRunsCount > 0 || weeklyAreaM2 > 0;
+
+        return AppCard(
+          padding: const EdgeInsets.all(AppSpacing.s20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildMetricItem(
-                  label: 'Distance',
-                  value: weeklyDistanceKm > 0
-                      ? weeklyDistanceKm.toStringAsFixed(1)
-                      : '0.0',
-                  unit: 'km',
+              // 3 Big Real Athletic Numbers
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricItem(
+                      label: 'Distance',
+                      value: weeklyDistanceKm > 0
+                          ? weeklyDistanceKm.toStringAsFixed(1)
+                          : '0.0',
+                      unit: 'km',
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 38,
+                    color: AppColors.borderSubtle,
+                  ),
+                  Expanded(
+                    child: _buildMetricItem(
+                      label: 'Territory',
+                      value: territoryDisplay.split(' ').first,
+                      unit: territoryDisplay.split(' ').length > 1
+                          ? territoryDisplay.split(' ').last.toLowerCase()
+                          : 'm²',
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 38,
+                    color: AppColors.borderSubtle,
+                  ),
+                  Expanded(
+                    child: _buildMetricItem(
+                      label: 'Runs',
+                      value: '$weeklyRunsCount',
+                      unit: 'total',
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.s20),
+
+              // 7-Day Clean Bar Chart (Real data only)
+              SizedBox(
+                height: 90,
+                width: double.infinity,
+                child: CustomPaint(
+                  painter: _WeeklyBarChartPainter(
+                    dayVolumes: dayVolumes,
+                    maxVolume: maxVolume,
+                    dayNames: dayNames,
+                    currentDayIndex: (now.weekday - 1) % 7,
+                  ),
                 ),
               ),
-              Container(width: 1, height: 38, color: AppColors.borderSubtle),
-              Expanded(
-                child: _buildMetricItem(
-                  label: 'Territory',
-                  value: territoryDisplay.split(' ').first,
-                  unit: territoryDisplay.split(' ').length > 1
-                      ? territoryDisplay.split(' ').last.toLowerCase()
-                      : 'm²',
+
+              if (!hasWeeklyData) ...[
+                const SizedBox(height: AppSpacing.s12),
+                Center(
+                  child: Text(
+                    'No runs logged this week. Start a run to begin.',
+                    style: AppText.caption.copyWith(color: AppColors.textMuted),
+                  ),
                 ),
-              ),
-              Container(width: 1, height: 38, color: AppColors.borderSubtle),
-              Expanded(
-                child: _buildMetricItem(
-                  label: 'Runs',
-                  value: '$weeklyRunsCount',
-                  unit: 'total',
-                ),
-              ),
+              ],
             ],
           ),
-
-          const SizedBox(height: AppSpacing.s20),
-
-          // 7-Day Clean Bar Chart (Real data only)
-          SizedBox(
-            height: 90,
-            width: double.infinity,
-            child: CustomPaint(
-              painter: _WeeklyBarChartPainter(
-                dayVolumes: dayVolumes,
-                maxVolume: maxVolume,
-                dayNames: dayNames,
-                currentDayIndex: (now.weekday - 1) % 7,
-              ),
-            ),
-          ),
-
-          if (!hasWeeklyData) ...[
-            const SizedBox(height: AppSpacing.s12),
-            Center(
-              child: Text(
-                'No runs logged this week. Start a run to begin.',
-                style: AppText.caption.copyWith(color: AppColors.textMuted),
-              ),
-            ),
-          ],
-        ],
-      ),
+        );
+      },
     );
   }
 

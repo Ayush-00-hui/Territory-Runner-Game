@@ -122,10 +122,9 @@ void main() {
       expect(find.text('Active territory quests'), findsOneWidget);
       expect(find.textContaining('Resets in '), findsOneWidget);
 
-      // Verify quests appear
-      expect(find.text('Daily distance run'), findsOneWidget);
-      expect(find.text('Loop closure'), findsOneWidget);
-      expect(find.text('Territory expansion'), findsOneWidget);
+      // Verify 3 live daily quest progress bars & completion indicators render
+      expect(find.byType(LinearProgressIndicator), findsNWidgets(3));
+      expect(find.textContaining('% complete'), findsNWidgets(3));
 
       // Verify Trophy Case shelf header
       expect(find.text('Trophy case & badges'), findsOneWidget);
@@ -278,9 +277,11 @@ void main() {
           ),
         );
 
-        // Voice Coach controls should be completely absent
+        // Legacy Voice Coach section remains absent; new concise cue toggle is present
         expect(find.text('Voice Coach Audio Cues'), findsNothing);
         expect(find.text('Audio & Haptics'), findsNothing);
+        expect(find.text('Voice coach cues'), findsOneWidget);
+        expect(find.text('Daily run reminder'), findsOneWidget);
 
         // Haptics & battery saver should be present
         expect(find.text('Haptics'), findsOneWidget);
@@ -289,7 +290,7 @@ void main() {
 
         // Tap haptic switch
         final switchTiles = find.byType(Switch);
-        expect(switchTiles, findsNWidgets(6));
+        expect(switchTiles, findsNWidgets(7));
 
         await tester.tap(switchTiles.first);
         await tester.pumpAndSettle();

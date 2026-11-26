@@ -32,10 +32,18 @@ class NotificationService {
 
   final StreamController<String> _attackedTerritoryController =
       StreamController<String>.broadcast();
+  String? _pendingTerritoryId;
 
   /// Stream of territory IDs to navigate and focus on when push alerts are tapped
   Stream<String> get onAttackedTerritoryTapped =>
       _attackedTerritoryController.stream;
+
+  /// Returns and clears any territory focus ID queued before MapScreen mounted.
+  String? consumePendingTerritoryId() {
+    final pending = _pendingTerritoryId;
+    _pendingTerritoryId = null;
+    return pending;
+  }
 
   /// Check if Firebase Core is initialized and available
   bool get isFirebaseAvailable {
@@ -143,6 +151,7 @@ class NotificationService {
         'Navigating to attacked territory: $territoryId',
         tag: 'NotificationService',
       );
+      _pendingTerritoryId = territoryId;
       _attackedTerritoryController.add(territoryId);
     }
   }
@@ -166,6 +175,7 @@ class NotificationService {
 
   /// Dispatches an attacked territory event (for testing or direct simulated alerts)
   void simulateAttackedTerritoryTap(String territoryId) {
+    _pendingTerritoryId = territoryId;
     _attackedTerritoryController.add(territoryId);
   }
 

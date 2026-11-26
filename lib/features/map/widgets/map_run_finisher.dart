@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -9,8 +10,10 @@ import '../../../models/interval_workout.dart';
 import '../../../models/lap_split.dart';
 import '../../../models/run_log_entry.dart';
 import '../../../models/saved_loop.dart';
+import '../../../models/wardrobe_catalog.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/calorie_model_engine.dart';
+import '../../../services/daily_quest_service.dart';
 import '../../../services/exploration_service.dart';
 import '../../../services/firebase_service.dart';
 import '../../../services/motion_sensor_service.dart';
@@ -19,17 +22,18 @@ import '../../../services/run_log_service.dart';
 import '../../../services/saved_loop_service.dart';
 import '../../../services/sync_queue.dart';
 import '../../../services/tiered_achievement_service.dart';
+import '../../../services/training_plan_service.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../gameplay/territory_service.dart';
 import '../controllers/map_run_controller.dart';
 import 'summary_sheet.dart';
 
-/// Handles finishing an active run: enqueuing to encrypted sync queue and presenting SummarySheet.
-void handleFinishRun({
+/// Handles finishing an active run: persisting run rewards, enqueuing sync, and presenting SummarySheet.
+Future<void> handleFinishRun({
   required BuildContext context,
   required MapRunController controller,
   required VoidCallback onTerritoriesUpdated,
-}) {
+}) async {
   if (!controller.isRunActive) return;
   MotionSensorService().stop();
   final motionWindows = List<MotionWindow>.from(MotionSensorService().windows);
@@ -48,12 +52,32 @@ void handleFinishRun({
   final points = summary['points'] as List<LatLng>;
   final laps = summary['laps'] as List<LapSplit>?;
   final savedLoop = summary['savedLoop'] as SavedLoop?;
+  final trainingWorkoutId = summary['trainingWorkoutId'] as String?;
+  final workoutPlan = summary['workoutPlan'] as IntervalWorkoutPlan?;
 
+  final preProfile = TerritoryService().getProfile();
+  final beforeUnlockedIds = WardrobeCatalog.items
+      .where((item) => item.unlockCondition.isUnlocked(preProfile))
+      .map((item) => item.id)
+      .toSet();
+
+  int newExploredBlocks = 0;
   if (!isSimulated) {
-    TerritoryService().defendTerritory(FirebaseService().currentUserId);
-    TerritoryService().addRunDistance(finalDistance);
+    final defended = await TerritoryService().defendTerritory(
+      FirebaseService().currentUserId,
+    );
+    if (defended != null) {
+      unawaited(DailyQuestService().recordDefenseToday());
+    }
+    await TerritoryService().addRunDistance(finalDistance);
     AppPreferences().recordCompletedRunForBodyProfile();
-    ExplorationService().recordVisitedPoints(points);
+    newExploredBlocks = await ExplorationService().recordVisitedPoints(points);
+    if (newExploredBlocks > 0) {
+      await DailyQuestService().recordNewBlocksToday(newExploredBlocks);
+    }
+    if (trainingWorkoutId != null) {
+      await TrainingPlanService().completeWorkout(trainingWorkoutId);
+    }
     TieredAchievementService().evaluateAllAchievements();
     if (savedLoop != null) {
       SavedLoopService().recordLoopRun(savedLoop.id, finalSeconds);
@@ -106,7 +130,7 @@ void handleFinishRun({
     }
   }
 
-  RunLogService().recordRun(
+  await RunLogService().recordRun(
     id: runId,
     startedAt: startTime,
     endedAt: endTime,
@@ -132,6 +156,25 @@ void handleFinishRun({
         : (points.length >= 3 ? 'pending' : 'local_only'),
   );
 
+  int? activeStreakDays;
+  List<DailyQuestProgress> completedQuests = const [];
+  if (!isSimulated) {
+    if (RunLogService().isBoxOpen) {
+      activeStreakDays = RunLogService().computeActiveStreakDays();
+      await TerritoryService().setCurrentStreak(activeStreakDays);
+    }
+    completedQuests = await DailyQuestService().claimCompletedQuests();
+  }
+
+  final updatedProfile = TerritoryService().getProfile();
+  final unlockedGear = WardrobeCatalog.items
+      .where(
+        (item) =>
+            !beforeUnlockedIds.contains(item.id) &&
+            item.unlockCondition.isUnlocked(updatedProfile),
+      )
+      .toList(growable: false);
+
   if (!isSimulated && points.length >= 3) {
     SyncQueueService().enqueueRun(
       idempotencyKey: runId,
@@ -149,29 +192,38 @@ void handleFinishRun({
     );
   }
 
+  if (!context.mounted) return;
+
   SummarySheet.show(
     context: context,
     distanceKm: finalDistance,
     durationSeconds: finalSeconds,
     territoriesClaimed: isSimulated ? 0 : finalTerritories,
-    profile: TerritoryService().getProfile(),
+    profile: updatedProfile,
     coachService: LLMCoachService(),
     routePoints: points,
     samples: samples,
     areaSqMeters: (!isSimulated && finalArea > 0) ? finalArea : null,
     elevationGainMeters: elevationGain,
     ghostResult: summary['ghostResult'] as String?,
-    workoutPlan: summary['workoutPlan'] as IntervalWorkoutPlan?,
+    workoutPlan: workoutPlan,
     workoutExecutions:
         summary['workoutExecutions'] as List<WorkoutPhaseExecution>?,
     laps: laps,
     isSimulated: isSimulated,
+    streakDays: activeStreakDays,
+    newExploredBlocks: newExploredBlocks,
+    completedQuests: completedQuests,
+    unlockedGear: unlockedGear,
+    completedWorkoutTitle: trainingWorkoutId != null ? workoutPlan?.name : null,
   );
 
   // Opt-in flow: prompt for notification permissions only after capturing territory
   if (finalTerritories > 0) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      NotificationService().showPermissionPrimerIfNeeded(context);
+      if (context.mounted) {
+        NotificationService().showPermissionPrimerIfNeeded(context);
+      }
     });
   }
 }

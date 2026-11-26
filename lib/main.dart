@@ -12,6 +12,7 @@ import 'profile_page.dart';
 import 'features/map/map_screen.dart';
 import 'models/territory.dart';
 import 'models/runner_profile.dart';
+import 'models/training_plan.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +26,7 @@ import 'services/api_client.dart';
 import 'services/app_preferences.dart';
 import 'services/avatar_service.dart';
 import 'services/battery_saver_service.dart';
+import 'services/exploration_service.dart';
 import 'services/export_service.dart';
 import 'services/firebase_service.dart';
 import 'services/gallery_saver_service.dart';
@@ -98,6 +100,7 @@ void main() {
       await Hive.openBox<RunnerProfile>('profile');
       await RunRecoveryService().init();
       await RunLogService().init();
+      await ExplorationService().init();
       await AvatarService.instance.init();
 
       // Load package metadata
@@ -353,6 +356,18 @@ class _MainScreenState extends State<MainScreen> {
                       ? HomeScreen(
                           isActive: _selectedIndex == 0,
                           onStartRun: () => _onTabSelected(1),
+                          onStartWorkout: (PlanWorkoutDay day) {
+                            try {
+                              Provider.of<MapRunController>(
+                                context,
+                                listen: false,
+                              ).setWorkoutPlan(
+                                day.intervalPlan,
+                                trainingWorkoutId: day.id,
+                              );
+                            } catch (_) {}
+                            _onTabSelected(1);
+                          },
                           scrollController: _homeScrollController,
                         )
                       : const SizedBox.shrink(),

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 
 import '../core/logging/app_logger.dart';
@@ -8,6 +9,7 @@ import '../models/training_plan.dart';
 /// Local-first service managing training plan enrollments, calendar progressions,
 /// and shame-free workout scheduling.
 class TrainingPlanService {
+  static final ValueNotifier<int> revisionNotifier = ValueNotifier<int>(0);
   static const String boxName = 'training_plans_v1';
   static const String activeEnrollmentKey = 'active_enrollment';
 
@@ -58,6 +60,7 @@ class TrainingPlanService {
       completedWorkoutIds: {},
     );
     await box.put(activeEnrollmentKey, jsonEncode(enrollment.toJson()));
+    revisionNotifier.value++;
     AppLogger.info(
       'Enrolled in training plan: $planId',
       tag: 'TrainingPlanService',
@@ -69,6 +72,7 @@ class TrainingPlanService {
   Future<void> unenroll() async {
     final box = await _getBox();
     await box.delete(activeEnrollmentKey);
+    revisionNotifier.value++;
     AppLogger.info('Unenrolled from training plan', tag: 'TrainingPlanService');
   }
 
@@ -86,6 +90,7 @@ class TrainingPlanService {
 
     final box = await _getBox();
     await box.put(activeEnrollmentKey, jsonEncode(updated.toJson()));
+    revisionNotifier.value++;
     AppLogger.info(
       'Completed plan workout: $workoutId (total: ${updatedSet.length})',
       tag: 'TrainingPlanService',

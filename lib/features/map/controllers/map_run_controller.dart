@@ -15,6 +15,7 @@ import '../../../services/app_preferences.dart';
 import '../../../services/auto_lap_service.dart';
 import '../../../services/auto_pause_engine.dart';
 import '../../../services/battery_saver_service.dart';
+import '../../../services/countdown_audio_service.dart';
 import '../../../services/elevation_incline_service.dart';
 import '../../../services/ghost_runner_service.dart';
 import '../../../services/gps_distance_filter.dart';
@@ -99,7 +100,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   GhostMode _ghostMode = GhostMode.off;
   GhostSelectionResult? _activeGhostResult;
   IntervalWorkoutPlan? _activeWorkoutPlan;
+  String? _activeTrainingWorkoutId;
   IntervalWorkoutTimeline? _workoutTimeline;
+  bool _closureCueSpokenThisLoop = false;
   RunGoal _activeGoal = const RunGoal(
     type: GoalType.distance,
     targetValue: 5.0,
@@ -174,6 +177,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   GhostMode get ghostMode => _ghostMode;
   GhostSelectionResult? get activeGhostResult => _activeGhostResult;
   IntervalWorkoutPlan? get activeWorkoutPlan => _activeWorkoutPlan;
+  String? get activeTrainingWorkoutId => _activeTrainingWorkoutId;
   IntervalWorkoutTimeline? get workoutTimeline => _workoutTimeline;
   RunGoal get activeGoal => _activeGoal;
   bool get isSimulated => _locationService.isSimulationMode;
@@ -347,8 +351,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     notifyListeners();
   }
 
-  void setWorkoutPlan(IntervalWorkoutPlan? plan) {
+  void setWorkoutPlan(IntervalWorkoutPlan? plan, {String? trainingWorkoutId}) {
     _activeWorkoutPlan = plan;
+    _activeTrainingWorkoutId = trainingWorkoutId;
     if (!_isRunActive) {
       _workoutTimeline = null;
       workoutSnapshotNotifier.value = null;
@@ -411,6 +416,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _elapsedDurationSeconds = 0;
     _movingDurationSeconds = 0;
     _goalCompletedAnnounced = false;
+    _closureCueSpokenThisLoop = false;
     _autoPauseEngine.reset();
     _autoLapService.reset();
     savedLoopProgressNotifier.value = null;
@@ -423,6 +429,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       );
       _workoutTimeline!.onSnapshotUpdated = (snapshot) {
         workoutSnapshotNotifier.value = snapshot;
+      };
+      _workoutTimeline!.onPhaseChanged = (phase) {
+        unawaited(CountdownAudioService().speakCue('${phase.name} interval'));
       };
       workoutSnapshotNotifier.value = _workoutTimeline!.getSnapshot(
         currentDistanceM: 0.0,
@@ -467,6 +476,8 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
     _isRunActive = false;
     MapScreenFeature.isRunActiveNotifier.value = false;
+    final completedTrainingWorkoutId = _activeTrainingWorkoutId;
+    _activeTrainingWorkoutId = null;
 
     String? ghostSummary;
     if (_activeGhostResult?.matchedRun != null) {
@@ -508,6 +519,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
       'ghostResult': ghostSummary,
       'ghostRun': _activeGhostResult?.matchedRun,
       'workoutPlan': _activeWorkoutPlan,
+      'trainingWorkoutId': completedTrainingWorkoutId,
       'workoutExecutions': _workoutTimeline?.executions,
       'laps': _autoLapService.completedLaps,
       'savedLoop': _activeSavedLoop,
@@ -595,11 +607,18 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     }
 
     if (_isRunActive && !_isAutoPaused && !_isManualPaused) {
-      _autoLapService.processFix(
+      final completedLap = _autoLapService.processFix(
         totalDistanceMeters: _runDistanceKm * 1000.0,
         movingDurationSeconds: _movingDurationSeconds,
         totalElevationGainMeters: _elevationPipeline.cumulativeGainMeters,
       );
+      if (completedLap != null) {
+        unawaited(
+          CountdownAudioService().speakCue(
+            'Kilometer ${completedLap.lapNumber} split in ${completedLap.formattedDuration}',
+          ),
+        );
+      }
       if (_activeSavedLoop != null) {
         final previousProg = savedLoopProgressNotifier.value;
         final prog = _savedLoopService.computeProgress(
@@ -653,6 +672,14 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
               _distanceToClosureMeters = candidate.distanceMeters;
               _proximityToClosure = candidate.proximity;
               _nearestClosurePoint = candidate.candidatePoint;
+              if (candidate.proximity >= 0.80 && !_closureCueSpokenThisLoop) {
+                _closureCueSpokenThisLoop = true;
+                unawaited(
+                  CountdownAudioService().speakCue(
+                    'Close to loop start, ${candidate.distanceMeters.round()} meters to claim territory',
+                  ),
+                );
+              }
             } else {
               _distanceToClosureMeters = null;
               _proximityToClosure = null;
@@ -691,6 +718,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _distanceToClosureMeters = null;
     _proximityToClosure = null;
     _nearestClosurePoint = null;
+    _closureCueSpokenThisLoop = false;
     final area = loopEvent.areaSqMeters;
 
     _territoriesClaimedThisRun++;

@@ -3,7 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
+import '../../../models/run_log_entry.dart';
 import '../../../models/territory.dart';
+import '../../../services/app_preferences.dart';
+import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
 import '../../gameplay/territory_service.dart';
 import '../../history/widgets/run_share_card_modal.dart';
@@ -169,139 +172,387 @@ class RecentActivityFeed extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (territories.isEmpty) {
-      return AppCard(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.s24),
-        child: EmptyState(
-          icon: Icons.directions_run_rounded,
-          title: 'No runs yet',
-          message:
-              'Lace up your shoes and run a closed loop to claim territory.',
-          actionLabel: 'Start run',
-          onAction: onStartRun,
-        ),
-      );
+  String _formatDuration(int seconds) {
+    final mins = seconds ~/ 60;
+    final secs = seconds % 60;
+    if (mins >= 60) {
+      final hrs = mins ~/ 60;
+      final rem = mins % 60;
+      return '${hrs}h ${rem}m';
     }
+    return '${mins}m ${secs.toString().padLeft(2, '0')}s';
+  }
 
-    final recentItems = territories.reversed.take(5).toList();
+  String _runTitle(RunLogEntry entry) {
+    if (entry.title != null && entry.title!.trim().isNotEmpty) {
+      return entry.title!.trim();
+    }
+    if (entry.claimedAreaSqM > 0) return 'Closed loop';
+    if (entry.activityType == 'walking') return 'Territory walk';
+    if (entry.activityType == 'cycling') return 'Explore ride';
+    return 'Outdoor run';
+  }
 
-    return Column(
-      children: recentItems.map((territory) {
-        final areaDisplay = territory.areaSqMeters >= 10000
-            ? '${(territory.areaSqMeters / 1000000.0).toStringAsFixed(2)} km²'
-            : '${territory.areaSqMeters.toStringAsFixed(0)} m²';
+  void _showRunEntryDetail(
+    BuildContext context,
+    RunLogEntry entry,
+    List<LatLng> routePoints,
+  ) {
+    final km = entry.distanceM / 1000.0;
+    final areaDisplay = AppPreferences().formatArea(entry.claimedAreaSqM);
 
-        return AppCard(
-          padding: EdgeInsets.zero,
-          onTap: () {
-            _showRunDetail(context, territory);
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.s14),
-            child: Row(
-              children: [
-                // Mini polygon preview container
-                Container(
-                  height: 56,
-                  width: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: AppRadius.br12,
-                    border: Border.all(
-                      color: AppColors.borderSubtle,
-                      width: 1.0,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: AppRadius.br12,
-                    child: CustomPaint(
-                      painter: _MiniPolygonPainter(points: territory.polygon),
-                    ),
+    AppSheet.show(
+      context: context,
+      builder: (ctx) => AppSheet(
+        title: _runTitle(entry),
+        subtitle: _formatDate(entry.startedAt),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 160,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: AppRadius.br16,
+                border: Border.all(color: AppColors.borderSubtle, width: 1.0),
+              ),
+              child: ClipRRect(
+                borderRadius: AppRadius.br16,
+                child: CustomPaint(
+                  painter: _MiniPolygonPainter(
+                    points: routePoints,
+                    closePath: entry.claimedAreaSqM > 0,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.s14),
-
-                // Run info
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s16),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.s16),
+              decoration: BoxDecoration(
+                color: AppColors.surface2,
+                borderRadius: AppRadius.br16,
+                border: Border.all(color: AppColors.borderSubtle, width: 1.0),
+              ),
+              child: Column(
+                children: [
+                  _metricRow('Distance', '${km.toStringAsFixed(2)} km'),
+                  const Divider(color: AppColors.borderSubtle, height: 16),
+                  _metricRow(
+                    'Moving time',
+                    _formatDuration(entry.movingSeconds),
+                  ),
+                  const Divider(color: AppColors.borderSubtle, height: 16),
+                  _metricRow(
+                    'Claimed area',
+                    entry.claimedAreaSqM > 0 ? areaDisplay : 'Open route',
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.s20),
+            Row(
+              children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  child: SecondaryButton(
+                    label: 'Share card',
+                    icon: Icons.share_rounded,
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      final profile = TerritoryService().getProfile();
+                      RunShareCardModal.show(
+                        context: context,
+                        distanceKm: km,
+                        durationSeconds: entry.movingSeconds,
+                        areaSqMeters: entry.claimedAreaSqM,
+                        points: routePoints,
+                        callsign: profile.username,
+                        faction: profile.faction,
+                        capturedAt: entry.startedAt,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.s12),
+                Expanded(
+                  child: PrimaryButton(
+                    label: 'Done',
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<List<RunLogEntry>>(
+      valueListenable: RunLogService().runsNotifier,
+      builder: (context, _, _) {
+        final realRuns = RunLogService().isBoxOpen
+            ? RunLogService()
+                  .getAllRuns()
+                  .where((r) => !r.simulated)
+                  .take(5)
+                  .toList()
+            : const <RunLogEntry>[];
+
+        if (realRuns.isNotEmpty) {
+          return Column(
+            children: realRuns.map((entry) {
+              final routePoints = entry.samples
+                  .map((s) => LatLng(s.lat, s.lng))
+                  .toList(growable: false);
+              final double km = entry.distanceM / 1000.0;
+              final bool hasArea = entry.claimedAreaSqM > 0;
+              final String badgeText = hasArea
+                  ? '+${AppPreferences().formatArea(entry.claimedAreaSqM)}'
+                  : '${km.toStringAsFixed(2)} km';
+
+              return AppCard(
+                padding: EdgeInsets.zero,
+                onTap: () => _showRunEntryDetail(context, entry, routePoints),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.s14),
+                  child: Row(
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              'Closed loop',
-                              style: AppText.titleSmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      Container(
+                        height: 56,
+                        width: 56,
+                        decoration: BoxDecoration(
+                          color: AppColors.surface2,
+                          borderRadius: AppRadius.br12,
+                          border: Border.all(
+                            color: AppColors.borderSubtle,
+                            width: 1.0,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: AppRadius.br12,
+                          child: CustomPaint(
+                            painter: _MiniPolygonPainter(
+                              points: routePoints,
+                              closePath: hasArea,
                             ),
                           ),
-                          const SizedBox(width: AppSpacing.s8),
-                          Text(
-                            _formatDate(territory.capturedAt),
-                            style: AppText.caption,
-                          ),
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.s6),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
+                      const SizedBox(width: AppSpacing.s14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    _runTitle(entry),
+                                    style: AppText.titleSmall,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s8),
+                                Text(
+                                  _formatDate(entry.startedAt),
+                                  style: AppText.caption,
+                                ),
+                              ],
                             ),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentContainer,
-                              borderRadius: AppRadius.br8,
-                              border: Border.all(
-                                color: AppColors.accent.withValues(alpha: 0.3),
-                              ),
+                            const SizedBox(height: AppSpacing.s6),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 7,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accentContainer,
+                                    borderRadius: AppRadius.br8,
+                                    border: Border.all(
+                                      color: AppColors.accent.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    badgeText,
+                                    style: AppText.micro.copyWith(
+                                      color: AppColors.accent,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: AppSpacing.s8),
+                                Flexible(
+                                  child: Text(
+                                    '${km.toStringAsFixed(1)} km · ${_formatDuration(entry.movingSeconds)}',
+                                    style: AppText.bodySmall,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                            child: Text(
-                              '+$areaDisplay',
-                              style: AppText.labelSmall.copyWith(
-                                color: AppColors.accent,
-                                fontSize: 9.5,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: AppSpacing.s8),
-                          Flexible(
-                            child: Text(
-                              '${territory.polygon.length} pts',
-                              style: AppText.bodySmall,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.chevron_right_rounded,
+                        color: AppColors.textMuted,
+                        size: 20,
                       ),
                     ],
                   ),
                 ),
+              );
+            }).toList(),
+          );
+        }
 
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.textMuted,
-                  size: 20,
-                ),
-              ],
+        if (territories.isEmpty) {
+          return AppCard(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.s24),
+            child: EmptyState(
+              icon: Icons.directions_run_rounded,
+              title: 'No runs yet',
+              message: 'Lace up your shoes and run a closed loop to claim territory.',
+              actionLabel: 'Start run',
+              onAction: onStartRun,
             ),
-          ),
+          );
+        }
+
+        final recentItems = territories.reversed.take(5).toList();
+
+        return Column(
+          children: recentItems.map((territory) {
+            final areaDisplay = territory.areaSqMeters >= 10000
+                ? '${(territory.areaSqMeters / 1000000.0).toStringAsFixed(2)} km²'
+                : '${territory.areaSqMeters.toStringAsFixed(0)} m²';
+
+            return AppCard(
+              padding: EdgeInsets.zero,
+              onTap: () {
+                _showRunDetail(context, territory);
+              },
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.s14),
+                child: Row(
+                  children: [
+                    // Mini polygon preview container
+                    Container(
+                      height: 56,
+                      width: 56,
+                      decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        borderRadius: AppRadius.br12,
+                        border: Border.all(
+                          color: AppColors.borderSubtle,
+                          width: 1.0,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: AppRadius.br12,
+                        child: CustomPaint(
+                          painter: _MiniPolygonPainter(
+                            points: territory.polygon,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s14),
+
+                    // Run info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'Closed loop',
+                                  style: AppText.titleSmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.s8),
+                              Text(
+                                _formatDate(territory.capturedAt),
+                                style: AppText.caption,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: AppSpacing.s6),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentContainer,
+                                  borderRadius: AppRadius.br8,
+                                  border: Border.all(
+                                    color: AppColors.accent.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                  ),
+                                ),
+                                child: Text(
+                                  '+$areaDisplay',
+                                  style: AppText.micro.copyWith(
+                                    color: AppColors.accent,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.s8),
+                              Flexible(
+                                child: Text(
+                                  '${territory.polygon.length} pts',
+                                  style: AppText.bodySmall,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 }
 
 class _MiniPolygonPainter extends CustomPainter {
   final List<LatLng> points;
+  final bool closePath;
 
-  _MiniPolygonPainter({required this.points});
+  _MiniPolygonPainter({required this.points, this.closePath = true});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -353,13 +604,15 @@ class _MiniPolygonPainter extends CustomPainter {
         path.lineTo(x, y);
       }
     }
-    path.close();
+    if (closePath) {
+      path.close();
 
-    // Fill with territoryMineFill
-    final fillPaint = Paint()
-      ..color = AppColors.territoryMineFill
-      ..style = PaintingStyle.fill;
-    canvas.drawPath(path, fillPaint);
+      // Fill with territoryMineFill
+      final fillPaint = Paint()
+        ..color = AppColors.territoryMineFill
+        ..style = PaintingStyle.fill;
+      canvas.drawPath(path, fillPaint);
+    }
 
     // Stroke with solid accent border
     final strokePaint = Paint()
@@ -371,5 +624,5 @@ class _MiniPolygonPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _MiniPolygonPainter oldDelegate) =>
-      oldDelegate.points != points;
+      oldDelegate.points != points || oldDelegate.closePath != closePath;
 }

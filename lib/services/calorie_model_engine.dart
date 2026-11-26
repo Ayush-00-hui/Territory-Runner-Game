@@ -63,7 +63,7 @@ class CalorieModelEngine {
 
   /// Cryptographic SHA-256 hash expected for assets/models/calorie_trees.json
   static const String expectedTreesSha256 =
-      '6ef0429cf529b8267a635631ffec9e3bab027423f1376519739eda47071037e4';
+      'd00dfa749a3b306c6ff22a738573782b012b723f2006e4b0014a90360615da84';
 
   static const String defaultTreesAssetPath =
       'assets/models/calorie_trees.json';

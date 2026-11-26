@@ -7,7 +7,10 @@ import '../../../models/interval_workout.dart';
 import '../../../models/lap_split.dart';
 import '../../../models/run_log_entry.dart';
 import '../../../models/runner_profile.dart';
+import '../../../models/wardrobe_catalog.dart';
 import '../../../services/app_preferences.dart';
+import '../../../services/avatar_service.dart';
+import '../../../services/daily_quest_service.dart';
 import '../../../services/elevation_splits_service.dart';
 import '../../../services/gallery_saver_service.dart';
 import '../../../services/saved_loop_service.dart';
@@ -42,6 +45,11 @@ class SummarySheet extends StatefulWidget {
   final List<LapSplit>? laps;
   final bool enableAutoSave;
   final bool isSimulated;
+  final int? streakDays;
+  final int newExploredBlocks;
+  final List<DailyQuestProgress> completedQuests;
+  final List<WardrobeItem> unlockedGear;
+  final String? completedWorkoutTitle;
 
   const SummarySheet({
     super.key,
@@ -61,6 +69,11 @@ class SummarySheet extends StatefulWidget {
     this.laps,
     this.enableAutoSave = true,
     this.isSimulated = false,
+    this.streakDays,
+    this.newExploredBlocks = 0,
+    this.completedQuests = const [],
+    this.unlockedGear = const [],
+    this.completedWorkoutTitle,
   });
 
   static Future<void> show({
@@ -80,6 +93,11 @@ class SummarySheet extends StatefulWidget {
     List<WorkoutPhaseExecution>? workoutExecutions,
     List<LapSplit>? laps,
     bool isSimulated = false,
+    int? streakDays,
+    int newExploredBlocks = 0,
+    List<DailyQuestProgress> completedQuests = const [],
+    List<WardrobeItem> unlockedGear = const [],
+    String? completedWorkoutTitle,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -104,6 +122,11 @@ class SummarySheet extends StatefulWidget {
         workoutExecutions: workoutExecutions,
         laps: laps,
         isSimulated: isSimulated,
+        streakDays: streakDays,
+        newExploredBlocks: newExploredBlocks,
+        completedQuests: completedQuests,
+        unlockedGear: unlockedGear,
+        completedWorkoutTitle: completedWorkoutTitle,
       ),
     );
   }
@@ -620,6 +643,22 @@ class _SummarySheetState extends State<SummarySheet>
               ),
             ],
 
+            if (!widget.isSimulated &&
+                ((widget.streakDays ?? 0) > 0 ||
+                    widget.newExploredBlocks > 0 ||
+                    widget.completedQuests.isNotEmpty ||
+                    widget.unlockedGear.isNotEmpty ||
+                    widget.completedWorkoutTitle != null)) ...[
+              const SizedBox(height: AppSpacing.s14),
+              _PostRunMilestonesCard(
+                streakDays: widget.streakDays,
+                newExploredBlocks: widget.newExploredBlocks,
+                completedQuests: widget.completedQuests,
+                unlockedGear: widget.unlockedGear,
+                completedWorkoutTitle: widget.completedWorkoutTitle,
+              ),
+            ],
+
             if (!widget.isSimulated && effectivePoints.length >= 4) ...[
               const SizedBox(height: AppSpacing.s14),
               _SaveLoopCard(
@@ -896,6 +935,190 @@ class _SaveLoopCardState extends State<_SaveLoopCard> {
               onPressed: _isSaving ? null : _handleSave,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PostRunMilestonesCard extends StatefulWidget {
+  final int? streakDays;
+  final int newExploredBlocks;
+  final List<DailyQuestProgress> completedQuests;
+  final List<WardrobeItem> unlockedGear;
+  final String? completedWorkoutTitle;
+
+  const _PostRunMilestonesCard({
+    this.streakDays,
+    this.newExploredBlocks = 0,
+    this.completedQuests = const [],
+    this.unlockedGear = const [],
+    this.completedWorkoutTitle,
+  });
+
+  @override
+  State<_PostRunMilestonesCard> createState() => _PostRunMilestonesCardState();
+}
+
+class _PostRunMilestonesCardState extends State<_PostRunMilestonesCard> {
+  final Set<String> _equippedIds = {};
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.s14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.emoji_events_rounded,
+                size: 18,
+                color: AppColors.accent,
+              ),
+              const SizedBox(width: AppSpacing.s8),
+              Text(
+                'Milestones & unlocks',
+                style: AppText.labelLarge.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.s10),
+          Wrap(
+            spacing: AppSpacing.s8,
+            runSpacing: AppSpacing.s8,
+            children: [
+              if ((widget.streakDays ?? 0) > 0)
+                _milestoneBadge(
+                  icon: Icons.local_fire_department_rounded,
+                  color: AppColors.warning,
+                  label: '${widget.streakDays}d active streak',
+                ),
+              if (widget.newExploredBlocks > 0)
+                _milestoneBadge(
+                  icon: Icons.grid_on_rounded,
+                  color: AppColors.info,
+                  label: '+${widget.newExploredBlocks} explored blocks',
+                ),
+              if (widget.completedWorkoutTitle != null)
+                _milestoneBadge(
+                  icon: Icons.check_circle_rounded,
+                  color: AppColors.accent,
+                  label: 'Completed ${widget.completedWorkoutTitle}',
+                ),
+              for (final q in widget.completedQuests)
+                _milestoneBadge(
+                  icon: Icons.bolt_rounded,
+                  color: AppColors.accent,
+                  label: '${q.title} (+${q.xpReward} XP)',
+                ),
+            ],
+          ),
+          if (widget.unlockedGear.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.s12),
+            const Divider(height: 1, color: AppColors.borderSubtle),
+            const SizedBox(height: AppSpacing.s10),
+            for (final item in widget.unlockedGear)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+                child: Row(
+                  children: [
+                    Container(
+                      height: 32,
+                      width: 32,
+                      decoration: BoxDecoration(
+                        color: item.primaryColor.withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: item.accentColor),
+                      ),
+                      child: Icon(
+                        item.category.icon,
+                        size: 16,
+                        color: item.accentColor,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Unlocked: ${item.name}',
+                            style: AppText.labelMedium.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            item.unlockCondition.label,
+                            style: AppText.caption.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SecondaryButton(
+                      label: _equippedIds.contains(item.id)
+                          ? 'Equipped'
+                          : 'Equip',
+                      isFullWidth: false,
+                      height: 34,
+                      onPressed: _equippedIds.contains(item.id)
+                          ? null
+                          : () async {
+                              await AvatarService.instance.equip(
+                                item.category,
+                                item.id,
+                              );
+                              if (!mounted || !context.mounted) return;
+                              setState(() => _equippedIds.add(item.id));
+                              AppToast.show(
+                                context,
+                                '${item.name} equipped to runner',
+                              );
+                            },
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _milestoneBadge({
+    required IconData icon,
+    required Color color,
+    required String label,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s10,
+        vertical: AppSpacing.s4,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: AppRadius.brFull,
+        border: Border.all(color: AppColors.borderSubtle),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: AppSpacing.s4),
+          Text(
+            label,
+            style: AppText.micro.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

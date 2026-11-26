@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -9,17 +10,39 @@ import 'privacy_zone_service.dart';
 /// Local-only service managing runner geographic exploration and fog-of-war grid cells.
 /// All cell coordinates and visited timestamps remain 100% on the local device.
 class ExplorationService {
+  static final ExplorationService _instance = ExplorationService._internal();
   static const String boxName = 'exploration_cells_v1';
   static const double cellSizeDegrees = 0.001; // ~100m grid cell resolution
 
   final PrivacyZoneService _privacyZoneService;
   Box<int>? _box;
+  final ValueNotifier<int> revisionNotifier = ValueNotifier<int>(0);
 
-  ExplorationService({PrivacyZoneService? privacyZoneService})
+  factory ExplorationService({PrivacyZoneService? privacyZoneService}) {
+    if (privacyZoneService != null) {
+      return ExplorationService._custom(privacyZoneService: privacyZoneService);
+    }
+    return _instance;
+  }
+
+  ExplorationService._internal() : _privacyZoneService = PrivacyZoneService();
+
+  ExplorationService._custom({PrivacyZoneService? privacyZoneService})
     : _privacyZoneService = privacyZoneService ?? PrivacyZoneService();
+
+  bool get isBoxReady =>
+      (_box != null && _box!.isOpen) || Hive.isBoxOpen(boxName);
+
+  Future<void> init() async {
+    await _getBox();
+  }
 
   Future<Box<int>> _getBox() async {
     if (_box != null && _box!.isOpen) return _box!;
+    if (Hive.isBoxOpen(boxName)) {
+      _box = Hive.box<int>(boxName);
+      return _box!;
+    }
     _box = await Hive.openBox<int>(boxName);
     return _box!;
   }
@@ -89,12 +112,54 @@ class ExplorationService {
     }
 
     if (newlyDiscovered > 0) {
+      revisionNotifier.value++;
       AppLogger.info(
         'Exploration: discovered $newlyDiscovered new grid cells (total: ${box.length})',
         tag: 'ExplorationService',
       );
     }
     return newlyDiscovered;
+  }
+
+  /// Synchronously returns square grid polygons for explored 100m blocks inside [minLat..maxLat, minLng..maxLng].
+  /// Returns empty list if the local Hive box is not yet open.
+  List<List<LatLng>> getExploredCellPolygonsInBounds({
+    required double minLat,
+    required double maxLat,
+    required double minLng,
+    required double maxLng,
+    int maxCells = 450,
+  }) {
+    if (!isBoxReady) return const [];
+    final box = _box ?? Hive.box<int>(boxName);
+    final List<List<LatLng>> polygons = [];
+
+    for (final rawKey in box.keys) {
+      final parts = rawKey.toString().split('_');
+      if (parts.length != 2) continue;
+      final x = int.tryParse(parts[0]);
+      final y = int.tryParse(parts[1]);
+      if (x == null || y == null) continue;
+
+      final lat0 = x * cellSizeDegrees;
+      final lng0 = y * cellSizeDegrees;
+      final lat1 = lat0 + cellSizeDegrees;
+      final lng1 = lng0 + cellSizeDegrees;
+
+      if (lat1 < minLat || lat0 > maxLat || lng1 < minLng || lng0 > maxLng) {
+        continue;
+      }
+
+      polygons.add([
+        LatLng(lat0, lng0),
+        LatLng(lat1, lng0),
+        LatLng(lat1, lng1),
+        LatLng(lat0, lng1),
+      ]);
+      if (polygons.length >= maxCells) break;
+    }
+
+    return polygons;
   }
 
   /// Computes the exploration density percentage within a radius around the runner.

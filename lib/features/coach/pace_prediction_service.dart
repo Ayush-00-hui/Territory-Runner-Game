@@ -5,6 +5,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../core/logging/app_logger.dart';
+import '../../models/run_log_entry.dart';
 import '../../models/runner_profile.dart';
 
 /// A single completed past run session used for sequential feature extraction
@@ -472,5 +473,30 @@ class PacePredictionService {
       return 'Developing Runner';
     }
     return 'Beginner Strider';
+  }
+
+  /// Converts persisted [RunLogEntry] sessions into sequential [PastRun] inputs
+  /// ordered oldest-to-newest for adaptive pace & distance inference.
+  static List<PastRun> pastRunsFromLog(List<RunLogEntry> entries) {
+    final valid =
+        entries
+            .where(
+              (e) =>
+                  !e.simulated &&
+                  e.distanceM >= 300.0 &&
+                  e.movingSeconds >= 120,
+            )
+            .toList()
+          ..sort((a, b) => a.startedAt.compareTo(b.startedAt));
+    return valid.map((e) {
+      final distKm = e.distanceM / 1000.0;
+      final paceMinKm = ((e.movingSeconds / 60.0) / distKm).clamp(2.5, 18.0);
+      return PastRun(
+        distanceKm: distKm,
+        paceMinKm: paceMinKm,
+        elevationGainM: e.elevationGainM ?? 0.0,
+        timestamp: e.startedAt,
+      );
+    }).toList();
   }
 }

@@ -98,7 +98,7 @@ def compute_ground_truth_burn_rate(
     return max(rmr, burn_rate)
 
 
-def generate_synthetic_surrogate_dataset(n_samples: int = 30000) -> pd.DataFrame:
+def generate_synthetic_surrogate_dataset(n_samples: int = 120000) -> pd.DataFrame:
     """
     Generates realistic kinematic samples with Phase 2 sensor noise models
     and natural biological variation in running economy.
@@ -110,23 +110,23 @@ def generate_synthetic_surrogate_dataset(n_samples: int = 30000) -> pd.DataFrame
         mass_kg = float(np.random.normal(72.0, 16.0))
         mass_kg = max(35.0, min(140.0, mass_kg))
 
-        # Activity regime: 5% stationary, 30% walking, 50% jogging/running, 15% fast running
-        regime = np.random.choice(["rest", "walk", "run", "fast"], p=[0.05, 0.30, 0.50, 0.15])
+        # Activity regime: 8% stationary/rest, 32% walking, 45% jogging/running, 15% fast running
+        regime = np.random.choice(["rest", "walk", "run", "fast"], p=[0.08, 0.32, 0.45, 0.15])
         if regime == "rest":
             true_speed = 0.0
             true_cadence = 0.0
             true_grade = 0.0
         elif regime == "walk":
-            true_speed = float(np.random.uniform(2.5, 6.5))
-            true_cadence = float(np.random.normal(115.0, 8.0))
-            true_grade = float(np.random.uniform(-0.12, 0.12))
+            true_speed = float(np.random.uniform(2.0, 6.5))
+            true_cadence = float(np.random.normal(112.0 + 1.5 * true_speed, 7.0))
+            true_grade = float(np.random.uniform(-0.14, 0.14))
         elif regime == "run":
-            true_speed = float(np.random.uniform(6.5, 14.0))
-            true_cadence = float(np.random.normal(140.0 + 2.8 * true_speed, 7.0))
-            true_grade = float(np.random.uniform(-0.15, 0.15))
+            true_speed = float(np.random.uniform(6.5, 14.5))
+            true_cadence = float(np.random.normal(140.0 + 2.8 * true_speed, 6.5))
+            true_grade = float(np.random.uniform(-0.16, 0.16))
         else:  # fast
-            true_speed = float(np.random.uniform(14.0, 22.0))
-            true_cadence = float(np.random.normal(170.0 + 1.2 * true_speed, 6.0))
+            true_speed = float(np.random.uniform(14.5, 22.0))
+            true_cadence = float(np.random.normal(170.0 + 1.2 * true_speed, 5.5))
             true_grade = float(np.random.uniform(-0.08, 0.08))
 
         true_grade = max(-0.20, min(0.20, true_grade))
@@ -140,24 +140,21 @@ def generate_synthetic_surrogate_dataset(n_samples: int = 30000) -> pd.DataFrame
             cadence_spm=true_cadence,
         )
 
-        # Injected Phase 2 Sensor Noise
+        # Injected Phase 2 Sensor Noise (reduced at stationary/rest)
         if true_speed > 0.2:
-            # GPS Doppler speed noise (sigma ~ 0.35 km/h)
-            meas_speed = max(0.0, true_speed + float(np.random.normal(0.0, 0.35)))
-            # Filtered elevation grade noise (sigma ~ 0.012)
-            meas_grade = max(-0.20, min(0.20, true_grade + float(np.random.normal(0.0, 0.012))))
-            # Accelerometer cadence jitter (sigma ~ 4 SPM)
-            meas_cadence = max(0.0, min(240.0, true_cadence + float(np.random.normal(0.0, 4.0))))
+            meas_speed = max(0.0, true_speed + float(np.random.normal(0.0, 0.25)))
+            meas_grade = max(-0.20, min(0.20, true_grade + float(np.random.normal(0.0, 0.008))))
+            meas_cadence = max(0.0, min(240.0, true_cadence + float(np.random.normal(0.0, 3.5))))
+            # Realistic biological inter-individual variation (+/- 5.5% in VO2 economy)
+            economy_factor = float(np.random.normal(1.0, 0.055))
+            noisy_target = max(compute_rmr_kcal_per_min(mass_kg), gt_burn_rate * economy_factor)
         else:
             meas_speed = 0.0
             meas_grade = 0.0
             meas_cadence = 0.0
+            noisy_target = gt_burn_rate * float(np.random.normal(1.0, 0.02))
 
         climb_rate = max(0.0, meas_grade * (meas_speed * 1000.0 / 60.0))
-
-        # Biological inter-individual variation: running economy +/- 10% (RER, ground contact, wind)
-        economy_factor = float(np.random.normal(1.0, 0.07))
-        noisy_target = max(compute_rmr_kcal_per_min(mass_kg), gt_burn_rate * economy_factor)
 
         rows.append({
             "body_mass_kg": mass_kg,
@@ -174,13 +171,13 @@ def generate_synthetic_surrogate_dataset(n_samples: int = 30000) -> pd.DataFrame
     return pd.DataFrame(rows)
 
 
-def convert_lgbm_node(node: Dict[str, Any], scale: float = 1.0) -> Dict[str, Any]:
+def convert_lgbm_node(node: Dict[str, Any], offset: float = 0.0) -> Dict[str, Any]:
     if "leaf_value" in node:
-        return {"leaf_value": float(node["leaf_value"]) * scale}
+        return {"leaf_value": float(node["leaf_value"]) + offset}
     split_feature = int(node.get("split_feature", -1))
     threshold = float(node.get("threshold", 0.0))
-    left_child = convert_lgbm_node(node.get("left_child", {}), scale)
-    right_child = convert_lgbm_node(node.get("right_child", {}), scale)
+    left_child = convert_lgbm_node(node.get("left_child", {}), offset)
+    right_child = convert_lgbm_node(node.get("right_child", {}), offset)
     return {
         "split_feature": split_feature,
         "threshold": threshold,
@@ -190,53 +187,77 @@ def convert_lgbm_node(node: Dict[str, Any], scale: float = 1.0) -> Dict[str, Any
 
 
 def train_and_export():
-    print("[*] Generating synthetic sensor-noisy kinematic dataset (N = 30,000)...")
-    df = generate_synthetic_surrogate_dataset(n_samples=30000)
+    print("[*] Generating stratified physiological dataset (N = 120,000)...")
+    df = generate_synthetic_surrogate_dataset(n_samples=120000)
 
-    # 80/20 train/test split
-    train_mask = np.random.rand(len(df)) < 0.8
-    train_df = df[train_mask].reset_index(drop=True)
-    test_df = df[~train_mask].reset_index(drop=True)
+    # 70% train / 15% conformal calibration / 15% held-out test split
+    r = np.random.rand(len(df))
+    train_df = df[r < 0.70].reset_index(drop=True)
+    cal_df = df[(r >= 0.70) & (r < 0.85)].reset_index(drop=True)
+    test_df = df[r >= 0.85].reset_index(drop=True)
 
     X_train = train_df[FEATURE_NAMES].values
     y_train = train_df["target_burn_rate"].values
 
+    X_cal = cal_df[FEATURE_NAMES].values
+    y_cal = cal_df["gt_burn_rate"].values
+
     X_test = test_df[FEATURE_NAMES].values
     y_test_gt = test_df["gt_burn_rate"].values
-    y_test_target = test_df["target_burn_rate"].values
 
-    print(f"[+] Dataset created: {len(train_df)} train samples, {len(test_df)} test samples.")
+    print(f"[+] Dataset created: {len(train_df)} train, {len(cal_df)} cal, {len(test_df)} test samples.")
 
-    print("[*] Training Monotone-Constrained Surrogate Model (P50)...")
-    base_model = lgb.LGBMRegressor(
-        objective="regression",
-        n_estimators=35,
-        max_depth=4,
-        num_leaves=12,
-        min_child_samples=20,
-        learning_rate=0.08,
-        monotone_constraints=MONOTONE_CONSTRAINTS,
-        random_state=RANDOM_SEED,
-        verbose=-1,
-    )
-    base_model.fit(X_train, y_train)
+    print("[*] Training dedicated Monotone-Constrained Quantile Regressors via IRLS (P10, P50, P90)...")
+    quantile_models: Dict[str, lgb.LGBMRegressor] = {}
 
-    # In-sample & Validation Predictions
-    train_pred = base_model.predict(X_train)
-    val_pred = base_model.predict(X_test)
+    def fit_monotone_quantile_irls(X: np.ndarray, y: np.ndarray, alpha: float, n_est: int, rounds: int = 4) -> lgb.LGBMRegressor:
+        model = None
+        weights = np.ones(len(y), dtype=np.float64)
+        for r_idx in range(rounds):
+            model = lgb.LGBMRegressor(
+                objective="regression",
+                n_estimators=n_est,
+                max_depth=5,
+                num_leaves=20,
+                min_child_samples=25,
+                learning_rate=0.08,
+                subsample=0.90,
+                subsample_freq=1,
+                colsample_bytree=0.90,
+                monotone_constraints=MONOTONE_CONSTRAINTS,
+                random_state=RANDOM_SEED + r_idx,
+                verbose=-1,
+            )
+            model.fit(X, y, sample_weight=weights)
+            if abs(alpha - 0.50) < 1e-6:
+                break
+            preds_curr = model.predict(X)
+            resid = y - preds_curr
+            # IRLS weights minimizing pinball loss rho_alpha(resid) via weighted L2
+            scale = np.maximum(0.15, np.abs(resid))
+            asym = np.where(resid >= 0.0, alpha, 1.0 - alpha)
+            weights = asym / scale
+            weights = weights / np.mean(weights)
+        assert model is not None
+        return model
 
-    # Compute empirical quantile scaling factors for P10 and P90 (conformal quantile scaling)
-    # Ratio r = y_true / y_pred captures inter-individual running economy and sensor variance
-    ratios_train = y_train / np.maximum(0.5, train_pred)
-    q10_ratio = float(np.percentile(ratios_train, 10.0))
-    q90_ratio = float(np.percentile(ratios_train, 90.0))
+    for q_name, alpha, n_est in [("p10", 0.10, 48), ("p50", 0.50, 55), ("p90", 0.90, 48)]:
+        quantile_models[q_name] = fit_monotone_quantile_irls(X_train, y_train, alpha=alpha, n_est=n_est)
 
-    print(f"[+] Calibrated Quantile Ratios: Q10 = {q10_ratio:.4f}, Q90 = {q90_ratio:.4f}")
+    # Conformalized Quantile Regression (CQR) adjustment on calibration set for ~82% GT coverage
+    cal_p10 = quantile_models["p10"].predict(X_cal)
+    cal_p90 = quantile_models["p90"].predict(X_cal)
+    cqr_scores = np.maximum(cal_p10 - y_cal, y_cal - cal_p90)
+    n_cal = len(cal_df)
+    q_level = min(0.99, 0.82 * (1.0 + 1.0 / n_cal))
+    cqr_delta = float(np.quantile(cqr_scores, q_level))
+    print(f"[+] Calibrated CQR interval shift delta = {cqr_delta:+.4f} kcal/min")
 
+    # Apply exact tree-0 offset so Python & Dart evaluate identically
     preds = {
-        "p10": val_pred * q10_ratio,
-        "p50": val_pred,
-        "p90": val_pred * q90_ratio,
+        "p10": quantile_models["p10"].predict(X_test) - cqr_delta,
+        "p50": quantile_models["p50"].predict(X_test),
+        "p90": quantile_models["p90"].predict(X_test) + cqr_delta,
     }
 
     # Enforce non-crossing quantiles
@@ -360,15 +381,19 @@ def train_and_export():
         "models": {},
     }
 
-    dump = base_model.booster_.dump_model()
-    quantile_scales = {
-        "p10": q10_ratio,
-        "p50": 1.0,
-        "p90": q90_ratio,
+    cqr_offsets = {
+        "p10": -cqr_delta,
+        "p50": 0.0,
+        "p90": cqr_delta,
     }
 
-    for q_name, scale in quantile_scales.items():
-        tree_nodes = [convert_lgbm_node(t["tree_structure"], scale=scale) for t in dump["tree_info"]]
+    for q_name in ["p10", "p50", "p90"]:
+        dump = quantile_models[q_name].booster_.dump_model()
+        offset = cqr_offsets[q_name]
+        tree_nodes = [
+            convert_lgbm_node(t["tree_structure"], offset=(offset if idx == 0 else 0.0))
+            for idx, t in enumerate(dump["tree_info"])
+        ]
         trees_bundle["models"][q_name] = {
             "num_trees": len(tree_nodes),
             "trees": tree_nodes,
@@ -382,7 +407,7 @@ def train_and_export():
         "sha256_trees": trees_sha,
         "features": FEATURE_NAMES,
         "quantiles": ["p10", "p50", "p90"],
-        "quantile_scales": quantile_scales,
+        "cqr_delta_kcal_per_min": cqr_delta,
         "metrics": {
             "p50_mae_kcal_per_min": mae_p50,
             "p50_mape_percent": mape_p50,
@@ -395,14 +420,14 @@ def train_and_export():
         "stratification": strat_report,
     }
 
-    # Save to assets/models
+    # Save to assets/models using LF line endings for deterministic SHA-256
     os.makedirs("assets/models", exist_ok=True)
     trees_path = os.path.join("assets", "models", "calorie_trees.json")
     meta_path = os.path.join("assets", "models", "calorie_meta.json")
 
-    with open(trees_path, "w", encoding="utf-8") as f:
+    with open(trees_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(trees_json_str)
-    with open(meta_path, "w", encoding="utf-8") as f:
+    with open(meta_path, "w", encoding="utf-8", newline="\n") as f:
         json.dump(meta_bundle, f, indent=2)
 
     print(f"[+] Model exported to {trees_path} (SHA-256: {trees_sha})")
@@ -422,10 +447,9 @@ def train_and_export():
 
     for case in sample_cases:
         feat = np.array([[case["mass"], case["speed"], case["grade"], case["cadence"], case["climb"]]])
-        base_pred = float(base_model.predict(feat)[0])
-        p10_val = base_pred * q10_ratio
-        p50_val = base_pred
-        p90_val = base_pred * q90_ratio
+        p10_val = float(quantile_models["p10"].predict(feat)[0]) - cqr_delta
+        p50_val = float(quantile_models["p50"].predict(feat)[0])
+        p90_val = float(quantile_models["p90"].predict(feat)[0]) + cqr_delta
 
         p50_val = max(p10_val, p50_val)
         p90_val = max(p50_val, p90_val)

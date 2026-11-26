@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../services/battery_saver_service.dart';
+import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
+import '../../coach/pace_prediction_service.dart';
+import '../../gameplay/territory_service.dart';
 import '../controllers/map_run_controller.dart';
-import '../models/run_telemetry.dart';
 import 'run_goal_sheet.dart';
 import 'run_hud.dart';
 
@@ -30,9 +32,13 @@ class MapHudPanel extends StatelessWidget {
           hudHeightNotifier.value = size.height;
         }
       },
-      child: ValueListenableBuilder<RunTelemetry>(
-        valueListenable: controller.telemetryNotifier,
-        builder: (context, telemetry, _) {
+      child: ListenableBuilder(
+        listenable: Listenable.merge([
+          controller.telemetryNotifier,
+          controller,
+        ]),
+        builder: (context, _) {
+          final telemetry = controller.telemetryNotifier.value;
           return RunHud(
             isRunActive: controller.isRunActive,
             isSimulated: controller.isSimulated,
@@ -56,9 +62,16 @@ class MapHudPanel extends StatelessWidget {
             runGoal: telemetry.activeGoal ?? controller.activeGoal,
             currentAreaSqm: telemetry.currentAreaSqm,
             onOpenGoalSelector: () async {
+              final recentRuns = RunLogService().isBoxOpen
+                  ? PacePredictionService.pastRunsFromLog(
+                      RunLogService().getAllRuns(),
+                    )
+                  : null;
               final goal = await RunGoalSheet.show(
                 context,
                 currentGoal: controller.activeGoal,
+                profile: TerritoryService().getProfile(),
+                recentRuns: recentRuns,
               );
               if (goal != null) {
                 controller.setGoal(goal);
@@ -68,6 +81,8 @@ class MapHudPanel extends StatelessWidget {
             ghostTelemetryNotifier: controller.ghostTelemetryNotifier,
             workoutSnapshotNotifier: controller.workoutSnapshotNotifier,
             onSkipWorkoutPhase: controller.skipWorkoutPhase,
+            exerciseActivity: controller.selectedActivity,
+            onActivityChanged: controller.setActivity,
             onToggleAmoledSaver: () {
               BatterySaverService().setAmoledHudActive(true);
             },

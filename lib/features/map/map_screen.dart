@@ -15,7 +15,9 @@ import '../../services/firebase_service.dart';
 import '../../services/ghost_runner_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/run_log_service.dart';
 import '../../ui/ui.dart';
+import '../coach/pace_prediction_service.dart';
 import '../gameplay/territory_service.dart';
 import '../routing/route_service.dart';
 import 'controllers/map_run_controller.dart';
@@ -185,6 +187,16 @@ class _MapScreenState extends State<MapScreen>
         _focusOnTerritory(territoryId);
       },
     );
+
+    final pendingTerritoryId = NotificationService()
+        .consumePendingTerritoryId();
+    if (pendingTerritoryId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _focusOnTerritory(pendingTerritoryId);
+        }
+      });
+    }
   }
 
   /// Smoothly glides the map camera to [destLocation] and [destZoom] over [AppMotion.standard] (220ms).
@@ -444,9 +456,16 @@ class _MapScreenState extends State<MapScreen>
         },
       ),
       onOpenGoals: () async {
+        final recentRuns = RunLogService().isBoxOpen
+            ? PacePredictionService.pastRunsFromLog(
+                RunLogService().getAllRuns(),
+              )
+            : null;
         final goal = await RunGoalSheet.show(
           context,
           currentGoal: controller.activeGoal,
+          profile: TerritoryService().getProfile(),
+          recentRuns: recentRuns,
         );
         if (goal != null) {
           controller.setGoal(goal);
@@ -599,8 +618,37 @@ class _MapScreenState extends State<MapScreen>
                         isCameraLocked: controller.isCameraFollowLocked,
                         onOpenTools: () =>
                             _openToolsSheet(controller, demoRunner),
-                        onOpenLayers: () =>
-                            MapLayersSheet.show(context: context),
+                        onOpenLayers: () => MapLayersSheet.show(
+                          context: context,
+                          onLocateNearestRival: () {
+                            final rivals = controller.activeRivalRunners.values;
+                            if (rivals.isEmpty) {
+                              AppToast.show(
+                                context,
+                                'No nearby runners active right now.',
+                              );
+                              return;
+                            }
+                            final origin = controller.currentLocation;
+                            var nearest = rivals.first;
+                            if (origin != null) {
+                              double bestDist = double.infinity;
+                              for (final r in rivals) {
+                                final d = const Distance().as(
+                                  LengthUnit.Meter,
+                                  origin,
+                                  r.position,
+                                );
+                                if (d < bestDist) {
+                                  bestDist = d;
+                                  nearest = r;
+                                }
+                              }
+                            }
+                            controller.setCameraFollow(false);
+                            _animateCameraMove(nearest.position, 16.5);
+                          },
+                        ),
                         onRecenter: () {
                           if (controller.currentLocation != null) {
                             _mapController.move(

@@ -186,6 +186,10 @@ def parse_plt_file(plt_path: str, intervals: List[dict]) -> List[dict]:
     if len(lines) <= 6:
         return points
 
+    parsed_rows = []
+    min_dt = None
+    max_dt = None
+
     # Read data points starting from line 7 (index 6)
     for line in lines[6:]:
         line = line.strip()
@@ -210,9 +214,24 @@ def parse_plt_file(plt_path: str, intervals: List[dict]) -> List[dict]:
             continue
 
         alt_m = alt_ft * 0.3048 if alt_ft != -777 else 0.0
+        parsed_rows.append((pt_dt, lat, lon, alt_m))
+        if min_dt is None or pt_dt < min_dt:
+            min_dt = pt_dt
+        if max_dt is None or pt_dt > max_dt:
+            max_dt = pt_dt
 
-        # Match against active interval
-        for interval in intervals:
+    if not parsed_rows or min_dt is None or max_dt is None:
+        return points
+
+    active_intervals = [
+        iv for iv in intervals
+        if iv["end_dt"] >= min_dt and iv["start_dt"] <= max_dt
+    ]
+    if not active_intervals:
+        return points
+
+    for pt_dt, lat, lon, alt_m in parsed_rows:
+        for interval in active_intervals:
             if interval["start_dt"] <= pt_dt <= interval["end_dt"]:
                 points.append({
                     "user_id": interval["user_id"],

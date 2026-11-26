@@ -71,9 +71,9 @@ def extract_sessions_from_trajectories(parquet_path: str) -> pd.DataFrame:
     print(f"[*] Reading trajectories from {parquet_path}...")
     df = pd.read_parquet(parquet_path)
 
-    # Focus on pedestrian / running modes
+    # Focus strictly on on-foot walk/run trajectories (never mix cycling speeds)
     if "transport_mode" in df.columns:
-        legit_mask = df["transport_mode"].isin(["legit_walk_run", "legit_cycle"])
+        legit_mask = df["transport_mode"] == "legit_walk_run"
         df = df[legit_mask].copy()
 
     df["timestamp_dt"] = pd.to_datetime(df["timestamp"], unit="s")
@@ -103,8 +103,8 @@ def extract_sessions_from_trajectories(parquet_path: str) -> pd.DataFrame:
         duration_min = duration_sec / 60.0
         pace_min_km = duration_min / total_dist_km
 
-        # Physiological filter for running/walking: pace between 2.5 min/km (elite) and 18.0 min/km (power walk)
-        if pace_min_km < 2.5 or pace_min_km > 18.0 or total_dist_km > 45.0:
+        # Physiological filter for on-foot running/walking: pace between 3.0 min/km and 15.0 min/km
+        if pace_min_km < 3.0 or pace_min_km > 15.0 or total_dist_km > 42.2:
             continue
 
         # Elevation gain
@@ -236,11 +236,16 @@ def train_quantile_ensemble(
         model = lgb.LGBMRegressor(
             objective="quantile",
             alpha=q,
-            n_estimators=35,
-            max_depth=3,
-            num_leaves=8,
-            min_child_samples=5,
-            learning_rate=0.08,
+            n_estimators=55,
+            max_depth=4,
+            num_leaves=12,
+            min_child_samples=8,
+            subsample=0.85,
+            subsample_freq=1,
+            colsample_bytree=0.90,
+            reg_alpha=0.1,
+            reg_lambda=0.5,
+            learning_rate=0.06,
             random_state=RANDOM_SEED,
             verbose=-1,
         )
@@ -253,11 +258,16 @@ def train_quantile_ensemble(
         model = lgb.LGBMRegressor(
             objective="quantile",
             alpha=q,
-            n_estimators=35,
-            max_depth=3,
-            num_leaves=8,
-            min_child_samples=5,
-            learning_rate=0.08,
+            n_estimators=55,
+            max_depth=4,
+            num_leaves=12,
+            min_child_samples=8,
+            subsample=0.85,
+            subsample_freq=1,
+            colsample_bytree=0.90,
+            reg_alpha=0.1,
+            reg_lambda=0.5,
+            learning_rate=0.06,
             random_state=RANDOM_SEED,
             verbose=-1,
         )

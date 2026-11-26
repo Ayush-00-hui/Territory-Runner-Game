@@ -4,8 +4,14 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../gameplay/territory_service.dart';
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
+import '../../models/training_plan.dart';
+import '../../services/run_log_service.dart';
 import '../../services/sync_queue.dart';
 import '../../ui/ui.dart';
+import '../history/run_history_screen.dart';
+import '../social/widgets/social_hub_cache.dart';
+import '../social/widgets/social_hub_sheet.dart';
+import 'widgets/daily_quests_home_card.dart';
 import 'widgets/home_header.dart';
 import 'widgets/needs_defending_row.dart';
 import 'widgets/offline_sync_banner.dart';
@@ -14,18 +20,18 @@ import 'widgets/recent_activity_feed.dart';
 import 'widgets/today_workout_card.dart';
 import 'widgets/weekly_recap_card.dart';
 import 'widgets/weekly_summary_card.dart';
-import '../history/run_history_screen.dart';
-import '../social/widgets/social_hub_sheet.dart';
 
-/// Athlete Home Screen - Performance First Conquest Dashboard
+/// Athlete Home Screen - Performance First Running & Territory Dashboard
 class HomeScreen extends StatelessWidget {
   final VoidCallback? onStartRun;
+  final ValueChanged<PlanWorkoutDay>? onStartWorkout;
   final bool isActive;
   final ScrollController? scrollController;
 
   const HomeScreen({
     super.key,
     this.onStartRun,
+    this.onStartWorkout,
     this.isActive = true,
     this.scrollController,
   });
@@ -110,6 +116,15 @@ class HomeScreen extends StatelessWidget {
             builder: (context, Box<Territory> territoryBox, _) {
               final territories = territoryService
                   .getCapturedTerritoryObjects();
+              final double totalAreaSqm = territories.fold<double>(
+                0.0,
+                (sum, t) => sum + t.areaSqMeters,
+              );
+              final int activeStreak = RunLogService().isBoxOpen
+                  ? RunLogService().computeActiveStreakDays()
+                  : profile.currentStreak;
+              final now = DateTime.now();
+              final int daysToLeagueReset = 8 - now.weekday;
 
               return RefreshIndicator(
                 color: AppColors.accent,
@@ -142,9 +157,19 @@ class HomeScreen extends StatelessWidget {
 
                       // Quick Launch Hero (Real daily goal or quiet goal setup + 56dp CTA)
                       QuickLaunchHero(
+                        profile: profile,
                         territories: territories,
                         onStartRun: onStartRun,
                         isActive: isActive,
+                      ),
+
+                      const SizedBox(height: AppSpacing.s12),
+
+                      // Daily Quests & Streak Pulse (Placed below primary hero CTA)
+                      DailyQuestsHomeCard(
+                        activeStreakDays: activeStreak,
+                        totalAreaSqMeters: totalAreaSqm,
+                        onTapQuest: onStartRun,
                       ),
 
                       // Needs Defending Row (Appears when claimed land falls <= 50% strength)
@@ -154,6 +179,13 @@ class HomeScreen extends StatelessWidget {
                       TodayWorkoutCard(
                         onStartWorkout: (plan) {
                           onStartRun?.call();
+                        },
+                        onStartWorkoutDay: (day) {
+                          if (onStartWorkout != null) {
+                            onStartWorkout!(day);
+                          } else {
+                            onStartRun?.call();
+                          }
                         },
                       ),
                       const SizedBox(height: AppSpacing.s12),
@@ -225,24 +257,37 @@ class HomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(width: AppSpacing.s12),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Community & duels',
-                                      style: AppText.bodyMedium.copyWith(
-                                        color: AppColors.textPrimary,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Feed, kudos, friend duels & squad',
-                                      style: AppText.caption.copyWith(
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ],
+                                child: ValueListenableBuilder<int>(
+                                  valueListenable:
+                                      SocialHubCache.incomingCountNotifier,
+                                  builder: (context, incomingRequests, _) {
+                                    final String subtitleText =
+                                        incomingRequests > 0
+                                        ? '$incomingRequests pending invite${incomingRequests == 1 ? '' : 's'} · League resets in ${daysToLeagueReset}d'
+                                        : 'Feed, kudos, duels · League resets in ${daysToLeagueReset}d';
+                                    return Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Community & duels',
+                                          style: AppText.bodyMedium.copyWith(
+                                            color: AppColors.textPrimary,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          subtitleText,
+                                          style: AppText.caption.copyWith(
+                                            color: AppColors.textSecondary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                               const Icon(

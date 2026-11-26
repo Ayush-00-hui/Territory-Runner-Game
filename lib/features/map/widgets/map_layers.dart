@@ -596,6 +596,34 @@ class MapLayers {
     }
     return palette.rival;
   }
+
+  /// Renders explored 100 m city blocks uncovered by the runner on foot.
+  static PolygonLayer buildExploredGridLayer(
+    List<List<LatLng>> cellPolygons, {
+    AppPalette palette = AppPalette.dark,
+    bool highContrast = false,
+  }) {
+    final fillColor = palette.info.withValues(
+      alpha: highContrast ? 0.16 : 0.08,
+    );
+    final borderColor = palette.info.withValues(
+      alpha: highContrast ? 0.34 : 0.18,
+    );
+
+    final polygons = cellPolygons
+        .where((pts) => pts.length >= 3)
+        .map(
+          (pts) => Polygon(
+            points: pts,
+            color: fillColor,
+            borderColor: borderColor,
+            borderStrokeWidth: highContrast ? 1.1 : 0.75,
+          ),
+        )
+        .toList(growable: false);
+
+    return PolygonLayer(polygons: polygons);
+  }
 }
 
 class PolygonShell {

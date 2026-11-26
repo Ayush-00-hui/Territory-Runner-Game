@@ -1,5 +1,5 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 import '../core/logging/app_logger.dart';
@@ -24,6 +24,13 @@ class CountdownAudioService {
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
     _initialized = true;
+    bool isTestEnv = false;
+    try {
+      isTestEnv = WidgetsBinding.instance.runtimeType.toString().contains(
+        'Test',
+      );
+    } catch (_) {}
+    if (isTestEnv) return;
     try {
       _player = AudioPlayer();
       await AudioPlayer.global.setAudioContext(
@@ -113,6 +120,19 @@ class CountdownAudioService {
       _player?.play(AssetSource('audio/interval_rest.wav')).catchError((_) {});
     } catch (e) {
       AppLogger.warning('Interval rest tone notice: $e', tag: 'CountdownAudio');
+    }
+  }
+
+  /// Speaks a brief hands-free mid-run audio coach cue without interrupting ambient music.
+  Future<void> speakCue(String text) async {
+    if (!AppPreferences().isVoiceCoachCuesEnabled) return;
+    if (text.trim().isEmpty) return;
+    try {
+      await _ensureInitialized();
+      _tts?.stop().catchError((_) {});
+      _tts?.speak(text).catchError((_) {});
+    } catch (e) {
+      AppLogger.warning('Voice coach cue notice: $e', tag: 'CountdownAudio');
     }
   }
 

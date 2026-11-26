@@ -1,7 +1,7 @@
 # Territory Runner Calorie Surrogate Model Evaluation Report
 
 - **Model Version**: `1.0.0`
-- **Model SHA-256**: `6ef0429cf529b8267a635631ffec9e3bab027423f1376519739eda47071037e4`
+- **Model SHA-256**: `d00dfa749a3b306c6ff22a738573782b012b723f2006e4b0014a90360615da84`
 - **Architecture**: Monotone-Constrained LightGBM Quantile Regressors (P10, P50, P90)
 - **Purpose**: Fast, noise-robust on-device estimation with honest uncertainty intervals.
 
@@ -9,29 +9,29 @@
 
 | Metric | Surrogate Model (P50) | Legacy Flat Factor Baseline | Relative Improvement |
 | :--- | :--- | :--- | :--- |
-| **MAE (kcal/min)** | 1.387 | 3.486 | 60.2% |
-| **MAPE (%)** | 26.69% | 50.42% | 47.1% |
-| **Mean Bias (kcal/min)** | -0.048 | -0.317 | N/A |
-| **[P10, P90] Coverage** | 81.46% | N/A (single point) | Ideal: 80.0% |
-| **Mean Interval Width** | 7.310 kcal/min | N/A | Balanced uncertainty |
+| **MAE (kcal/min)** | 0.764 | 3.518 | 78.3% |
+| **MAPE (%)** | 13.43% | 50.96% | 73.6% |
+| **Mean Bias (kcal/min)** | -0.001 | -0.308 | N/A |
+| **[P10, P90] Coverage** | 83.35% | N/A (single point) | Ideal: 80.0% |
+| **Mean Interval Width** | 4.608 kcal/min | N/A | Balanced uncertainty |
 
 ## 2. Stratified Performance Breakdown
 
 | Stratum Category | Band | N (Test Samples) | Surrogate MAE (kcal/min) | Legacy Flat MAE (kcal/min) | Error Reduction |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Speed Band | Rest (0 km/h) | 315 | 1.370 | 0.000 | **-13698.0%** |
-| Speed Band | Walk (0.5 - 6.5 km/h) | 1761 | 1.006 | 2.578 | **61.0%** |
-| Speed Band | Jog (6.5 - 10 km/h) | 1389 | 1.105 | 3.508 | **68.5%** |
-| Speed Band | Run (10 - 15 km/h) | 1701 | 1.507 | 4.813 | **68.7%** |
-| Speed Band | Fast (> 15 km/h) | 805 | 2.458 | 3.993 | **38.4%** |
-| Grade Band | Steep Descent (< -6%) | 1447 | 1.231 | 4.692 | **73.8%** |
-| Grade Band | Mild Descent (-6% to -1%) | 1149 | 1.285 | 2.223 | **42.2%** |
-| Grade Band | Level (-1% to +1%) | 753 | 1.362 | 0.478 | **-185.2%** |
-| Grade Band | Mild Ascent (+1% to +6%) | 1136 | 1.531 | 2.333 | **34.4%** |
-| Grade Band | Steep Ascent (> +6%) | 1486 | 1.519 | 5.694 | **73.3%** |
-| Body Mass Band | Light (< 55 kg) | 833 | 1.440 | 2.248 | **35.9%** |
-| Body Mass Band | Standard (55 - 85 kg) | 3836 | 1.207 | 3.455 | **65.1%** |
-| Body Mass Band | Heavy (> 85 kg) | 1302 | 1.882 | 4.368 | **56.9%** |
+| Speed Band | Rest (0 km/h) | 1430 | 0.466 | 0.000 | **-4658.0%** |
+| Speed Band | Walk (0.5 - 6.5 km/h) | 5608 | 0.524 | 2.536 | **79.3%** |
+| Speed Band | Jog (6.5 - 10 km/h) | 3525 | 0.688 | 3.669 | **81.2%** |
+| Speed Band | Run (10 - 15 km/h) | 4780 | 0.896 | 5.332 | **83.2%** |
+| Speed Band | Fast (> 15 km/h) | 2555 | 1.316 | 4.039 | **67.4%** |
+| Grade Band | Steep Descent (< -6%) | 4550 | 0.624 | 4.713 | **86.8%** |
+| Grade Band | Mild Descent (-6% to -1%) | 3134 | 0.825 | 2.220 | **62.8%** |
+| Grade Band | Level (-1% to +1%) | 2681 | 0.641 | 0.319 | **-100.8%** |
+| Grade Band | Mild Ascent (+1% to +6%) | 3055 | 0.815 | 2.238 | **63.6%** |
+| Grade Band | Steep Ascent (> +6%) | 4478 | 0.904 | 6.000 | **84.9%** |
+| Body Mass Band | Light (< 55 kg) | 2553 | 0.811 | 2.308 | **64.8%** |
+| Body Mass Band | Standard (55 - 85 kg) | 11614 | 0.661 | 3.414 | **80.6%** |
+| Body Mass Band | Heavy (> 85 kg) | 3731 | 1.054 | 4.669 | **77.4%** |
 
 ## 3. Scientific Disclaimers & Methodology
 

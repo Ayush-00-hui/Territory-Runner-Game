@@ -1,27 +1,51 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
+import '../../../models/run_log_entry.dart';
+import '../../../models/runner_profile.dart';
 import '../../../models/territory.dart';
 import '../../../services/app_preferences.dart';
+import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
+import '../../coach/pace_prediction_service.dart';
 
 /// Performance-first Home Hero Card featuring real daily goal progress or quiet goal setup,
-/// zero fake numbers, and the primary Start Run action.
+/// active streak + AI target pill, zero fake numbers, and the primary Start Run action.
 class QuickLaunchHero extends StatelessWidget {
+  final RunnerProfile? profile;
   final List<Territory> territories;
   final VoidCallback? onStartRun;
   final bool isActive;
 
   const QuickLaunchHero({
     super.key,
+    this.profile,
     this.territories = const [],
     this.onStartRun,
     this.isActive = true,
   });
 
-  /// Computes real running distance in kilometers completed today
-  double _computeTodayKm() {
+  /// Computes real running distance in kilometers completed today, preferring
+  /// the authoritative non-simulated [RunLogService] when open.
+  double _computeTodayKm(List<RunLogEntry> runs) {
     final now = DateTime.now();
+    if (RunLogService().isBoxOpen && runs.isNotEmpty) {
+      double realKm = 0.0;
+      for (final r in runs) {
+        if (!r.simulated &&
+            r.startedAt.year == now.year &&
+            r.startedAt.month == now.month &&
+            r.startedAt.day == now.day) {
+          realKm += r.distanceM / 1000.0;
+        }
+      }
+      if (realKm > 0 || territories.isEmpty) {
+        return realKm;
+      }
+    }
+
     double totalKm = 0.0;
     const distance = Distance();
 
@@ -105,15 +129,30 @@ class QuickLaunchHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double todayKm = _computeTodayKm();
-
-    return ValueListenableBuilder<double?>(
-      valueListenable: AppPreferences().dailyGoalKmNotifier,
-      builder: (context, goalTargetKm, _) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        AppPreferences().dailyGoalKmNotifier,
+        RunLogService().runsNotifier,
+      ]),
+      builder: (context, _) {
+        final goalTargetKm = AppPreferences().dailyGoalKmNotifier.value;
+        final List<RunLogEntry> runs = RunLogService().isBoxOpen
+            ? RunLogService().runsNotifier.value
+            : const [];
+        final double todayKm = _computeTodayKm(runs);
         final bool hasGoal = goalTargetKm != null && goalTargetKm > 0;
         final double goalProgress = hasGoal
             ? (todayKm / goalTargetKm).clamp(0.0, 1.0)
             : 0.0;
+
+        final int activeStreak = RunLogService().isBoxOpen
+            ? RunLogService().computeActiveStreakDays(overrideRuns: runs)
+            : math.max(0, profile?.currentStreak ?? 0);
+        final pastRuns = PacePredictionService.pastRunsFromLog(runs);
+        final prediction = PacePredictionService().predictTarget(
+          profile ?? RunnerProfile(id: 'local', username: 'Runner'),
+          recentRuns: pastRuns,
+        );
 
         return AppCard(
           padding: const EdgeInsets.all(AppSpacing.s20),
@@ -245,7 +284,96 @@ class QuickLaunchHero extends StatelessWidget {
                 ),
               ],
 
-              const SizedBox(height: AppSpacing.s16),
+              const SizedBox(height: AppSpacing.s12),
+
+              // Compact Streak + AI Target Pill Row (maintains above-the-fold CTA)
+              Row(
+                children: [
+                  if (activeStreak > 0) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.s10,
+                        vertical: AppSpacing.s4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface2,
+                        borderRadius: AppRadius.brFull,
+                        border: Border.all(color: AppColors.borderSubtle),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.local_fire_department_rounded,
+                            size: 14,
+                            color: AppColors.warning,
+                          ),
+                          const SizedBox(width: AppSpacing.s4),
+                          Text(
+                            '${activeStreak}d streak',
+                            style: AppText.micro.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.s8),
+                  ],
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        AppPreferences().setDailyGoalKm(
+                          prediction.targetDistanceKm,
+                        );
+                        AppToast.show(
+                          context,
+                          'Daily goal set to ${prediction.targetDistanceKm.toStringAsFixed(1)} km',
+                        );
+                      },
+                      borderRadius: AppRadius.brFull,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s10,
+                          vertical: AppSpacing.s4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentContainer,
+                          borderRadius: AppRadius.brFull,
+                          border: Border.all(
+                            color: AppColors.accent.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome_rounded,
+                              size: 13,
+                              color: AppColors.accent,
+                            ),
+                            const SizedBox(width: AppSpacing.s4),
+                            Flexible(
+                              child: Text(
+                                '${prediction.isColdStart ? "Target" : "AI target"}: ${prediction.targetDistanceKm.toStringAsFixed(1)} km @ ${prediction.paceFormatted}',
+                                style: AppText.micro.copyWith(
+                                  color: AppColors.accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.s14),
 
               // Primary CTA Button
               PrimaryButton(
@@ -255,7 +383,7 @@ class QuickLaunchHero extends StatelessWidget {
                   onStartRun?.call();
                 },
               ),
-              const SizedBox(height: AppSpacing.s10),
+              const SizedBox(height: AppSpacing.s8),
 
               // Motivation subtext
               Text(

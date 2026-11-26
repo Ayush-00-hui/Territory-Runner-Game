@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
 
-/// Modal bottom sheet allowing runners to configure active map overlay layers:
+/// Modal bottom sheet allowing runners to configure persisted map overlay layers:
 /// - Claimed territory polygons
+/// - Explored 100 m fog-of-war blocks
 /// - Nearby rival runners and live breadcrumbs
 /// - High-contrast outdoor layer
 class MapLayersSheet extends StatefulWidget {
@@ -35,9 +37,20 @@ class MapLayersSheet extends StatefulWidget {
 }
 
 class _MapLayersSheetState extends State<MapLayersSheet> {
-  bool _showTerritories = true;
-  bool _showRivals = true;
-  bool _highContrast = false;
+  final AppPreferences _prefs = AppPreferences();
+  late bool _showTerritories;
+  late bool _showExploredGrid;
+  late bool _showRivals;
+  late bool _highContrast;
+
+  @override
+  void initState() {
+    super.initState();
+    _showTerritories = _prefs.showTerritoriesLayer;
+    _showExploredGrid = _prefs.showExploredGridLayer;
+    _showRivals = _prefs.showRivalsLayer;
+    _highContrast = _prefs.highContrastMapLayer;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,25 +68,41 @@ class _MapLayersSheetState extends State<MapLayersSheet> {
             value: _showTerritories,
             onChanged: (val) {
               setState(() => _showTerritories = val);
+              _prefs.setMapLayerVisibility(showTerritories: val);
               widget.onStyleChanged?.call();
             },
           ),
           const SizedBox(height: AppSpacing.s8),
 
-          // 2. Rival Presence Layer
+          // 2. Explored City Blocks Fog-of-War Overlay
+          _LayerToggleTile(
+            icon: Icons.grid_on_rounded,
+            title: 'Explored city blocks',
+            subtitle: 'Highlight 100 m blocks uncovered on foot',
+            value: _showExploredGrid,
+            onChanged: (val) {
+              setState(() => _showExploredGrid = val);
+              _prefs.setMapLayerVisibility(showExploredGrid: val);
+              widget.onStyleChanged?.call();
+            },
+          ),
+          const SizedBox(height: AppSpacing.s8),
+
+          // 3. Rival Presence Layer
           _LayerToggleTile(
             icon: Icons.radar_rounded,
             title: 'Nearby runners',
-            subtitle: 'Display live kinematic presence of rival runners',
+            subtitle: 'Display live movement of nearby runners',
             value: _showRivals,
             onChanged: (val) {
               setState(() => _showRivals = val);
+              _prefs.setMapLayerVisibility(showRivals: val);
               widget.onStyleChanged?.call();
             },
           ),
           const SizedBox(height: AppSpacing.s8),
 
-          // 3. High Contrast Outdoor Mode
+          // 4. High Contrast Outdoor Mode
           _LayerToggleTile(
             icon: Icons.wb_sunny_rounded,
             title: 'High-contrast outdoor mode',
@@ -81,6 +110,7 @@ class _MapLayersSheetState extends State<MapLayersSheet> {
             value: _highContrast,
             onChanged: (val) {
               setState(() => _highContrast = val);
+              _prefs.setMapLayerVisibility(highContrast: val);
               widget.onStyleChanged?.call();
             },
           ),

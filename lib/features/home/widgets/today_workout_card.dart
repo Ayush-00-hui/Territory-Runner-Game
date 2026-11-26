@@ -11,11 +11,13 @@ import '../../training/training_plans_sheet.dart';
 class TodayWorkoutCard extends StatefulWidget {
   final TrainingPlanService? trainingService;
   final ValueChanged<IntervalWorkoutPlan?> onStartWorkout;
+  final ValueChanged<PlanWorkoutDay>? onStartWorkoutDay;
 
   const TodayWorkoutCard({
     super.key,
     this.trainingService,
     required this.onStartWorkout,
+    this.onStartWorkoutDay,
   });
 
   @override
@@ -33,7 +35,20 @@ class _TodayWorkoutCardState extends State<TodayWorkoutCard> {
   void initState() {
     super.initState();
     _service = widget.trainingService ?? TrainingPlanService();
+    TrainingPlanService.revisionNotifier.addListener(_onPlanRevisionChanged);
     _loadPlanData();
+  }
+
+  void _onPlanRevisionChanged() {
+    if (mounted) {
+      _loadPlanData();
+    }
+  }
+
+  @override
+  void dispose() {
+    TrainingPlanService.revisionNotifier.removeListener(_onPlanRevisionChanged);
+    super.dispose();
   }
 
   Future<void> _loadPlanData() async {
@@ -158,7 +173,11 @@ class _TodayWorkoutCardState extends State<TodayWorkoutCard> {
             label: 'Start Session',
             icon: Icons.play_arrow_rounded,
             onPressed: () {
-              widget.onStartWorkout(_nextWorkout!.intervalPlan);
+              if (widget.onStartWorkoutDay != null) {
+                widget.onStartWorkoutDay!(_nextWorkout!);
+              } else {
+                widget.onStartWorkout(_nextWorkout!.intervalPlan);
+              }
             },
           ),
         ],

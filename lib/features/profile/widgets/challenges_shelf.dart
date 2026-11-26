@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../models/run_log_entry.dart';
 import '../../../models/runner_profile.dart';
+import '../../../services/daily_quest_service.dart';
 import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
 import 'profile_dialogs.dart';
@@ -22,135 +24,127 @@ class ChallengesShelf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
-    final todayStart = DateTime(now.year, now.month, now.day);
-    final runs = RunLogService().getAllRuns();
-    final todayRuns = runs
-        .where((r) => r.startedAt.isAfter(todayStart))
-        .toList();
-    final double todayDistanceKm = todayRuns.fold(
-      0.0,
-      (sum, r) => sum + (r.distanceM / 1000.0),
-    );
-    final int todayLoopsClaimed = todayRuns
-        .where((r) => r.claimedAreaSqM > 0)
-        .length;
-
     final hoursToMidnight = 24 - now.hour;
     final String resetString =
         resetCountdown ?? 'Resets in ${hoursToMidnight}h';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // --- ACTIVE ATHLETE QUESTS ---
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.s16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppSpacing.br20,
-            border: Border.all(color: AppColors.border),
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        DailyQuestService().revisionNotifier,
+        RunLogService().runsNotifier,
+      ]),
+      builder: (context, _) {
+        final List<RunLogEntry> runs = RunLogService().isBoxOpen
+            ? RunLogService().getAllRuns()
+            : const [];
+        final initialQuests = DailyQuestService().getTodayQuestsSync(
+          now: now,
+          overrideRuns: runs,
+          totalAreaSqMeters: totalAreaSqMeters,
+        );
+        return FutureBuilder<List<DailyQuestProgress>>(
+          initialData: initialQuests,
+          future: DailyQuestService().getTodayQuests(
+            now: now,
+            overrideRuns: runs,
+            totalAreaSqMeters: totalAreaSqMeters,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.bolt_rounded,
-                          color: AppColors.accent,
-                          size: 18,
-                        ),
-                        const SizedBox(width: AppSpacing.s8),
-                        Flexible(
-                          child: Text(
-                            'Active territory quests',
-                            style: AppText.labelLarge.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                              letterSpacing: 0.2,
+          builder: (context, snapshot) {
+            final quests = snapshot.data ?? initialQuests;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- ACTIVE ATHLETE QUESTS ---
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.s16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: AppSpacing.br20,
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.bolt_rounded,
+                                  color: AppColors.accent,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: AppSpacing.s8),
+                                Flexible(
+                                  child: Text(
+                                    'Active territory quests',
+                                    style: AppText.labelLarge.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(width: AppSpacing.s8),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                resetString,
+                                style: AppText.labelSmall.copyWith(
+                                  color: AppColors.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.s16),
+                      for (int i = 0; i < quests.length; i++) ...[
+                        if (i > 0)
+                          const Divider(color: AppColors.border, height: 24),
+                        _buildQuestItem(
+                          title: quests[i].title,
+                          description: quests[i].description,
+                          current: quests[i].current,
+                          target: quests[i].target,
+                          unit: quests[i].unit,
+                          xpReward: quests[i].xpReward,
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: AppSpacing.s8),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        resetString,
-                        style: AppText.labelSmall.copyWith(
-                          color: AppColors.textMuted,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
+                ),
+
+                const SizedBox(height: AppSpacing.s20),
+
+                // --- TROPHY CASE SECTION HEADER ---
+                Text(
+                  'Trophy case & badges',
+                  style: AppText.labelLarge.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
                   ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.s16),
+                ),
+                const SizedBox(height: AppSpacing.s12),
 
-              // Quest 1: Distance
-              _buildQuestItem(
-                title: 'Daily distance run',
-                description: 'Run at least 2.0 km on foot today',
-                current: todayDistanceKm,
-                target: 2.0,
-                unit: 'km',
-                xpReward: 75,
-              ),
-
-              const Divider(color: AppColors.border, height: 24),
-
-              // Quest 2: Loops
-              _buildQuestItem(
-                title: 'Loop closure',
-                description: 'Enclose and claim 1 territory polygon today',
-                current: todayLoopsClaimed.toDouble(),
-                target: 1.0,
-                unit: 'loop',
-                xpReward: 120,
-              ),
-
-              const Divider(color: AppColors.border, height: 24),
-
-              // Quest 3: Territory Footprint
-              _buildQuestItem(
-                title: 'Territory expansion',
-                description: 'Hold over 10,000 m² of ground',
-                current: totalAreaSqMeters,
-                target: 10000.0,
-                unit: 'm²',
-                xpReward: 250,
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: AppSpacing.s20),
-
-        // --- TROPHY CASE SECTION HEADER ---
-        Text(
-          'Trophy case & badges',
-          style: AppText.labelLarge.copyWith(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.2,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.s12),
-
-        // --- TROPHY CASE GRID ---
-        _buildBadgeGrid(context),
-      ],
+                // --- TROPHY CASE GRID ---
+                _buildBadgeGrid(context),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

@@ -1,7 +1,7 @@
 {
   "model_name": "Pace & Distance Quantile Regressor",
   "model_version": "1.0.0",
-  "sha256_trees": "a15a9b9855667fdd6bc32103737c712aa74c4c5237eb126c33977bf48f410f05",
+  "sha256_trees": "cbe4814aa8c203f1a75441fb9abb1292fcda3f9cc5dc55ab134c770786612da1",
   "quantiles": [
     0.1,
     0.5,
@@ -28,20 +28,20 @@
   "num_features": 16,
   "metrics": {
     "distance": {
-      "p10_pinball_loss": 0.23620403527796233,
-      "p50_pinball_loss": 0.6919106362165167,
-      "p90_pinball_loss": 0.5819774200110405,
-      "p50_mae_km": 1.3838212724330334,
-      "p10_p90_coverage_rate": 0.7430555555555556,
-      "mean_interval_width_km": 3.541333375644266
+      "p10_pinball_loss": 0.11220563186059687,
+      "p50_pinball_loss": 0.4584644140371594,
+      "p90_pinball_loss": 0.4762513210191867,
+      "p50_mae_km": 0.9169288280743187,
+      "p10_p90_coverage_rate": 0.7531486146095718,
+      "mean_interval_width_km": 2.5275907947440635
     },
     "pace": {
-      "p10_pinball_loss": 0.3748779432121607,
-      "p50_pinball_loss": 1.1712749690293291,
-      "p90_pinball_loss": 0.6962151689070053,
-      "p50_mae_min_km": 2.3425499380586583,
-      "p10_p90_coverage_rate": 0.7569444444444444,
-      "mean_interval_width_min_km": 6.991970526964302
+      "p10_pinball_loss": 0.5554975219618294,
+      "p50_pinball_loss": 1.062279792365118,
+      "p90_pinball_loss": 0.4039582573302207,
+      "p50_mae_min_km": 2.124559584730236,
+      "p10_p90_coverage_rate": 0.7380352644836272,
+      "mean_interval_width_min_km": 6.190613016422517
     }
   },
   "cold_start_threshold": 5,

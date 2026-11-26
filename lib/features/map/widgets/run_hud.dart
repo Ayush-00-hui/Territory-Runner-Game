@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../../../models/activity_type.dart';
 import '../../../models/run_goal.dart';
 import '../../../services/ghost_runner_service.dart';
 import '../../../services/interval_workout_service.dart';
@@ -43,6 +44,8 @@ class RunHud extends StatefulWidget {
   final ValueNotifier<GhostTelemetry?>? ghostTelemetryNotifier;
   final ValueNotifier<IntervalWorkoutSnapshot?>? workoutSnapshotNotifier;
   final VoidCallback? onSkipWorkoutPhase;
+  final ExerciseActivityType exerciseActivity;
+  final ValueChanged<ExerciseActivityType>? onActivityChanged;
   final VoidCallback onToggleRun;
   final VoidCallback onSealShape;
   final VoidCallback onFinishRun;
@@ -77,6 +80,8 @@ class RunHud extends StatefulWidget {
     this.ghostTelemetryNotifier,
     this.workoutSnapshotNotifier,
     this.onSkipWorkoutPhase,
+    this.exerciseActivity = ExerciseActivityType.running,
+    this.onActivityChanged,
     required this.onToggleRun,
     required this.onSealShape,
     required this.onFinishRun,
@@ -389,6 +394,86 @@ class _RunHudState extends State<RunHud> {
                         );
                       },
                     ),
+                  ],
+
+                  // Quick Idle Activity Mode Selector (Run / Walk / Cycle)
+                  if (!widget.isRunActive &&
+                      widget.onActivityChanged != null) ...[
+                    Row(
+                      children: ExerciseActivityType.values.map((activity) {
+                        final bool isSelected =
+                            activity == widget.exerciseActivity;
+                        final IconData icon;
+                        switch (activity) {
+                          case ExerciseActivityType.running:
+                            icon = Icons.directions_run_rounded;
+                            break;
+                          case ExerciseActivityType.walking:
+                            icon = Icons.directions_walk_rounded;
+                            break;
+                          case ExerciseActivityType.cycling:
+                            icon = Icons.directions_bike_rounded;
+                            break;
+                        }
+                        return Expanded(
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              right:
+                                  activity != ExerciseActivityType.values.last
+                                  ? AppSpacing.s6
+                                  : 0,
+                            ),
+                            child: GestureDetector(
+                              onTap: () => widget.onActivityChanged!(activity),
+                              behavior: HitTestBehavior.opaque,
+                              child: Container(
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? palette.accent.withValues(alpha: 0.16)
+                                      : palette.surface2,
+                                  borderRadius: AppSpacing.brFull,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? palette.accent
+                                        : palette.borderSubtle,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      icon,
+                                      size: 14,
+                                      color: isSelected
+                                          ? palette.accent
+                                          : palette.textSecondary,
+                                    ),
+                                    const SizedBox(width: AppSpacing.s4),
+                                    Flexible(
+                                      child: Text(
+                                        activity.displayName,
+                                        style: AppText.micro.copyWith(
+                                          color: isSelected
+                                              ? palette.accent
+                                              : palette.textSecondary,
+                                          fontWeight: isSelected
+                                              ? FontWeight.w700
+                                              : FontWeight.w600,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: AppSpacing.s10),
                   ],
 
                   // Closure and Goal Bar

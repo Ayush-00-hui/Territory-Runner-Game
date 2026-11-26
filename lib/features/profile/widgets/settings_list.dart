@@ -463,6 +463,27 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           const Divider(height: 1, color: AppColors.border),
           SwitchListTile(
             secondary: const Icon(
+              Icons.spatial_audio_off_rounded,
+              color: AppColors.accent,
+              size: 20,
+            ),
+            title: const Text('Voice coach cues', style: AppText.bodyBold),
+            subtitle: const Text(
+              'Spoken km splits, interval prompts & loop proximity cues',
+              style: AppText.bodySmall,
+            ),
+            activeThumbColor: AppColors.accent,
+            activeTrackColor: AppColors.accentContainer,
+            value: _appPrefs.isVoiceCoachCuesEnabled,
+            onChanged: (val) {
+              setState(() {
+                _appPrefs.toggleVoiceCoachCues(val);
+              });
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          SwitchListTile(
+            secondary: const Icon(
               Icons.photo_library_rounded,
               color: AppColors.accent,
               size: 20,
@@ -516,6 +537,65 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                 onChanged: (val) {
                   UserSettingsService().setLandReminders(val);
                 },
+              );
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ValueListenableBuilder<String>(
+            valueListenable: _appPrefs.dailyReminderWindowNotifier,
+            builder: (context, window, _) {
+              return ListTile(
+                leading: const Icon(
+                  Icons.alarm_rounded,
+                  color: AppColors.accent,
+                  size: 20,
+                ),
+                title: const Text(
+                  'Daily run reminder',
+                  style: AppText.bodyBold,
+                ),
+                subtitle: Text(
+                  window == 'off'
+                      ? 'Off'
+                      : (window == 'morning'
+                            ? 'Morning cue at 7:00 AM'
+                            : 'Evening cue at 6:30 PM'),
+                  style: AppText.bodySmall,
+                ),
+                trailing: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'off',
+                      label: Text('Off', style: AppText.labelSmall),
+                    ),
+                    ButtonSegment(
+                      value: 'morning',
+                      label: Text('AM', style: AppText.labelSmall),
+                    ),
+                    ButtonSegment(
+                      value: 'evening',
+                      label: Text('PM', style: AppText.labelSmall),
+                    ),
+                  ],
+                  selected: {window},
+                  style: SegmentedButton.styleFrom(
+                    selectedBackgroundColor: AppColors.accent,
+                    selectedForegroundColor: AppColors.onAccent,
+                    foregroundColor: AppColors.textSecondary,
+                    backgroundColor: AppColors.surface2,
+                  ),
+                  onSelectionChanged: (selected) {
+                    if (selected.isNotEmpty) {
+                      final next = selected.first;
+                      _appPrefs.setDailyReminderWindow(next);
+                      if (next != 'off') {
+                        NotificationService().showPermissionPrimerIfNeeded(
+                          context,
+                        );
+                      }
+                    }
+                  },
+                ),
               );
             },
           ),

@@ -535,6 +535,14 @@ class TerritoryService {
     await saveProfile(profile);
   }
 
+  /// Updates the runner's active daily streak from authoritative run history.
+  Future<void> setCurrentStreak(int streakDays) async {
+    final profile = getProfile();
+    if (profile.currentStreak == streakDays) return;
+    profile.currentStreak = streakDays;
+    await saveProfile(profile);
+  }
+
   /// Saves a specific territory (e.g. captured by rival faction or cloud sync)
   Future<void> saveTerritory(Territory territory) async {
     await _territoryBox?.put(territory.id, territory);

@@ -42,6 +42,15 @@ class AppPreferences {
   static const String _prefThemeModeKey = 'pref_theme_mode';
   static const String _prefShareRunsWithFriendsKey =
       'pref_share_runs_with_friends';
+  static const String _prefVoiceCoachCuesKey = 'pref_voice_coach_cues_enabled';
+  static const String _prefDailyReminderWindowKey =
+      'pref_daily_reminder_window';
+  static const String _prefShowTerritoriesLayerKey =
+      'pref_map_show_territories';
+  static const String _prefShowRivalsLayerKey = 'pref_map_show_rivals';
+  static const String _prefShowExploredGridLayerKey =
+      'pref_map_show_explored_grid';
+  static const String _prefHighContrastMapLayerKey = 'pref_map_high_contrast';
 
   bool _isHapticsEnabled = true;
   bool _isShareRunsWithFriends = false;
@@ -52,6 +61,12 @@ class AppPreferences {
   bool _isCountdownVoiceEnabled = true;
   bool _isSoundEffectsEnabled = true;
   bool _isAutoSaveCardEnabled = true;
+  bool _isVoiceCoachCuesEnabled = true;
+  String _dailyReminderWindow = 'off';
+  bool _showTerritoriesLayer = true;
+  bool _showRivalsLayer = true;
+  bool _showExploredGridLayer = true;
+  bool _highContrastMapLayer = false;
   bool _isDemoModeUnlocked = false;
   bool _isDemoModeEnabled = false;
   double? _bodyWeightKg;
@@ -79,6 +94,9 @@ class AppPreferences {
   final ValueNotifier<bool> shareRunsWithFriendsNotifier = ValueNotifier<bool>(
     false,
   );
+  final ValueNotifier<String> dailyReminderWindowNotifier =
+      ValueNotifier<String>('off');
+  final ValueNotifier<int> mapLayersNotifier = ValueNotifier<int>(0);
 
   bool get isHapticsEnabled => _isHapticsEnabled;
   bool get isShareRunsWithFriends => _isShareRunsWithFriends;
@@ -100,6 +118,12 @@ class AppPreferences {
   bool get isCountdownVoiceEnabled => _isCountdownVoiceEnabled;
   bool get isSoundEffectsEnabled => _isSoundEffectsEnabled;
   bool get isAutoSaveCardEnabled => _isAutoSaveCardEnabled;
+  bool get isVoiceCoachCuesEnabled => _isVoiceCoachCuesEnabled;
+  String get dailyReminderWindow => _dailyReminderWindow;
+  bool get showTerritoriesLayer => _showTerritoriesLayer;
+  bool get showRivalsLayer => _showRivalsLayer;
+  bool get showExploredGridLayer => _showExploredGridLayer;
+  bool get highContrastMapLayer => _highContrastMapLayer;
   bool get isDemoModeUnlocked => _isDemoModeUnlocked;
   bool get isDemoModeEnabled => _isDemoModeEnabled;
   double? get bodyWeightKg => _bodyWeightKg;
@@ -148,6 +172,18 @@ class AppPreferences {
       _isShareRunsWithFriends =
           prefs.getBool(_prefShareRunsWithFriendsKey) ?? false;
       shareRunsWithFriendsNotifier.value = _isShareRunsWithFriends;
+      _isVoiceCoachCuesEnabled = prefs.getBool(_prefVoiceCoachCuesKey) ?? true;
+      _dailyReminderWindow =
+          prefs.getString(_prefDailyReminderWindowKey) ?? 'off';
+      dailyReminderWindowNotifier.value = _dailyReminderWindow;
+      _showTerritoriesLayer =
+          prefs.getBool(_prefShowTerritoriesLayerKey) ?? true;
+      _showRivalsLayer = prefs.getBool(_prefShowRivalsLayerKey) ?? true;
+      _showExploredGridLayer =
+          prefs.getBool(_prefShowExploredGridLayerKey) ?? true;
+      _highContrastMapLayer =
+          prefs.getBool(_prefHighContrastMapLayerKey) ?? false;
+      mapLayersNotifier.value++;
       _bodyWeightKg = prefs.getDouble(_prefBodyWeightKgKey);
       bodyWeightKgNotifier.value = _bodyWeightKg;
 
@@ -276,6 +312,56 @@ class AppPreferences {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_prefSoundEffectsKey, enabled);
+    } catch (_) {}
+  }
+
+  /// Toggles hands-free spoken audio coach cues during runs.
+  Future<void> toggleVoiceCoachCues(bool enabled) async {
+    _isVoiceCoachCuesEnabled = enabled;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_prefVoiceCoachCuesKey, enabled);
+    } catch (_) {}
+  }
+
+  /// Updates the preferred daily run reminder window ('off', 'morning', 'evening').
+  Future<void> setDailyReminderWindow(String window) async {
+    const allowed = {'off', 'morning', 'evening'};
+    final normalized = allowed.contains(window) ? window : 'off';
+    _dailyReminderWindow = normalized;
+    dailyReminderWindowNotifier.value = normalized;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefDailyReminderWindowKey, normalized);
+    } catch (_) {}
+  }
+
+  /// Updates persisted map overlay visibility toggles and notifies [mapLayersNotifier].
+  Future<void> setMapLayerVisibility({
+    bool? showTerritories,
+    bool? showRivals,
+    bool? showExploredGrid,
+    bool? highContrast,
+  }) async {
+    if (showTerritories != null) _showTerritoriesLayer = showTerritories;
+    if (showRivals != null) _showRivalsLayer = showRivals;
+    if (showExploredGrid != null) _showExploredGridLayer = showExploredGrid;
+    if (highContrast != null) _highContrastMapLayer = highContrast;
+    mapLayersNotifier.value++;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (showTerritories != null) {
+        await prefs.setBool(_prefShowTerritoriesLayerKey, showTerritories);
+      }
+      if (showRivals != null) {
+        await prefs.setBool(_prefShowRivalsLayerKey, showRivals);
+      }
+      if (showExploredGrid != null) {
+        await prefs.setBool(_prefShowExploredGridLayerKey, showExploredGrid);
+      }
+      if (highContrast != null) {
+        await prefs.setBool(_prefHighContrastMapLayerKey, highContrast);
+      }
     } catch (_) {}
   }
 

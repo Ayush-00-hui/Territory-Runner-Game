@@ -286,6 +286,46 @@ class RunLogService {
     AppLogger.info('Purged all RunLog entries from disk', tag: 'RunLogService');
   }
 
+  bool get isBoxOpen =>
+      (_box != null && _box!.isOpen) || Hive.isBoxOpen(boxName);
+
+  /// Computes real consecutive calendar-day streak ending today or yesterday
+  /// across non-simulated runs (ignoring tiny jitter < 100 m).
+  int computeActiveStreakDays({
+    List<RunLogEntry>? overrideRuns,
+    DateTime? referenceNow,
+  }) {
+    final runs = overrideRuns ?? (isBoxOpen ? runsNotifier.value : const []);
+    final uniqueDays = <DateTime>{};
+    for (final run in runs) {
+      if (run.simulated || run.distanceM < 100.0) continue;
+      uniqueDays.add(
+        DateTime(run.startedAt.year, run.startedAt.month, run.startedAt.day),
+      );
+    }
+    if (uniqueDays.isEmpty) return 0;
+
+    final now = referenceNow ?? DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    DateTime cursor;
+    if (uniqueDays.contains(today)) {
+      cursor = today;
+    } else if (uniqueDays.contains(yesterday)) {
+      cursor = yesterday;
+    } else {
+      return 0;
+    }
+
+    int streak = 0;
+    while (uniqueDays.contains(cursor)) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
+
   /// Computes personal records derived exclusively from real recorded runs.
   PersonalRecords computePersonalRecords({List<RunLogEntry>? overrideRuns}) {
     final runs = overrideRuns ?? runsNotifier.value;
