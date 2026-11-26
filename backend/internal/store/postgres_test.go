@@ -926,7 +926,7 @@ func TestPostgres_StrengthDecayAndDefenseUpdate(t *testing.T) {
 
 // 9. Leaderboard ordering on Postgres
 func TestPostgres_LeaderboardOrdering(t *testing.T) {
-	st, _ := setupTestStore(t)
+	st, pool := setupTestStore(t)
 	ctx := context.Background()
 
 	users := []*store.User{
@@ -938,6 +938,18 @@ func TestPostgres_LeaderboardOrdering(t *testing.T) {
 
 	for _, u := range users {
 		require.NoError(t, st.UpsertUser(ctx, u))
+	}
+
+	// Invariant (T2/j): All-time leaderboard ranks by currently owned territory area in territories table
+	now := time.Now().UTC()
+	for _, u := range users {
+		if u.TotalAreaSqm > 0 {
+			_, err := pool.Exec(ctx, `
+				INSERT INTO territories (id, owner_id, geom, area_sqm, strength, last_defended_at, last_decayed_at, updated_at)
+				VALUES ($1, $2, ST_Multi(ST_MakeValid(ST_PolygonFromText('POLYGON((0 0, 0 1, 1 1, 1 0, 0 0))', 4326))), $3, 100.0, $4, $4, $4);
+			`, fmt.Sprintf("poly_%s_territory", u.ID), u.ID, u.TotalAreaSqm, now)
+			require.NoError(t, err)
+		}
 	}
 
 	leaderboard, err := st.GetLeaderboard(ctx, 10, "")

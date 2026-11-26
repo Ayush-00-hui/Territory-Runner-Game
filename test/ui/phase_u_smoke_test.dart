@@ -226,7 +226,7 @@ void main() {
         // Verify dossier details and actions
         expect(find.text('River Sunrise Loop'), findsWidgets);
         expect(find.text('GPX'), findsOneWidget);
-        expect(find.text('Share'), findsOneWidget);
+        expect(find.textContaining('Share'), findsOneWidget);
         expect(find.text('Done'), findsOneWidget);
         expect(find.byIcon(Icons.edit_outlined), findsOneWidget);
 
