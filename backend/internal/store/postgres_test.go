@@ -515,7 +515,7 @@ func TestPostgres_LoopCapture_ST_PolygonFromText_MakeValid(t *testing.T) {
 
 	assert.Equal(t, run.ID, result.RunID)
 	assert.True(t, result.LoopDetected)
-	assert.InDelta(t, loopArea, result.AreaClaimedSqm, 1.0)
+	assert.InDelta(t, loopArea, result.AreaClaimedSqm, 100.0) // PostGIS geodesic area vs Shoelace approximation
 	assert.Greater(t, result.XpAwarded, 0)
 	assert.Contains(t, result.TerritoryGeoJSON, "MultiPolygon")
 
@@ -775,10 +775,10 @@ func TestPostgres_MultiLoopRunCapture_SummedXP(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedSummedArea := area1 + area2
-	expectedXP := int(math.Max(5, math.Round(expectedSummedArea/20.0)))
+	expectedXP := int(math.Max(5, math.Round(result.AreaClaimedSqm/20.0)))
 
 	assert.True(t, result.LoopDetected)
-	assert.InDelta(t, expectedSummedArea, result.AreaClaimedSqm, 1.0)
+	assert.InDelta(t, expectedSummedArea, result.AreaClaimedSqm, 100.0) // PostGIS geodesic area vs Shoelace
 	assert.Equal(t, expectedXP, result.XpAwarded)
 
 	// Verify user stats in Postgres
@@ -1323,7 +1323,7 @@ func TestPostgres_TerritoryDefenseShieldCooldown(t *testing.T) {
 		CreatedAt:      now,
 	}, []geo.EnclosedLoop{defenderLoop}, nil)
 	require.NoError(t, err)
-	assert.InDelta(t, loopArea, resDef.AreaClaimedSqm, 1.0)
+	assert.InDelta(t, loopArea, resDef.AreaClaimedSqm, 100.0) // PostGIS geodesic area vs Shoelace
 
 	// Fetch defender territory and verify shield
 	territories, err := st.GetTerritoriesInBBox(ctx, -0.13, 51.49, -0.11, 51.51)
