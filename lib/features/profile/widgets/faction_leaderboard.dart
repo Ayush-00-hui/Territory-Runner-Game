@@ -477,8 +477,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       switch (_scope) {
         case LeaderboardScope.city:
           emptyTitle = 'No city contenders yet';
-          emptySubtitle =
-              'Claim territory on a run to qualify for the active city bracket.';
+          emptySubtitle = 'Claim territory on a run to qualify for the active city bracket.';
           break;
         case LeaderboardScope.local:
           emptyTitle = 'No nearby rivals yet';

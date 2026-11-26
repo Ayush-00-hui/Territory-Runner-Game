@@ -544,57 +544,79 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           ValueListenableBuilder<String>(
             valueListenable: _appPrefs.dailyReminderWindowNotifier,
             builder: (context, window, _) {
-              return ListTile(
-                leading: const Icon(
-                  Icons.alarm_rounded,
-                  color: AppColors.accent,
-                  size: 20,
+              return Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.s16,
+                  vertical: AppSpacing.s12,
                 ),
-                title: const Text(
-                  'Daily run reminder',
-                  style: AppText.bodyBold,
-                ),
-                subtitle: Text(
-                  window == 'off'
-                      ? 'Off'
-                      : (window == 'morning'
-                            ? 'Morning cue at 7:00 AM'
-                            : 'Evening cue at 6:30 PM'),
-                  style: AppText.bodySmall,
-                ),
-                trailing: SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'off',
-                      label: Text('Off', style: AppText.labelSmall),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.alarm_rounded,
+                          color: AppColors.accent,
+                          size: 20,
+                        ),
+                        const SizedBox(width: AppSpacing.s16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Daily run reminder',
+                                style: AppText.bodyBold,
+                              ),
+                              Text(
+                                window == 'off'
+                                    ? 'Off'
+                                    : (window == 'morning'
+                                          ? 'Morning cue at 7:00 AM'
+                                          : 'Evening cue at 6:30 PM'),
+                                style: AppText.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    ButtonSegment(
-                      value: 'morning',
-                      label: Text('AM', style: AppText.labelSmall),
-                    ),
-                    ButtonSegment(
-                      value: 'evening',
-                      label: Text('PM', style: AppText.labelSmall),
+                    const SizedBox(height: AppSpacing.s10),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(
+                          value: 'off',
+                          label: Text('Off', style: AppText.labelSmall),
+                        ),
+                        ButtonSegment(
+                          value: 'morning',
+                          label: Text('AM', style: AppText.labelSmall),
+                        ),
+                        ButtonSegment(
+                          value: 'evening',
+                          label: Text('PM', style: AppText.labelSmall),
+                        ),
+                      ],
+                      selected: {window},
+                      style: SegmentedButton.styleFrom(
+                        selectedBackgroundColor: AppColors.accent,
+                        selectedForegroundColor: AppColors.onAccent,
+                        foregroundColor: AppColors.textSecondary,
+                        backgroundColor: AppColors.surface2,
+                      ),
+                      onSelectionChanged: (selected) {
+                        if (selected.isNotEmpty) {
+                          final next = selected.first;
+                          _appPrefs.setDailyReminderWindow(next);
+                          if (next != 'off') {
+                            NotificationService().showPermissionPrimerIfNeeded(
+                              context,
+                            );
+                          }
+                        }
+                      },
                     ),
                   ],
-                  selected: {window},
-                  style: SegmentedButton.styleFrom(
-                    selectedBackgroundColor: AppColors.accent,
-                    selectedForegroundColor: AppColors.onAccent,
-                    foregroundColor: AppColors.textSecondary,
-                    backgroundColor: AppColors.surface2,
-                  ),
-                  onSelectionChanged: (selected) {
-                    if (selected.isNotEmpty) {
-                      final next = selected.first;
-                      _appPrefs.setDailyReminderWindow(next);
-                      if (next != 'off') {
-                        NotificationService().showPermissionPrimerIfNeeded(
-                          context,
-                        );
-                      }
-                    }
-                  },
                 ),
               );
             },
@@ -646,42 +668,67 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         // 4. UNITS
         _buildSectionTitle('Measurement units'),
         _buildSettingsGroup([
-          ListTile(
-            leading: const Icon(
-              Icons.straighten_rounded,
-              color: AppColors.accent,
-              size: 20,
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.s16,
+              vertical: AppSpacing.s12,
             ),
-            title: const Text('Distance & pace units', style: AppText.bodyBold),
-            subtitle: Text(
-              _appPrefs.unit == DistanceUnit.metric
-                  ? 'Metric (Kilometers, m²)'
-                  : 'Imperial (Miles, Acres)',
-              style: AppText.bodySmall,
-            ),
-            trailing: SegmentedButton<DistanceUnit>(
-              segments: const [
-                ButtonSegment(
-                  value: DistanceUnit.metric,
-                  label: Text('KM', style: AppText.labelSmall),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.straighten_rounded,
+                      color: AppColors.accent,
+                      size: 20,
+                    ),
+                    const SizedBox(width: AppSpacing.s16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Distance & pace units',
+                            style: AppText.bodyBold,
+                          ),
+                          Text(
+                            _appPrefs.unit == DistanceUnit.metric
+                                ? 'Metric (Kilometers, m²)'
+                                : 'Imperial (Miles, Acres)',
+                            style: AppText.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                ButtonSegment(
-                  value: DistanceUnit.imperial,
-                  label: Text('MI', style: AppText.labelSmall),
+                const SizedBox(height: AppSpacing.s10),
+                SegmentedButton<DistanceUnit>(
+                  segments: const [
+                    ButtonSegment(
+                      value: DistanceUnit.metric,
+                      label: Text('KM', style: AppText.labelSmall),
+                    ),
+                    ButtonSegment(
+                      value: DistanceUnit.imperial,
+                      label: Text('MI', style: AppText.labelSmall),
+                    ),
+                  ],
+                  selected: {_appPrefs.unit},
+                  style: SegmentedButton.styleFrom(
+                    selectedBackgroundColor: AppColors.accent,
+                    selectedForegroundColor: AppColors.onAccent,
+                    foregroundColor: AppColors.textSecondary,
+                    backgroundColor: AppColors.surface2,
+                  ),
+                  onSelectionChanged: (Set<DistanceUnit> selected) {
+                    setState(() {
+                      _appPrefs.setUnit(selected.first);
+                    });
+                  },
                 ),
               ],
-              selected: {_appPrefs.unit},
-              style: SegmentedButton.styleFrom(
-                selectedBackgroundColor: AppColors.accent,
-                selectedForegroundColor: AppColors.onAccent,
-                foregroundColor: AppColors.textSecondary,
-                backgroundColor: AppColors.surface2,
-              ),
-              onSelectionChanged: (Set<DistanceUnit> selected) {
-                setState(() {
-                  _appPrefs.setUnit(selected.first);
-                });
-              },
             ),
           ),
           const Divider(height: 1, color: AppColors.border),
