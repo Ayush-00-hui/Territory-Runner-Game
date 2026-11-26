@@ -6,6 +6,7 @@ import '../../../core/utils/constants.dart';
 import '../../../models/territory.dart';
 import '../../../services/app_preferences.dart';
 import '../../../services/exploration_service.dart';
+import '../../../services/firebase_service.dart';
 import '../../../ui/ui.dart';
 import '../controllers/map_run_controller.dart';
 import 'map_layers.dart';
@@ -114,6 +115,7 @@ class _MapViewportState extends State<MapViewport> {
                         territories,
                         highlightedTerritoryId:
                             widget.controller.highlightedTerritoryId,
+                        currentUserId: FirebaseService().currentUserId,
                         palette: palette,
                       ),
                 ),

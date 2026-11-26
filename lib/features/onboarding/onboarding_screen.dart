@@ -110,23 +110,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: AppColors.accentContainer,
-                            borderRadius: AppRadius.br8,
-                            border: Border.all(
-                              color: AppColors.accent.withValues(alpha: 0.5),
-                              width: 1.0,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.terrain_rounded,
-                            color: AppColors.accent,
-                            size: 18,
-                          ),
-                        ),
+                        const TerritoryBrandMark(size: 36),
                         const SizedBox(width: AppSpacing.s10),
                         Flexible(
                           child: Text(

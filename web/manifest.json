@@ -1,11 +1,11 @@
 {
-    "name": "territory_runner",
-    "short_name": "territory_runner",
+    "name": "Territory Runner",
+    "short_name": "Territory",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0D0F11",
+    "theme_color": "#A3C586",
+    "description": "Real-time server-authoritative GPS running and territory game.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -768,19 +768,23 @@ func (a *API) HandleGetTerritories(w http.ResponseWriter, r *http.Request) {
 		if t.GeoJSON != "" {
 			_ = json.Unmarshal([]byte(t.GeoJSON), &geomObj)
 		}
+		props := map[string]interface{}{
+			"owner_id":         t.OwnerID,
+			"username":         t.Username,
+			"is_self":          t.OwnerID == currentUID,
+			"area_sqm":         t.AreaSqm,
+			"strength":         t.Strength,
+			"last_defended_at": t.LastDefendedAt,
+			"updated_at":       t.UpdatedAt,
+		}
+		if t.CooldownUntil != nil {
+			props["cooldown_until"] = t.CooldownUntil
+		}
 		feat := map[string]interface{}{
-			"type": "Feature",
-			"id":   t.ID,
-			"properties": map[string]interface{}{
-				"owner_id":         t.OwnerID,
-				"username":         t.Username,
-				"is_self":          t.OwnerID == currentUID,
-				"area_sqm":         t.AreaSqm,
-				"strength":         t.Strength,
-				"last_defended_at": t.LastDefendedAt,
-				"updated_at":       t.UpdatedAt,
-			},
-			"geometry": geomObj,
+			"type":       "Feature",
+			"id":         t.ID,
+			"properties": props,
+			"geometry":   geomObj,
 		}
 		features = append(features, feat)
 	}

@@ -282,24 +282,7 @@ class _AuthScreenState extends State<AuthScreen> {
               // --- APP LOGO & BRAND HEADER ---
               Row(
                 children: [
-                  Container(
-                    height: 48,
-                    width: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.accentContainer,
-                      borderRadius: AppRadius.br16,
-                      border: Border.all(
-                        color: AppColors.accent.withValues(alpha: 0.6),
-                        width: 1.5,
-                      ),
-                      boxShadow: AppElevation.floating,
-                    ),
-                    child: const Icon(
-                      Icons.terrain_rounded,
-                      color: AppColors.accent,
-                      size: 26,
-                    ),
-                  ),
+                  const TerritoryBrandMark(size: 48),
                   const SizedBox(width: AppSpacing.s14),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

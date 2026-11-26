@@ -204,6 +204,64 @@ class ApiClient {
     }
   }
 
+  static List<({double speed, double heading})> _computeKinematics(
+    List<LatLng> points,
+    int effectiveDuration,
+    List<DateTime>? timestamps,
+  ) {
+    if (points.isEmpty) return const [];
+    const distance = Distance();
+    final int n = points.length;
+    final double defaultDt = n > 1 ? effectiveDuration / (n - 1) : 1.0;
+
+    final result = List<({double speed, double heading})>.filled(n, (
+      speed: 0.0,
+      heading: 0.0,
+    ));
+    double lastHeading = 0.0;
+
+    for (int i = 0; i < n; i++) {
+      final int prevIdx = i == 0 ? 0 : i - 1;
+      final int nextIdx = i == 0 ? (n > 1 ? 1 : 0) : i;
+      if (prevIdx == nextIdx) {
+        result[i] = (speed: 0.0, heading: 0.0);
+        continue;
+      }
+
+      final p1 = points[prevIdx];
+      final p2 = points[nextIdx];
+      final double distM = distance.as(LengthUnit.Meter, p1, p2);
+
+      double dtSec = defaultDt;
+      if (timestamps != null && timestamps.length == n) {
+        final ms = timestamps[nextIdx]
+            .difference(timestamps[prevIdx])
+            .inMilliseconds;
+        if (ms > 0) {
+          dtSec = ms / 1000.0;
+        }
+      }
+
+      final double speedMs = (dtSec > 0 && distM >= 0)
+          ? (distM / dtSec).clamp(0.0, 25.0)
+          : 0.0;
+
+      if (distM > 0.25) {
+        final double lat1 = p1.latitude * math.pi / 180.0;
+        final double lat2 = p2.latitude * math.pi / 180.0;
+        final double dLng = (p2.longitude - p1.longitude) * math.pi / 180.0;
+        final double y = math.sin(dLng) * math.cos(lat2);
+        final double x =
+            math.cos(lat1) * math.sin(lat2) -
+            math.sin(lat1) * math.cos(lat2) * math.cos(dLng);
+        lastHeading = ((math.atan2(y, x) * 180.0 / math.pi) + 360.0) % 360.0;
+      }
+
+      result[i] = (speed: speedMs, heading: lastHeading);
+    }
+    return result;
+  }
+
   /// Submits a completed run to the server (POST /v1/runs)
   Future<Map<String, dynamic>> submitRun({
     required String idempotencyKey,
@@ -214,6 +272,8 @@ class ApiClient {
     double? clientPreviewArea,
     int? clientPreviewXp,
     List<MotionWindow>? motionWindows,
+    int? stepCount,
+    List<DateTime>? timestamps,
     bool simulated = false,
   }) async {
     final uri = Uri.parse('$baseUrl/v1/runs');
@@ -227,12 +287,18 @@ class ApiClient {
         ? effectiveDuration / (points.length - 1)
         : 1.0;
     final startTime = now.subtract(Duration(seconds: effectiveDuration));
+    final kinematics = _computeKinematics(
+      points,
+      effectiveDuration,
+      timestamps,
+    );
 
     final Map<String, dynamic> payload = {
       'idempotency_key': idempotencyKey,
       'activity_type': activityType,
       'duration_seconds': durationSeconds,
       'distance_meters': distanceMeters,
+      'step_count': ?stepCount,
       if (simulated) 'simulated': true,
       'client_preview': {
         'area_claimed': clientPreviewArea ?? 0.0,
@@ -241,15 +307,19 @@ class ApiClient {
       'points': points.asMap().entries.map((entry) {
         final idx = entry.key;
         final p = entry.value;
-        final ptTime = startTime.add(
-          Duration(milliseconds: (idx * stepSeconds * 1000).round()),
-        );
+        final ptTime =
+            (timestamps != null && timestamps.length == points.length)
+            ? timestamps[idx]
+            : startTime.add(
+                Duration(milliseconds: (idx * stepSeconds * 1000).round()),
+              );
+        final kin = kinematics[idx];
         return {
           'latitude': p.latitude,
           'longitude': p.longitude,
           'timestamp': ptTime.toIso8601String(),
-          'speed': 2.7,
-          'heading': 0.0,
+          'speed': double.parse(kin.speed.toStringAsFixed(2)),
+          'heading': double.parse(kin.heading.toStringAsFixed(1)),
           'is_mocked': false,
         };
       }).toList(),
@@ -391,6 +461,19 @@ class ApiClient {
 
         final isSelf = ownerId == _firebaseService.currentUserId;
         final color = isSelf ? AppColors.accent : AppColors.rival;
+        final double? strength = (props['strength'] as num?)?.toDouble();
+        final DateTime? lastDefendedAt = props['last_defended_at'] != null
+            ? DateTime.tryParse(props['last_defended_at'].toString())
+            : null;
+        final DateTime? cooldownUntil = props['cooldown_until'] != null
+            ? DateTime.tryParse(props['cooldown_until'].toString())
+            : null;
+        final DateTime capturedAt =
+            (props['updated_at'] != null
+                ? DateTime.tryParse(props['updated_at'].toString())
+                : null) ??
+            lastDefendedAt ??
+            DateTime.now();
 
         territories.add(
           Territory(
@@ -399,7 +482,10 @@ class ApiClient {
             polygon: multiPolys.isNotEmpty ? multiPolys.first : [],
             polygons: multiPolys,
             areaSqMeters: areaSqm,
-            capturedAt: DateTime.now(),
+            capturedAt: capturedAt,
+            lastDefendedAt: lastDefendedAt,
+            cooldownUntil: cooldownUntil,
+            strength: strength,
             color: color,
           ),
         );
@@ -1048,5 +1134,40 @@ class ApiClient {
     );
 
     return response.statusCode == 201;
+  }
+
+  /// Fetches recent completed runs for the authenticated runner (GET /v1/runs).
+  Future<List<Map<String, dynamic>>> getRuns({int limit = 20}) async {
+    final uri = Uri.parse('$baseUrl/v1/runs?limit=$limit');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.get(uri, headers: headers),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final runs = data['runs'] as List<dynamic>? ?? const [];
+      return runs.whereType<Map<String, dynamic>>().toList();
+    }
+
+    final errorBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errorBody['error'] ?? 'RUNS_FETCH_ERROR',
+      message: errorBody['detail'] ?? 'Failed to fetch runs',
+    );
+  }
+
+  /// Removes a mutual friend connection (DELETE /v1/friends/{friendId}).
+  Future<bool> removeFriend(String friendId) async {
+    final uri = Uri.parse('$baseUrl/v1/friends/$friendId');
+    final headers = await _buildHeaders();
+
+    final response = await _executeWithRetry(
+      () => _httpClient.delete(uri, headers: headers),
+    );
+
+    return response.statusCode == 200;
   }
 }

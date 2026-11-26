@@ -466,7 +466,32 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
       );
     }
 
-    if (entries.isEmpty) {
+    final List<LeaderboardEntry> scopedEntries = _scopeEntries(
+      entries,
+      currentUsername,
+    );
+
+    if (scopedEntries.isEmpty) {
+      final String emptyTitle;
+      final String emptySubtitle;
+      switch (_scope) {
+        case LeaderboardScope.city:
+          emptyTitle = 'No city contenders yet';
+          emptySubtitle =
+              'Claim territory on a run to qualify for the active city bracket.';
+          break;
+        case LeaderboardScope.local:
+          emptyTitle = 'No nearby rivals yet';
+          emptySubtitle =
+              'Complete a run to compare ranks with runners near your tier.';
+          break;
+        case LeaderboardScope.global:
+          emptyTitle = 'No leaderboard entries yet';
+          emptySubtitle =
+              'Claim your first territory to rank on the leaderboard.';
+          break;
+      }
+
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(AppSpacing.s24),
@@ -484,7 +509,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
             ),
             const SizedBox(height: AppSpacing.s10),
             Text(
-              'No leaderboard entries yet',
+              emptyTitle,
               style: AppText.headingSmall.copyWith(
                 fontSize: 14,
                 color: AppColors.textPrimary,
@@ -492,7 +517,7 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
             ),
             const SizedBox(height: AppSpacing.s4),
             Text(
-              'Claim your first territory to rank on the leaderboard.',
+              emptySubtitle,
               textAlign: TextAlign.center,
               style: AppText.bodySmall.copyWith(
                 color: AppColors.textMuted,
@@ -505,13 +530,54 @@ class _FactionLeaderboardState extends State<FactionLeaderboard> {
     }
 
     return Column(
-      children: entries.map((entry) {
-        final isUser =
-            entry.userId == widget.profile.id ||
-            entry.username.toLowerCase() == currentUsername.toLowerCase();
-        return _buildLeaderCard(entry, isUser);
-      }).toList(),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_scope != LeaderboardScope.global)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.s8),
+            child: Text(
+              _scope == LeaderboardScope.city
+                  ? 'City bracket · top active contenders with claimed territory'
+                  : 'Closest competitors around your current rank',
+              style: AppText.caption.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+        ...scopedEntries.map((entry) {
+          final isUser =
+              entry.userId == widget.profile.id ||
+              entry.username.toLowerCase() == currentUsername.toLowerCase();
+          return _buildLeaderCard(entry, isUser);
+        }),
+      ],
     );
+  }
+
+  List<LeaderboardEntry> _scopeEntries(
+    List<LeaderboardEntry> entries,
+    String currentUsername,
+  ) {
+    switch (_scope) {
+      case LeaderboardScope.global:
+        return entries;
+      case LeaderboardScope.city:
+        return entries
+            .where((e) => e.totalAreaSqm > 0 || e.userId == widget.profile.id)
+            .take(10)
+            .toList();
+      case LeaderboardScope.local:
+        if (entries.isEmpty) return entries;
+        final idx = entries.indexWhere(
+          (e) =>
+              e.userId == widget.profile.id ||
+              e.username.toLowerCase() == currentUsername.toLowerCase(),
+        );
+        if (idx == -1) {
+          return entries.take(5).toList();
+        }
+        final int start = idx - 3 < 0 ? 0 : idx - 3;
+        final int end = idx + 4 > entries.length ? entries.length : idx + 4;
+        return entries.sublist(start, end);
+    }
   }
 
   Widget _buildLeaderCard(LeaderboardEntry entry, bool isUser) {

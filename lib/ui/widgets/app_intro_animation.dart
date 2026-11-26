@@ -6,6 +6,7 @@ import '../motion/motion.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_text.dart';
+import 'brand_logo.dart';
 
 /// Full-screen startup animation overlay shown once per app launch session.
 /// Features a minimal, ultra-smooth animated running person carving out a glowing
@@ -45,7 +46,7 @@ class _AppIntroGateState extends State<AppIntroGate>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 580),
+      duration: const Duration(milliseconds: 590),
     );
 
     _controller.addStatusListener((status) {
@@ -154,32 +155,38 @@ class _AppIntroGateState extends State<AppIntroGate>
                 }
 
                 // 2. Timeline staging
-                // Route drawing (0.00 -> 0.44)
-                final double loopProgress = (t / 0.44).clamp(0.0, 1.0);
+                // Route drawing (0.00 -> 0.42)
+                final double loopProgress = Curves.easeInOutCubic.transform(
+                  (t / 0.42).clamp(0.0, 1.0),
+                );
 
-                // Territory fill & pulse (0.42 -> 0.70)
-                final double fillProgress = ((t - 0.42) / 0.20).clamp(0.0, 1.0);
-                final double pulseProgress = ((t - 0.44) / 0.26).clamp(
+                // Territory fill & pulse (0.38 -> 0.72)
+                final double fillProgress = Curves.easeOut.transform(
+                  ((t - 0.38) / 0.24).clamp(0.0, 1.0),
+                );
+                final double pulseProgress = ((t - 0.42) / 0.30).clamp(
                   0.0,
                   1.0,
                 );
 
-                // Runner visibility: smoothly fades out as crest/title take focus (0.50 -> 0.68)
-                final double runnerOpacity = t < 0.50
+                // Runner visibility: smoothly transitions as brand crest settles (0.46 -> 0.64)
+                final double runnerOpacity = t < 0.46
                     ? 1.0
-                    : (1.0 - (t - 0.50) / 0.18).clamp(0.0, 1.0);
+                    : (1.0 - (t - 0.46) / 0.18).clamp(0.0, 1.0);
 
-                // Crest reveal (0.50 -> 0.74)
-                final double crestT = ((t - 0.50) / 0.24).clamp(0.0, 1.0);
-                final double crestOpacity = Curves.easeIn.transform(crestT);
+                // Brand crest reveal (0.44 -> 0.74) with progressive stroke completion
+                final double crestT = ((t - 0.44) / 0.26).clamp(0.0, 1.0);
+                final double crestOpacity = Curves.easeOut.transform(crestT);
                 final double crestScale =
-                    0.85 + (0.15 * Curves.easeOutBack.transform(crestT));
+                    0.82 + (0.18 * Curves.easeOutBack.transform(crestT));
 
-                // Title reveal (0.48 -> 0.75) — guaranteed visible by 1500ms
-                final double textT = ((t - 0.48) / 0.24).clamp(0.0, 1.0);
+                // Title reveal (0.46 -> 0.78) — visible by ~280ms
+                final double textT = ((t - 0.46) / 0.26).clamp(0.0, 1.0);
                 final double letterSpacing =
-                    5.0 - (2.5 * Curves.easeOutCubic.transform(textT));
-                final double textOpacity = textT;
+                    4.5 - (2.1 * Curves.easeOutCubic.transform(textT));
+                final double textOpacity = Curves.easeOut.transform(textT);
+                final double textOffsetY =
+                    10.0 * (1.0 - Curves.easeOutCubic.transform(textT));
 
                 return Opacity(
                   opacity: sceneOpacity,
@@ -188,7 +195,7 @@ class _AppIntroGateState extends State<AppIntroGate>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Minimalist Canvas (Running Person + Territory Loop + Pulse)
+                        // Precision Topographic Canvas (Radar Grid + Closed Loop + Runner + Pulse)
                         Positioned.fill(
                           child: CustomPaint(
                             painter: _MinimalRunnerIntroPainter(
@@ -201,8 +208,8 @@ class _AppIntroGateState extends State<AppIntroGate>
                           ),
                         ),
 
-                        // Center Brand Column (Smoothly revealed as runner transitions)
-                        if (t >= 0.48)
+                        // Center Brand Column (Revealed seamlessly as loop closes)
+                        if (t >= 0.44)
                           Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -211,30 +218,42 @@ class _AppIntroGateState extends State<AppIntroGate>
                                   scale: crestScale,
                                   child: Opacity(
                                     opacity: crestOpacity,
-                                    child: _buildCrestIcon(76),
+                                    child: _buildCrestIcon(
+                                      84,
+                                      loopProgress: crestT,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.s24),
-                                Opacity(
-                                  opacity: textOpacity,
-                                  child: Text(
-                                    'TERRITORY RUNNER',
-                                    style: AppText.headingLarge.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: letterSpacing,
-                                      color: AppColors.textPrimary,
+                                Transform.translate(
+                                  offset: Offset(0, textOffsetY),
+                                  child: Opacity(
+                                    opacity: textOpacity,
+                                    child: Text(
+                                      'TERRITORY RUNNER',
+                                      style: AppText.headingLarge.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: letterSpacing,
+                                        color: AppColors.textPrimary,
+                                      ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(height: AppSpacing.s8),
-                                Opacity(
-                                  opacity: (textOpacity * 1.2).clamp(0.0, 1.0),
-                                  child: Text(
-                                    'RUN • CLAIM • DEFEND',
-                                    style: AppText.labelAccent.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 3.2,
-                                      color: AppColors.accent,
+                                Transform.translate(
+                                  offset: Offset(0, textOffsetY * 1.2),
+                                  child: Opacity(
+                                    opacity: (textOpacity * 1.15).clamp(
+                                      0.0,
+                                      1.0,
+                                    ),
+                                    child: Text(
+                                      'RUN • CLAIM • DEFEND',
+                                      style: AppText.labelAccent.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 3.2,
+                                        color: AppColors.accent,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -269,23 +288,11 @@ class _AppIntroGateState extends State<AppIntroGate>
     );
   }
 
-  Widget _buildCrestIcon(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: AppColors.accent.withValues(alpha: 0.8),
-          width: 2.0,
-        ),
-      ),
-      child: Icon(
-        Icons.shield_rounded,
-        size: size * 0.56,
-        color: AppColors.accent,
-      ),
+  Widget _buildCrestIcon(double size, {double loopProgress = 1.0}) {
+    return TerritoryBrandMark(
+      size: size,
+      loopProgress: loopProgress,
+      showContainer: true,
     );
   }
 }
@@ -335,26 +342,59 @@ class _MinimalRunnerIntroPainter extends CustomPainter {
       return Offset(origin.dx + pt.dx * boxSize, origin.dy + pt.dy * boxSize);
     }).toList();
 
+    // 0. Subtle architectural topographic grid & compass hairlines
+    final centerPt = Offset(size.width / 2.0, size.height / 2.0);
+    final gridAlpha = (0.28 * (1.0 - pulseProgress * 0.4)).clamp(0.08, 0.28);
+    final topoPaint = Paint()
+      ..color = AppColors.borderSubtle.withValues(alpha: gridAlpha)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    for (final ringR in [boxSize * 0.34, boxSize * 0.52]) {
+      canvas.drawCircle(centerPt, ringR, topoPaint);
+    }
+
+    // Build smooth closed spline curve across waypoints
+    final smoothLoop = Path();
+    if (points.length > 2) {
+      final mid0 = Offset(
+        (points.last.dx + points[1].dx) / 2,
+        (points.last.dy + points[1].dy) / 2,
+      );
+      smoothLoop.moveTo(points.first.dx, points.first.dy);
+      for (int i = 1; i < points.length - 1; i++) {
+        final next = points[i + 1];
+        final mid = Offset(
+          (points[i].dx + next.dx) / 2,
+          (points[i].dy + next.dy) / 2,
+        );
+        smoothLoop.quadraticBezierTo(
+          points[i].dx,
+          points[i].dy,
+          mid.dx,
+          mid.dy,
+        );
+      }
+      smoothLoop.quadraticBezierTo(
+        points.first.dx,
+        points.first.dy,
+        mid0.dx,
+        mid0.dy,
+      );
+      smoothLoop.close();
+    }
+
     // 1. Territory translucent claim fill upon loop closure
     if (fillProgress > 0.0) {
-      final fillPath = Path()..moveTo(points.first.dx, points.first.dy);
-      for (int i = 1; i < points.length; i++) {
-        fillPath.lineTo(points[i].dx, points[i].dy);
-      }
-      fillPath.close();
-
-      // Soft ambient territory glow
       final fillPaint = Paint()
         ..color = AppColors.accent.withValues(alpha: 0.14 * fillProgress)
         ..style = PaintingStyle.fill;
-      canvas.drawPath(fillPath, fillPaint);
+      canvas.drawPath(smoothLoop, fillPaint);
 
-      // Delicate inner boundary
       final borderPaint = Paint()
-        ..color = AppColors.accent.withValues(alpha: 0.4 * fillProgress)
+        ..color = AppColors.accent.withValues(alpha: 0.42 * fillProgress)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
-      canvas.drawPath(fillPath, borderPaint);
+      canvas.drawPath(smoothLoop, borderPaint);
     }
 
     // 2. Minimal territory claim ripple pulse
@@ -372,39 +412,31 @@ class _MinimalRunnerIntroPainter extends CustomPainter {
       canvas.drawCircle(center, currentRadius, pulsePaint);
     }
 
-    // 3. Traced route line
+    // 3. Smooth spline traced route line via PathMetrics
     if (loopProgress > 0.0) {
-      final totalSegments = points.length - 1;
-      final currentFloat = loopProgress * totalSegments;
-      final currentIdx = currentFloat.floor().clamp(0, totalSegments - 1);
-      final segmentFrac = (currentFloat - currentIdx).clamp(0.0, 1.0);
-
-      final tracePath = Path()..moveTo(points.first.dx, points.first.dy);
-      for (int i = 1; i <= currentIdx; i++) {
-        tracePath.lineTo(points[i].dx, points[i].dy);
-      }
-
-      final pStart = points[currentIdx];
-      final pEnd = points[currentIdx + 1];
-      final currentHead = Offset(
-        pStart.dx + (pEnd.dx - pStart.dx) * segmentFrac,
-        pStart.dy + (pEnd.dy - pStart.dy) * segmentFrac,
-      );
-      tracePath.lineTo(currentHead.dx, currentHead.dy);
-
-      // Clean crisp core stroke
       final routePaint = Paint()
         ..color = AppColors.accent
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3.0
+        ..strokeWidth = 3.2
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round;
-      canvas.drawPath(tracePath, routePaint);
 
-      // Leading beacon dot at the head of the loop (crisp, zero glow)
-      if (loopProgress < 1.0) {
-        canvas.drawCircle(currentHead, 3.5, Paint()..color = AppColors.accent);
-        canvas.drawCircle(currentHead, 1.8, Paint()..color = AppColors.bgDeep);
+      Offset? headPos;
+      for (final metric in smoothLoop.computeMetrics()) {
+        final len = metric.length * loopProgress;
+        final tracePath = metric.extractPath(0.0, len);
+        canvas.drawPath(tracePath, routePaint);
+        headPos = metric.getTangentForOffset(len)?.position;
+      }
+
+      if (loopProgress < 1.0 && headPos != null) {
+        canvas.drawCircle(
+          headPos,
+          6.0,
+          Paint()..color = AppColors.accent.withValues(alpha: 0.35),
+        );
+        canvas.drawCircle(headPos, 3.6, Paint()..color = AppColors.accent);
+        canvas.drawCircle(headPos, 1.8, Paint()..color = AppColors.bgDeep);
       }
     }
 

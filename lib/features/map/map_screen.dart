@@ -7,8 +7,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/utils/geohash_utils.dart';
 import '../../models/activity_type.dart';
 import '../../models/territory.dart';
+import '../../models/ws_events.dart';
+import '../../services/api_client.dart';
 import '../../services/app_preferences.dart';
 import '../../services/battery_saver_service.dart';
 import '../../services/firebase_service.dart';
@@ -16,7 +19,9 @@ import '../../services/ghost_runner_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/run_log_service.dart';
+import '../../services/websocket_service.dart';
 import '../../ui/ui.dart';
+import '../coach/llm_coach_service.dart';
 import '../coach/pace_prediction_service.dart';
 import '../gameplay/territory_service.dart';
 import '../routing/route_service.dart';
@@ -43,6 +48,7 @@ import 'widgets/run_goal_sheet.dart';
 import 'widgets/run_recovery_dialog.dart';
 import 'widgets/saved_loops_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
+import 'widgets/summary_sheet.dart';
 import '../profile/widgets/body_details_sheet.dart';
 import '../profile/widgets/offline_maps_sheet.dart';
 import '../social/widgets/social_hub_sheet.dart';
@@ -95,6 +101,11 @@ class _MapScreenState extends State<MapScreen>
   MapRunController? _localController;
   StreamSubscription<Position>? _positionSub;
   StreamSubscription<String>? _territoryFocusSub;
+  StreamSubscription<RunnerPresenceEvent>? _wsPresenceSub;
+  StreamSubscription<String>? _wsRunnerLeftSub;
+  StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
+  DateTime? _lastBBoxFetchAt;
+  LatLng? _lastBBoxCenter;
   bool _showGoCue = false;
 
   MapRunController _resolveController() {
@@ -169,13 +180,58 @@ class _MapScreenState extends State<MapScreen>
       }
     }
 
+    final bool isTestEnv = WidgetsBinding.instance.runtimeType
+        .toString()
+        .contains('TestWidgetsFlutterBinding');
+
+    if (!isTestEnv) {
+      final ws = WebSocketService();
+      _wsPresenceSub = ws.presenceStream.listen((event) {
+        if (!mounted) return;
+        controller.upsertLiveRival(event);
+      });
+      _wsRunnerLeftSub = ws.runnerLeftStream.listen((userId) {
+        if (!mounted) return;
+        controller.removeLiveRival(userId);
+      });
+      _wsAlertSub = ws.alertStream.listen((alert) {
+        if (!mounted) return;
+        AppToast.show(
+          context,
+          '${alert.attackerName} entered your territory zone',
+          icon: Icons.shield_outlined,
+          type: AppToastType.warning,
+        );
+      });
+      unawaited(ws.connect());
+      if (controller.currentLocation != null) {
+        ws.sendViewportSubscription(
+          GeohashUtils.computeViewportCells(controller.currentLocation!),
+        );
+        unawaited(_syncNearbyTerritories(controller.currentLocation!));
+      }
+    }
+
     _positionSub = LocationService().locationStream.listen((pos) {
       if (!mounted) return;
       controller.processPosition(pos);
+      final target =
+          controller.currentLocation ?? LatLng(pos.latitude, pos.longitude);
       if (controller.isCameraFollowLocked) {
-        final target =
-            controller.currentLocation ?? LatLng(pos.latitude, pos.longitude);
         _animateCameraMove(target, _mapController.camera.zoom);
+      }
+      if (!isTestEnv) {
+        final ws = WebSocketService();
+        ws.sendViewportSubscription(GeohashUtils.computeViewportCells(target));
+        ws.sendPresenceUpdate(
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+          speed: pos.speed,
+          heading: pos.heading,
+        );
+        if (_shouldRefreshBBox(target)) {
+          unawaited(_syncNearbyTerritories(target));
+        }
       }
     });
 
@@ -288,6 +344,40 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  bool _shouldRefreshBBox(LatLng center) {
+    final now = DateTime.now();
+    if (_lastBBoxFetchAt == null || _lastBBoxCenter == null) {
+      return true;
+    }
+    if (now.difference(_lastBBoxFetchAt!).inSeconds >= 90) {
+      return true;
+    }
+    const distance = Distance();
+    return distance.as(LengthUnit.Meter, _lastBBoxCenter!, center) >= 400.0;
+  }
+
+  Future<void> _syncNearbyTerritories(LatLng center) async {
+    _lastBBoxFetchAt = DateTime.now();
+    _lastBBoxCenter = center;
+    try {
+      const double delta = 0.025; // ~2.8 km viewport radius
+      final remote = await ApiClient()
+          .getTerritoriesInBBox(
+            minLng: center.longitude - delta,
+            minLat: center.latitude - delta,
+            maxLng: center.longitude + delta,
+            maxLat: center.latitude + delta,
+          )
+          .timeout(const Duration(seconds: 5));
+      final merged = await TerritoryService().mergeRemoteTerritories(remote);
+      if (merged > 0 && mounted) {
+        _refreshTerritoryCache();
+      }
+    } catch (_) {
+      // Offline or unauthenticated; retain local Hive territory cache silently.
+    }
+  }
+
   void _refreshTerritoryCache() {
     _territoriesNotifier.value = TerritoryService()
         .getCapturedTerritoryObjects();
@@ -318,6 +408,9 @@ class _MapScreenState extends State<MapScreen>
     _cameraAnimationController.dispose();
     _positionSub?.cancel();
     _territoryFocusSub?.cancel();
+    _wsPresenceSub?.cancel();
+    _wsRunnerLeftSub?.cancel();
+    _wsAlertSub?.cancel();
     _hudHeightNotifier.dispose();
     _territoriesNotifier.dispose();
     _keyboardFocusNode.dispose();
@@ -446,7 +539,19 @@ class _MapScreenState extends State<MapScreen>
         onSimulateLoop: demoRunner.runAutomatedLoopDemo,
         onSimulateRivalCut: demoRunner.runRivalConflictDemo,
         onSimulateAnomaly: demoRunner.simulateSpeedAnomaly,
-        onSimulateCoachDebrief: () {},
+        onSimulateCoachDebrief: () {
+          SummarySheet.show(
+            context: context,
+            distanceKm: 3.52,
+            durationSeconds: 1085,
+            territoriesClaimed: 1,
+            areaSqMeters: 1840.0,
+            elevationGainMeters: 42.0,
+            profile: TerritoryService().getProfile(),
+            coachService: LLMCoachService(),
+            isSimulated: true,
+          );
+        },
         onSimulateDecayAndAttack: demoRunner.simulateDecayAndAttack,
         isRivalSimulating: controller.isRivalSimulating,
         onToggleRivalSimulation: () {
@@ -524,10 +629,17 @@ class _MapScreenState extends State<MapScreen>
         );
       },
       onOpenSocialHub: () => showSocialHubSheet(context),
+      activePacerLabel: controller.activePaceTarget != null
+          ? '${controller.activePaceTarget!.targetSecondsPerKm ~/ 60}:${(controller.activePaceTarget!.targetSecondsPerKm % 60).toString().padLeft(2, '0')}/km'
+          : null,
+      activeGoalLabel: controller.activeGoal.isActive
+          ? controller.activeGoal.title
+          : null,
       activeGhostLabel: controller.ghostMode != GhostMode.off
           ? controller.ghostMode.label
           : null,
       activeWorkoutLabel: controller.activeWorkoutPlan?.name,
+      isAmoledActive: BatterySaverService().isAmoledHudActive,
     );
   }
 

@@ -6,6 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/logging/app_logger.dart';
 import '../../../models/interval_workout.dart';
 import '../../../models/lap_split.dart';
 import '../../../models/run_log_entry.dart';
@@ -25,6 +26,7 @@ import '../../../services/tiered_achievement_service.dart';
 import '../../../services/training_plan_service.dart';
 import '../../coach/llm_coach_service.dart';
 import '../../gameplay/territory_service.dart';
+import '../../security/anomaly_service.dart';
 import '../controllers/map_run_controller.dart';
 import 'summary_sheet.dart';
 
@@ -176,6 +178,21 @@ Future<void> handleFinishRun({
       .toList(growable: false);
 
   if (!isSimulated && points.length >= 3) {
+    if (positions.length >= 2) {
+      try {
+        final anomaly = AnomalyService().scoreSegment(
+          positions,
+          controller.selectedActivity,
+          motionWindows,
+        );
+        if (anomaly.isAnomaly) {
+          AppLogger.warning(
+            'Preflight anti-cheat flag (${anomaly.anomalyScore.toStringAsFixed(2)}): ${anomaly.reason}',
+            tag: 'MapRunFinisher',
+          );
+        }
+      } catch (_) {}
+    }
     SyncQueueService().enqueueRun(
       idempotencyKey: runId,
       points: points,

@@ -22,6 +22,7 @@ export 'widgets/permission_primer_sheet.dart';
 export 'widgets/calm_error_screen.dart';
 export 'widgets/measure_size.dart';
 export 'widgets/app_icon_button.dart';
+export 'widgets/brand_logo.dart';
 export 'widgets/territory_art.dart';
 export 'widgets/combined_status_indicator.dart';
 export 'widgets/territory_hero_card.dart';

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -277,6 +278,82 @@ class RunLogService {
       'Updated metadata for RunLogEntry $id',
       tag: 'RunLogService',
     );
+  }
+
+  /// Merges remote runs returned by GET /v1/runs into the encrypted local log.
+  /// Updates existing entries by ID or idempotency key to 'synced' and adds missing ones.
+  Future<int> mergeServerRuns(List<Map<String, dynamic>> serverRuns) async {
+    if (serverRuns.isEmpty) return 0;
+    int mergedCount = 0;
+
+    final existingById = <String, RunLogEntry>{
+      for (final r in getAllRuns()) r.id: r,
+    };
+
+    for (final raw in serverRuns) {
+      final serverId = raw['id']?.toString() ?? '';
+      final idempotencyKey = raw['idempotency_key']?.toString() ?? '';
+      final matchKey = existingById.containsKey(serverId)
+          ? serverId
+          : (idempotencyKey.isNotEmpty &&
+                    existingById.containsKey(idempotencyKey)
+                ? idempotencyKey
+                : '');
+
+      if (matchKey.isNotEmpty) {
+        final local = existingById[matchKey]!;
+        if (local.syncStatus != 'synced') {
+          final updated = local.copyWith(syncStatus: 'synced');
+          await _safeBox.put(matchKey, jsonEncode(updated.toJson()));
+          mergedCount++;
+        }
+        continue;
+      }
+
+      final entryId = serverId.isNotEmpty ? serverId : idempotencyKey;
+      if (entryId.isEmpty) continue;
+
+      final durationSec = (raw['duration_seconds'] as num?)?.toInt() ?? 0;
+      final distanceM = (raw['distance_meters'] as num?)?.toDouble() ?? 0.0;
+      final areaClaimed = (raw['area_claimed'] as num?)?.toDouble() ?? 0.0;
+      final stepCount = (raw['step_count'] as num?)?.toInt();
+      final activityType = raw['activity_type']?.toString() ?? 'running';
+      final createdAt = raw['created_at'] != null
+          ? DateTime.tryParse(raw['created_at'].toString())?.toLocal() ??
+                DateTime.now()
+          : DateTime.now();
+      final startedAt = createdAt.subtract(Duration(seconds: durationSec));
+      final xpAwarded = areaClaimed >= 25.0
+          ? math.max(5, (areaClaimed / 20.0).round())
+          : 0;
+
+      final entry = RunLogEntry(
+        id: entryId,
+        startedAt: startedAt,
+        endedAt: createdAt,
+        activityType: activityType.isNotEmpty ? activityType : 'running',
+        movingSeconds: durationSec,
+        totalSeconds: durationSec,
+        distanceM: distanceM,
+        samples: const [],
+        stepCount: stepCount,
+        claimedAreaSqM: areaClaimed,
+        xp: xpAwarded,
+        syncStatus: raw['status']?.toString() == 'flagged_review'
+            ? 'flagged_review'
+            : 'synced',
+        isSimplified: false,
+      );
+
+      await _safeBox.put(entryId, jsonEncode(entry.toJson()));
+      mergedCount++;
+    }
+
+    if (mergedCount > 0) {
+      _loadRunsFromBox();
+      await _applyRetentionPolicy();
+    }
+    return mergedCount;
   }
 
   /// Clears all stored runs (used during "Delete my data" and account deletion)

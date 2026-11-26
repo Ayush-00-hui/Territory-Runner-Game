@@ -4,7 +4,7 @@ import 'package:latlong2/latlong.dart' hide Path;
 
 import '../../ui/ui.dart';
 
-/// Debug-only Design Gallery showcasing all Amber Red + Off-White + Electric Yellow
+/// Debug-only Design Gallery showcasing all Calm Moss + Neutral Obsidian
 /// design tokens, typography styles, and component states.
 class DesignGalleryScreen extends StatefulWidget {
   const DesignGalleryScreen({super.key});
@@ -138,7 +138,7 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
           const SectionHeader(
             title: 'Interactive Buttons',
             overline: 'COMPONENTS',
-            subtitle: 'Electric yellow primary and surface secondary buttons with 0.97 press scale',
+            subtitle: 'Calm Moss primary and obsidian surface secondary buttons with 0.97 press scale',
           ),
           const SizedBox(height: AppSpacing.s8),
           PrimaryButton(
@@ -212,7 +212,14 @@ class _DesignGalleryScreenState extends State<DesignGalleryScreen> {
                 isSelected: _selectedChipIndex == 2,
                 onTap: () => setState(() => _selectedChipIndex = 2),
               ),
-              NeutralChip(label: 'Neutral chip', onTap: () {}),
+              NeutralChip(
+                label: 'Neutral chip',
+                onTap: () => AppToast.show(
+                  context,
+                  'Neutral filter chip selected',
+                  type: AppToastType.info,
+                ),
+              ),
               const CombinedStatusIndicator(
                 isGpsSearching: false,
                 accuracyMeters: 4.8,

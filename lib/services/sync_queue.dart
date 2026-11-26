@@ -426,6 +426,7 @@ class SyncQueueService {
           clientPreviewArea: run.clientPreviewArea,
           clientPreviewXp: run.clientPreviewXp,
           motionWindows: run.motionWindows,
+          stepCount: run.stepCount,
         );
 
         AppLogger.info(

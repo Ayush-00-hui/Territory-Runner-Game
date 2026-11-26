@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import '../../models/run_log_entry.dart';
 import '../../models/runner_profile.dart';
 import '../../models/territory.dart';
+import '../../services/api_client.dart';
 import '../../services/run_log_service.dart';
 import '../../ui/ui.dart';
 import '../gameplay/territory_service.dart';
@@ -42,6 +43,36 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   List<RunLogEntry>? _localRuns;
+  bool _isSyncingCloud = false;
+
+  Future<void> _syncServerRuns() async {
+    if (_isSyncingCloud) return;
+    setState(() => _isSyncingCloud = true);
+    try {
+      await _runLogService.init();
+      final serverRuns = await ApiClient().getRuns(limit: 50);
+      final merged = await _runLogService.mergeServerRuns(serverRuns);
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        merged > 0
+            ? 'Synced $merged ${merged == 1 ? 'run' : 'runs'} from cloud'
+            : 'Run archive is up to date',
+        type: merged > 0 ? AppToastType.success : AppToastType.info,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        'Unable to reach server — showing local runs',
+        type: AppToastType.warning,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSyncingCloud = false);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -199,6 +230,26 @@ class _RunHistoryScreenState extends State<RunHistoryScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Sync cloud runs',
+            onPressed: _isSyncingCloud ? null : _syncServerRuns,
+            icon: _isSyncingCloud
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.accent,
+                    ),
+                  )
+                : const Icon(
+                    Icons.cloud_sync_outlined,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+          ),
+        ],
       ),
       body: ValueListenableBuilder<List<RunLogEntry>>(
         valueListenable: _runLogService.runsNotifier,

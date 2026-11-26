@@ -29,7 +29,9 @@ All sound effects bundled in Territory Runner are procedurally synthesized harmo
 
 | Asset | Type | License | Source |
 | :--- | :--- | :--- | :--- |
-| `logo.png` | PNG Raster (1024x1024) | MIT License | Territory Runner Project Vector Export |
+| `logo.png` | PNG Raster (1024x1024) | MIT License | Territory Runner Shield & Stride Crest Vector Render (`#0D0F11` Obsidian + `#A3C586` Calm Moss + `#F8FAFC` Alpine Snow) |
+| `logo_foreground.png` | PNG Raster (1024x1024 Transparent) | MIT License | Android 12+ Adaptive Icon Foreground Layer (Shield & Stride Crest + Splash Logo) |
+| `mipmap-*`, `Assets.xcassets`, `web/icons` | Platform Icon & Splash Suites | MIT License | Generated via `flutter_launcher_icons` & `flutter_native_splash` |
 | Material & Cupertino Icons | Vector glyphs | Apache 2.0 / MIT | Google Material Design / Apple Cupertino Icons |
 
 ---
@@ -44,7 +46,7 @@ Territory Runner displays map tiles using OpenStreetMap data by default, with op
 | **Optional Dark Style** | [Mapbox](https://www.mapbox.com) | `© Mapbox, © OpenStreetMap` | [Mapbox Terms of Service](https://www.mapbox.com/legal/tos) | `MAPBOX_API_KEY` / `TILE_API_KEY` |
 
 ### OpenStreetMap Tile Usage Policy Compliance:
-- **No Unsolicited Bulk Prefetching**: Bulk sector prefetching is disabled by default (`ALLOW_TILE_PREFETCH=false`). Only areas actively navigated or viewed by the runner are cached locally.
+- **No Unsolicited Bulk Prefetching**: Bulk area prefetching is disabled by default (`ALLOW_TILE_PREFETCH=false`). Only areas actively navigated or viewed by the runner are cached locally.
 - **Minimum 7-Day Caching**: The client caches viewed tiles with a minimum 7-day retention period (`minTileCacheDays = 7`) before conditional revalidation (`If-Modified-Since`), minimizing network load.
 - **Identifiable User-Agent**: All map tile HTTP requests identify the application, version, and repository (`com.territoryrunner.app/1.0.0 (https://github.com/Ayush-00-hui/Territory-Runner-Game)`).
 - **Prominent Attribution**: Attribution is displayed on the live map via `RichAttributionWidget` and in the Profile Settings under "Map Data & Attribution".

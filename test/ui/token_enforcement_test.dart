@@ -46,7 +46,6 @@ void main() {
         'lib/features/map/widgets/summary_coach_card.dart': 5,
         'lib/features/map/widgets/summary_stats_grid.dart': 5,
         'lib/ui/widgets/calm_error_screen.dart': 5,
-        'lib/profile_page.dart': 0,
         'lib/features/history/widgets/run_share_card_actions.dart': 4,
         'lib/features/map/widgets/run_hud_closure_bar.dart': 4,
         'lib/features/map/widgets/summary_victory_header.dart': 4,

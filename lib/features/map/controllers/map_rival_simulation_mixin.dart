@@ -75,6 +75,24 @@ mixin MapRivalSimulationMixin on ChangeNotifier {
     notifyListeners();
   }
 
+  void upsertLiveRival(RunnerPresenceEvent event) {
+    if (event.userId.isEmpty || event.userId == 'sim_rival_phantom') return;
+    _activeRivalRunners[event.userId] = event;
+    final trail = _rivalBreadcrumbs.putIfAbsent(event.userId, () => []);
+    trail.add(event.position);
+    if (trail.length > 40) trail.removeAt(0);
+    notifyListeners();
+  }
+
+  void removeLiveRival(String userId) {
+    if (userId.isEmpty || userId == 'sim_rival_phantom') return;
+    final removedRunner = _activeRivalRunners.remove(userId);
+    final removedTrail = _rivalBreadcrumbs.remove(userId);
+    if (removedRunner != null || removedTrail != null) {
+      notifyListeners();
+    }
+  }
+
   void disposeRivalSimulation() {
     _rivalSimulationTimer?.cancel();
   }

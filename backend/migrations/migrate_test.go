@@ -13,8 +13,8 @@ func TestEmbeddedMigrationsCompleteness(t *testing.T) {
 	files, err := GetEmbeddedMigrationFiles()
 	require.NoError(t, err)
 
-	// Ensure all 12 pairs (24 files total) are embedded
-	assert.GreaterOrEqual(t, len(files), 24, "expected at least 24 migration files (12 up/down pairs)")
+	// Ensure all 18 pairs (36 files total) are embedded
+	assert.GreaterOrEqual(t, len(files), 36, "expected at least 36 migration files (18 up/down pairs)")
 
 	upFiles := make(map[int]string)
 	downFiles := make(map[int]string)

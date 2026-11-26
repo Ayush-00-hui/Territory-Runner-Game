@@ -70,10 +70,7 @@ class MapFloatingControls extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(24.0),
-                      border: Border.all(
-                        color: AppColors.accent,
-                        width: 1.5,
-                      ),
+                      border: Border.all(color: AppColors.accent, width: 1.5),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.35),

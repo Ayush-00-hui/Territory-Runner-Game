@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math' as math;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,7 +23,9 @@ void main() {
 
       final initialRss = ProcessInfo.currentRss;
       // ignore: avoid_print
-      print('Initial Process RSS: ${(initialRss / (1024 * 1024)).toStringAsFixed(2)} MB');
+      print(
+        'Initial Process RSS: ${(initialRss / (1024 * 1024)).toStringAsFixed(2)} MB',
+      );
 
       final startTime = DateTime(2026, 11, 26, 6, 0, 0);
       double currentLat = 51.5074;
@@ -60,14 +63,22 @@ void main() {
       final finalRss = ProcessInfo.currentRss;
       final rssDeltaMb = (finalRss - initialRss) / (1024 * 1024);
       // ignore: avoid_print
-      print('Final Process RSS: ${(finalRss / (1024 * 1024)).toStringAsFixed(2)} MB');
+      print(
+        'Final Process RSS: ${(finalRss / (1024 * 1024)).toStringAsFixed(2)} MB',
+      );
       // ignore: avoid_print
-      print('Memory Growth Delta: ${rssDeltaMb.toStringAsFixed(2)} MB over 5,000 GPS fixes');
+      print(
+        'Memory Growth Delta: ${rssDeltaMb.toStringAsFixed(2)} MB over 5,000 GPS fixes',
+      );
 
       // Assertions:
       expect(controller.runCoordinates.length, greaterThan(1000));
       expect(controller.runDistanceKm, greaterThan(1.0));
-      expect(rssDeltaMb, lessThan(50.0), reason: 'Memory growth must be bounded without unbounded leak');
+      expect(
+        rssDeltaMb,
+        lessThan(50.0),
+        reason: 'Memory growth must be bounded without unbounded leak',
+      );
 
       controller.stopRun();
       await Future.delayed(const Duration(milliseconds: 50));

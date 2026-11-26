@@ -10,7 +10,7 @@ import 'package:territory_runner/features/map/map_screen.dart';
 import 'package:territory_runner/models/run_log_entry.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/models/territory.dart';
-import 'package:territory_runner/profile_page.dart';
+import 'package:territory_runner/features/profile/profile_screen.dart';
 import 'package:territory_runner/services/app_preferences.dart';
 import 'package:territory_runner/services/run_log_service.dart';
 import 'package:territory_runner/ui/ui.dart';

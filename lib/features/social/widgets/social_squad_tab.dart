@@ -14,6 +14,7 @@ class SocialSquadTab extends StatelessWidget {
   final VoidCallback onAddFriend;
   final Future<void> Function(String reqId, String action) onRespondRequest;
   final void Function(FriendUser friend) onChallengeDuel;
+  final Future<void> Function(FriendUser friend)? onRemoveFriend;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
   final String? myCallsign;
@@ -26,6 +27,7 @@ class SocialSquadTab extends StatelessWidget {
     required this.onAddFriend,
     required this.onRespondRequest,
     required this.onChallengeDuel,
+    this.onRemoveFriend,
     this.shrinkWrap = false,
     this.physics,
     this.myCallsign,
@@ -454,6 +456,18 @@ class SocialSquadTab extends StatelessWidget {
             height: 48,
             onPressed: () => onChallengeDuel(friend),
           ),
+          if (onRemoveFriend != null) ...[
+            const SizedBox(width: AppSpacing.s6),
+            IconButton(
+              tooltip: 'Remove friend',
+              icon: const Icon(
+                Icons.person_remove_outlined,
+                color: AppColors.textMuted,
+                size: 20,
+              ),
+              onPressed: () => onRemoveFriend!(friend),
+            ),
+          ],
         ],
       ),
     );

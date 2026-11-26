@@ -16,7 +16,7 @@ import 'package:territory_runner/features/map/widgets/summary_sheet.dart';
 import 'package:territory_runner/models/run_goal.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/models/territory.dart';
-import 'package:territory_runner/profile_page.dart';
+import 'package:territory_runner/features/profile/profile_screen.dart';
 import 'package:territory_runner/ui/ui.dart';
 
 class MockCoachService implements LLMCoachService {

@@ -5,6 +5,7 @@ import '../../../models/runner_profile.dart';
 import '../../../services/daily_quest_service.dart';
 import '../../../services/run_log_service.dart';
 import '../../../ui/ui.dart';
+import 'achievements_sheet.dart';
 import 'profile_dialogs.dart';
 
 class ChallengesShelf extends StatelessWidget {
@@ -140,6 +141,14 @@ class ChallengesShelf extends StatelessWidget {
 
                 // --- TROPHY CASE GRID ---
                 _buildBadgeGrid(context),
+
+                const SizedBox(height: AppSpacing.s14),
+
+                SecondaryButton(
+                  label: 'Milestones & earned timeline',
+                  icon: Icons.workspace_premium_rounded,
+                  onPressed: () => AchievementsSheet.show(context: context),
+                ),
               ],
             );
           },

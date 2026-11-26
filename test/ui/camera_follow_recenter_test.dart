@@ -16,20 +16,23 @@ void main() {
   });
 
   group('Phase M: Camera Follow & Recenter Mechanics Tests', () {
-    test('MapRunController defaults to camera follow locked and updates state', () {
-      final controller = MapRunController();
-      expect(controller.isCameraFollowLocked, isTrue);
+    test(
+      'MapRunController defaults to camera follow locked and updates state',
+      () {
+        final controller = MapRunController();
+        expect(controller.isCameraFollowLocked, isTrue);
 
-      bool notified = false;
-      controller.addListener(() => notified = true);
+        bool notified = false;
+        controller.addListener(() => notified = true);
 
-      controller.setCameraFollow(false);
-      expect(controller.isCameraFollowLocked, isFalse);
-      expect(notified, isTrue);
+        controller.setCameraFollow(false);
+        expect(controller.isCameraFollowLocked, isFalse);
+        expect(notified, isTrue);
 
-      controller.setCameraFollow(true);
-      expect(controller.isCameraFollowLocked, isTrue);
-    });
+        controller.setCameraFollow(true);
+        expect(controller.isCameraFollowLocked, isTrue);
+      },
+    );
 
     testWidgets(
       'MapFloatingControls shows prominent Recenter pill when camera follow is unlocked',

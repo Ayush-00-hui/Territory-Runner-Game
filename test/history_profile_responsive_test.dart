@@ -8,7 +8,7 @@ import 'package:territory_runner/features/profile/widgets/settings_list.dart';
 import 'package:territory_runner/features/gameplay/territory_service.dart';
 import 'package:territory_runner/models/runner_profile.dart';
 import 'package:territory_runner/models/territory.dart';
-import 'package:territory_runner/profile_page.dart';
+import 'package:territory_runner/features/profile/profile_screen.dart';
 import 'package:territory_runner/services/firebase_service.dart';
 import 'package:territory_runner/ui/ui.dart';
 

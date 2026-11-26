@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../profile_page.dart';
+import '../../profile/profile_screen.dart';
 import '../../../ui/ui.dart';
 import 'gps_sync_chip.dart';
 

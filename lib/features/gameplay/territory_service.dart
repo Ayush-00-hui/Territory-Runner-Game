@@ -549,6 +549,29 @@ class TerritoryService {
     _captureEventController.add(territory);
   }
 
+  /// Merges remote server territories returned from GET /v1/territories without
+  /// overwriting a locally captured self territory that has pending unsynced edits.
+  Future<int> mergeRemoteTerritories(List<Territory> remoteTerritories) async {
+    final box = _territoryBox;
+    if (box == null || remoteTerritories.isEmpty) return 0;
+
+    final currentUid = _firebaseService.currentUserId;
+    final selfId = 'poly_${currentUid}_territory';
+    int merged = 0;
+
+    for (final remote in remoteTerritories) {
+      if (remote.polygons.isEmpty) continue;
+      final isSelf = remote.ownerId == currentUid || remote.id == selfId;
+      if (isSelf && box.containsKey(remote.id)) {
+        // Keep local self territory intact unless explicitly reconciled via SyncQueueService.
+        continue;
+      }
+      await box.put(remote.id, remote);
+      merged++;
+    }
+    return merged;
+  }
+
   /// Spawns a mock rival territory (e.g. Crimson Faction) near the given coordinate for live demonstration
   Future<Territory> spawnMockRivalTerritory(LatLng center) async {
     const double deltaLat = 0.0018; // approx 200m

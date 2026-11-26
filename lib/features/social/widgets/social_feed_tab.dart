@@ -14,8 +14,16 @@ import 'social_add_friend_dialog.dart';
 class SocialFeedTab extends StatefulWidget {
   final ApiClient? apiClient;
   final String? currentUserId;
+  final bool shrinkWrap;
+  final ScrollPhysics? physics;
 
-  const SocialFeedTab({super.key, this.apiClient, this.currentUserId});
+  const SocialFeedTab({
+    super.key,
+    this.apiClient,
+    this.currentUserId,
+    this.shrinkWrap = false,
+    this.physics,
+  });
 
   @override
   State<SocialFeedTab> createState() => _SocialFeedTabState();
@@ -242,6 +250,8 @@ class _SocialFeedTabState extends State<SocialFeedTab> {
       color: AppColors.accent,
       onRefresh: _loadFeed,
       child: ListView(
+        shrinkWrap: widget.shrinkWrap,
+        physics: widget.physics,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.s16,
           vertical: AppSpacing.s8,

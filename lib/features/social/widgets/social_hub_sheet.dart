@@ -274,6 +274,66 @@ class _SocialHubViewState extends State<SocialHubView> {
     }
   }
 
+  Future<void> _removeFriend(FriendUser friend) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(
+          'Remove ${friend.username}?',
+          style: AppText.titleMedium.copyWith(color: AppColors.textPrimary),
+        ),
+        content: Text(
+          'They will no longer appear in your squad or friend activity feed.',
+          style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(
+              'Cancel',
+              style: AppText.labelLarge.copyWith(color: AppColors.textMuted),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(
+              'Remove',
+              style: AppText.labelLarge.copyWith(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final ok = await _apiClient.removeFriend(friend.id);
+      if (!mounted) return;
+      if (ok) {
+        setState(() {
+          _friends.removeWhere((f) => f.id == friend.id);
+        });
+        AppToast.show(
+          context,
+          'Removed ${friend.username} from squad',
+          type: AppToastType.info,
+        );
+        _refreshData();
+      } else {
+        AppToast.show(
+          context,
+          'Could not remove friend',
+          type: AppToastType.error,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.show(context, 'Error: $e', type: AppToastType.error);
+      }
+    }
+  }
+
   Widget _buildSquadTab({required bool embedded}) {
     return SocialSquadTab(
       friends: _friends,
@@ -284,6 +344,7 @@ class _SocialHubViewState extends State<SocialHubView> {
       myRunnerId: _myRunnerId,
       onAddFriend: _openAddFriendSheet,
       onRespondRequest: _respondRequest,
+      onRemoveFriend: _removeFriend,
       onChallengeDuel: (friend) => showCreateDuelSheet(
         context,
         apiClient: _apiClient,
@@ -314,7 +375,12 @@ class _SocialHubViewState extends State<SocialHubView> {
   Widget _buildTabContent({required bool embedded}) {
     switch (_activeTab) {
       case SocialTab.feed:
-        return SocialFeedTab(apiClient: _apiClient, currentUserId: _myUid);
+        return SocialFeedTab(
+          apiClient: _apiClient,
+          currentUserId: _myUid,
+          shrinkWrap: embedded,
+          physics: embedded ? const NeverScrollableScrollPhysics() : null,
+        );
       case SocialTab.squad:
         return _buildSquadTab(embedded: embedded);
       case SocialTab.duels:

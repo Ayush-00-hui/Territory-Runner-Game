@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'features/onboarding/onboarding_screen.dart';
 import 'features/auth/auth_screen.dart';
-import 'profile_page.dart';
+import 'features/profile/profile_screen.dart';
 import 'features/map/map_screen.dart';
 import 'models/territory.dart';
 import 'models/runner_profile.dart';
@@ -174,6 +174,26 @@ void _initServicesAsync() async {
   } catch (e, st) {
     AppLogger.warning(
       'NotificationService init skipped/timed out: $e',
+      tag: 'main',
+      error: e,
+      stackTrace: st,
+    );
+  }
+  try {
+    await UserSettingsService().init().timeout(const Duration(seconds: 3));
+  } catch (e, st) {
+    AppLogger.warning(
+      'UserSettingsService init skipped/timed out: $e',
+      tag: 'main',
+      error: e,
+      stackTrace: st,
+    );
+  }
+  try {
+    await PrivacyZoneService().loadZones().timeout(const Duration(seconds: 3));
+  } catch (e, st) {
+    AppLogger.warning(
+      'PrivacyZoneService init skipped/timed out: $e',
       tag: 'main',
       error: e,
       stackTrace: st,
