@@ -166,6 +166,7 @@ Future<void> handleFinishRun({
       await TerritoryService().setCurrentStreak(activeStreakDays);
     }
     completedQuests = await DailyQuestService().claimCompletedQuests();
+    unawaited(NotificationService().syncDailyReminders());
   }
 
   final updatedProfile = TerritoryService().getProfile();

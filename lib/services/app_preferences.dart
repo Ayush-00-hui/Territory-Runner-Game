@@ -62,7 +62,7 @@ class AppPreferences {
   bool _isSoundEffectsEnabled = true;
   bool _isAutoSaveCardEnabled = true;
   bool _isVoiceCoachCuesEnabled = true;
-  String _dailyReminderWindow = 'off';
+  String _dailyReminderWindow = 'daily_3';
   bool _showTerritoriesLayer = true;
   bool _showRivalsLayer = true;
   bool _showExploredGridLayer = true;
@@ -95,7 +95,7 @@ class AppPreferences {
     false,
   );
   final ValueNotifier<String> dailyReminderWindowNotifier =
-      ValueNotifier<String>('off');
+      ValueNotifier<String>('daily_3');
   final ValueNotifier<int> mapLayersNotifier = ValueNotifier<int>(0);
 
   bool get isHapticsEnabled => _isHapticsEnabled;
@@ -174,7 +174,7 @@ class AppPreferences {
       shareRunsWithFriendsNotifier.value = _isShareRunsWithFriends;
       _isVoiceCoachCuesEnabled = prefs.getBool(_prefVoiceCoachCuesKey) ?? true;
       _dailyReminderWindow =
-          prefs.getString(_prefDailyReminderWindowKey) ?? 'off';
+          prefs.getString(_prefDailyReminderWindowKey) ?? 'daily_3';
       dailyReminderWindowNotifier.value = _dailyReminderWindow;
       _showTerritoriesLayer =
           prefs.getBool(_prefShowTerritoriesLayerKey) ?? true;
@@ -324,9 +324,10 @@ class AppPreferences {
     } catch (_) {}
   }
 
-  /// Updates the preferred daily run reminder window ('off', 'morning', 'evening').
+  /// Updates the preferred daily run reminder cadence ('off', 'daily_2', 'daily_3',
+  /// plus legacy aliases 'morning' and 'evening').
   Future<void> setDailyReminderWindow(String window) async {
-    const allowed = {'off', 'morning', 'evening'};
+    const allowed = {'off', 'morning', 'evening', 'daily_2', 'daily_3'};
     final normalized = allowed.contains(window) ? window : 'off';
     _dailyReminderWindow = normalized;
     dailyReminderWindowNotifier.value = normalized;

@@ -42,8 +42,14 @@ class TrainingPlanService {
       if (raw == null) return null;
       final json = jsonDecode(raw) as Map<String, dynamic>;
       return UserPlanEnrollment.fromJson(json);
+    } on HiveError catch (e) {
+      AppLogger.debug(
+        'Training plan box unavailable before Hive init: $e',
+        tag: 'TrainingPlanService',
+      );
+      return null;
     } catch (e) {
-      AppLogger.error(
+      AppLogger.warning(
         'Error reading training plan enrollment: $e',
         tag: 'TrainingPlanService',
       );

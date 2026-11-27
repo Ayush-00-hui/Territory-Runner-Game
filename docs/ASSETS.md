@@ -31,6 +31,7 @@ All sound effects bundled in Territory Runner are procedurally synthesized harmo
 | :--- | :--- | :--- | :--- |
 | `logo.png` | PNG Raster (1024x1024) | MIT License | Territory Runner Shield & Stride Crest Vector Render (`#0D0F11` Obsidian + `#A3C586` Calm Moss + `#F8FAFC` Alpine Snow) |
 | `logo_foreground.png` | PNG Raster (1024x1024 Transparent) | MIT License | Android 12+ Adaptive Icon Foreground Layer (Shield & Stride Crest + Splash Logo) |
+| `android/app/src/main/res/drawable/ic_notification.xml` | Android Monochrome VectorDrawable (24dp) | MIT License | Minimal white `#FFFFFF` Shield & Stride Crest silhouette for status bar notifications (`#A3C586` accent) |
 | `mipmap-*`, `Assets.xcassets`, `web/icons` | Platform Icon & Splash Suites | MIT License | Generated via `flutter_launcher_icons` & `flutter_native_splash` |
 | Material & Cupertino Icons | Vector glyphs | Apache 2.0 / MIT | Google Material Design / Apple Cupertino Icons |
 

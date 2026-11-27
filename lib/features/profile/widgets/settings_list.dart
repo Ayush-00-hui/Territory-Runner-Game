@@ -544,6 +544,19 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
           ValueListenableBuilder<String>(
             valueListenable: _appPrefs.dailyReminderWindowNotifier,
             builder: (context, window, _) {
+              final String selectedSegment = window == 'off'
+                  ? 'off'
+                  : ((window == 'daily_2' ||
+                            window == 'morning' ||
+                            window == 'evening')
+                        ? 'daily_2'
+                        : 'daily_3');
+              final String subtitle = selectedSegment == 'off'
+                  ? 'Off'
+                  : (selectedSegment == 'daily_2'
+                        ? '2 check-ins/day · 8:30 AM goal & 6:45 PM wrap-up'
+                        : '3 check-ins/day · goal, midday health check & quote');
+
               return Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.s16,
@@ -568,14 +581,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                                 'Daily run reminder',
                                 style: AppText.bodyBold,
                               ),
-                              Text(
-                                window == 'off'
-                                    ? 'Off'
-                                    : (window == 'morning'
-                                          ? 'Morning cue at 7:00 AM'
-                                          : 'Evening cue at 6:30 PM'),
-                                style: AppText.bodySmall,
-                              ),
+                              Text(subtitle, style: AppText.bodySmall),
                             ],
                           ),
                         ),
@@ -589,36 +595,54 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
                           label: Text('Off', style: AppText.labelSmall),
                         ),
                         ButtonSegment(
-                          value: 'morning',
-                          label: Text('AM', style: AppText.labelSmall),
+                          value: 'daily_2',
+                          label: Text('2/day', style: AppText.labelSmall),
                         ),
                         ButtonSegment(
-                          value: 'evening',
-                          label: Text('PM', style: AppText.labelSmall),
+                          value: 'daily_3',
+                          label: Text('3/day', style: AppText.labelSmall),
                         ),
                       ],
-                      selected: {window},
+                      selected: {selectedSegment},
                       style: SegmentedButton.styleFrom(
                         selectedBackgroundColor: AppColors.accent,
                         selectedForegroundColor: AppColors.onAccent,
                         foregroundColor: AppColors.textSecondary,
                         backgroundColor: AppColors.surface2,
                       ),
-                      onSelectionChanged: (selected) {
+                      onSelectionChanged: (selected) async {
                         if (selected.isNotEmpty) {
                           final next = selected.first;
-                          _appPrefs.setDailyReminderWindow(next);
-                          if (next != 'off') {
-                            NotificationService().showPermissionPrimerIfNeeded(
-                              context,
-                            );
+                          await _appPrefs.setDailyReminderWindow(next);
+                          if (next != 'off' && context.mounted) {
+                            await NotificationService()
+                                .requestNotificationPermission();
                           }
+                          await NotificationService().syncDailyReminders();
                         }
                       },
                     ),
                   ],
                 ),
               );
+            },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.notifications_active_outlined,
+            title: 'Preview daily check-in',
+            subtitle:
+                'Push a sample notification with today\'s goal & health tip',
+            onTap: () async {
+              final preview = await NotificationService()
+                  .sendSampleDailyCheckIn();
+              if (context.mounted && preview != null) {
+                AppToast.show(
+                  context,
+                  'Notification pushed: ${preview.title}',
+                  type: AppToastType.success,
+                );
+              }
             },
           ),
           const Divider(height: 1, color: AppColors.border),

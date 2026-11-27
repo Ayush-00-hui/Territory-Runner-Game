@@ -38,6 +38,7 @@ import 'services/run_recovery_service.dart';
 import 'services/safety_service.dart';
 import 'services/sync_queue.dart';
 import 'services/tile_cache_service.dart';
+import 'services/training_plan_service.dart';
 import 'services/user_settings_service.dart';
 import 'services/websocket_service.dart';
 import 'ui/ui.dart';
@@ -102,6 +103,7 @@ void main() {
       await RunLogService().init();
       await ExplorationService().init();
       await AvatarService.instance.init();
+      await Hive.openBox<String>(TrainingPlanService.boxName);
 
       // Load package metadata
       unawaited(AppVersion.init());
