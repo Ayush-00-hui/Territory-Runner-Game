@@ -27,7 +27,7 @@ class MotionWindow {
   });
 
   Map<String, dynamic> toJson() => {
-    'start_time': startTime.toIso8601String(),
+    'start_time': startTime.toUtc().toIso8601String(),
     'duration_seconds': durationSeconds,
     'cadence_spm': cadenceSpm,
     'motion_energy': motionEnergy,

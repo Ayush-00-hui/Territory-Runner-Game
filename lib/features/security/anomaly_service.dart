@@ -315,7 +315,7 @@ class AnomalyService {
     double minVal,
     double maxVal,
   ) {
-    if (vals.isEmpty || nBins <= 0) return 0.0;
+    if (vals.isEmpty || nBins <= 0 || maxVal <= minVal) return 0.0;
     final binWidth = (maxVal - minVal) / nBins;
     final counts = List<int>.filled(nBins, 0);
 
@@ -754,9 +754,16 @@ class AnomalyService {
   /// Computes the normalized weighted Z-score for a 5-element feature vector,
   /// capping each per-feature |z| at 6.0 so no single feature can dominate the score.
   double scoreFeatureVector(List<double> fVector) {
+    if (fVector.length < 5 ||
+        _means.length < 5 ||
+        _stds.length < 5 ||
+        _weights.length < 5) {
+      return 0.0;
+    }
     double weightedScore = 0.0;
     for (int i = 0; i < 5; i++) {
-      double z = ((fVector[i] - _means[i]) / _stds[i]).abs();
+      final std = _stds[i] > 0 ? _stds[i] : 1e-6;
+      double z = ((fVector[i] - _means[i]) / std).abs();
       if (z > 6.0) {
         z = 6.0;
       }

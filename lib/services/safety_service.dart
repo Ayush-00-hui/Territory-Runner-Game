@@ -154,6 +154,7 @@ class SafetyService {
       await _sirenPlayer!.setVolume(1.0);
       await _sirenPlayer!.play(AssetSource('audio/sos_siren.wav'));
     } catch (e) {
+      _isSirenPlaying = false;
       AppLogger.error(
         'Error playing siren: $e',
         tag: 'SafetyService',

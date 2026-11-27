@@ -43,6 +43,7 @@ class _SeasonCrewViewState extends State<SeasonCrewView> {
   }
 
   void _updateCountdownFromService() {
+    if (!mounted) return;
     final season = _service.currentSeason.value;
     if (season != null) {
       final now = DateTime.now().toUtc();
@@ -296,9 +297,14 @@ class _SeasonCrewViewState extends State<SeasonCrewView> {
           ],
         ),
         actions: [
-          SecondaryButton(label: 'Cancel', onPressed: () => Navigator.pop(ctx)),
+          SecondaryButton(
+            label: 'Cancel',
+            isFullWidth: false,
+            onPressed: () => Navigator.pop(ctx),
+          ),
           PrimaryButton(
             label: 'Join Crew',
+            isFullWidth: false,
             isLoading: _isActionLoading,
             onPressed: () async {
               final code = controller.text.trim().toUpperCase();

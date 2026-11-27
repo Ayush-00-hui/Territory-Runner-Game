@@ -38,7 +38,8 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lon2 - lon1)
     a = math.sin(dphi / 2.0) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0) ** 2
-    return 2.0 * EARTH_RADIUS_METERS * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    a = min(1.0, max(0.0, a))
+    return 2.0 * EARTH_RADIUS_METERS * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1.0 - a)))
 
 
 def initial_bearing_deg(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -135,7 +136,8 @@ def extract_single_window_features(pts: List[dict]) -> Optional[Tuple[dict, np.n
         b = initial_bearing_deg(p_prev["latitude"], p_prev["longitude"], p_curr["latitude"], p_curr["longitude"])
         bearings.append(b)
 
-        acc = float(p_curr.get("accuracy_m", 4.0))
+        raw_acc = p_curr.get("accuracy_m")
+        acc = 4.0 if raw_acc is None or pd.isna(raw_acc) else float(raw_acc)
         accuracies.append(acc)
 
     speeds_ms = np.array(speeds_ms, dtype=np.float64)
@@ -205,9 +207,9 @@ def extract_single_window_features(pts: List[dict]) -> Optional[Tuple[dict, np.n
     }
 
     # Accelerometer cadence and motion energy features (only from real recorded app traces)
-    explicit_cadences = [float(p["cadence_spm"]) for p in pts if p.get("cadence_spm") is not None]
-    explicit_energies = [float(p["motion_energy"]) for p in pts if p.get("motion_energy") is not None]
-    explicit_confs = [float(p["cadence_confidence"]) for p in pts if p.get("cadence_confidence") is not None]
+    explicit_cadences = [float(p["cadence_spm"]) for p in pts if pd.notna(p.get("cadence_spm"))]
+    explicit_energies = [float(p["motion_energy"]) for p in pts if pd.notna(p.get("motion_energy"))]
+    explicit_confs = [float(p["cadence_confidence"]) for p in pts if pd.notna(p.get("cadence_confidence"))]
 
     if explicit_cadences and explicit_energies:
         feat["cadence_spm"] = float(np.mean(explicit_cadences))
@@ -312,6 +314,10 @@ def extract_features_from_dataframe(
     feat_df = pd.DataFrame(tabular_records)
     seq_arr = np.array(sequence_tensors, dtype=np.float32) if sequence_tensors else np.zeros((0, window_size - 1, 5), dtype=np.float32)
 
+    if feat_df.empty:
+        print("[!] Extracted 0 feature windows from input trajectories.")
+        return feat_df, seq_arr
+
     print(f"[+] Extracted {len(feat_df):,} feature windows across {feat_df['session_id'].nunique():,} sessions.")
     print(f"    Class balance: {feat_df['is_anomaly'].value_counts().to_dict()} (0=legit, 1=anomaly)")
     return feat_df, seq_arr
@@ -330,7 +336,9 @@ if __name__ == "__main__":
         df_in = pd.read_parquet(args.input)
         feat_df, seq_arr = extract_features_from_dataframe(df_in, window_size=args.window_size, stride=args.stride)
 
-        os.makedirs(os.path.dirname(args.output_features), exist_ok=True)
+        out_dir = os.path.dirname(args.output_features)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
         feat_df.to_parquet(args.output_features, index=False)
         np.save(args.output_sequences, seq_arr)
         print(f"[+] Saved tabular features: {args.output_features}")

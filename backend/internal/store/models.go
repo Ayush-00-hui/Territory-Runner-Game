@@ -139,10 +139,11 @@ func (t *Territory) RemainingShieldDuration(now time.Time) time.Duration {
 }
 
 // IsDespawned returns true if territory has exceeded 0% strength plus the 72-hour grace period (232 hours total inactivity).
+// Uses LastDefendedAt (the true defense timestamp) first, falling back to LastDecayedAt for legacy/test fixtures.
 func (t *Territory) IsDespawned(now time.Time) bool {
-	refTime := t.LastDecayedAt
+	refTime := t.LastDefendedAt
 	if refTime.IsZero() {
-		refTime = t.LastDefendedAt
+		refTime = t.LastDecayedAt
 	}
 	if refTime.IsZero() {
 		return false

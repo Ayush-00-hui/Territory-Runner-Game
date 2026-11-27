@@ -231,6 +231,7 @@ void showProfileAuthModal(
                             await firebaseService.verifyPhoneNumber(
                               phoneNumber: phone,
                               onCodeSent: (verId) {
+                                if (!context.mounted) return;
                                 setModalState(() {
                                   verificationId = verId;
                                   codeSent = true;
@@ -243,6 +244,7 @@ void showProfileAuthModal(
                                 );
                               },
                               onVerificationFailed: (e) {
+                                if (!context.mounted) return;
                                 setModalState(() => isLoading = false);
                                 showDialog(
                                   context: context,
@@ -307,12 +309,13 @@ void showProfileAuthModal(
                                 );
                               },
                               onVerificationCompleted: (cred) async {
+                                if (!context.mounted) return;
                                 setModalState(() => isLoading = false);
                               },
                             );
                           } catch (e) {
-                            setModalState(() => isLoading = false);
                             if (context.mounted) {
+                              setModalState(() => isLoading = false);
                               AppToast.show(
                                 context,
                                 'Error: $e',
@@ -402,8 +405,8 @@ void showProfileAuthModal(
                               );
                             }
                           } catch (e) {
-                            setModalState(() => isLoading = false);
                             if (context.mounted) {
+                              setModalState(() => isLoading = false);
                               AppToast.show(
                                 context,
                                 'Verification error: $e',
@@ -498,6 +501,7 @@ void showProfileAuthModal(
                           : 'Log In with Email',
                       isLoading: isLoading,
                       onPressed: () async {
+                        setModalState(() => isLoading = true);
                         try {
                           if (isSignUp) {
                             await firebaseService.signUpWithEmail(
@@ -539,6 +543,10 @@ void showProfileAuthModal(
                               type: AppToastType.error,
                             );
                           }
+                        } finally {
+                          if (context.mounted) {
+                            setModalState(() => isLoading = false);
+                          }
                         }
                       },
                     ),
@@ -561,5 +569,11 @@ void showProfileAuthModal(
         },
       );
     },
-  );
+  ).whenComplete(() {
+    phoneController.dispose();
+    otpController.dispose();
+    emailController.dispose();
+    passController.dispose();
+    nameController.dispose();
+  });
 }

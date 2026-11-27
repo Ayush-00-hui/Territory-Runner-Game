@@ -12,7 +12,7 @@
 | **Android** | Namespace | `com.territoryrunner.app` | [android/app/build.gradle.kts](android/app/build.gradle.kts) |
 | **Android** | Application ID | `com.territoryrunner.app` | [android/app/build.gradle.kts](android/app/build.gradle.kts) |
 | **Android** | App Label | `Territory Runner` | [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml) |
-| **Android** | Min SDK / Target SDK | Min: 21 / Target: 34 (Android 14) | [android/app/build.gradle.kts](android/app/build.gradle.kts) |
+| **Android** | Min SDK / Target SDK | Min: 21 / Target: 36 (Android 16) | [android/app/build.gradle.kts](android/app/build.gradle.kts) |
 | **iOS** | Bundle Identifier | `com.territoryrunner.app` | [ios/Runner.xcodeproj/project.pbxproj](ios/Runner.xcodeproj/project.pbxproj) |
 | **iOS** | CFBundleDisplayName | `Territory Runner` | [ios/Runner/Info.plist](ios/Runner/Info.plist) |
 | **iOS** | CFBundleName | `Territory Runner` | [ios/Runner/Info.plist](ios/Runner/Info.plist) |

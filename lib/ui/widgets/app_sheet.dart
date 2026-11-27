@@ -119,8 +119,10 @@ class AppSheet extends StatelessWidget {
           ),
         ],
 
-        // Sheet Content
-        Padding(padding: padding, child: child),
+        // Sheet Content (scrollable on compact viewports without inflating height)
+        Flexible(
+          child: SingleChildScrollView(padding: padding, child: child),
+        ),
       ],
     );
   }

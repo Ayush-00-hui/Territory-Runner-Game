@@ -282,6 +282,7 @@ class CalorieModelEngine {
     double p10 = rates['p10']! * durationMin;
     double p50 = rates['p50']! * durationMin;
     double p90 = rates['p90']! * durationMin;
+    double burnRate = rates['p50']!;
 
     // Apply personal watch calibration if present (clamped strictly to [0.8, 1.2])
     if (watchCalibrationFactor != null && watchCalibrationFactor > 0) {
@@ -289,13 +290,14 @@ class CalorieModelEngine {
       p10 *= factor;
       p50 *= factor;
       p90 *= factor;
+      burnRate *= factor;
     }
 
     return CalorieQuantileResult(
       p10Kcal: p10,
       p50Kcal: p50,
       p90Kcal: p90,
-      burnRateKcalPerMin: rates['p50']!,
+      burnRateKcalPerMin: burnRate,
       legacyFlatKcal: legacyFlat,
       isModelVerified: _isModelVerified,
     );

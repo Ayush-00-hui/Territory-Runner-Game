@@ -13,6 +13,8 @@ All sound effects bundled in Territory Runner are procedurally synthesized harmo
 | `sos_siren.wav` | 0.6s (loopable) | 22.05 kHz 16-bit Mono PCM | High-intensity pulsed dual-frequency siren (880 Hz / 587 Hz) for SafetyService emergency SOS distress beacon. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
 | `interval_work.wav` | 0.3s | 22.05 kHz 16-bit Mono PCM | Rising dual harmonic chime (587 Hz -> 880 Hz) signaling active run/work workout intervals. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
 | `interval_rest.wav` | 0.3s | 22.05 kHz 16-bit Mono PCM | Descending harmonic chime (659 Hz -> 440 Hz) signaling walk/rest recovery workout intervals. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
+| `countdown_tick.wav` | 0.1s | 22.05 kHz 16-bit Mono PCM | Short crisp acoustic tick cue for 3-2-1 countdown steps. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
+| `countdown_go.wav` | 0.25s | 22.05 kHz 16-bit Mono PCM | Rising two-tone chime signaling run launch. | Procedural sine synthesis (Territory Runner Core) | **CC0 1.0 Universal / Public Domain** |
 
 ---
 
@@ -21,7 +23,6 @@ All sound effects bundled in Territory Runner are procedurally synthesized harmo
 | Font Family | Styles | License | Source |
 | :--- | :--- | :--- | :--- |
 | **Inter** | Regular (400), SemiBold (600), Bold (700) | SIL Open Font License 1.1 | [Google Fonts / Rasmus Andersson](https://fonts.google.com/specimen/Inter) |
-| **Oswald** | Medium (500), Bold (700) | SIL Open Font License 1.1 | [Google Fonts / Vernon Adams](https://fonts.google.com/specimen/Oswald) |
 
 ---
 

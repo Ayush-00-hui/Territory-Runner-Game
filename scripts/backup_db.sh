@@ -9,7 +9,13 @@
 
 set -euo pipefail
 
-DB_URL="${DATABASE_URL:-${1:-}}"
+if [ -n "${DATABASE_URL:-}" ]; then
+    DB_URL="$DATABASE_URL"
+    OUTPUT_FILE="${1:-}"
+else
+    DB_URL="${1:-}"
+    OUTPUT_FILE="${2:-}"
+fi
 
 if [ -z "$DB_URL" ]; then
     echo "ERROR: DATABASE_URL environment variable or first argument must be provided." >&2
@@ -19,9 +25,10 @@ fi
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
-mkdir -p "$BACKUP_DIR"
-
-OUTPUT_FILE="${2:-${1:-$BACKUP_DIR/territory_runner_$TIMESTAMP.dump}}"
+if [ -z "$OUTPUT_FILE" ]; then
+    OUTPUT_FILE="$BACKUP_DIR/territory_runner_$TIMESTAMP.dump"
+fi
+mkdir -p "$(dirname "$OUTPUT_FILE")"
 
 echo "==> Backing up Territory Runner database..."
 echo "==> Destination: $OUTPUT_FILE"

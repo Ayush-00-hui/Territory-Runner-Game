@@ -101,7 +101,8 @@ class NeuralSequenceClassifier:
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.lr, weight_decay=1e-4)
 
         dataset = TensorDataset(X_t, y_t)
-        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, drop_last=False)
+        drop_last_singleton = len(dataset) > self.batch_size and (len(dataset) % self.batch_size == 1)
+        loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, drop_last=drop_last_singleton)
 
         self.model.train()
         for epoch in range(self.epochs):

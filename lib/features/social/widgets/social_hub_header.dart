@@ -142,15 +142,19 @@ class SocialHubHeader extends StatelessWidget {
               color: isSelected ? AppColors.onAccent : AppColors.textSecondary,
             ),
             const SizedBox(width: AppSpacing.s6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected
-                    ? AppColors.onAccent
-                    : AppColors.textSecondary,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                fontSize: 12,
-                letterSpacing: 0.4,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isSelected
+                      ? AppColors.onAccent
+                      : AppColors.textSecondary,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                  fontSize: 12,
+                  letterSpacing: 0.4,
+                ),
               ),
             ),
           ],

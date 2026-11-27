@@ -82,37 +82,46 @@ class SummaryRouteReplay extends StatelessWidget {
               Positioned(
                 bottom: 8,
                 left: 10,
-                child: GestureDetector(
-                  onTap: () => CalorieFactorsSheet.show(context: context),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.bgDeep.withValues(alpha: 0.85),
-                      borderRadius: AppSpacing.br8,
-                      border: Border.all(color: AppColors.borderSubtle),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Claimed: ${_formatArea(effectiveArea)} • ${calorieRange ?? AppPreferences().formatCalories(calories)}',
-                          style: AppText.label.copyWith(
-                            color: AppColors.accent,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                            fontFeatures: const [FontFeature.tabularFigures()],
+                right: 10,
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: GestureDetector(
+                    onTap: () => CalorieFactorsSheet.show(context: context),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.bgDeep.withValues(alpha: 0.85),
+                        borderRadius: AppSpacing.br8,
+                        border: Border.all(color: AppColors.borderSubtle),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              'Claimed: ${_formatArea(effectiveArea)} • ${calorieRange ?? AppPreferences().formatCalories(calories)}',
+                              overflow: TextOverflow.ellipsis,
+                              style: AppText.label.copyWith(
+                                color: AppColors.accent,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: AppSpacing.s4),
-                        const Icon(
-                          Icons.info_outline_rounded,
-                          size: 11,
-                          color: AppColors.textMuted,
-                        ),
-                      ],
+                          const SizedBox(width: AppSpacing.s4),
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 11,
+                            color: AppColors.textMuted,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

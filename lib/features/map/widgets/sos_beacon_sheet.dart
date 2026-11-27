@@ -33,8 +33,10 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
   @override
   void initState() {
     super.initState();
-    _safetyService.loadSettings();
     _isSirenOn = _safetyService.isSirenPlaying;
+    _safetyService.loadSettings().then((_) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
@@ -143,8 +145,17 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                 'Call emergency (911)',
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
               ),
-              onPressed: () {
-                _safetyService.callEmergencyServices(dialNumber: '911');
+              onPressed: () async {
+                final launched = await _safetyService.callEmergencyServices(
+                  dialNumber: '911',
+                );
+                if (!launched && context.mounted) {
+                  AppToast.show(
+                    context,
+                    'Unable to open phone dialer on this device',
+                    type: AppToastType.error,
+                  );
+                }
               },
             ),
           ),
@@ -158,11 +169,21 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
                 : 'Set up emergency contact SMS',
             icon: Icons.sms_rounded,
             height: 48,
-            onPressed: () {
+            onPressed: () async {
               if (_safetyService.hasContactConfigured) {
-                _safetyService.sendEmergencySms(position: position);
+                final launched = await _safetyService.sendEmergencySms(
+                  position: position,
+                );
+                if (!launched && context.mounted) {
+                  AppToast.show(
+                    context,
+                    'Unable to open SMS composer on this device',
+                    type: AppToastType.error,
+                  );
+                }
               } else {
-                showEmergencyContactDialog(context);
+                await showEmergencyContactDialog(context);
+                if (mounted) setState(() {});
               }
             },
           ),

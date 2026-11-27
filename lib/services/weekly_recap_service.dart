@@ -18,16 +18,24 @@ class WeeklyRecapService {
   Future<WeeklyRecap> computeRecap({DateTime? referenceDate}) async {
     final now = referenceDate ?? DateTime.now();
 
-    // Monday of current week at 00:00:00 UTC
+    // Calendar Monday of current week at 00:00:00 (DST-safe via DateTime calendar arithmetic)
     final currentWeekMonday = DateTime(
       now.year,
       now.month,
-      now.day,
-    ).subtract(Duration(days: now.weekday - 1));
-    final currentWeekSunday = currentWeekMonday.add(const Duration(days: 7));
+      now.day - (now.weekday - 1),
+    );
+    final currentWeekSunday = DateTime(
+      currentWeekMonday.year,
+      currentWeekMonday.month,
+      currentWeekMonday.day + 7,
+    );
 
     // Previous week Monday and Sunday
-    final prevWeekMonday = currentWeekMonday.subtract(const Duration(days: 7));
+    final prevWeekMonday = DateTime(
+      currentWeekMonday.year,
+      currentWeekMonday.month,
+      currentWeekMonday.day - 7,
+    );
     final prevWeekSunday = currentWeekMonday;
 
     final allRuns = _runLogService.getAllRuns();
@@ -42,11 +50,12 @@ class WeeklyRecapService {
     double prevAreaSqm = 0.0;
 
     for (final run in allRuns) {
+      if (run.simulated) continue;
       final started = run.startedAt;
       final distKm = run.distanceM / 1000.0;
       final area = run.claimedAreaSqM;
 
-      if (started.isAfter(currentWeekMonday) &&
+      if (!started.isBefore(currentWeekMonday) &&
           started.isBefore(currentWeekSunday)) {
         currentDistKm += distKm;
         currentRunsCount++;
@@ -56,7 +65,7 @@ class WeeklyRecapService {
             bestPace = run.paceSecondsPerKm;
           }
         }
-      } else if (started.isAfter(prevWeekMonday) &&
+      } else if (!started.isBefore(prevWeekMonday) &&
           started.isBefore(prevWeekSunday)) {
         prevDistKm += distKm;
         prevRunsCount++;

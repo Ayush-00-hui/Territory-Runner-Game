@@ -13,6 +13,7 @@ import (
 	"github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/geo"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -162,7 +163,7 @@ func (s *PostgresStore) GetRunsByUser(ctx context.Context, userID string, limit 
 		limit = 20
 	}
 	query := `
-		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), step_count, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
+		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), step_count, duration_seconds, distance_meters, area_claimed, COALESCE(area_stolen, 0.0), COALESCE(legacy, false), anomaly_score, anomaly_reasons, status, created_at
 		FROM runs
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -179,11 +180,14 @@ func (s *PostgresStore) GetRunsByUser(ctx context.Context, userID string, limit 
 		var r Run
 		if err := rows.Scan(
 			&r.ID, &r.UserID, &r.IdempotencyKey, &r.ActivityType, &r.StepCount, &r.DurationSeconds, &r.DistanceMeters,
-			&r.AreaClaimed, &r.AnomalyScore, &r.AnomalyReasons, &r.Status, &r.CreatedAt,
+			&r.AreaClaimed, &r.AreaStolen, &r.Legacy, &r.AnomalyScore, &r.AnomalyReasons, &r.Status, &r.CreatedAt,
 		); err != nil {
 			return nil, err
 		}
 		runs = append(runs, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return runs, nil
 }
@@ -191,14 +195,14 @@ func (s *PostgresStore) GetRunsByUser(ctx context.Context, userID string, limit 
 // GetRunByIdempotencyKey fetches an existing run by idempotency key.
 func (s *PostgresStore) GetRunByIdempotencyKey(ctx context.Context, key string) (*Run, error) {
 	query := `
-		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), step_count, duration_seconds, distance_meters, area_claimed, anomaly_score, anomaly_reasons, status, created_at
+		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), step_count, duration_seconds, distance_meters, area_claimed, COALESCE(area_stolen, 0.0), COALESCE(legacy, false), anomaly_score, anomaly_reasons, status, created_at
 		FROM runs
 		WHERE idempotency_key = $1;
 	`
 	var r Run
 	err := s.pool.QueryRow(ctx, query, key).Scan(
 		&r.ID, &r.UserID, &r.IdempotencyKey, &r.ActivityType, &r.StepCount, &r.DurationSeconds, &r.DistanceMeters,
-		&r.AreaClaimed, &r.AnomalyScore, &r.AnomalyReasons, &r.Status, &r.CreatedAt,
+		&r.AreaClaimed, &r.AreaStolen, &r.Legacy, &r.AnomalyScore, &r.AnomalyReasons, &r.Status, &r.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
@@ -216,7 +220,7 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 		FROM territories t
 		JOIN users u ON t.owner_id = u.id
 		WHERE ST_Intersects(t.geom, ST_MakeEnvelope($1, $2, $3, $4, 4326))
-		  AND COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at) >= NOW() - INTERVAL '232 hours';
+		  AND COALESCE(t.last_defended_at, t.last_decayed_at, t.updated_at) >= NOW() - INTERVAL '232 hours';
 	`
 	rows, err := s.pool.Query(ctx, query, minLng, minLat, maxLng, maxLat)
 	if err != nil {
@@ -233,6 +237,9 @@ func (s *PostgresStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat
 		}
 		t.Strength = t.EffectiveStrength(now)
 		list = append(list, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return list, nil
 }
@@ -257,6 +264,9 @@ func (s *PostgresStore) GetAllTerritories(ctx context.Context) ([]Territory, err
 			return nil, err
 		}
 		list = append(list, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return list, nil
 }
@@ -284,10 +294,10 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	// 2. Idempotency Check:
 	var existing Run
 	err = tx.QueryRow(ctx, `
-		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), duration_seconds, distance_meters, area_claimed, COALESCE(area_stolen, 0.0), anomaly_score, anomaly_reasons, status, created_at
+		SELECT id, user_id, idempotency_key, COALESCE(activity_type, 'running'), step_count, duration_seconds, distance_meters, area_claimed, COALESCE(area_stolen, 0.0), anomaly_score, anomaly_reasons, status, created_at
 		FROM runs WHERE idempotency_key = $1;
 	`, run.IdempotencyKey).Scan(
-		&existing.ID, &existing.UserID, &existing.IdempotencyKey, &existing.ActivityType, &existing.DurationSeconds,
+		&existing.ID, &existing.UserID, &existing.IdempotencyKey, &existing.ActivityType, &existing.StepCount, &existing.DurationSeconds,
 		&existing.DistanceMeters, &existing.AreaClaimed, &existing.AreaStolen, &existing.AnomalyScore,
 		&existing.AnomalyReasons, &existing.Status, &existing.CreatedAt,
 	)
@@ -304,11 +314,15 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		xpAwarded := 0
 		if gained >= MinCaptureFloorSqm {
 			xpAwarded = int(math.Max(5, math.Round(gained/20.0)))
+			if xpAwarded > DailyXpCap {
+				xpAwarded = DailyXpCap
+			}
 		}
 		return &CaptureResult{
 			RunID:              existing.ID,
 			IdempotencyKey:     existing.IdempotencyKey,
 			ActivityType:       existing.ActivityType,
+			StepCount:          existing.StepCount,
 			Status:             existing.Status,
 			AnomalyScore:       existing.AnomalyScore,
 			AnomalyReasons:     existing.AnomalyReasons,
@@ -339,7 +353,18 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	}
 
 	var currentUserXP int64
-	_ = tx.QueryRow(ctx, "SELECT COALESCE(xp, 0), COALESCE(total_area_sqm, 0.0) FROM users WHERE id = $1;", run.UserID).Scan(&currentUserXP, &playerTotalArea)
+	err = tx.QueryRow(ctx, "SELECT COALESCE(xp, 0), COALESCE(total_area_sqm, 0.0) FROM users WHERE id = $1;", run.UserID).Scan(&currentUserXP, &playerTotalArea)
+	if errors.Is(err, pgx.ErrNoRows) {
+		if _, insErr := tx.Exec(ctx, `
+			INSERT INTO users (id, runner_code, username, faction)
+			VALUES ($1, $2, $3, '')
+			ON CONFLICT (id) DO NOTHING;
+		`, run.UserID, GenerateRunnerCode(), "Runner_"+run.UserID[:min(6, len(run.UserID))]); insErr != nil {
+			return nil, fmt.Errorf("failed to ensure runner user record: %w", insErr)
+		}
+	} else if err != nil {
+		return nil, fmt.Errorf("failed to load runner user stats: %w", err)
+	}
 
 	// 3. Process spatial loop capture for all closed loops
 	var loopWKTs []string
@@ -372,20 +397,24 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		if err == nil && candidateGeom != "" && candidateGeom != "MULTIPOLYGON EMPTY" {
 			// Sovereign Shield Check (T3): Subtract active shielded rival territories from candidate loop
 			var shieldedRivalGeom *string
-			_ = tx.QueryRow(ctx, `
+			if shieldErr := tx.QueryRow(ctx, `
 				SELECT ST_AsText(ST_Union(geom))
 				FROM territories
 				WHERE owner_id != $1::text
 				  AND cooldown_until > NOW()
-				  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
+				  AND COALESCE(last_defended_at, last_decayed_at, updated_at) >= NOW() - INTERVAL '232 hours'
 				  AND ST_Intersects(geom, ST_GeomFromText($2::text, 4326));
-			`, run.UserID, candidateGeom).Scan(&shieldedRivalGeom)
+			`, run.UserID, candidateGeom).Scan(&shieldedRivalGeom); shieldErr != nil && !errors.Is(shieldErr, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("failed to query shielded rival territories: %w", shieldErr)
+			}
 
 			claimableGeom := candidateGeom
 			if shieldedRivalGeom != nil && *shieldedRivalGeom != "" && *shieldedRivalGeom != "GEOMETRYCOLLECTION EMPTY" && *shieldedRivalGeom != "MULTIPOLYGON EMPTY" {
-				_ = tx.QueryRow(ctx, `
+				if diffErr := tx.QueryRow(ctx, `
 					SELECT ST_AsText(ST_Multi(ST_CollectionExtract(ST_MakeValid(ST_Difference(ST_GeomFromText($1::text, 4326), ST_GeomFromText($2::text, 4326))), 3)));
-				`, candidateGeom, *shieldedRivalGeom).Scan(&claimableGeom)
+				`, candidateGeom, *shieldedRivalGeom).Scan(&claimableGeom); diffErr != nil {
+					return nil, fmt.Errorf("failed to subtract shielded rival territories: %w", diffErr)
+				}
 			}
 
 			if claimableGeom != "" && claimableGeom != "MULTIPOLYGON EMPTY" {
@@ -395,18 +424,26 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 				var playerExistingStrength float64
 				var playerLastDecayed time.Time
 
-				_ = tx.QueryRow(ctx, `
+				ownErr := tx.QueryRow(ctx, `
 					SELECT ST_AsText(geom), area_sqm, COALESCE(strength, 100.0), COALESCE(last_decayed_at, last_defended_at, updated_at)
-					FROM territories WHERE id = $1::text;
+					FROM territories WHERE id = $1::text
+					  AND COALESCE(last_defended_at, last_decayed_at, updated_at) >= NOW() - INTERVAL '232 hours';
 				`, territoryID).Scan(&playerExistingGeom, &playerExistingArea, &playerExistingStrength, &playerLastDecayed)
+				if ownErr != nil && !errors.Is(ownErr, pgx.ErrNoRows) {
+					return nil, fmt.Errorf("failed to query existing owner territory: %w", ownErr)
+				}
 
 				// Compute net_new (T2)
 				if playerExistingGeom != nil && *playerExistingGeom != "" {
-					_ = tx.QueryRow(ctx, `
+					if areaErr := tx.QueryRow(ctx, `
 						SELECT ST_Area(ST_MakeValid(ST_Difference(ST_GeomFromText($1::text, 4326), ST_GeomFromText($2::text, 4326)))::geography);
-					`, claimableGeom, *playerExistingGeom).Scan(&netNewArea)
+					`, claimableGeom, *playerExistingGeom).Scan(&netNewArea); areaErr != nil {
+						return nil, fmt.Errorf("failed to compute net new area: %w", areaErr)
+					}
 				} else {
-					_ = tx.QueryRow(ctx, `SELECT ST_Area(ST_GeomFromText($1::text, 4326)::geography);`, claimableGeom).Scan(&netNewArea)
+					if areaErr := tx.QueryRow(ctx, `SELECT ST_Area(ST_GeomFromText($1::text, 4326)::geography);`, claimableGeom).Scan(&netNewArea); areaErr != nil {
+						return nil, fmt.Errorf("failed to compute candidate territory area: %w", areaErr)
+					}
 				}
 
 				// Compute stolen area & weak bonus from unshielded rivals (T2, T5)
@@ -416,27 +453,35 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 					FROM territories
 					WHERE owner_id != $2::text
 					  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
-					  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
+					  AND COALESCE(last_defended_at, last_decayed_at, updated_at) >= NOW() - INTERVAL '232 hours'
 					  AND ST_Intersects(geom, ST_GeomFromText($1::text, 4326));
 				`
-				if rRows, err := tx.Query(ctx, checkRivalsQuery, claimableGeom, run.UserID); err == nil {
-					for rRows.Next() {
-						var rID, rOwner string
-						var rOverlapArea, rStrength float64
-						var rLastDecayed time.Time
-						if rRows.Scan(&rID, &rOwner, &rOverlapArea, &rStrength, &rLastDecayed) == nil {
-							if rOverlapArea > 0 {
-								stolenArea += rOverlapArea
-								rivalsAffectedSet[rOwner] = true
-								effStr := CalculateEffectiveStrength(rStrength, rLastDecayed, now)
-								if effStr < TerritoryWeakThreshold {
-									weakBonusArea += rOverlapArea * 0.5
-								}
-							}
+				rRows, rErr := tx.Query(ctx, checkRivalsQuery, claimableGeom, run.UserID)
+				if rErr != nil {
+					return nil, fmt.Errorf("failed to query rival intersections: %w", rErr)
+				}
+				for rRows.Next() {
+					var rID, rOwner string
+					var rOverlapArea, rStrength float64
+					var rLastDecayed time.Time
+					if scanErr := rRows.Scan(&rID, &rOwner, &rOverlapArea, &rStrength, &rLastDecayed); scanErr != nil {
+						rRows.Close()
+						return nil, fmt.Errorf("failed to scan rival intersection: %w", scanErr)
+					}
+					if rOverlapArea > 0 {
+						stolenArea += rOverlapArea
+						rivalsAffectedSet[rOwner] = true
+						effStr := CalculateEffectiveStrength(rStrength, rLastDecayed, now)
+						if effStr < TerritoryWeakThreshold {
+							weakBonusArea += rOverlapArea * 0.5
 						}
 					}
-					rRows.Close()
 				}
+				if rowsErr := rRows.Err(); rowsErr != nil {
+					rRows.Close()
+					return nil, fmt.Errorf("error iterating rival intersections: %w", rowsErr)
+				}
+				rRows.Close()
 
 				gainedTotal = netNewArea + stolenArea
 
@@ -445,9 +490,11 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 					// Area-weighted strength model (T4)
 					var defendedOverlapArea float64
 					if playerExistingGeom != nil && *playerExistingGeom != "" {
-						_ = tx.QueryRow(ctx, `
+						if defErr := tx.QueryRow(ctx, `
 							SELECT ST_Area(ST_MakeValid(ST_Intersection(ST_GeomFromText($1::text, 4326), ST_GeomFromText($2::text, 4326)))::geography);
-						`, *playerExistingGeom, claimableGeom).Scan(&defendedOverlapArea)
+						`, *playerExistingGeom, claimableGeom).Scan(&defendedOverlapArea); defErr != nil {
+							return nil, fmt.Errorf("failed to compute defended overlap area: %w", defErr)
+						}
 					}
 					oldEffectiveStrength := TerritoryDefaultStrength
 					if playerExistingGeom != nil {
@@ -498,17 +545,21 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 							updated_at = NOW()
 						WHERE owner_id != $2::text
 						  AND (cooldown_until IS NULL OR cooldown_until <= NOW())
-						  AND COALESCE(last_decayed_at, last_defended_at, updated_at) >= NOW() - INTERVAL '232 hours'
+						  AND COALESCE(last_defended_at, last_decayed_at, updated_at) >= NOW() - INTERVAL '232 hours'
 						  AND ST_Intersects(geom, ST_GeomFromText($1::text, 4326));
 					`
-					_, _ = tx.Exec(ctx, diffQuery, claimableGeom, run.UserID)
+					if _, err := tx.Exec(ctx, diffQuery, claimableGeom, run.UserID); err != nil {
+						return nil, fmt.Errorf("failed to clip rival territories: %w", err)
+					}
 
 					// Clean up empty or sliver rival territories (< 2 m²)
-					_, _ = tx.Exec(ctx, `
+					if _, err := tx.Exec(ctx, `
 						DELETE FROM territories
 						WHERE owner_id != $1::text
 						  AND (ST_IsEmpty(geom) OR area_sqm < 2.0);
-					`, run.UserID)
+					`, run.UserID); err != nil {
+						return nil, fmt.Errorf("failed to clean up sliver rival territories: %w", err)
+					}
 
 					effectiveXpArea := gainedTotal
 					if run.VerificationStatus != "unverified_motion" {
@@ -519,6 +570,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 					// Enforce daily XP ceiling (10,000 XP/day)
 					var todayXP int64
 					todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+					todayEnd := todayStart.Add(24 * time.Hour)
 					_ = tx.QueryRow(ctx, `
 						SELECT COALESCE(SUM(
 							CASE 
@@ -527,8 +579,8 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 							END
 						), 0)::bigint
 						FROM runs
-						WHERE user_id = $1 AND created_at >= $2;
-					`, run.UserID, todayStart).Scan(&todayXP)
+						WHERE user_id = $1 AND status = 'accepted' AND created_at >= $2 AND created_at < $3;
+					`, run.UserID, todayStart, todayEnd).Scan(&todayXP)
 
 					if todayXP >= int64(DailyXpCap) {
 						xpAwarded = 0
@@ -545,10 +597,11 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 		}
 	} else {
 		// Non-loop run
-		if run.AreaClaimed >= MinCaptureFloorSqm {
+		if run.AreaClaimed >= MinCaptureFloorSqm && run.Status != "flagged_review" {
 			xpAwarded = int(math.Max(5, math.Round(run.AreaClaimed/20.0)))
 			var todayXP int64
 			todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+			todayEnd := todayStart.Add(24 * time.Hour)
 			_ = tx.QueryRow(ctx, `
 				SELECT COALESCE(SUM(
 					CASE 
@@ -557,8 +610,8 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 					END
 				), 0)::bigint
 				FROM runs
-				WHERE user_id = $1 AND created_at >= $2;
-			`, run.UserID, todayStart).Scan(&todayXP)
+				WHERE user_id = $1 AND status = 'accepted' AND created_at >= $2 AND created_at < $3;
+			`, run.UserID, todayStart, todayEnd).Scan(&todayXP)
 
 			if todayXP >= int64(DailyXpCap) {
 				xpAwarded = 0
@@ -567,6 +620,7 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 			}
 			netNewArea = run.AreaClaimed
 			gainedTotal = run.AreaClaimed
+			playerTotalArea += run.AreaClaimed
 		}
 	}
 
@@ -633,32 +687,34 @@ func (s *PostgresStore) CaptureRunAndMutateTerritories(
 	seasonStart := time.Date(createdAt.Year(), createdAt.Month(), 1, 0, 0, 0, 0, time.UTC)
 	seasonEnd := time.Date(createdAt.Year(), createdAt.Month()+1, 1, 0, 0, 0, 0, time.UTC)
 
-	// Update season progress for current month within transaction (guarded by savepoint)
-	if _, err := tx.Exec(ctx, "SAVEPOINT season_update;"); err == nil {
-		_, errSeason := tx.Exec(ctx, `
-			INSERT INTO seasons (id, name, starts_at, ends_at, created_at)
-			VALUES ($1, $2, $3, $4, NOW())
-			ON CONFLICT (id) DO NOTHING;
-		`, seasonID, seasonName, seasonStart, seasonEnd)
+	// Update season progress for current month within transaction (guarded by savepoint; skip flagged runs)
+	if status == "accepted" {
+		if _, err := tx.Exec(ctx, "SAVEPOINT season_update;"); err == nil {
+			_, errSeason := tx.Exec(ctx, `
+				INSERT INTO seasons (id, name, starts_at, ends_at, created_at)
+				VALUES ($1, $2, $3, $4, NOW())
+				ON CONFLICT (id) DO NOTHING;
+			`, seasonID, seasonName, seasonStart, seasonEnd)
 
-		if errSeason == nil {
-			_, errSeason = tx.Exec(ctx, `
-				INSERT INTO season_standings (season_id, user_id, faction, total_area_sqm, total_distance_m, xp, updated_at)
-				SELECT $1, $2, COALESCE(u.faction, ''), $3, $4, $5, NOW()
-				FROM users u WHERE u.id = $2
-				ON CONFLICT (season_id, user_id) DO UPDATE SET
-					total_area_sqm = season_standings.total_area_sqm + EXCLUDED.total_area_sqm,
-					total_distance_m = season_standings.total_distance_m + EXCLUDED.total_distance_m,
-					xp = season_standings.xp + EXCLUDED.xp,
-					faction = CASE WHEN EXCLUDED.faction != '' THEN EXCLUDED.faction ELSE season_standings.faction END,
-					updated_at = NOW();
-			`, seasonID, run.UserID, gainedTotal, run.DistanceMeters, xpAwarded)
-		}
+			if errSeason == nil {
+				_, errSeason = tx.Exec(ctx, `
+					INSERT INTO season_standings (season_id, user_id, faction, total_area_sqm, total_distance_m, xp, updated_at)
+					SELECT $1, $2, COALESCE(u.faction, ''), $3, $4, $5, NOW()
+					FROM users u WHERE u.id = $2
+					ON CONFLICT (season_id, user_id) DO UPDATE SET
+						total_area_sqm = season_standings.total_area_sqm + EXCLUDED.total_area_sqm,
+						total_distance_m = season_standings.total_distance_m + EXCLUDED.total_distance_m,
+						xp = season_standings.xp + EXCLUDED.xp,
+						faction = CASE WHEN EXCLUDED.faction != '' THEN EXCLUDED.faction ELSE season_standings.faction END,
+						updated_at = NOW();
+				`, seasonID, run.UserID, gainedTotal, run.DistanceMeters, xpAwarded)
+			}
 
-		if errSeason != nil {
-			_, _ = tx.Exec(ctx, "ROLLBACK TO SAVEPOINT season_update;")
-		} else {
-			_, _ = tx.Exec(ctx, "RELEASE SAVEPOINT season_update;")
+			if errSeason != nil {
+				_, _ = tx.Exec(ctx, "ROLLBACK TO SAVEPOINT season_update;")
+			} else {
+				_, _ = tx.Exec(ctx, "RELEASE SAVEPOINT season_update;")
+			}
 		}
 	}
 
@@ -714,7 +770,7 @@ func (s *PostgresStore) GetLeaderboard(ctx context.Context, limit int, activityT
 		query = `
 			SELECT u.id, u.username, u.faction, COALESCE(t.area_sqm, 0.0) AS total_area_sqm, u.level, u.total_runs
 			FROM users u
-			LEFT JOIN territories t ON t.owner_id = u.id AND COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at) >= NOW() - INTERVAL '232 hours'
+			LEFT JOIN territories t ON t.owner_id = u.id AND COALESCE(t.last_defended_at, t.last_decayed_at, t.updated_at) >= NOW() - INTERVAL '232 hours'
 			ORDER BY total_area_sqm DESC
 			LIMIT $1;
 		`
@@ -795,7 +851,7 @@ func (s *PostgresStore) GetTerritoryByID(ctx context.Context, id string) (*Terri
 		FROM territories t
 		JOIN users u ON t.owner_id = u.id
 		WHERE t.id = $1
-		  AND COALESCE(t.last_decayed_at, t.last_defended_at, t.updated_at) >= NOW() - INTERVAL '232 hours';
+		  AND COALESCE(t.last_defended_at, t.last_decayed_at, t.updated_at) >= NOW() - INTERVAL '232 hours';
 	`
 	var t Territory
 	err := s.pool.QueryRow(ctx, query, id).Scan(
@@ -902,7 +958,7 @@ func (s *PostgresStore) GetFactionStandings(ctx context.Context) (*FactionStandi
 			COALESCE(SUM(t.area_sqm), 0.0) AS total_area, 
 			COUNT(DISTINCT u.id) AS member_count
 		FROM users u
-		LEFT JOIN territories t ON t.owner_id = u.id
+		LEFT JOIN territories t ON t.owner_id = u.id AND COALESCE(t.last_defended_at, t.last_decayed_at, t.updated_at) >= NOW() - INTERVAL '232 hours'
 		WHERE u.faction IS NOT NULL AND u.faction != ''
 		GROUP BY u.faction
 		ORDER BY total_area DESC, member_count DESC;
@@ -1047,6 +1103,16 @@ func (s *PostgresStore) SendFriendRequest(ctx context.Context, requesterID, addr
 		}
 		if existingStatus == "pending" {
 			return nil, fmt.Errorf("friend request already pending")
+		}
+		if existingStatus == "declined" {
+			// Clear previous declined row so uq_friendship_pair allows re-requesting.
+			if _, delErr := s.pool.Exec(ctx, `
+				DELETE FROM friendships
+				WHERE status = 'declined'
+				  AND ((requester_id = $1 AND addressee_id = $2) OR (requester_id = $2 AND addressee_id = $1));
+			`, requesterID, addresseeID); delErr != nil {
+				return nil, fmt.Errorf("failed to reset declined friendship: %w", delErr)
+			}
 		}
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("failed to check existing friendship: %w", err)
@@ -1304,12 +1370,32 @@ func (s *PostgresStore) CreateDuel(ctx context.Context, d *Duel) error {
 		}
 	}
 
-	// Check if opponent exists
+	// Check if opponent exists & resolve usernames
+	var challengerUsername, opponentUsername string
 	var opponentExists bool
-	_ = s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1);`, d.OpponentID).Scan(&opponentExists)
+	_ = s.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE id = $1), COALESCE((SELECT username FROM users WHERE id = $1), '');`, d.OpponentID).Scan(&opponentExists, &opponentUsername)
 	if !opponentExists {
 		return fmt.Errorf("opponent not found: %s", d.OpponentID)
 	}
+	_ = s.pool.QueryRow(ctx, `SELECT COALESCE(username, $1) FROM users WHERE id = $1;`, d.ChallengerID).Scan(&challengerUsername)
+
+	// Sweep any overdue active/pending duels between this pair so uq_duels_active_pair cannot block a new challenge
+	_, _ = s.pool.Exec(ctx, `
+		UPDATE duels
+		SET status = CASE
+				WHEN status = 'active' AND challenger_progress != opponent_progress THEN 'completed'
+				ELSE 'expired'
+			END,
+			winner_id = CASE
+				WHEN status = 'active' AND challenger_progress > opponent_progress THEN challenger_id
+				WHEN status = 'active' AND opponent_progress > challenger_progress THEN opponent_id
+				ELSE NULL
+			END,
+			completed_at = CASE WHEN status = 'active' THEN expires_at ELSE completed_at END
+		WHERE ((challenger_id = $1 AND opponent_id = $2) OR (challenger_id = $2 AND opponent_id = $1))
+		  AND status IN ('pending', 'active')
+		  AND expires_at <= NOW();
+	`, d.ChallengerID, d.OpponentID)
 
 	// Anti-abuse: Check duplicate active/pending duel between these two runners
 	var existingDuels int
@@ -1371,13 +1457,29 @@ func (s *PostgresStore) CreateDuel(ctx context.Context, d *Duel) error {
 
 	query := `
 		INSERT INTO duels (id, challenger_id, opponent_id, activity_type, target_type, target_value, status, challenger_progress, opponent_progress, xp_stake, expires_at, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending', 0.0, 0.0, $7, $8, NOW());
+		VALUES ($1, $2, $3, $4, $5, $6, 'pending', 0.0, 0.0, $7, $8, NOW())
+		RETURNING status, created_at;
 	`
-	_, err = s.pool.Exec(ctx, query, d.ID, d.ChallengerID, d.OpponentID, d.ActivityType, d.TargetType, d.TargetValue, d.XpStake, d.ExpiresAt)
+	err = s.pool.QueryRow(ctx, query, d.ID, d.ChallengerID, d.OpponentID, d.ActivityType, d.TargetType, d.TargetValue, d.XpStake, d.ExpiresAt).Scan(&d.Status, &d.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("failed to insert duel: %w", err)
 	}
+	d.ChallengerUsername = challengerUsername
+	d.OpponentUsername = opponentUsername
 	return nil
+}
+
+// awardUserXP increments user XP and updates level atomically.
+func (s *PostgresStore) awardUserXP(ctx context.Context, userID string, xpDelta int) {
+	if userID == "" || xpDelta <= 0 {
+		return
+	}
+	var newXP int64
+	err := s.pool.QueryRow(ctx, `UPDATE users SET xp = xp + $1, updated_at = NOW() WHERE id = $2 RETURNING xp;`, xpDelta, userID).Scan(&newXP)
+	if err == nil {
+		newLevel := CalculateLevelFromXP(newXP)
+		_, _ = s.pool.Exec(ctx, `UPDATE users SET level = $1 WHERE id = $2 AND level != $1;`, newLevel, userID)
+	}
 }
 
 // GetDuelsByUser retrieves active, pending, and recent duels involving the user.
@@ -1397,10 +1499,14 @@ func (s *PostgresStore) GetDuelsByUser(ctx context.Context, userID string) ([]Du
 	if err != nil {
 		return nil, fmt.Errorf("failed to query duels: %w", err)
 	}
-	defer rows.Close()
 
 	now := time.Now().UTC()
 	var duels []Duel
+	type expiredUpdate struct {
+		id, status, winner string
+		xp                 int
+	}
+	var toExpire []expiredUpdate
 	for rows.Next() {
 		var d Duel
 		if err := rows.Scan(
@@ -1408,6 +1514,7 @@ func (s *PostgresStore) GetDuelsByUser(ctx context.Context, userID string) ([]Du
 			&d.ActivityType, &d.TargetType, &d.TargetValue, &d.Status, &d.ChallengerProgress, &d.OpponentProgress,
 			&d.WinnerID, &d.XpStake, &d.ExpiresAt, &d.CreatedAt, &d.CompletedAt,
 		); err != nil {
+			rows.Close()
 			return nil, fmt.Errorf("failed to scan duel row: %w", err)
 		}
 
@@ -1428,16 +1535,25 @@ func (s *PostgresStore) GetDuelsByUser(ctx context.Context, userID string) ([]Du
 			} else {
 				d.Status = "expired"
 			}
-			// Asynchronously update expired status in DB and award XP if winner
-			go func(dID, status, winner string, xp int) {
-				_, _ = s.pool.Exec(context.Background(), `UPDATE duels SET status = $1, winner_id = NULLIF($2, ''), completed_at = NOW() WHERE id = $3;`, status, winner, dID)
-				if winner != "" && xp > 0 {
-					_, _ = s.pool.Exec(context.Background(), `UPDATE users SET xp = xp + $1 WHERE id = $2;`, xp, winner)
-				}
-			}(d.ID, d.Status, d.WinnerID, d.XpStake)
+			toExpire = append(toExpire, expiredUpdate{id: d.ID, status: d.Status, winner: d.WinnerID, xp: d.XpStake})
 		}
 
 		duels = append(duels, d)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("error iterating duels: %w", err)
+	}
+	rows.Close()
+
+	for _, exp := range toExpire {
+		tag, upErr := s.pool.Exec(ctx, `
+			UPDATE duels SET status = $1, winner_id = NULLIF($2, ''), completed_at = NOW()
+			WHERE id = $3 AND status IN ('active', 'pending');
+		`, exp.status, exp.winner, exp.id)
+		if upErr == nil && tag.RowsAffected() > 0 && exp.winner != "" && exp.xp > 0 {
+			s.awardUserXP(ctx, exp.winner, exp.xp)
+		}
 	}
 	return duels, nil
 }
@@ -1491,7 +1607,6 @@ func (s *PostgresStore) UpdateDuelProgress(ctx context.Context, userID, activity
 	if err != nil {
 		return fmt.Errorf("failed to query active duels for progress: %w", err)
 	}
-	defer rows.Close()
 
 	type duelUpdate struct {
 		id          string
@@ -1546,22 +1661,27 @@ func (s *PostgresStore) UpdateDuelProgress(ctx context.Context, userID, activity
 			xpStake:     xpStake,
 		})
 	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return fmt.Errorf("failed to iterate duel progress rows: %w", err)
+	}
+	rows.Close()
 
 	for _, u := range updates {
 		if u.isCompleted {
-			_, _ = s.pool.Exec(ctx, `
+			tag, execErr := s.pool.Exec(ctx, `
 				UPDATE duels
 				SET challenger_progress = $1, opponent_progress = $2, status = 'completed', winner_id = $3, completed_at = NOW()
-				WHERE id = $4;
+				WHERE id = $4 AND status = 'active';
 			`, u.newChProg, u.newOpProg, u.winnerID, u.id)
-			if u.winnerID != "" {
-				_, _ = s.pool.Exec(ctx, `UPDATE users SET xp = xp + $1 WHERE id = $2;`, u.xpStake, u.winnerID)
+			if execErr == nil && tag.RowsAffected() > 0 && u.winnerID != "" {
+				s.awardUserXP(ctx, u.winnerID, u.xpStake)
 			}
 		} else {
 			_, _ = s.pool.Exec(ctx, `
 				UPDATE duels
 				SET challenger_progress = $1, opponent_progress = $2
-				WHERE id = $3;
+				WHERE id = $3 AND status = 'active';
 			`, u.newChProg, u.newOpProg, u.id)
 		}
 	}
@@ -1674,8 +1794,8 @@ func (s *PostgresStore) UpdateUserSettings(ctx context.Context, userID string, s
 	}
 
 	query := `
-		INSERT INTO users (id, runner_code, username, live_visibility, timezone, land_reminders, share_runs_with_friends, updated_at)
-		VALUES ($1, $2, $1, $3, $4, $5, $6, NOW())
+		INSERT INTO users (id, runner_code, username, faction, live_visibility, timezone, land_reminders, share_runs_with_friends, updated_at)
+		VALUES ($1, $2, $1, '', $3, $4, $5, $6, NOW())
 		ON CONFLICT (id) DO UPDATE
 		SET live_visibility = EXCLUDED.live_visibility,
 		    timezone = EXCLUDED.timezone,
@@ -1907,6 +2027,13 @@ func (s *PostgresStore) CreateCrew(ctx context.Context, creatorID, name, joinCod
 	if err := tx.QueryRow(ctx, insertCrewQuery, crewID, name, joinCode, creatorID).Scan(
 		&c.ID, &c.Name, &c.JoinCode, &c.CreatorID, &c.CreatedAt,
 	); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			if strings.Contains(pgErr.ConstraintName, "join_code") {
+				return nil, errors.New("Crew join code collision")
+			}
+			return nil, errors.New("Crew name is already taken")
+		}
 		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique") {
 			return nil, errors.New("Crew name is already taken")
 		}
@@ -2012,7 +2139,7 @@ func (s *PostgresStore) GetCrewMembers(ctx context.Context, crewID string, weekS
 			COALESCE(SUM(r.area_claimed + r.area_stolen), 0) as weekly_area_sqm
 		FROM crew_memberships cm
 		LEFT JOIN users u ON u.id = cm.user_id
-		LEFT JOIN runs r ON r.user_id = cm.user_id AND r.created_at >= $2 AND r.created_at < $3
+		LEFT JOIN runs r ON r.user_id = cm.user_id AND r.status = 'accepted' AND r.created_at >= $2 AND r.created_at < $3
 		WHERE cm.crew_id = $1
 		GROUP BY cm.crew_id, cm.user_id, u.username, cm.role, cm.joined_at
 		ORDER BY CASE WHEN cm.role = 'leader' THEN 0 ELSE 1 END, weekly_distance_m DESC;
@@ -2087,7 +2214,7 @@ func (s *PostgresStore) GetActiveCrewGoal(ctx context.Context, crewID string, we
 			COALESCE(SUM(CASE WHEN $3 = 'area' THEN (r.area_claimed + r.area_stolen) ELSE r.distance_meters END), 0)
 		FROM runs r
 		JOIN crew_memberships cm ON cm.user_id = r.user_id
-		WHERE cm.crew_id = $1 AND r.created_at >= $2 AND r.created_at < $4;
+		WHERE cm.crew_id = $1 AND r.status = 'accepted' AND r.created_at >= $2 AND r.created_at < $4;
 	`
 	var currentVal float64
 	if err := s.pool.QueryRow(ctx, progressQuery, crewID, weekStart, g.GoalType, weekEnd).Scan(&currentVal); err != nil {
@@ -2181,15 +2308,30 @@ func (s *PostgresStore) GetActivityFeed(ctx context.Context, userID string, limi
 		authorIDs[r.userID] = true
 	}
 
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating activity feed: %w", err)
+	}
+
 	if len(rawRows) == 0 {
 		return []FeedItem{}, nil
 	}
 
-	privacyZonesMap := make(map[string][]PrivacyZone)
+	authorList := make([]string, 0, len(authorIDs))
 	for aID := range authorIDs {
-		zones, err := s.GetPrivacyZones(ctx, aID)
-		if err == nil {
-			privacyZonesMap[aID] = zones
+		authorList = append(authorList, aID)
+	}
+	privacyZonesMap := make(map[string][]PrivacyZone)
+	if pzRows, pzErr := s.pool.Query(ctx, `
+		SELECT id, user_id, name, latitude, longitude, radius_meters, is_enabled, created_at
+		FROM privacy_zones
+		WHERE user_id = ANY($1) AND is_enabled = TRUE;
+	`, authorList); pzErr == nil {
+		defer pzRows.Close()
+		for pzRows.Next() {
+			var pz PrivacyZone
+			if scanErr := pzRows.Scan(&pz.ID, &pz.UserID, &pz.Name, &pz.Latitude, &pz.Longitude, &pz.RadiusMeters, &pz.IsEnabled, &pz.CreatedAt); scanErr == nil {
+				privacyZonesMap[pz.UserID] = append(privacyZonesMap[pz.UserID], pz)
+			}
 		}
 	}
 

@@ -323,9 +323,11 @@ class RouteService {
       10.0,
     );
     final double radiusDegLat = radiusKm / 111.32;
-    final double radiusDegLng =
-        radiusKm /
-        (111.32 * math.cos(currentLocation.latitude * math.pi / 180.0));
+    final double cosLat = math
+        .cos(currentLocation.latitude * math.pi / 180.0)
+        .abs()
+        .clamp(0.05, 1.0);
+    final double radiusDegLng = radiusKm / (111.32 * cosLat);
 
     // Determine centroid of already-owned territory to bias loop in opposite direction
     double biasAngleRad = 0.0;
@@ -334,11 +336,16 @@ class RouteService {
       double sumLng = 0.0;
       int ptCount = 0;
       for (final t in ownedTerritories) {
-        final polygon = t.polygon as List<LatLng>;
-        for (final p in polygon) {
-          sumLat += p.latitude;
-          sumLng += p.longitude;
-          ptCount++;
+        final rings = t.polygons as List<List<LatLng>>;
+        final iterRings = rings.isNotEmpty
+            ? rings
+            : [t.polygon as List<LatLng>];
+        for (final ring in iterRings) {
+          for (final p in ring) {
+            sumLat += p.latitude;
+            sumLng += p.longitude;
+            ptCount++;
+          }
         }
       }
       if (ptCount > 0) {
@@ -389,7 +396,12 @@ class RouteService {
             math.sin(dLng / 2) *
             math.cos(lat1Rad) *
             math.cos(lat2Rad);
-    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final double c =
+        2 *
+        math.atan2(
+          math.sqrt(a.clamp(0.0, 1.0)),
+          math.sqrt((1 - a).clamp(0.0, 1.0)),
+        );
 
     return earthRadiusKm * c;
   }

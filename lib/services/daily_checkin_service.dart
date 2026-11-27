@@ -158,8 +158,14 @@ class DailyCheckInService {
     if (slots.isEmpty) return const [];
 
     final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = DateTime(now.year, now.month, now.day + 1);
     final todayRuns = runs
-        .where((r) => !r.simulated && !r.startedAt.isBefore(todayStart))
+        .where(
+          (r) =>
+              !r.simulated &&
+              !r.startedAt.isBefore(todayStart) &&
+              r.startedAt.isBefore(todayEnd),
+        )
         .toList();
     final double todayDistanceKm = todayRuns.fold(
       0.0,
@@ -170,12 +176,12 @@ class DailyCheckInService {
     int seqId = 1;
 
     for (int dayOffset = 0; dayOffset <= 1; dayOffset++) {
-      final dayDate = todayStart.add(Duration(days: dayOffset));
+      final scheduledBase = DateTime(now.year, now.month, now.day + dayOffset);
       for (final slot in slots) {
         final scheduled = DateTime(
-          dayDate.year,
-          dayDate.month,
-          dayDate.day,
+          scheduledBase.year,
+          scheduledBase.month,
+          scheduledBase.day,
           slot.hour,
           slot.minute,
         );
@@ -222,7 +228,12 @@ class DailyCheckInService {
     PlanWorkoutDay? nextPlanWorkout,
   }) {
     final int daySeed =
-        date.difference(DateTime(date.year, 1, 1)).inDays + date.year;
+        DateTime.utc(
+          date.year,
+          date.month,
+          date.day,
+        ).difference(DateTime.utc(date.year, 1, 1)).inDays +
+        date.year;
     final String quote =
         healthQuotes[(daySeed + slot.slotIndex) % healthQuotes.length];
     final String healthCheck =

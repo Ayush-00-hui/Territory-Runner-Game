@@ -73,6 +73,7 @@ class MapHudPanel extends StatelessWidget {
                 profile: TerritoryService().getProfile(),
                 recentRuns: recentRuns,
               );
+              if (!context.mounted || controller.isDisposed) return;
               if (goal != null) {
                 controller.setGoal(goal);
               }

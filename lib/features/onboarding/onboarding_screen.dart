@@ -76,6 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Future<void> _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(OnboardingScreen.prefsKeyCompleted, true);
+    if (!mounted) return;
     widget.onCompleted();
   }
 

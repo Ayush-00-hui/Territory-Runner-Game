@@ -7,7 +7,7 @@ This document specifies the scientific and physiological energy expenditure foun
 ## 1. Principles & Offline-First Design
 
 1. **Offline-First**: All physiological and sensing calculations execute on-device in pure Dart with zero external network or server dependencies.
-2. **Privacy-by-Design**: User body details (weight, height, age, gender) remain strictly local on the device in encrypted storage (`SharedPreferences`). They are **never** transmitted to backends, analytics, push notifications, or public leaderboards.
+2. **Privacy-by-Design**: User body details (weight, height, age, gender) remain strictly local on the device in `SharedPreferences`. They are **never** transmitted to backends, analytics, push notifications, or public leaderboards.
 3. **Dual Metric Tracking (Gross vs. Net Energy)**:
    - **Gross Energy Expenditure ($EE_{\text{gross}}$)**: Total calories burned by the body during the workout, including basal/resting metabolism ($RMR$). Fitness devices (Garmin, Apple Watch, Strava) display gross energy to athletes. Territory Runner renders gross calories as the primary user readout (`~N kcal (est.)`).
    - **Net Energy Expenditure ($EE_{\text{net}}$)**: Energy burned *strictly above* resting levels due to physical locomotion ($EE_{\text{net}} = EE_{\text{gross}} - RMR$). Both are tracked internally.
@@ -143,7 +143,7 @@ Accordingly, Territory Runner does **not claim to have discovered new physiologi
 
 ### 5.3 On-Device Pure Dart Inference
 - **Zero Heavy Dependencies**: Evaluated directly in Dart using native recursion on compact JSON tree structures (`assets/models/calorie_trees.json`).
-- **Integrity Validation**: The runtime hashes the model asset with cryptographic SHA-256 (`6ef0429cf529b8267a635631ffec9e3bab027423f1376519739eda47071037e4`). If the asset is missing, corrupt, or tampered with, it logs once and gracefully falls back to the analytical Phase 3 equations.
+- **Integrity Validation**: The runtime hashes the model asset with cryptographic SHA-256 (`d00dfa749a3b306c6ff22a738573782b012b723f2006e4b0014a90360615da84`). If the asset is missing, corrupt, or tampered with, it logs once and gracefully falls back to the analytical Phase 3 equations.
 - **Execution Cost**: $< 15\ \mu\text{s}$ per evaluation on standard mobile CPUs.
 
 ### 5.4 Personal Smartwatch Calibration ("Calibrate with my watch")

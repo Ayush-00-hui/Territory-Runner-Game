@@ -395,7 +395,12 @@ class HistoryRunCard extends StatelessWidget {
                                   'Territory Run - ${_formatDate(_effectiveDate)}',
                               coordinates: _effectivePoints,
                             );
-                          } catch (_) {}
+                          } catch (e) {
+                            AppToast.showGlobal(
+                              'Could not export GPX: $e',
+                              type: AppToastType.error,
+                            );
+                          }
                         },
                       ),
                     ),
@@ -531,7 +536,10 @@ class HistoryRunCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ).whenComplete(() {
+      titleController.dispose();
+      notesController.dispose();
+    });
   }
 
   void _confirmDelete(BuildContext context) {

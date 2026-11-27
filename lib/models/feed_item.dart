@@ -1,5 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
+import 'faction_standing.dart';
+
 /// Represents a completed run shared by a friend in the activity feed.
 class FeedItem {
   final String id;
@@ -89,11 +91,13 @@ class FeedItem {
       }
     });
 
+    final rawFaction = json['faction'] as String?;
+    final canonicalFaction = FactionStanding.canonicalFaction(rawFaction);
     return FeedItem(
       id: json['id'] as String? ?? '',
       userId: json['user_id'] as String? ?? '',
       username: json['username'] as String? ?? 'Runner',
-      faction: json['faction'] as String?,
+      faction: canonicalFaction.isNotEmpty ? canonicalFaction : null,
       activityType: json['activity_type'] as String? ?? 'running',
       durationSeconds: (json['duration_seconds'] as num?)?.toInt() ?? 0,
       distanceMeters: (json['distance_meters'] as num?)?.toDouble() ?? 0.0,

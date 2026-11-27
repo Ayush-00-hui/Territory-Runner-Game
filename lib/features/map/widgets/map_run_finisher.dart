@@ -35,6 +35,7 @@ Future<void> handleFinishRun({
   required BuildContext context,
   required MapRunController controller,
   required VoidCallback onTerritoriesUpdated,
+  SyncQueueService? syncQueueService,
 }) async {
   if (!controller.isRunActive) return;
   MotionSensorService().stop();
@@ -194,7 +195,7 @@ Future<void> handleFinishRun({
         }
       } catch (_) {}
     }
-    SyncQueueService().enqueueRun(
+    (syncQueueService ?? SyncQueueService()).enqueueRun(
       idempotencyKey: runId,
       points: points,
       durationSeconds: finalSeconds,

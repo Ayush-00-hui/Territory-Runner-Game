@@ -205,6 +205,7 @@ class ElevationGradePipeline {
       }
     }
 
+    final prevAcceptedTime = _lastAcceptedGpsTime;
     _lastAcceptedGpsTime = now;
     _lastAcceptedAltitude = rawAlt;
 
@@ -221,8 +222,11 @@ class ElevationGradePipeline {
       _kalmanAltitude = medianAlt;
       _kalmanP = 25.0;
     } else {
-      // Time update
-      final dt = math.max(0.2, _rawAltitudeBuffer.length > 1 ? 1.0 : 1.0);
+      // Time update using actual elapsed seconds between fixes
+      final elapsedSec = prevAcceptedTime != null
+          ? (now.difference(prevAcceptedTime).inMilliseconds / 1000.0).abs()
+          : 1.0;
+      final dt = elapsedSec.clamp(0.2, 30.0);
       _kalmanP += _kalmanQRate * dt;
 
       // Measurement update

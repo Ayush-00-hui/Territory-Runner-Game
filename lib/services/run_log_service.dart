@@ -84,19 +84,10 @@ class RunLogService {
           _box = await Hive.openBox<String>(boxName, encryptionCipher: cipher);
         } catch (e) {
           AppLogger.warning(
-            'Failed opening encrypted box $boxName ($e). Recreating box.',
+            'Failed opening encrypted box $boxName ($e). Retrying without wiping.',
             tag: 'RunLogService',
           );
-          try {
-            await Hive.deleteBoxFromDisk(boxName);
-            final cipher = await _encryptionService.getCipherForBox(boxName);
-            _box = await Hive.openBox<String>(
-              boxName,
-              encryptionCipher: cipher,
-            );
-          } catch (_) {
-            _box = await Hive.openBox<String>(boxName);
-          }
+          rethrow;
         }
       }
     }
@@ -316,6 +307,7 @@ class RunLogService {
       final durationSec = (raw['duration_seconds'] as num?)?.toInt() ?? 0;
       final distanceM = (raw['distance_meters'] as num?)?.toDouble() ?? 0.0;
       final areaClaimed = (raw['area_claimed'] as num?)?.toDouble() ?? 0.0;
+      final areaStolen = (raw['area_stolen'] as num?)?.toDouble() ?? 0.0;
       final stepCount = (raw['step_count'] as num?)?.toInt();
       final activityType = raw['activity_type']?.toString() ?? 'running';
       final createdAt = raw['created_at'] != null
@@ -323,8 +315,9 @@ class RunLogService {
                 DateTime.now()
           : DateTime.now();
       final startedAt = createdAt.subtract(Duration(seconds: durationSec));
-      final xpAwarded = areaClaimed >= 25.0
-          ? math.max(5, (areaClaimed / 20.0).round())
+      final totalAreaGained = areaClaimed + areaStolen;
+      final xpAwarded = totalAreaGained >= 25.0
+          ? math.max(5, (totalAreaGained / 20.0).round())
           : 0;
 
       final entry = RunLogEntry(
@@ -377,14 +370,18 @@ class RunLogService {
     for (final run in runs) {
       if (run.simulated || run.distanceM < 100.0) continue;
       uniqueDays.add(
-        DateTime(run.startedAt.year, run.startedAt.month, run.startedAt.day),
+        DateTime.utc(
+          run.startedAt.year,
+          run.startedAt.month,
+          run.startedAt.day,
+        ),
       );
     }
     if (uniqueDays.isEmpty) return 0;
 
     final now = referenceNow ?? DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final yesterday = DateTime.utc(now.year, now.month, now.day - 1);
 
     DateTime cursor;
     if (uniqueDays.contains(today)) {
@@ -398,14 +395,16 @@ class RunLogService {
     int streak = 0;
     while (uniqueDays.contains(cursor)) {
       streak++;
-      cursor = cursor.subtract(const Duration(days: 1));
+      cursor = DateTime.utc(cursor.year, cursor.month, cursor.day - 1);
     }
     return streak;
   }
 
   /// Computes personal records derived exclusively from real recorded runs.
   PersonalRecords computePersonalRecords({List<RunLogEntry>? overrideRuns}) {
-    final runs = overrideRuns ?? runsNotifier.value;
+    final runs = (overrideRuns ?? runsNotifier.value)
+        .where((r) => !r.simulated)
+        .toList();
     if (runs.isEmpty) {
       return const PersonalRecords();
     }
@@ -417,6 +416,7 @@ class RunLogService {
     double weeklyArea = 0.0;
 
     final now = DateTime.now();
+    final weekWindowStart = DateTime(now.year, now.month, now.day - 6);
 
     for (final run in runs) {
       if (run.distanceM > longestRunDist) {
@@ -442,17 +442,21 @@ class RunLogService {
         }
       }
 
-      // Weekly area: runs completed in the last 7 calendar days
-      if (now.difference(run.endedAt).inDays <= 7) {
+      // Weekly area: runs completed in the last 7 calendar days up to now
+      if (!run.endedAt.isBefore(weekWindowStart) && !run.endedAt.isAfter(now)) {
         weeklyArea += run.claimedAreaSqM;
       }
     }
 
-    // Longest streak: max consecutive calendar days with a completed run
+    // Longest streak: max consecutive calendar days with a completed run (DST-safe UTC calendar dates)
     final uniqueDays = <DateTime>{};
     for (final run in runs) {
       uniqueDays.add(
-        DateTime(run.startedAt.year, run.startedAt.month, run.startedAt.day),
+        DateTime.utc(
+          run.startedAt.year,
+          run.startedAt.month,
+          run.startedAt.day,
+        ),
       );
     }
     final sortedDays = uniqueDays.toList()..sort();

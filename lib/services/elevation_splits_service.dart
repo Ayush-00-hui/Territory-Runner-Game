@@ -420,18 +420,30 @@ class ElevationSplitsService {
     for (int i = 0; i < rawTrack.length; i++) {
       final pt = rawTrack[i];
 
-      if (pt.distanceMeters >= currentBoundaryM) {
+      while (pt.distanceMeters >= currentBoundaryM) {
         final startPt = rawTrack[startIndex];
-        final splitDistM = pt.distanceMeters - startPt.distanceMeters;
+        final totalDeltaDist = pt.distanceMeters - startPt.distanceMeters;
+        final totalDeltaTimeMs = math.max(
+          1000,
+          pt.timeOffsetMs - startPt.timeOffsetMs,
+        );
+        final totalDeltaElev = pt.altitudeMeters - startPt.altitudeMeters;
+
+        final segDistM = (currentBoundaryM - startPt.distanceMeters).clamp(
+          1.0,
+          totalDeltaDist > 0 ? totalDeltaDist : unitStepM,
+        );
+        final frac = totalDeltaDist > 0
+            ? (segDistM / totalDeltaDist).clamp(0.0, 1.0)
+            : 1.0;
+
+        final splitDistM = unitStepM;
         final durationSec = math.max(
           1,
-          (pt.timeOffsetMs - startPt.timeOffsetMs) ~/ 1000,
+          ((totalDeltaTimeMs * frac) / 1000.0).round(),
         );
-
-        final paceSec = (durationSec / (splitDistM / unitStepM)).round();
-        final elevChange = hasAltitude
-            ? (pt.altitudeMeters - startPt.altitudeMeters)
-            : 0.0;
+        final paceSec = durationSec;
+        final elevChange = hasAltitude ? totalDeltaElev * frac : 0.0;
         final grade = splitDistM > 0
             ? (elevChange / splitDistM).clamp(-0.20, 0.20)
             : 0.0;

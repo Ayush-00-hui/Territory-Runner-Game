@@ -421,7 +421,6 @@ func TestCrossLanguageAnomalyParity(t *testing.T) {
 	candidates := []string{
 		filepath.Join("..", "..", "..", "test_fixtures", "anomaly_vectors.json"),
 		filepath.Join("test_fixtures", "anomaly_vectors.json"),
-		"c:/Users/AYUSH/Desktop/territory_runner/test_fixtures/anomaly_vectors.json",
 	}
 	var data []byte
 	var err error

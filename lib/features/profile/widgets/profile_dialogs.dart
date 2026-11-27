@@ -25,16 +25,19 @@ void showEditCallsignDialog(
         borderRadius: AppSpacing.br20,
         side: const BorderSide(color: AppColors.border),
       ),
-      title: Row(
+      title: const Row(
         children: [
-          const Icon(Icons.badge_rounded, color: AppColors.accent, size: 20),
-          const SizedBox(width: AppSpacing.s8),
-          Text(
-            'Edit Runner Name',
-            style: AppText.headingSmall.copyWith(
-              color: AppColors.textPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
+          Icon(Icons.badge_rounded, color: AppColors.accent, size: 20),
+          SizedBox(width: AppSpacing.s8),
+          Expanded(
+            child: Text(
+              'Edit Runner Name',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -84,9 +87,14 @@ void showEditCallsignDialog(
         ],
       ),
       actions: [
-        SecondaryButton(label: 'Cancel', onPressed: () => Navigator.pop(ctx)),
+        SecondaryButton(
+          label: 'Cancel',
+          isFullWidth: false,
+          onPressed: () => Navigator.pop(ctx),
+        ),
         PrimaryButton(
           label: 'Save Name',
+          isFullWidth: false,
           onPressed: () async {
             final newName = controller.text.trim();
             if (newName.isNotEmpty) {
@@ -107,7 +115,7 @@ void showEditCallsignDialog(
         ),
       ],
     ),
-  );
+  ).whenComplete(controller.dispose);
 }
 
 void showFactionSelectionDialog(

@@ -78,10 +78,10 @@ func (e *DecayReminderEngine) ProcessDecayAlerts(ctx context.Context, now time.T
 		return 0, fmt.Errorf("failed to get territories for decay reminders: %w", err)
 	}
 
-	// Group territories by owner
+	// Group non-despawned territories by owner using evaluation timestamp `now`
 	byOwner := make(map[string][]store.Territory)
 	for _, t := range territories {
-		if t.OwnerID != "" {
+		if t.OwnerID != "" && !t.IsDespawned(now) {
 			byOwner[t.OwnerID] = append(byOwner[t.OwnerID], t)
 		}
 	}

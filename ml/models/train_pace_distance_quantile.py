@@ -31,7 +31,6 @@ from sklearn.metrics import mean_absolute_error
 RANDOM_SEED = 42
 os.environ["PYTHONHASHSEED"] = str(RANDOM_SEED)
 random.seed(RANDOM_SEED)
-np.seed = RANDOM_SEED
 np.random.seed(RANDOM_SEED)
 
 FEATURE_COLUMNS = [
@@ -64,7 +63,8 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         math.sin(dphi / 2.0) ** 2
         + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2.0) ** 2
     )
-    return 2.0 * R * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+    a = min(1.0, max(0.0, a))
+    return 2.0 * R * math.atan2(math.sqrt(a), math.sqrt(max(0.0, 1.0 - a)))
 
 
 def extract_sessions_from_trajectories(parquet_path: str) -> pd.DataFrame:

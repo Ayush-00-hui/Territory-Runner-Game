@@ -642,16 +642,16 @@ class PolygonEnclosureEngine {
     final d3 = ccw(p1, p2, p3);
     final d4 = ccw(p1, p2, p4);
 
-    if (((d1 > 1e-9 && d2 < -1e-9) || (d1 < -1e-9 && d2 > 1e-9)) &&
-        ((d3 > 1e-9 && d4 < -1e-9) || (d3 < -1e-9 && d4 > 1e-9))) {
+    if (((d1 > 1e-13 && d2 < -1e-13) || (d1 < -1e-13 && d2 > 1e-13)) &&
+        ((d3 > 1e-13 && d4 < -1e-13) || (d3 < -1e-13 && d4 > 1e-13))) {
       return true;
     }
 
     // Collinear overlap check
-    if (d1.abs() <= 1e-9 &&
-        d2.abs() <= 1e-9 &&
-        d3.abs() <= 1e-9 &&
-        d4.abs() <= 1e-9) {
+    if (d1.abs() <= 1e-13 &&
+        d2.abs() <= 1e-13 &&
+        d3.abs() <= 1e-13 &&
+        d4.abs() <= 1e-13) {
       final dx = p2.longitude - p1.longitude;
       final dy = p2.latitude - p1.latitude;
       final lenSq = dx * dx + dy * dy;
@@ -739,7 +739,12 @@ class PolygonEnclosureEngine {
             math.sin(dLng / 2) *
             math.cos(lat1) *
             math.cos(lat2);
-    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+    final double c =
+        2 *
+        math.atan2(
+          math.sqrt(a.clamp(0.0, 1.0)),
+          math.sqrt((1 - a).clamp(0.0, 1.0)),
+        );
     return earthRadius * c;
   }
 

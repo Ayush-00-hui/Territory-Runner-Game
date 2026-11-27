@@ -25,8 +25,12 @@ class CoachInsight {
     final double pace = (distanceKm > 0)
         ? (durationSeconds / 60.0) / distanceKm
         : 0.0;
-    final int paceMin = pace.floor();
-    final int paceSec = ((pace - paceMin) * 60).round();
+    int paceMin = pace.floor();
+    int paceSec = ((pace - paceMin) * 60).round();
+    if (paceSec >= 60) {
+      paceMin += 1;
+      paceSec = 0;
+    }
 
     return CoachInsight(
       summary:

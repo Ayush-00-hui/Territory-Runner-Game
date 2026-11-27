@@ -140,7 +140,7 @@ func (a *API) MetricsMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 
 		duration := time.Since(start).Seconds()
-		path := r.URL.Path
+		path := "unmatched"
 		if routeCtx := chi.RouteContext(r.Context()); routeCtx != nil {
 			if pattern := routeCtx.RoutePattern(); pattern != "" {
 				path = pattern

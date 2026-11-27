@@ -96,9 +96,10 @@ cd backend
 # Create .env from template with production secrets
 cp .env.example .env
 
-# Set strong database password and Firebase project ID in .env:
+# Set required production environment variables in .env:
 # POSTGRES_PASSWORD=your-secure-random-password-32-chars
 # FIREBASE_PROJECT_ID=your-project-id
+# ALLOWED_ORIGINS=https://app.yourdomain.com,https://api.yourdomain.com
 
 # Start production stack
 docker compose -f docker-compose.prod.yml up -d
@@ -136,5 +137,5 @@ Before directing real traffic to the production cluster:
 - [ ] Direct database connection (Port 5432) used instead of transaction pooler.
 - [ ] Database credentials not committed to version control; verified `.gitignore` excludes `.env`.
 - [ ] Reverse proxy (e.g. Cloudflare / Render) enforces TLS 1.3 (`https://` and `wss://`).
-- [ ] All 10 SQL migrations applied and verified via `RUN_MIGRATIONS=true`.
+- [ ] All 18 SQL migration versions (000001–000018) applied and verified via `RUN_MIGRATIONS=true`.
 - [ ] Smoke test suite passes: `powershell -File scripts/smoke_test.ps1 -BaseUrl https://api.yourdomain.com`.

@@ -104,6 +104,8 @@ void main() {
       await ExplorationService().init();
       await AvatarService.instance.init();
       await Hive.openBox<String>(TrainingPlanService.boxName);
+      await AppPreferences().init();
+      await SyncQueueService().ensureInitialized();
 
       // Load package metadata
       unawaited(AppVersion.init());
@@ -218,13 +220,15 @@ class TerritoryApp extends StatefulWidget {
 class _TerritoryAppState extends State<TerritoryApp> {
   bool _isAuthenticated = false;
   bool _hasCompletedOnboarding = true;
+  late final FirebaseService _firebaseService;
 
   @override
   void initState() {
     super.initState();
-    final firebaseService = FirebaseService();
+    _firebaseService = FirebaseService();
     // Only bypass to MainScreen if genuinely signed in with Firebase/Google
-    _isAuthenticated = firebaseService.isSignedIn;
+    _isAuthenticated = _firebaseService.isSignedIn;
+    _firebaseService.authStateVersionNotifier.addListener(_onAuthStateSignal);
 
     // Check onboarding completion for unauthenticated runners
     SharedPreferences.getInstance().then((prefs) {
@@ -236,6 +240,24 @@ class _TerritoryAppState extends State<TerritoryApp> {
         });
       }
     });
+  }
+
+  void _onAuthStateSignal() {
+    if (!mounted) return;
+    final signedIn = _firebaseService.isSignedIn;
+    if (_isAuthenticated != signedIn) {
+      setState(() {
+        _isAuthenticated = signedIn;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _firebaseService.authStateVersionNotifier.removeListener(
+      _onAuthStateSignal,
+    );
+    super.dispose();
   }
 
   @override

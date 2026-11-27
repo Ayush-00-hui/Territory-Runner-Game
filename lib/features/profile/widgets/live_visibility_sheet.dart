@@ -7,11 +7,14 @@ import '../../../ui/ui.dart';
 void showLiveVisibilitySheet(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
+    isScrollControlled: true,
     backgroundColor: AppColors.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: AppRadius.r16),
     ),
-    builder: (ctx) => const LiveVisibilitySheetContent(),
+    builder: (ctx) => const SafeArea(
+      child: SingleChildScrollView(child: LiveVisibilitySheetContent()),
+    ),
   );
 }
 
@@ -64,10 +67,13 @@ class _LiveVisibilitySheetContentState
                     size: 22,
                   ),
                   const SizedBox(width: AppSpacing.s8),
-                  Text(
-                    'Live Location Visibility',
-                    style: AppText.titleMedium.copyWith(
-                      color: AppColors.textPrimary,
+                  Expanded(
+                    child: Text(
+                      'Live Location Visibility',
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.titleMedium.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
                     ),
                   ),
                 ],

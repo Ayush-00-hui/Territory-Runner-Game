@@ -325,7 +325,7 @@ func (c *FCMClient) SendTerritoryAlertToUser(ctx context.Context, userID, territ
 
 	tokens, err := c.store.GetDeviceTokens(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("error querying device tokens for %s: %w", err, err)
+		return fmt.Errorf("error querying device tokens for %s: %w", userID, err)
 	}
 	if len(tokens) == 0 {
 		logger.Debug("no device tokens registered for victim runner", "user_id", userID)
@@ -406,7 +406,7 @@ func (c *FCMClient) SendLandWeakAlertToUser(ctx context.Context, userID, territo
 
 	tokens, err := c.store.GetDeviceTokens(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("error querying device tokens for %s: %w", err, err)
+		return fmt.Errorf("error querying device tokens for %s: %w", userID, err)
 	}
 	if len(tokens) == 0 {
 		logger.Debug("no device tokens registered for runner", "user_id", userID)

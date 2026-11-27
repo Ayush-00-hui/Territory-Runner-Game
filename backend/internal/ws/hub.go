@@ -116,6 +116,7 @@ type Hub struct {
 	mu                  sync.RWMutex
 	logger              *slog.Logger
 	stop                chan struct{}
+	stopOnce            sync.Once
 	upgrader            websocket.Upgrader
 	store               store.Store
 	presenceDelay       time.Duration
@@ -689,9 +690,14 @@ func (h *Hub) dropSlowClient(client *Client) {
 			delete(userMap, client)
 			if len(userMap) == 0 {
 				delete(h.userClients, client.userID)
+				delete(h.userPrivacyZones, client.userID)
+				delete(h.userVisibility, client.userID)
 			}
 		}
 	}
+	h.recentRecipientsMu.Lock()
+	delete(h.recentRecipients, client.userID)
+	h.recentRecipientsMu.Unlock()
 }
 
 // ActiveClientCount returns the number of currently connected WebSocket runners.
@@ -701,9 +707,11 @@ func (h *Hub) ActiveClientCount() int {
 	return len(h.clients)
 }
 
-// Stop gracefully shuts down the hub.
+// Stop gracefully shuts down the hub. Safe to call multiple times.
 func (h *Hub) Stop() {
-	close(h.stop)
+	h.stopOnce.Do(func() {
+		close(h.stop)
+	})
 }
 
 // ServeWS upgrades the HTTP connection to a full-duplex WebSocket session with connection capping.
@@ -741,7 +749,12 @@ func (h *Hub) ServeWS(w http.ResponseWriter, r *http.Request, userID, username, 
 		subscribedCells: make(map[string]bool),
 	}
 
-	h.register <- client
+	select {
+	case h.register <- client:
+	case <-h.stop:
+		conn.Close()
+		return
+	}
 
 	go client.writePump()
 	go client.readPump()

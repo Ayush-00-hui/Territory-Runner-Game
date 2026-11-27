@@ -86,28 +86,32 @@ class _TrainingPlansSheetState extends State<TrainingPlansSheet> {
                 child: CircularProgressIndicator(color: AppColors.accent),
               ),
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Structured progressions with shame-free scheduling. Missed sessions simply move forward whenever you are ready.',
-                  style: AppText.body.copyWith(color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: AppSpacing.s16),
-                ...plans.map((plan) => _buildPlanCard(plan)),
-                if (_enrollment != null) ...[
-                  const SizedBox(height: AppSpacing.s12),
-                  Center(
-                    child: TextButton(
-                      onPressed: _unenroll,
-                      child: Text(
-                        'Leave active plan',
-                        style: AppText.label.copyWith(color: AppColors.error),
-                      ),
+          : SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Structured progressions with shame-free scheduling. Missed sessions simply move forward whenever you are ready.',
+                    style: AppText.body.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.s16),
+                  ...plans.map((plan) => _buildPlanCard(plan)),
+                  if (_enrollment != null) ...[
+                    const SizedBox(height: AppSpacing.s12),
+                    Center(
+                      child: TextButton(
+                        onPressed: _unenroll,
+                        child: Text(
+                          'Leave active plan',
+                          style: AppText.label.copyWith(color: AppColors.error),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
     );
   }

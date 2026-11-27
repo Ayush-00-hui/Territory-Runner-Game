@@ -43,8 +43,8 @@ fi
 
 echo "==> Restoring Territory Runner database from: $BACKUP_FILE..."
 
-# Check if file is custom pg_dump format or plain SQL
-if file "$BACKUP_FILE" 2>/dev/null | grep -q "PostgreSQL custom database dump"; then
+# Check if file is custom/tar pg_dump archive via pg_restore -l; otherwise run plain SQL with strict error handling
+if pg_restore -l "$BACKUP_FILE" >/dev/null 2>&1; then
     pg_restore \
         --dbname="$DB_URL" \
         --clean \
@@ -54,14 +54,7 @@ if file "$BACKUP_FILE" 2>/dev/null | grep -q "PostgreSQL custom database dump"; 
         --verbose \
         "$BACKUP_FILE"
 else
-    # Fallback to plain SQL execution or custom restore
-    pg_restore \
-        --dbname="$DB_URL" \
-        --clean \
-        --if-exists \
-        --no-owner \
-        --no-privileges \
-        "$BACKUP_FILE" || psql "$DB_URL" -f "$BACKUP_FILE"
+    psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$BACKUP_FILE"
 fi
 
 echo "==> Database restore completed successfully."

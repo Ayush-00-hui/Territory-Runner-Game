@@ -99,16 +99,30 @@ class DailyQuestService {
       currentNow.month,
       currentNow.day,
     );
+    final todayEnd = DateTime(
+      currentNow.year,
+      currentNow.month,
+      currentNow.day + 1,
+    );
     final dateKey = _dateKey(currentNow);
     final daySeed =
-        currentNow.difference(DateTime(currentNow.year, 1, 1)).inDays +
+        DateTime.utc(
+          currentNow.year,
+          currentNow.month,
+          currentNow.day,
+        ).difference(DateTime.utc(currentNow.year, 1, 1)).inDays +
         currentNow.year;
 
     final runs =
         overrideRuns ??
         (RunLogService().isBoxOpen ? RunLogService().getAllRuns() : const []);
     final todayRuns = runs
-        .where((r) => !r.simulated && !r.startedAt.isBefore(todayStart))
+        .where(
+          (r) =>
+              !r.simulated &&
+              !r.startedAt.isBefore(todayStart) &&
+              r.startedAt.isBefore(todayEnd),
+        )
         .toList();
 
     final double todayDistanceKm = todayRuns.fold(

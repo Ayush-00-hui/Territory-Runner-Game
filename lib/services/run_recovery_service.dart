@@ -108,7 +108,7 @@ class ActiveRunSnapshot {
       accumulatedPreviewXp: map['accumulated_preview_xp'] as int? ?? 0,
       lastSavedAt:
           DateTime.tryParse(map['last_saved_at']?.toString() ?? '') ??
-          DateTime.now(),
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
     );
   }
 }
@@ -153,16 +153,11 @@ class RunRecoveryService {
           final cipher = await _encryptionService.getCipherForBox(boxName);
           _box = await Hive.openBox<String>(boxName, encryptionCipher: cipher);
         } catch (e) {
-          try {
-            await Hive.deleteBoxFromDisk(boxName);
-            final cipher = await _encryptionService.getCipherForBox(boxName);
-            _box = await Hive.openBox<String>(
-              boxName,
-              encryptionCipher: cipher,
-            );
-          } catch (_) {
-            _box = await Hive.openBox<String>(boxName);
-          }
+          AppLogger.warning(
+            'Failed opening encrypted recovery box $boxName ($e)',
+            tag: 'RunRecoveryService',
+          );
+          rethrow;
         }
       }
     }

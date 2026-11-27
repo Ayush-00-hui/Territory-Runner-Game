@@ -139,6 +139,7 @@ func main() {
 		api.WithTrustedProxies(cfg.TrustedProxies),
 		api.WithCadenceModel(cfg.EnableCadenceModel),
 	)
+	defer apiHandler.Close()
 	router := api.SetupRouter(apiHandler, authenticator, cfg.AllowedOrigins...)
 
 	server := &http.Server{

@@ -95,5 +95,7 @@ void writeWavFile(String path, List<double> samples, int sampleRate) {
   }
   bytes.add(pcmData.buffer.asUint8List());
 
-  File(path).writeAsBytesSync(bytes.toBytes());
+  final outFile = File(path);
+  outFile.parent.createSync(recursive: true);
+  outFile.writeAsBytesSync(bytes.toBytes());
 }

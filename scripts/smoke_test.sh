@@ -64,24 +64,27 @@ else
 fi
 
 # 4. WebSocket Upgrade Handshake
-WS_SCHEME="ws"
-if [[ "$BASE_URL" == https* ]]; then
-    WS_SCHEME="wss"
-fi
 HOST_PART=$(echo "$BASE_URL" | sed -E 's|^https?://||')
-WS_URL="$WS_SCHEME://$HOST_PART/v1/ws?dev_user=$AUTH_USER"
+ORIGIN_HEADER="${ORIGIN:-$BASE_URL}"
+WS_HTTP_URL="$BASE_URL/v1/ws"
+if [ -z "$BEARER_TOKEN" ]; then
+    WS_HTTP_URL="$BASE_URL/v1/ws?dev_user=$AUTH_USER"
+fi
 
 # Verify HTTP 101 Switching Protocols response on WebSocket handshake request
 HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+    --http1.1 \
+    --max-time 5 \
     --include \
     --no-buffer \
+    "${AUTH_HEADERS[@]}" \
     --header "Connection: Upgrade" \
     --header "Upgrade: websocket" \
     --header "Host: $HOST_PART" \
-    --header "Origin: http://localhost" \
+    --header "Origin: $ORIGIN_HEADER" \
     --header "Sec-WebSocket-Key: SGVsbG8sIHdvcmxkIQ==" \
     --header "Sec-WebSocket-Version: 13" \
-    "$BASE_URL/v1/ws?dev_user=$AUTH_USER" || echo "000")
+    "$WS_HTTP_URL" || echo "000")
 
 if [ "$HTTP_STATUS" = "101" ]; then
     pass "WebSocket handshake returned HTTP 101 Switching Protocols"

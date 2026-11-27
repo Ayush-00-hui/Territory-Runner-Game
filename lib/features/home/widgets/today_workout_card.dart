@@ -113,23 +113,29 @@ class _TodayWorkoutCardState extends State<TodayWorkoutCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.directions_run_rounded,
-                    size: 18,
-                    color: AppColors.accent,
-                  ),
-                  const SizedBox(width: AppSpacing.s8),
-                  Text(
-                    _plan!.title,
-                    style: AppText.label.copyWith(
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.directions_run_rounded,
+                      size: 18,
                       color: AppColors.accent,
-                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: AppSpacing.s8),
+                    Flexible(
+                      child: Text(
+                        _plan!.title,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.label.copyWith(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
+              const SizedBox(width: AppSpacing.s8),
               GestureDetector(
                 onTap: _openPlansSheet,
                 child: Text(

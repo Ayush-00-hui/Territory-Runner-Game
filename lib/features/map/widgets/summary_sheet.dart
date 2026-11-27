@@ -610,7 +610,9 @@ class _SummarySheetState extends State<SummarySheet>
                       ),
                     ),
                     const SizedBox(height: AppSpacing.s10),
-                    Row(
+                    Wrap(
+                      spacing: AppSpacing.s8,
+                      runSpacing: AppSpacing.s8,
                       children: [
                         SecondaryButton(
                           label: 'Set details',
@@ -626,7 +628,6 @@ class _SummarySheetState extends State<SummarySheet>
                             );
                           },
                         ),
-                        const SizedBox(width: AppSpacing.s8),
                         SecondaryButton(
                           label: 'Keep default',
                           isFullWidth: false,

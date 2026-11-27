@@ -106,150 +106,159 @@ class _RunGoalSheetState extends State<RunGoalSheet>
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 28,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag Handle
-          Center(
-            child: Container(
-              width: 44,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.borderSubtle,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 28,
           ),
-          const SizedBox(height: AppSpacing.s16),
-
-          // Header
-          Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.12),
-                  borderRadius: AppSpacing.br10,
-                ),
-                child: const Icon(
-                  Icons.flag_outlined,
-                  color: AppColors.accent,
-                  size: 22,
+              // Drag Handle
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.borderSubtle,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.s10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Run goal',
-                      style: AppText.headingSmall.copyWith(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
+              const SizedBox(height: AppSpacing.s16),
+
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.12),
+                      borderRadius: AppSpacing.br10,
                     ),
-                    Text(
-                      'Set a target for your run',
-                      style: AppText.label.copyWith(
-                        color: AppColors.textMuted,
-                        fontSize: 11,
-                      ),
+                    child: const Icon(
+                      Icons.flag_outlined,
+                      color: AppColors.accent,
+                      size: 22,
                     ),
+                  ),
+                  const SizedBox(width: AppSpacing.s10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Run goal',
+                          style: AppText.headingSmall.copyWith(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          'Set a target for your run',
+                          style: AppText.label.copyWith(
+                            color: AppColors.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: AppSpacing.s14),
+
+              // Tab Bar
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppSpacing.br14,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  padding: EdgeInsets.zero,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicator: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: AppSpacing.br12,
+                  ),
+                  labelColor: AppColors.onAccent,
+                  unselectedLabelColor: AppColors.textSecondary,
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                  tabs: const [
+                    Tab(text: 'Distance'),
+                    Tab(text: 'Time'),
+                    Tab(text: 'Territory'),
+                    Tab(text: 'Open'),
                   ],
+                ),
+              ),
+
+              const SizedBox(height: AppSpacing.s20),
+
+              // Options based on selected tab
+              if (_selectedType == GoalType.distance) ...[
+                _buildDistanceGrid(),
+              ] else if (_selectedType == GoalType.duration) ...[
+                _buildDurationGrid(),
+              ] else if (_selectedType == GoalType.area) ...[
+                _buildAreaGrid(),
+              ] else ...[
+                _buildOpenRunCard(),
+              ],
+
+              const SizedBox(height: AppSpacing.s24),
+
+              // Confirm CTA
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.onAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSpacing.br14,
+                    ),
+                  ),
+                  onPressed: () {
+                    final goal = RunGoal(
+                      type: _selectedType,
+                      targetValue: _selectedValue,
+                    );
+                    Navigator.of(context).pop(goal);
+                  },
+                  child: Text(
+                    _selectedType == GoalType.none
+                        ? 'Start open run'
+                        : 'Set goal',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-
-          const SizedBox(height: AppSpacing.s14),
-
-          // Tab Bar
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppSpacing.br14,
-              border: Border.all(color: AppColors.border),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              padding: EdgeInsets.zero,
-              indicatorSize: TabBarIndicatorSize.tab,
-              indicator: BoxDecoration(
-                color: AppColors.accent,
-                borderRadius: AppSpacing.br12,
-              ),
-              labelColor: AppColors.onAccent,
-              unselectedLabelColor: AppColors.textSecondary,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 12,
-              ),
-              unselectedLabelStyle: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-              tabs: const [
-                Tab(text: 'Distance'),
-                Tab(text: 'Time'),
-                Tab(text: 'Territory'),
-                Tab(text: 'Open'),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.s20),
-
-          // Options based on selected tab
-          if (_selectedType == GoalType.distance) ...[
-            _buildDistanceGrid(),
-          ] else if (_selectedType == GoalType.duration) ...[
-            _buildDurationGrid(),
-          ] else if (_selectedType == GoalType.area) ...[
-            _buildAreaGrid(),
-          ] else ...[
-            _buildOpenRunCard(),
-          ],
-
-          const SizedBox(height: AppSpacing.s24),
-
-          // Confirm CTA
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: FilledButton(
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.onAccent,
-                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br14),
-              ),
-              onPressed: () {
-                final goal = RunGoal(
-                  type: _selectedType,
-                  targetValue: _selectedValue,
-                );
-                Navigator.of(context).pop(goal);
-              },
-              child: Text(
-                _selectedType == GoalType.none ? 'Start open run' : 'Set goal',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -290,18 +299,21 @@ class _RunGoalSheetState extends State<RunGoalSheet>
                     size: 16,
                   ),
                   const SizedBox(width: AppSpacing.s6),
-                  Text(
-                    'ADAPTIVE DAILY GOALS',
-                    style: AppText.caption.copyWith(
-                      color: prediction.isColdStart
-                          ? AppColors.textMuted
-                          : AppColors.accent,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 10,
-                      letterSpacing: 0.8,
+                  Expanded(
+                    child: Text(
+                      'ADAPTIVE DAILY GOALS',
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption.copyWith(
+                        color: prediction.isColdStart
+                            ? AppColors.textMuted
+                            : AppColors.accent,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 10,
+                        letterSpacing: 0.8,
+                      ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: AppSpacing.s8),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 6,

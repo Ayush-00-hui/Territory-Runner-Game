@@ -520,15 +520,20 @@ class _SocialFeedTabState extends State<SocialFeedTab> {
                 _buildReactionChip(item, 'fire', '🔥'),
                 const SizedBox(width: AppSpacing.s6),
                 _buildReactionChip(item, 'strong', '💪'),
-                const Spacer(),
-                if (item.totalKudosCount > 0)
-                  Text(
-                    '${item.totalKudosCount} ${item.totalKudosCount == 1 ? 'kudo' : 'kudos'}',
-                    style: AppText.caption.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w600,
+                if (item.totalKudosCount > 0) ...[
+                  const SizedBox(width: AppSpacing.s8),
+                  Expanded(
+                    child: Text(
+                      '${item.totalKudosCount} ${item.totalKudosCount == 1 ? 'kudo' : 'kudos'}',
+                      textAlign: TextAlign.end,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption.copyWith(
+                        color: AppColors.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
+                ],
               ],
             ),
           ],

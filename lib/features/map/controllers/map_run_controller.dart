@@ -81,6 +81,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
   bool _hasPromptedLowBattery = false;
   bool _wasGpsLost = false;
   bool _isDisposed = false;
+  bool get isDisposed => _isDisposed;
   int _elapsedDurationSeconds = 0;
   int _movingDurationSeconds = 0;
   double _runDistanceKm = 0.0;
@@ -885,6 +886,14 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     _accumulatedRunPreviewArea = snapshot.accumulatedPreviewArea;
     _accumulatedRunPreviewXp = snapshot.accumulatedPreviewXp;
     _isRunActive = true;
+    telemetryNotifier.setRunActive(true);
+    _motionSensorService.start();
+    _locationService.setTrackingMode(
+      GpsTrackingMode.activeRun,
+      liveStatusText: '${_selectedActivity.displayName} in progress...',
+      activityType: _selectedActivity,
+    );
+    unawaited(WakelockPlus.enable().catchError((_) {}));
     _startRunTimer();
     runPathUpdateNotifier.value++;
     MapScreenFeature.isRunActiveNotifier.value = true;
@@ -901,8 +910,12 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
     telemetryNotifier.dispose();
     liveLocationNotifier.dispose();
     runPathUpdateNotifier.dispose();
+    ghostTelemetryNotifier.dispose();
+    ghostLocationNotifier.dispose();
+    workoutSnapshotNotifier.dispose();
     savedLoopProgressNotifier.dispose();
     paceBandNotifier.dispose();
+    lowBatteryPromptNotifier.dispose();
     super.dispose();
   }
 }

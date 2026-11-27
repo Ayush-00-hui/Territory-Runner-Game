@@ -330,7 +330,7 @@ ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/internal/ws	4.683s
 PASS
 ok  	github.com/Ayush-00-hui/Territory-Runner-Game/backend/migrations	0.474s
 ```
-*(Verifies all 10 schema versions, 20 up/down SQL files embedded via `go:embed`, sequential continuity, non-empty contents, and advisory lock integration)*
+*(Verifies all 18 schema versions, 36 up/down SQL files embedded via `go:embed`, sequential continuity, non-empty contents, and advisory lock integration)*
 
 ### 8.2 Go Static Code Analysis & Test Suite
 - **Command**: `go vet ./...; go test -count=1 ./...`

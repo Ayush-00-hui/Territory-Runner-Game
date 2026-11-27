@@ -83,6 +83,8 @@ try {
 }
 
 # 4. Real-Time WebSocket Handshake
+$ws = $null
+$cts = $null
 try {
     $wsScheme = if ($BaseUrl.StartsWith("https")) { "wss" } else { "ws" }
     $hostPart = $BaseUrl -replace "^https?://", ""
@@ -118,9 +120,11 @@ try {
     } else {
         Write-Fail "WebSocket connected but state not Open" $ws.State
     }
-    $ws.Dispose()
 } catch {
     Write-Fail "WebSocket handshake failed" $_.Exception.Message
+} finally {
+    if ($ws -ne $null) { $ws.Dispose() }
+    if ($cts -ne $null) { $cts.Dispose() }
 }
 
 Write-Host "--------------------------------------------------" -ForegroundColor Cyan

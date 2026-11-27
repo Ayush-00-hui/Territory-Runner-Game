@@ -257,6 +257,28 @@ class PacePredictionService {
     required RunnerProfile profile,
     DateTime? upcomingRunTime,
   }) {
+    if (recentRuns.isEmpty) {
+      final now = upcomingRunTime ?? DateTime.now();
+      final double hour = now.hour + (now.minute / 60.0);
+      return [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        hour,
+        math.sin(2 * math.pi * hour / 24.0),
+        math.cos(2 * math.pi * hour / 24.0),
+        profile.currentStreak.toDouble(),
+      ];
+    }
     final runs = recentRuns.length > 5
         ? recentRuns.sublist(recentRuns.length - 5)
         : recentRuns;
@@ -451,8 +473,13 @@ class PacePredictionService {
   }
 
   static String _formatPace(double paceMinKm) {
-    final int minutes = paceMinKm.floor();
-    final int seconds = ((paceMinKm - minutes) * 60).round();
+    if (!paceMinKm.isFinite || paceMinKm <= 0) return '0\'00"/km';
+    int minutes = paceMinKm.floor();
+    int seconds = ((paceMinKm - minutes) * 60).round();
+    if (seconds >= 60) {
+      minutes += 1;
+      seconds = 0;
+    }
     return "$minutes'${seconds.toString().padLeft(2, '0')}\"/km";
   }
 

@@ -270,11 +270,42 @@ func (m *MemoryStore) GetTerritoriesInBBox(ctx context.Context, minLng, minLat, 
 		if t.IsDespawned(now) {
 			continue
 		}
+		if len(t.Polygons) > 0 && !polygonsIntersectBBox(t.Polygons, minLng, minLat, maxLng, maxLat) {
+			continue
+		}
 		cpy := *t
 		cpy.Strength = cpy.EffectiveStrength(now)
 		res = append(res, cpy)
 	}
 	return res, nil
+}
+
+func polygonsIntersectBBox(polys [][]geo.LatLng, minLng, minLat, maxLng, maxLat float64) bool {
+	for _, poly := range polys {
+		if len(poly) == 0 {
+			continue
+		}
+		pMinLat, pMaxLat := poly[0].Latitude, poly[0].Latitude
+		pMinLng, pMaxLng := poly[0].Longitude, poly[0].Longitude
+		for _, pt := range poly[1:] {
+			if pt.Latitude < pMinLat {
+				pMinLat = pt.Latitude
+			}
+			if pt.Latitude > pMaxLat {
+				pMaxLat = pt.Latitude
+			}
+			if pt.Longitude < pMinLng {
+				pMinLng = pt.Longitude
+			}
+			if pt.Longitude > pMaxLng {
+				pMaxLng = pt.Longitude
+			}
+		}
+		if pMaxLng >= minLng && pMinLng <= maxLng && pMaxLat >= minLat && pMinLat <= maxLat {
+			return true
+		}
+	}
+	return false
 }
 
 // GetAllTerritories returns all persisted territories in memory.
@@ -441,7 +472,7 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 								if overlap > 0 {
 									stolenArea += overlap
 									rivalsAffectedSet[t.OwnerID] = true
-									if t.EffectiveStrength(now) < 50.0 {
+									if t.EffectiveStrength(now) < TerritoryWeakThreshold {
 										weakBonusArea += overlap * 0.5
 									}
 								}
@@ -494,27 +525,27 @@ func (m *MemoryStore) CaptureRunAndMutateTerritories(
 			allPolys := append(playerExistingPolys, claimableLoops...)
 			cleanedPolys := geo.CleanGeometry(allPolys, 2.0)
 
-			// Build GeoJSON
+			// Build valid RFC 7946 GeoJSON MultiPolygon: [[[[lng,lat],...]],...]
 			var sb strings.Builder
-			sb.WriteString(`{"type":"MultiPolygon","coordinates":[[`)
+			sb.WriteString(`{"type":"MultiPolygon","coordinates":[`)
 			for lIdx, loop := range cleanedPolys {
 				if lIdx > 0 {
-					sb.WriteString(`],[`)
+					sb.WriteString(`,`)
 				}
 				ring := append([]geo.LatLng(nil), loop...)
 				if len(ring) > 0 && (ring[0].Latitude != ring[len(ring)-1].Latitude || ring[0].Longitude != ring[len(ring)-1].Longitude) {
 					ring = append(ring, ring[0])
 				}
-				sb.WriteString(`[`)
+				sb.WriteString(`[[`)
 				for pIdx, pt := range ring {
 					if pIdx > 0 {
 						sb.WriteString(`,`)
 					}
 					sb.WriteString(fmt.Sprintf(`[%f,%f]`, pt.Longitude, pt.Latitude))
 				}
-				sb.WriteString(`]`)
+				sb.WriteString(`]]`)
 			}
-			sb.WriteString(`]]}`)
+			sb.WriteString(`]}`)
 			geojson = sb.String()
 
 			cooldown := now.Add(TerritoryShieldDuration)
@@ -900,7 +931,11 @@ func (m *MemoryStore) GetFactionStandings(ctx context.Context) (*FactionStanding
 		st.MemberCount++
 	}
 
+	now := time.Now().UTC()
 	for _, t := range m.territories {
+		if t.IsDespawned(now) {
+			continue
+		}
 		u, ok := m.users[t.OwnerID]
 		if ok && u.Faction != "" {
 			st, exists := canonical[u.Faction]
@@ -2017,7 +2052,7 @@ func (m *MemoryStore) GetCrewMembers(ctx context.Context, crewID string, weekSta
 		var area float64
 		for _, key := range m.runsByOrder {
 			r := m.runs[key]
-			if r != nil && r.UserID == mem.UserID && !r.CreatedAt.Before(weekStart) && r.CreatedAt.Before(weekEnd) {
+			if r != nil && r.UserID == mem.UserID && (r.Status == "" || r.Status == "accepted") && !r.CreatedAt.Before(weekStart) && r.CreatedAt.Before(weekEnd) {
 				dist += r.DistanceMeters
 				area += r.AreaClaimed + r.AreaStolen
 			}
@@ -2086,7 +2121,7 @@ func (m *MemoryStore) GetActiveCrewGoal(ctx context.Context, crewID string, week
 	var currentVal float64
 	for _, key := range m.runsByOrder {
 		r := m.runs[key]
-		if r != nil && !r.CreatedAt.Before(weekStart) && r.CreatedAt.Before(weekEnd) {
+		if r != nil && (r.Status == "" || r.Status == "accepted") && !r.CreatedAt.Before(weekStart) && r.CreatedAt.Before(weekEnd) {
 			if _, isMember := membersMap[r.UserID]; isMember {
 				if g.GoalType == "area" {
 					currentVal += r.AreaClaimed + r.AreaStolen

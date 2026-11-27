@@ -572,11 +572,16 @@ func (d *Detector) EvaluateTrackWithMotion(points []geo.TrackPoint, activityType
 
 	if len(points) < 3 {
 		isAnomaly := maxScore > d.cfg.AnomalyThreshold
+		verStatus := "verified_motion"
+		if len(motionWindows) == 0 {
+			verStatus = "unverified_motion"
+		}
 		return Result{
-			IsAnomaly: isAnomaly,
-			Score:     maxScore,
-			Reasons:   reasons,
-			Features:  features,
+			IsAnomaly:          isAnomaly,
+			Score:              maxScore,
+			Reasons:            reasons,
+			Features:           features,
+			VerificationStatus: verStatus,
 		}
 	}
 

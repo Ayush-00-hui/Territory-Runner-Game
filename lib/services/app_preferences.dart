@@ -137,12 +137,29 @@ class AppPreferences {
       List.unmodifiable(_watchCalibrationSessions);
   bool get isInitialized => _isInitialized;
 
+  Future<void>? _initFuture;
+
   AppPreferences._internal() {
     init();
   }
 
-  /// Initializes preferences from persistent storage
+  /// Initializes preferences from persistent storage (safe to await concurrently)
   Future<void> init() async {
+    if (_isInitialized) return;
+    final inFlight = _initFuture;
+    if (inFlight != null) return inFlight;
+    final future = _doInit();
+    _initFuture = future;
+    try {
+      await future;
+    } finally {
+      if (identical(_initFuture, future)) {
+        _initFuture = null;
+      }
+    }
+  }
+
+  Future<void> _doInit() async {
     if (_isInitialized) return;
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -665,7 +682,11 @@ class AppPreferences {
           factor = 1.036;
           break;
       }
-      return (distanceKm * weight * factor).round();
+      double legacy = distanceKm * weight * factor;
+      if (_watchCalorieFactor != null) {
+        legacy *= _watchCalorieFactor!;
+      }
+      return legacy.round();
     }
 
     final result = estimatePhysiologicalCalories(
@@ -767,14 +788,19 @@ class AppPreferences {
       defaultSpeed = 10.0;
     }
 
+    final double? explicitSpeed =
+        (speedKmh != null && speedKmh > 0 && speedKmh.isFinite)
+        ? speedKmh
+        : null;
     final spd =
-        speedKmh ??
+        explicitSpeed ??
         (durationMinutes != null && durationMinutes > 0
             ? (distanceKm / (durationMinutes / 60.0))
             : defaultSpeed);
+    final safeSpd = spd > 0 && spd.isFinite ? spd : defaultSpeed;
     final durSec = (durationMinutes != null)
         ? durationMinutes * 60.0
-        : (distanceKm > 0 ? (distanceKm / spd) * 3600.0 : 0.0);
+        : (distanceKm > 0 ? (distanceKm / safeSpd) * 3600.0 : 0.0);
 
     final profile =
         _bodyProfile ?? UserBodyProfile.referenceAdult(weightKg: weight);
@@ -782,7 +808,7 @@ class AppPreferences {
     return PhysiologicalCalorieEngine.estimateSegment(
       distanceKm: distanceKm,
       durationSeconds: durSec,
-      speedKmh: spd,
+      speedKmh: safeSpd,
       grade: grade,
       activityType: activityType,
       profile: profile,

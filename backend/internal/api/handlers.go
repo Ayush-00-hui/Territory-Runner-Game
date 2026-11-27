@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -205,6 +207,19 @@ func NewAPI(s store.Store, logger *slog.Logger, opts ...Option) *API {
 		opt(a)
 	}
 	return a
+}
+
+// Close releases background rate-limiter goroutines owned by API.
+func (a *API) Close() {
+	if a.runsLimiter != nil {
+		a.runsLimiter.Close()
+	}
+	if a.coachLimiter != nil {
+		a.coachLimiter.Close()
+	}
+	if a.teamLimiter != nil {
+		a.teamLimiter.Close()
+	}
 }
 
 // HandleHealthz handles GET /healthz liveness checks.
@@ -558,7 +573,7 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Validate run duration limits
+	// 3. Validate run duration, distance, steps, and coordinate bounds
 	maxDur := a.maxRunDurationSec
 	if maxDur <= 0 {
 		maxDur = 86400
@@ -566,6 +581,21 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 	if req.DurationSeconds < 0 || req.DurationSeconds > maxDur {
 		writeError(w, http.StatusBadRequest, "INVALID_DURATION", fmt.Sprintf("Run duration must be between 0 and %d seconds", maxDur))
 		return
+	}
+	if math.IsNaN(req.DistanceMeters) || math.IsInf(req.DistanceMeters, 0) || req.DistanceMeters < 0 {
+		writeError(w, http.StatusBadRequest, "INVALID_DISTANCE", "Run distance must be non-negative")
+		return
+	}
+	if req.StepCount != nil && *req.StepCount < 0 {
+		writeError(w, http.StatusBadRequest, "INVALID_STEPS", "Step count must be non-negative")
+		return
+	}
+	for _, pt := range req.Points {
+		if math.IsNaN(pt.Latitude) || math.IsInf(pt.Latitude, 0) || pt.Latitude < -90 || pt.Latitude > 90 ||
+			math.IsNaN(pt.Longitude) || math.IsInf(pt.Longitude, 0) || pt.Longitude < -180 || pt.Longitude > 180 {
+			writeError(w, http.StatusBadRequest, "INVALID_COORDINATES", "Track point coordinates out of WGS84 bounds")
+			return
+		}
 	}
 
 	// 4. Server timestamp hygiene & track integrity validation
@@ -611,10 +641,18 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Fast-path: Check for idempotent replay
+	// 5. Fast-path: Check for idempotent replay (scoped to the authenticated user)
 	if existing, err := a.store.GetRunByIdempotencyKey(r.Context(), req.IdempotencyKey); err == nil && existing != nil {
+		if existing.UserID != uid {
+			writeError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "Idempotency key belongs to a different account")
+			return
+		}
 		a.logger.Info("idempotent replay served", "key", req.IdempotencyKey, "run_id", existing.ID)
-		res, _ := a.store.CaptureRunAndMutateTerritories(r.Context(), existing, nil, nil)
+		res, replayErr := a.store.CaptureRunAndMutateTerritories(r.Context(), existing, nil, nil)
+		if replayErr != nil || res == nil {
+			writeError(w, http.StatusInternalServerError, "REPLAY_FAILED", "Failed to reconstruct idempotent run result")
+			return
+		}
 		if existing.Status == "flagged_review" {
 			writeJSON(w, http.StatusAccepted, res)
 			return
@@ -682,13 +720,13 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 5. Fan out real-time conquest broadcast and push notifications
-	if result.LoopDetected && result.AreaClaimedSqm > 0 {
+	if result.LoopDetected && result.AreaGainedSqm > 0 {
 		username := "Runner_" + uid[:min(6, len(uid))]
 		if u, err := a.store.GetUser(r.Context(), uid); err == nil && u != nil {
 			username = u.Username
 		}
 		if a.wsHub != nil {
-			a.wsHub.BroadcastConquest(uid, username, result.AreaClaimedSqm, result.RivalsAffected)
+			a.wsHub.BroadcastConquest(uid, username, result.AreaGainedSqm, result.RivalsAffected)
 		}
 		if a.notifier != nil && len(result.RivalsAffected) > 0 {
 			go func(rivals []string, territoryID, runnerName string, area float64) {
@@ -697,7 +735,7 @@ func (a *API) HandleSubmitRun(w http.ResponseWriter, r *http.Request) {
 				for _, rUID := range rivals {
 					_ = a.notifier.SendTerritoryAlertToUser(ctx, rUID, territoryID, runnerName, area)
 				}
-			}(result.RivalsAffected, result.RunID, username, result.AreaClaimedSqm)
+			}(result.RivalsAffected, result.RunID, username, result.AreaGainedSqm)
 		}
 	}
 
@@ -715,7 +753,7 @@ func (a *API) HandleGetRuns(w http.ResponseWriter, r *http.Request) {
 	limit := 20
 	if l := r.URL.Query().Get("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			limit = parsed
+			limit = min(parsed, 200)
 		}
 	}
 
@@ -723,6 +761,9 @@ func (a *API) HandleGetRuns(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to retrieve runs")
 		return
+	}
+	if runs == nil {
+		runs = []store.Run{}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -735,15 +776,21 @@ func (a *API) HandleGetRuns(w http.ResponseWriter, r *http.Request) {
 func (a *API) HandleGetTerritories(w http.ResponseWriter, r *http.Request) {
 	bboxStr := r.URL.Query().Get("bbox")
 	var minLng, minLat, maxLng, maxLat float64
-	var err error
 
 	if bboxStr != "" {
 		parts := strings.Split(bboxStr, ",")
-		if len(parts) == 4 {
-			minLng, err = strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
-			minLat, _ = strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
-			maxLng, _ = strconv.ParseFloat(strings.TrimSpace(parts[2]), 64)
-			maxLat, _ = strconv.ParseFloat(strings.TrimSpace(parts[3]), 64)
+		if len(parts) != 4 {
+			writeError(w, http.StatusBadRequest, "INVALID_BBOX", "bbox must contain 4 comma-separated coordinates: minLng,minLat,maxLng,maxLat")
+			return
+		}
+		var err1, err2, err3, err4 error
+		minLng, err1 = strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+		minLat, err2 = strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+		maxLng, err3 = strconv.ParseFloat(strings.TrimSpace(parts[2]), 64)
+		maxLat, err4 = strconv.ParseFloat(strings.TrimSpace(parts[3]), 64)
+		if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+			writeError(w, http.StatusBadRequest, "INVALID_BBOX", "bbox coordinates must be valid numbers")
+			return
 		}
 	}
 
@@ -800,7 +847,7 @@ func (a *API) HandleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	limit := 50
 	if l := r.URL.Query().Get("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 {
-			limit = parsed
+			limit = min(parsed, 200)
 		}
 	}
 	activityType := r.URL.Query().Get("activity_type")
@@ -809,6 +856,9 @@ func (a *API) HandleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to load leaderboard")
 		return
+	}
+	if lb == nil {
+		lb = []store.LeaderboardEntry{}
 	}
 
 	for i := range lb {
@@ -836,7 +886,10 @@ func (a *API) HandleRunCoach(w http.ResponseWriter, r *http.Request) {
 
 	var req coach.RunContext
 	if r.Body != nil {
-		_ = json.NewDecoder(r.Body).Decode(&req)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+			writeError(w, http.StatusBadRequest, "INVALID_JSON", "Malformed JSON coach request")
+			return
+		}
 	}
 	req.RunID = runID
 

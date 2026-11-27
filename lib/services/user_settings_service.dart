@@ -181,16 +181,12 @@ class UserSettingsService extends ChangeNotifier {
   }
 
   /// Synchronizes settings with Go backend, preserving local values on network errors
+  /// Fetches server settings first so a fresh install does not overwrite server opt-outs.
   Future<void> syncWithServer() async {
     try {
-      // Push client timezone to server as non-sensitive operational setting
-      await _apiClient.updateSettings({
-        'timezone': localTimezone,
-        'land_reminders': _landReminders,
-      });
-
       final data = await _apiClient.getSettings();
       if (data != null) {
+        bool changed = false;
         if (data.containsKey('live_visibility')) {
           final serverVis = LiveVisibility.fromString(
             data['live_visibility'] as String?,
@@ -202,6 +198,7 @@ class UserSettingsService extends ChangeNotifier {
               _prefLiveVisibilityKey,
               serverVis.toApiValue(),
             );
+            changed = true;
           }
         }
         if (data.containsKey('land_reminders')) {
@@ -210,10 +207,17 @@ class UserSettingsService extends ChangeNotifier {
             _landReminders = serverReminders;
             final prefs = await SharedPreferences.getInstance();
             await prefs.setBool(_prefLandRemindersKey, serverReminders);
+            changed = true;
           }
         }
-        notifyListeners();
+        if (changed) notifyListeners();
       }
+
+      // Update server timezone only without clobbering existing land_reminders
+      await _apiClient.updateSettings({
+        'timezone': localTimezone,
+        'land_reminders': _landReminders,
+      });
     } catch (e) {
       AppLogger.debug(
         'Server settings sync skipped (device offline): $e',

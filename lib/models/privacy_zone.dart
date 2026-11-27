@@ -57,7 +57,7 @@ class PrivacyZone {
     'longitude': longitude,
     'radius_meters': radiusMeters,
     'is_enabled': isEnabled,
-    'created_at': createdAt.toIso8601String(),
+    'created_at': createdAt.toUtc().toIso8601String(),
   };
 
   factory PrivacyZone.fromJson(Map<String, dynamic> json) {

@@ -572,6 +572,7 @@ class _MapScreenState extends State<MapScreen>
           profile: TerritoryService().getProfile(),
           recentRuns: recentRuns,
         );
+        if (!mounted || controller.isDisposed) return;
         if (goal != null) {
           controller.setGoal(goal);
         }

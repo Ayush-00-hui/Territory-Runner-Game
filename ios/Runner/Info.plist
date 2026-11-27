@@ -37,6 +37,12 @@
 		<key>UIBackgroundModes</key>
 		<array>
 			<string>location</string>
+			<string>remote-notification</string>
+		</array>
+		<key>LSApplicationQueriesSchemes</key>
+		<array>
+			<string>tel</string>
+			<string>sms</string>
 		</array>
 		<key>UIApplicationSceneManifest</key>
 		<dict>

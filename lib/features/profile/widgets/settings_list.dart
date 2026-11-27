@@ -260,9 +260,13 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
         AppToast.show(context, 'Account and data permanently deleted');
         Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
       }
-    } catch (_) {
+    } catch (e) {
       if (context.mounted) {
-        AppToast.show(context, 'Account reset complete');
+        AppToast.show(
+          context,
+          'Could not complete account deletion: $e',
+          type: AppToastType.error,
+        );
       }
     }
   }
@@ -962,7 +966,7 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             title: 'Territory Runner',
             subtitle: 'Real-world GPS running and territory loops',
             trailing: Text(
-              'v${AppVersion.display}',
+              AppVersion.display,
               style: AppText.labelMedium.copyWith(color: AppColors.textMuted),
             ),
             onTap: _onVersionTap,

@@ -211,10 +211,11 @@ void main() {
       expect(recordedDistance, greaterThan(0.0));
 
       final context = tester.element(find.byType(MapScreen));
-      handleFinishRun(
+      await handleFinishRun(
         context: context,
         controller: runController,
         onTerritoriesUpdated: () {},
+        syncQueueService: syncQueueService,
       );
 
       await tester.pumpAndSettle();

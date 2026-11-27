@@ -317,7 +317,7 @@ class ApiClient {
         return {
           'latitude': p.latitude,
           'longitude': p.longitude,
-          'timestamp': ptTime.toIso8601String(),
+          'timestamp': ptTime.toUtc().toIso8601String(),
           'speed': double.parse(kin.speed.toStringAsFixed(2)),
           'heading': double.parse(kin.heading.toStringAsFixed(1)),
           'is_mocked': false,
@@ -335,7 +335,9 @@ class ApiClient {
       () => _httpClient.post(uri, headers: headers, body: body),
     );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
+    if (response.statusCode == 200 ||
+        response.statusCode == 201 ||
+        response.statusCode == 202) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
 
@@ -438,9 +440,16 @@ class ApiClient {
         List<List<LatLng>> multiPolys = [];
         if (geom != null && geom['coordinates'] is List) {
           final rawCoords = geom['coordinates'] as List<dynamic>;
-          for (final poly in rawCoords) {
-            if (poly is List && poly.isNotEmpty) {
-              final ring = poly.first as List<dynamic>;
+          final geomType = geom['type'] as String?;
+          final List<dynamic> outerRings = geomType == 'Polygon'
+              ? (rawCoords.isNotEmpty ? [rawCoords.first] : const [])
+              : rawCoords
+                    .whereType<List<dynamic>>()
+                    .where((poly) => poly.isNotEmpty)
+                    .map((poly) => poly.first)
+                    .toList();
+          for (final ring in outerRings) {
+            if (ring is List) {
               final ringPoints = <LatLng>[];
               for (final pt in ring) {
                 if (pt is List && pt.length >= 2) {
@@ -613,7 +622,7 @@ class ApiClient {
     final response = await _executeWithRetry(
       () => _httpClient.post(uri, headers: headers, body: body),
       maxRetries: 0,
-      timeout: const Duration(seconds: 2),
+      timeout: const Duration(seconds: 12),
     );
 
     if (response.statusCode == 200) {
@@ -819,7 +828,12 @@ class ApiClient {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return Duel.fromJson(data);
     }
-    return null;
+    final errBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errBody['error'] as String? ?? 'DUEL_ERROR',
+      message: errBody['detail'] as String? ?? 'Failed to create duel',
+    );
   }
 
   /// Accepts an incoming duel challenge (PUT /v1/duels/{id}/accept)
@@ -892,7 +906,12 @@ class ApiClient {
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    return null;
+    final errBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errBody['error'] as String? ?? 'SETTINGS_ERROR',
+      message: errBody['detail'] as String? ?? 'Failed to update settings',
+    );
   }
 
   /// Updates user settings (PUT /v1/me/settings)
@@ -910,7 +929,12 @@ class ApiClient {
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
     }
-    return null;
+    final errBody = _parseError(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      code: errBody['error'] as String? ?? 'SETTINGS_ERROR',
+      message: errBody['detail'] as String? ?? 'Failed to update settings',
+    );
   }
 
   /// Permanently purges runner account and all server-persisted data (DELETE /v1/me)
@@ -971,11 +995,11 @@ class ApiClient {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return Crew.fromJson(data);
     }
-    final data = jsonDecode(response.body) as Map<String, dynamic>?;
+    final data = _parseError(response.body);
     throw ApiException(
       statusCode: response.statusCode,
-      code: data?['error'] as String? ?? 'CREATE_CREW_ERROR',
-      message: data?['detail'] as String? ?? 'Failed to create crew',
+      code: data['error'] as String? ?? 'CREATE_CREW_ERROR',
+      message: data['detail'] as String? ?? 'Failed to create crew',
     );
   }
 
@@ -993,11 +1017,11 @@ class ApiClient {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return Crew.fromJson(data);
     }
-    final data = jsonDecode(response.body) as Map<String, dynamic>?;
+    final data = _parseError(response.body);
     throw ApiException(
       statusCode: response.statusCode,
-      code: data?['error'] as String? ?? 'JOIN_CREW_ERROR',
-      message: data?['detail'] as String? ?? 'Failed to join crew',
+      code: data['error'] as String? ?? 'JOIN_CREW_ERROR',
+      message: data['detail'] as String? ?? 'Failed to join crew',
     );
   }
 
@@ -1018,11 +1042,11 @@ class ApiClient {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       return CrewGoal.fromJson(data);
     }
-    final data = jsonDecode(response.body) as Map<String, dynamic>?;
+    final data = _parseError(response.body);
     throw ApiException(
       statusCode: response.statusCode,
-      code: data?['error'] as String? ?? 'SET_GOAL_ERROR',
-      message: data?['detail'] as String? ?? 'Failed to set crew goal',
+      code: data['error'] as String? ?? 'SET_GOAL_ERROR',
+      message: data['detail'] as String? ?? 'Failed to set crew goal',
     );
   }
 

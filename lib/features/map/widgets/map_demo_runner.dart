@@ -24,6 +24,7 @@ class MapDemoRunner {
   final TerritoryService territoryService;
   final FirebaseService firebaseService;
   final ValueChanged<String?> onHighlightTerritory;
+  final List<Timer> _activeTimers = [];
 
   MapDemoRunner({
     required this.context,
@@ -33,6 +34,13 @@ class MapDemoRunner {
     required this.firebaseService,
     required this.onHighlightTerritory,
   });
+
+  void dispose() {
+    for (final timer in _activeTimers) {
+      timer.cancel();
+    }
+    _activeTimers.clear();
+  }
 
   void runAutomatedLoopDemo() {
     LocationService().isSimulationMode = true;
@@ -63,9 +71,11 @@ class MapDemoRunner {
     );
 
     int currentStep = 0;
-    Timer.periodic(const Duration(milliseconds: 320), (timer) {
-      if (currentStep >= waypoints.length) {
+    late final Timer timerRef;
+    timerRef = Timer.periodic(const Duration(milliseconds: 320), (timer) {
+      if (runController.isDisposed || currentStep >= waypoints.length) {
         timer.cancel();
+        _activeTimers.remove(timerRef);
         return;
       }
 
@@ -90,6 +100,7 @@ class MapDemoRunner {
 
       currentStep++;
     });
+    _activeTimers.add(timerRef);
   }
 
   void runRivalConflictDemo() async {
@@ -122,9 +133,11 @@ class MapDemoRunner {
     ];
 
     int step = 0;
-    Timer.periodic(const Duration(milliseconds: 400), (timer) {
-      if (step >= sliceWaypoints.length) {
+    late final Timer conflictTimer;
+    conflictTimer = Timer.periodic(const Duration(milliseconds: 400), (timer) {
+      if (runController.isDisposed || step >= sliceWaypoints.length) {
         timer.cancel();
+        _activeTimers.remove(conflictTimer);
         return;
       }
 
@@ -145,6 +158,7 @@ class MapDemoRunner {
       runController.processPosition(pos);
       step++;
     });
+    _activeTimers.add(conflictTimer);
   }
 
   void simulateSpeedAnomaly() {

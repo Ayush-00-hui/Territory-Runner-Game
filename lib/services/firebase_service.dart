@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../core/logging/app_logger.dart';
@@ -15,6 +16,7 @@ class FirebaseService {
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
+  final ValueNotifier<int> authStateVersionNotifier = ValueNotifier<int>(0);
 
   FirebaseAuth? _auth;
   FirebaseFirestore? _firestore;
@@ -217,11 +219,16 @@ class FirebaseService {
 
   /// Sign Out
   Future<void> signOut() async {
-    if (!_isInitialized || _auth == null) return;
     try {
-      await _googleSignIn.signOut();
-    } catch (_) {}
-    await _auth!.signOut();
+      if (_isInitialized && _auth != null) {
+        try {
+          await _googleSignIn.signOut();
+        } catch (_) {}
+        await _auth!.signOut();
+      }
+    } finally {
+      authStateVersionNotifier.value++;
+    }
   }
 
   /// Syncs a captured territory to Firestore with Server Timestamp conflict resolution

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../services/safety_service.dart';
 import '../../../ui/ui.dart';
 
-void showEmergencyContactDialog(BuildContext context) {
-  showDialog(
+Future<void> showEmergencyContactDialog(BuildContext context) {
+  return showDialog<void>(
     context: context,
     builder: (ctx) => const _EmergencyContactDialog(),
   );
@@ -233,9 +233,14 @@ class _EmergencyContactDialogState extends State<_EmergencyContactDialog> {
       actions: [
         SecondaryButton(
           label: 'Cancel',
+          isFullWidth: false,
           onPressed: () => Navigator.of(context).pop(),
         ),
-        PrimaryButton(label: 'Save settings', onPressed: _save),
+        PrimaryButton(
+          label: 'Save settings',
+          isFullWidth: false,
+          onPressed: _save,
+        ),
       ],
     );
   }

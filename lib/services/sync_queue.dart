@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/logging/app_logger.dart';
 import '../models/territory.dart';
+import '../features/gameplay/polygon_enclosure_engine.dart';
 import '../features/gameplay/territory_service.dart';
 import 'api_client.dart';
 import 'hive_encryption_service.dart';
@@ -219,6 +220,8 @@ class SyncQueueService {
   static const String _rejectedBoxName = 'rejected_runs_v1';
   Box<String>? _box;
   Box<String>? _rejectedBox;
+  Future<Box<String>>? _openingBoxFuture;
+  Future<Box<String>>? _openingRejectedBoxFuture;
   bool _isSyncing = false;
 
   /// Returns true for permanent 4xx failures that should not be retried.
@@ -299,25 +302,41 @@ class SyncQueueService {
     _updateUnsettledCount();
   }
 
-  Future<Box<String>> _getBox() async {
-    if (_box != null && _box!.isOpen) return _box!;
+  /// Opens the persistent queue box on startup so pending badge counts reflect disk state.
+  Future<void> ensureInitialized() async {
+    try {
+      await _getBox();
+      _updateUnsettledCount();
+    } catch (e) {
+      AppLogger.warning(
+        'SyncQueue initialization deferred: $e',
+        tag: 'SyncQueueService',
+      );
+    }
+  }
+
+  Future<Box<String>> _getBox() {
+    if (_box != null && _box!.isOpen) return Future.value(_box!);
     if (Hive.isBoxOpen(_boxName)) {
       _box = Hive.box<String>(_boxName);
-      return _box!;
+      return Future.value(_box!);
     }
-    try {
-      final cipher = await _encryptionService.getCipherForBox(_boxName);
-      _box = await Hive.openBox<String>(_boxName, encryptionCipher: cipher);
-    } catch (e) {
-      try {
-        await Hive.deleteBoxFromDisk(_boxName);
-        final cipher = await _encryptionService.getCipherForBox(_boxName);
-        _box = await Hive.openBox<String>(_boxName, encryptionCipher: cipher);
-      } catch (_) {
-        _box = await Hive.openBox<String>(_boxName);
-      }
-    }
-    return _box!;
+    return _openingBoxFuture ??= _openEncryptedBox(_boxName)
+        .then((box) {
+          _box = box;
+          _openingBoxFuture = null;
+          _updateUnsettledCount();
+          return box;
+        })
+        .catchError((Object e) {
+          _openingBoxFuture = null;
+          throw e;
+        });
+  }
+
+  Future<Box<String>> _openEncryptedBox(String name) async {
+    final cipher = await _encryptionService.getCipherForBox(name);
+    return Hive.openBox<String>(name, encryptionCipher: cipher);
   }
 
   void _updateUnsettledCount() {
@@ -526,61 +545,57 @@ class SyncQueueService {
 
           if (geomType == 'MultiPolygon') {
             for (final poly in coordinates) {
-              if (poly is List) {
-                for (final ring in poly) {
-                  if (ring is List) {
-                    final ringPoints = <LatLng>[];
-                    for (final pt in ring) {
-                      if (pt is List && pt.length >= 2) {
-                        ringPoints.add(
-                          LatLng(
-                            (pt[1] as num).toDouble(),
-                            (pt[0] as num).toDouble(),
-                          ),
-                        );
-                      }
+              if (poly is List && poly.isNotEmpty) {
+                final ring = poly.first;
+                if (ring is List) {
+                  final ringPoints = <LatLng>[];
+                  for (final pt in ring) {
+                    if (pt is List && pt.length >= 2) {
+                      ringPoints.add(
+                        LatLng(
+                          (pt[1] as num).toDouble(),
+                          (pt[0] as num).toDouble(),
+                        ),
+                      );
                     }
-                    if (ringPoints.isNotEmpty) {
-                      multiPolys.add(ringPoints);
-                    }
+                  }
+                  if (ringPoints.isNotEmpty) {
+                    multiPolys.add(ringPoints);
                   }
                 }
               }
             }
-          } else {
-            // Standard Polygon with coordinates as list of linear rings (outer + holes)
-            for (final ring in coordinates) {
-              if (ring is List) {
-                final ringPoints = <LatLng>[];
-                for (final pt in ring) {
-                  if (pt is List && pt.length >= 2) {
-                    ringPoints.add(
-                      LatLng(
-                        (pt[1] as num).toDouble(),
-                        (pt[0] as num).toDouble(),
-                      ),
-                    );
-                  }
-                }
-                if (ringPoints.isNotEmpty) {
-                  multiPolys.add(ringPoints);
-                }
+          } else if (coordinates.isNotEmpty && coordinates.first is List) {
+            // Standard Polygon: only outer ring (coordinates.first)
+            final ring = coordinates.first as List<dynamic>;
+            final ringPoints = <LatLng>[];
+            for (final pt in ring) {
+              if (pt is List && pt.length >= 2) {
+                ringPoints.add(
+                  LatLng((pt[1] as num).toDouble(), (pt[0] as num).toDouble()),
+                );
               }
+            }
+            if (ringPoints.isNotEmpty) {
+              multiPolys.add(ringPoints);
             }
           }
 
           if (multiPolys.isNotEmpty) {
             final profile = _territoryService.getProfile();
             final territoryId = 'poly_${profile.id}_territory';
+            final double computedAreaSqm = multiPolys.fold(
+              0.0,
+              (acc, p) =>
+                  acc + PolygonEnclosureEngine.computeGeodesicShoelaceArea(p),
+            );
 
             final authoritativeTerritory = Territory(
               id: territoryId,
               ownerId: profile.id,
               polygon: multiPolys.first,
               polygons: multiPolys,
-              areaSqMeters:
-                  serverTotalArea ??
-                  multiPolys.fold(0.0, (acc, p) => acc + p.length),
+              areaSqMeters: serverTotalArea ?? computedAreaSqm,
               capturedAt: DateTime.now(),
             );
 
@@ -601,33 +616,24 @@ class SyncQueueService {
     }
   }
 
-  Future<Box<String>> _getRejectedBox() async {
-    if (_rejectedBox != null && _rejectedBox!.isOpen) return _rejectedBox!;
+  Future<Box<String>> _getRejectedBox() {
+    if (_rejectedBox != null && _rejectedBox!.isOpen) {
+      return Future.value(_rejectedBox!);
+    }
     if (Hive.isBoxOpen(_rejectedBoxName)) {
       _rejectedBox = Hive.box<String>(_rejectedBoxName);
-      return _rejectedBox!;
+      return Future.value(_rejectedBox!);
     }
-    try {
-      final cipher = await _encryptionService.getCipherForBox(_rejectedBoxName);
-      _rejectedBox = await Hive.openBox<String>(
-        _rejectedBoxName,
-        encryptionCipher: cipher,
-      );
-    } catch (e) {
-      try {
-        await Hive.deleteBoxFromDisk(_rejectedBoxName);
-        final cipher = await _encryptionService.getCipherForBox(
-          _rejectedBoxName,
-        );
-        _rejectedBox = await Hive.openBox<String>(
-          _rejectedBoxName,
-          encryptionCipher: cipher,
-        );
-      } catch (_) {
-        _rejectedBox = await Hive.openBox<String>(_rejectedBoxName);
-      }
-    }
-    return _rejectedBox!;
+    return _openingRejectedBoxFuture ??= _openEncryptedBox(_rejectedBoxName)
+        .then((box) {
+          _rejectedBox = box;
+          _openingRejectedBoxFuture = null;
+          return box;
+        })
+        .catchError((Object e) {
+          _openingRejectedBoxFuture = null;
+          throw e;
+        });
   }
 
   Future<void> _saveRejectedRun(RejectedRun rejected) async {

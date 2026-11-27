@@ -98,7 +98,10 @@ class GpsDistanceFilter {
     if (!_isInitialized) {
       _anchorLat = pos.latitude;
       _anchorLng = pos.longitude;
-      _cosAnchorLat = math.cos(pos.latitude * (math.pi / 180.0));
+      _cosAnchorLat = math
+          .cos(pos.latitude * (math.pi / 180.0))
+          .abs()
+          .clamp(0.05, 1.0);
       _x = 0.0;
       _y = 0.0;
       _vx = 0.0;
@@ -154,11 +157,16 @@ class GpsDistanceFilter {
     _pVel += qRate * dt * dt;
 
     // Measurement noise R (scaled by horizontal satellite accuracy)
-    final r = math.max(4.0, pos.accuracy * pos.accuracy);
+    final double safeAccuracy =
+        (pos.accuracy.isNaN || !pos.accuracy.isFinite || pos.accuracy <= 0)
+        ? 4.0
+        : pos.accuracy;
+    final r = math.max(4.0, safeAccuracy * safeAccuracy);
 
-    // Kalman gain K
+    // Kalman gain K (use minimum 0.1s velocity denominator to avoid burst-duplicate velocity spikes)
     final kPos = _pPos / (_pPos + r);
-    final kVel = (_pPos / (_pPos + r)) / dt;
+    final velDt = dt < 0.1 ? 0.1 : dt;
+    final kVel = kPos / velDt;
 
     // Innovation residual
     final resX = meas.dx - _x;

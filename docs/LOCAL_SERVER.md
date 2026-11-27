@@ -146,7 +146,7 @@ Before demonstrating Territory Runner to examiners, peers, or users:
 - [ ] **1. Laptop Battery**: Laptop charged to 100%; power adapter and portable power bank packed.
 - [ ] **2. OS Sleep Disabled**: Confirmed laptop will not sleep when lid is closed.
 - [ ] **3. Backend Running**: Go backend running on port 8080; terminal visible or logs piped.
-- [ ] **4. Database Migrations**: All 10 SQL migrations applied and verified clean.
+- [ ] **4. Database Migrations**: All 18 SQL migration versions applied and verified clean.
 - [ ] **5. Hotspot Active**: Phone or mobile hotspot active with 2.4/5GHz Wi-Fi broadcast.
 - [ ] **6. IP Address Verified**: Laptop LAN IP checked (`ipconfig` / `ifconfig`) and confirmed reachable.
 - [ ] **7. Smoke Test Green**: Ran `scripts/smoke_test.ps1` with 4/4 passing checks.

@@ -37,6 +37,12 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
     await _privacyService.loadZones();
     // Background sync with server (offline-first preserved)
@@ -434,7 +440,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                             val,
                             apiClient: ApiClient(),
                           );
-                          setState(() {});
+                          if (mounted) setState(() {});
                         },
                       ),
                       IconButton(
@@ -448,7 +454,7 @@ class _PrivacyZonesSheetState extends State<_PrivacyZonesSheet> {
                             zone.id,
                             apiClient: ApiClient(),
                           );
-                          setState(() {});
+                          if (mounted) setState(() {});
                         },
                       ),
                     ],

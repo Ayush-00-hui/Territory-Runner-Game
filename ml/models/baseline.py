@@ -49,17 +49,17 @@ class RuleBaselineClassifier:
             p95_speed = row.get("speed_p95_kmh", 0.0)
             avg_speed = row.get("speed_mean_kmh", 0.0)
 
-            if p95_speed > self.speed_ceiling_kmh:
+            if np.isfinite(p95_speed) and p95_speed > self.speed_ceiling_kmh:
                 overshoot = (p95_speed - self.speed_ceiling_kmh) / 20.0
                 penalty += 1.5 * min(2.0, overshoot)
 
-            if avg_speed > self.speed_avg_ceiling_kmh:
+            if np.isfinite(avg_speed) and avg_speed > self.speed_avg_ceiling_kmh:
                 overshoot = (avg_speed - self.speed_avg_ceiling_kmh) / 15.0
                 penalty += 2.0 * min(2.5, overshoot)
 
             # 2. Acceleration ceiling violation
             max_accel = row.get("accel_max_ms2", 0.0)
-            if max_accel > self.accel_ceiling_ms2:
+            if np.isfinite(max_accel) and max_accel > self.accel_ceiling_ms2:
                 overshoot = (max_accel - self.accel_ceiling_ms2) / 4.0
                 penalty += 1.2 * min(2.0, overshoot)
 

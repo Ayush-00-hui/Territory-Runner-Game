@@ -8,6 +8,3 @@ CREATE INDEX IF NOT EXISTS idx_runs_user_created ON runs(user_id, created_at DES
 
 -- Partial index for fast query of shielded rival territories
 CREATE INDEX IF NOT EXISTS idx_territories_cooldown ON territories(cooldown_until) WHERE cooldown_until IS NOT NULL;
-
--- Index on owner_id for territory queries
-CREATE INDEX IF NOT EXISTS idx_territories_owner ON territories(owner_id);

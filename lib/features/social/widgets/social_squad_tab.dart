@@ -406,12 +406,16 @@ class SocialSquadTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      friend.username,
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+                    Flexible(
+                      child: Text(
+                        friend.username,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.s6),

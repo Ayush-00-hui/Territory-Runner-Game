@@ -15,6 +15,7 @@ class CountdownAudioService {
   AudioPlayer? _player;
   FlutterTts? _tts;
   bool _initialized = false;
+  Future<void>? _initFuture;
 
   CountdownAudioService._internal();
 
@@ -23,14 +24,21 @@ class CountdownAudioService {
 
   Future<void> _ensureInitialized() async {
     if (_initialized) return;
-    _initialized = true;
+    _initFuture ??= _doInitialize();
+    return _initFuture;
+  }
+
+  Future<void> _doInitialize() async {
     bool isTestEnv = false;
     try {
       isTestEnv = WidgetsBinding.instance.runtimeType.toString().contains(
         'Test',
       );
     } catch (_) {}
-    if (isTestEnv) return;
+    if (isTestEnv) {
+      _initialized = true;
+      return;
+    }
     try {
       _player = AudioPlayer();
       await AudioPlayer.global.setAudioContext(

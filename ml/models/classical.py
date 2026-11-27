@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -20,8 +21,9 @@ RANDOM_SEED = 42
 
 
 def build_logistic_regression_model(c: float = 1.0) -> Pipeline:
-    """Constructs a calibrated Logistic Regression pipeline with feature scaling."""
+    """Constructs a calibrated Logistic Regression pipeline with imputation and feature scaling."""
     return Pipeline([
+        ("imputer", SimpleImputer(strategy="median")),
         ("scaler", StandardScaler()),
         ("clf", LogisticRegression(
             C=c,

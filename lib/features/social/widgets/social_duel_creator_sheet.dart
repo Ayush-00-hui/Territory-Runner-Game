@@ -317,7 +317,7 @@ Future<void> showCreateDuelSheet(
         );
       },
     ),
-  );
+  ).whenComplete(opponentController.dispose);
 }
 
 Widget _buildTargetChip(

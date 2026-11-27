@@ -1,6 +1,5 @@
 -- Rollback Migration 000018
 
-DROP INDEX IF EXISTS idx_territories_owner;
 DROP INDEX IF EXISTS idx_territories_cooldown;
 DROP INDEX IF EXISTS idx_runs_user_created;
 

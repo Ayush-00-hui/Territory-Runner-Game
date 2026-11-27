@@ -42,12 +42,15 @@ class Territory {
     required this.capturedAt,
     DateTime? lastDefendedAt,
     DateTime? cooldownUntil,
+    bool preserveNullCooldown = false,
     double? strength,
     this.color = AppColors.mine,
     this.isPendingReview = false,
   }) : polygons = polygons ?? (polygon.isNotEmpty ? [polygon] : []),
        lastDefendedAt = lastDefendedAt ?? capturedAt,
-       cooldownUntil = cooldownUntil ?? capturedAt.add(defaultShieldDuration),
+       cooldownUntil = preserveNullCooldown
+           ? cooldownUntil
+           : (cooldownUntil ?? capturedAt.add(defaultShieldDuration)),
        strength = (strength ?? defaultInitialStrength).clamp(0.0, 100.0);
 
   /// Computes real-time dynamic strength factoring in elapsed days since last defense
@@ -228,14 +231,32 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
         ? DateTime.fromMillisecondsSinceEpoch(fields[9] as int)
         : null;
 
+    final List<dynamic>? rawPolys = fields[10] as List?;
+    List<List<LatLng>>? multiPolys;
+    if (rawPolys != null && rawPolys.isNotEmpty) {
+      multiPolys = rawPolys.whereType<List>().map((ring) {
+        return ring.map((p) {
+          if (p is Map) {
+            return LatLng(
+              (p['lat'] as num).toDouble(),
+              (p['lng'] as num).toDouble(),
+            );
+          }
+          return const LatLng(0, 0);
+        }).toList();
+      }).toList();
+    }
+
     return Territory(
       id: fields[0] as String,
       ownerId: fields[1] as String,
       polygon: polyPoints,
+      polygons: multiPolys,
       areaSqMeters: (fields[3] as num).toDouble(),
       capturedAt: capturedAt,
       lastDefendedAt: lastDefendedAt,
       cooldownUntil: cooldownUntil,
+      preserveNullCooldown: fields.containsKey(9),
       strength: strength,
       color: Color(fields[5] as int),
       isPendingReview: (fields[6] as bool?) ?? false,
@@ -245,7 +266,7 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
   @override
   void write(BinaryWriter writer, Territory obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -269,6 +290,16 @@ class TerritoryAdapter extends TypeAdapter<Territory> {
       ..writeByte(8)
       ..write(obj.strength)
       ..writeByte(9)
-      ..write(obj.cooldownUntil?.millisecondsSinceEpoch);
+      ..write(obj.cooldownUntil?.millisecondsSinceEpoch)
+      ..writeByte(10)
+      ..write(
+        obj.polygons
+            .map(
+              (ring) => ring
+                  .map((p) => {'lat': p.latitude, 'lng': p.longitude})
+                  .toList(),
+            )
+            .toList(),
+      );
   }
 }

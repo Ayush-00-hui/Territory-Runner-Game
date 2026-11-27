@@ -90,15 +90,14 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     setState(() => _errorMessage = message);
-    if (mounted) {
-      AppToast.show(
-        context,
-        message,
-        type: AppToastType.error,
-        icon: Icons.error_outline_rounded,
-      );
-    }
+    AppToast.show(
+      context,
+      message,
+      type: AppToastType.error,
+      icon: Icons.error_outline_rounded,
+    );
   }
 
   Future<void> _handleGoogleSignIn() async {
@@ -217,8 +216,10 @@ class _AuthScreenState extends State<AuthScreen> {
         },
       );
     } catch (e) {
-      setState(() => _isLoading = false);
-      _showError('Error sending OTP: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        _showError('Error sending OTP: $e');
+      }
     }
   }
 
@@ -284,29 +285,31 @@ class _AuthScreenState extends State<AuthScreen> {
                 children: [
                   const TerritoryBrandMark(size: 48),
                   const SizedBox(width: AppSpacing.s14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'TERRITORY RUNNER',
-                        style: AppText.headingSmall.copyWith(
-                          color: AppColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 1.4,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TERRITORY RUNNER',
+                          style: AppText.headingSmall.copyWith(
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.4,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Claim real-world territory on foot',
-                        style: AppText.label.copyWith(
-                          color: AppColors.textSecondary,
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
+                        const SizedBox(height: 2),
+                        Text(
+                          'Claim real-world territory on foot',
+                          style: AppText.label.copyWith(
+                            color: AppColors.textSecondary,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

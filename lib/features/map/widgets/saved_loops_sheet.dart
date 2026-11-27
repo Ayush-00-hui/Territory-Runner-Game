@@ -47,6 +47,7 @@ class _SavedLoopsSheetState extends State<SavedLoopsSheet> {
   }
 
   Future<void> _loadLoops() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     final loops = await _service.getSavedLoops();
     if (mounted) {

@@ -51,7 +51,6 @@ jobs:
 
       - name: Verify Dart Formatting
         run: dart format --output=none --set-exit-if-changed .
-        continue-on-error: true
 
       - name: Run Static Code Analysis
         run: flutter analyze --fatal-infos --fatal-warnings

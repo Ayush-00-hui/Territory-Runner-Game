@@ -55,8 +55,17 @@ services:
       DATABASE_URL: "postgres://runner:${POSTGRES_PASSWORD}@postgis:5432/territory_runner?sslmode=disable"
       RUN_MIGRATIONS: "true"
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      ALLOW_ANY_ORIGIN: ${ALLOW_ANY_ORIGIN:-false}
+      METRICS_TOKEN: ${METRICS_TOKEN:-}
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    healthcheck:
+      test: ["CMD", "/app/server", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     ports:
       # Bind to loopback (127.0.0.1) by default to prevent direct public internet exposure without
       # a reverse proxy (e.g. Caddy, Nginx, or Traefik with TLS). To expose directly, change to "8080:8080".

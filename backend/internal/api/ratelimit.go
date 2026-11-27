@@ -160,8 +160,13 @@ func (rl *RateLimiter) cleanupLoop() {
 			rl.mu.Lock()
 			now := time.Now()
 			for k, b := range rl.buckets {
-				// Remove buckets that have been at capacity and idle for > 10 minutes
-				if now.Sub(b.lastRefill) > 10*time.Minute && b.tokens >= rl.capacity {
+				elapsed := now.Sub(b.lastRefill).Seconds()
+				if elapsed > 0 {
+					b.tokens = math.Min(rl.capacity, b.tokens+elapsed*rl.rate)
+					b.lastRefill = now
+				}
+				// Remove buckets that have refilled to full capacity after idle period (> 10 minutes)
+				if b.tokens >= rl.capacity && elapsed > 600 {
 					delete(rl.buckets, k)
 				}
 			}

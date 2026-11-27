@@ -69,72 +69,88 @@ class TerritoryHeroCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Total territory', style: AppText.labelSmall),
-                  const SizedBox(height: AppSpacing.s4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        _formatArea(totalAreaSqm),
-                        style: AppText.displayMedium.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w700,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Total territory', style: AppText.labelSmall),
+                    const SizedBox(height: AppSpacing.s4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _formatArea(totalAreaSqm),
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.displayMedium.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.s4),
-                      Text(
-                        _formatUnit(totalAreaSqm),
-                        style: AppText.statUnit.copyWith(
-                          color: AppColors.accent,
-                          fontWeight: FontWeight.w600,
+                        const SizedBox(width: AppSpacing.s4),
+                        Text(
+                          _formatUnit(totalAreaSqm),
+                          style: AppText.statUnit.copyWith(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
               if (weeklyGainedAreaSqm != null && weeklyGainedAreaSqm! > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.s8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface2,
-                    borderRadius: AppRadius.br8,
-                    border: Border.all(
-                      color: AppColors.borderSubtle,
-                      width: 1.0,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.s8,
+                      vertical: 4,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.trending_up_rounded,
-                        size: 14,
-                        color: AppColors.accent,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: AppRadius.br8,
+                      border: Border.all(
+                        color: AppColors.borderSubtle,
+                        width: 1.0,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '+${_formatArea(weeklyGainedAreaSqm!)} ${_formatUnit(weeklyGainedAreaSqm!)} this week',
-                        style: AppText.caption.copyWith(
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                          fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.trending_up_rounded,
+                          size: 14,
+                          color: AppColors.accent,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            '+${_formatArea(weeklyGainedAreaSqm!)} ${_formatUnit(weeklyGainedAreaSqm!)} this week',
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.caption.copyWith(
+                              color: AppColors.textSecondary,
+                              fontWeight: FontWeight.w600,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 )
               else if (!hasTerritories)
-                Text(
-                  'No territory claimed yet',
-                  style: AppText.caption.copyWith(color: AppColors.textMuted),
+                Flexible(
+                  child: Text(
+                    'No territory claimed yet',
+                    textAlign: TextAlign.end,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.caption.copyWith(color: AppColors.textMuted),
+                  ),
                 ),
             ],
           ),
