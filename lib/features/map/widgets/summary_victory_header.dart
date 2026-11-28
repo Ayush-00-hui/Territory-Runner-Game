@@ -46,11 +46,23 @@ class SummaryVictoryHeader extends StatelessWidget {
             Expanded(
               child: Row(
                 children: [
-                  const AvatarWidget(
-                    size: 32,
-                    isRunning: false,
-                    semanticsLabel: 'Runner avatar victory stance',
-                  ),
+                  if (!isRejected)
+                    CelebrationBurst(
+                      primaryColor: AppColors.accent,
+                      secondaryColor: AppColors.gold,
+                      particleCount: 16,
+                      child: const AvatarWidget(
+                        size: 32,
+                        isRunning: false,
+                        semanticsLabel: 'Runner avatar victory stance',
+                      ),
+                    )
+                  else
+                    const AvatarWidget(
+                      size: 32,
+                      isRunning: false,
+                      semanticsLabel: 'Runner avatar victory stance',
+                    ),
                   const SizedBox(width: AppSpacing.s8),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -114,11 +126,9 @@ class SummaryVictoryHeader extends StatelessWidget {
             Semantics(
               button: true,
               label: 'Close summary',
-              child: GestureDetector(
-                onTap: () {
-                  onClose();
-                },
-                behavior: HitTestBehavior.opaque,
+              child: BouncyTap(
+                onTap: onClose,
+                enableHaptics: true,
                 child: Container(
                   width: 32,
                   height: 32,

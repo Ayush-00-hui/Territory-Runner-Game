@@ -290,35 +290,7 @@ class QuickLaunchHero extends StatelessWidget {
               Row(
                 children: [
                   if (activeStreak > 0) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.s10,
-                        vertical: AppSpacing.s4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface2,
-                        borderRadius: AppRadius.brFull,
-                        border: Border.all(color: AppColors.borderSubtle),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.local_fire_department_rounded,
-                            size: 14,
-                            color: AppColors.warning,
-                          ),
-                          const SizedBox(width: AppSpacing.s4),
-                          Text(
-                            '${activeStreak}d streak',
-                            style: AppText.micro.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    StreakFlameWidget(streakDays: activeStreak, iconSize: 14),
                     const SizedBox(width: AppSpacing.s8),
                   ],
                   Expanded(

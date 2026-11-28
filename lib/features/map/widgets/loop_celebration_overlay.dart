@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../ui/ui.dart';
 
-/// Calm, punchy loop-closure toast banner.
-/// A short scale-in pill (+1,250 m² claimed) that fades out in 1.8 s.
-/// Zero confetti, zero flashing bloom.
+/// Joyful, memorable loop-closure celebration banner.
+/// A spring-scale pill (+1,250 m² claimed) with expanding sonar shockwave
+/// and sparkling micro-starburst particles that fades out gracefully.
 class LoopCelebrationOverlay extends StatefulWidget {
   final double areaSqMeters;
   final int xpAwarded;
@@ -62,10 +62,12 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
     super.initState();
     _controller = AnimationController(vsync: this, duration: AppMotion.capture);
 
-    _scaleAnimation = Tween<double>(begin: 0.92, end: 1.0).animate(
+    AppMotion.heavyBurst();
+
+    _scaleAnimation = Tween<double>(begin: 0.84, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.25, curve: Curves.easeOutCubic),
+        curve: const Interval(0.0, 0.32, curve: Curves.easeOutBack),
       ),
     );
 
@@ -112,61 +114,77 @@ class _LoopCelebrationOverlayState extends State<LoopCelebrationOverlay>
                   opacity: opacity,
                   child: Transform.scale(
                     scale: scale,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.s16,
-                        vertical: AppSpacing.s10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: AppRadius.brFull,
-                        border: Border.all(color: AppColors.accent, width: 1.2),
-                        boxShadow: AppElevation.floating,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.shield_rounded,
+                    child: CelebrationBurst(
+                      primaryColor: AppColors.accent,
+                      secondaryColor: AppColors.gold,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.s16,
+                          vertical: AppSpacing.s10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: AppRadius.brFull,
+                          border: Border.all(
                             color: AppColors.accent,
-                            size: 18,
+                            width: 1.2,
                           ),
-                          const SizedBox(width: AppSpacing.s8),
-                          Text(
-                            '+$areaDisplay claimed',
-                            style: AppText.bodyBold.copyWith(
-                              color: AppColors.textPrimary,
-                              fontSize: 13,
-                              fontFeatures: const [
-                                FontFeature.tabularFigures(),
-                              ],
-                            ),
-                          ),
-                          if (widget.xpAwarded > 0) ...[
-                            const SizedBox(width: AppSpacing.s8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 7,
-                                vertical: 2,
+                          boxShadow: [
+                            ...AppElevation.floating,
+                            BoxShadow(
+                              color: AppColors.accent.withValues(
+                                alpha: 0.25 * opacity,
                               ),
-                              decoration: BoxDecoration(
-                                color: AppColors.accentContainer,
-                                borderRadius: AppRadius.br8,
-                              ),
-                              child: Text(
-                                '+${widget.xpAwarded} XP',
-                                style: AppText.labelSmall.copyWith(
-                                  color: AppColors.accent,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  fontFeatures: const [
-                                    FontFeature.tabularFigures(),
-                                  ],
-                                ),
-                              ),
+                              blurRadius: 16,
+                              spreadRadius: 2,
                             ),
                           ],
-                        ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.shield_rounded,
+                              color: AppColors.accent,
+                              size: 18,
+                            ),
+                            const SizedBox(width: AppSpacing.s8),
+                            Text(
+                              '+$areaDisplay claimed',
+                              style: AppText.bodyBold.copyWith(
+                                color: AppColors.textPrimary,
+                                fontSize: 13,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
+                              ),
+                            ),
+                            if (widget.xpAwarded > 0) ...[
+                              const SizedBox(width: AppSpacing.s8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 7,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentContainer,
+                                  borderRadius: AppRadius.br8,
+                                ),
+                                child: Text(
+                                  '+${widget.xpAwarded} XP',
+                                  style: AppText.labelSmall.copyWith(
+                                    color: AppColors.accent,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   ),

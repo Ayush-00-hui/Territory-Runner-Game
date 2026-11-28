@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<img src="docs/assets/logo.png" width="110" alt="Territory Runner Logo" /><br>
+
 ```
   _______             _ _                     _____                                 
  |__   __|           (_) |                   |  __ \                                
@@ -19,24 +21,25 @@
 <br>
 
 [![CI](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayush-00-hui/Territory-Runner-Game/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game/branch/main/graph/badge.svg)](https://codecov.io/gh/Ayush-00-hui/Territory-Runner-Game)
 [![Flutter Tests](https://img.shields.io/badge/Flutter_Tests-743%20Passing-00F59B.svg?style=flat-square&logo=flutter&logoColor=black)](test/)
 [![Go Tests](https://img.shields.io/badge/Go_Tests-11%20Packages_Passing-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](backend/)
-[![Cartography](https://img.shields.io/badge/Cartography-OpenStreetMap_Standard-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
-[![Theme Palette](https://img.shields.io/badge/Theme-Calm_Moss_&_Neutral_Obsidian-A3C586.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
-[![Game Mechanics](https://img.shields.io/badge/Mechanics-Dynamic_Loop_&_120--Min_Shield-46663A.svg?style=flat-square)](docs/MECHANICS.md)
-[![Encrypted Storage](https://img.shields.io/badge/Storage-Hive_AES--256-blueviolet.svg?style=flat-square&logo=keybase&logoColor=white)](lib/services/hive_encryption_service.dart)
-[![Threat Model](https://img.shields.io/badge/Security-STRIDE_Threat_Model-critical.svg?style=flat-square&logo=shield&logoColor=white)](docs/THREAT_MODEL.md)
-[![AIML Anti-Cheat](https://img.shields.io/badge/AIML_AntiCheat-LightGBM_&_PyTorch_LOUO-9C27B0.svg?style=flat-square&logo=scikitlearn&logoColor=white)](docs/AIML_EVALUATION.md)
 [![Static Analysis](https://img.shields.io/badge/Flutter_Analyze-0_Issues-4C8DFF.svg?style=flat-square&logo=dart&logoColor=white)](lib/)
 [![Code Formatting](https://img.shields.io/badge/Format-Clean_325_Dart_Files-green.svg?style=flat-square)](lib/)
+[![Cartography](https://img.shields.io/badge/Cartography-OpenStreetMap_Standard-00C6FF.svg?style=flat-square&logo=openstreetmap&logoColor=white)](lib/features/map/widgets/map_layers.dart)
+[![Theme Palette](https://img.shields.io/badge/Theme-Obsidian_&_Calm_Moss-A3C586.svg?style=flat-square)](lib/ui/theme/app_colors.dart)
+[![Game Mechanics](https://img.shields.io/badge/Mechanics-Dynamic_Loop_&_120--Min_Shield-46663A.svg?style=flat-square)](docs/MECHANICS.md)
+[![Database](https://img.shields.io/badge/PostGIS-18_Migrations-4169E1.svg?style=flat-square&logo=postgresql&logoColor=white)](backend/migrations/)
+[![Encrypted Storage](https://img.shields.io/badge/Storage-Hive_AES--256-blueviolet.svg?style=flat-square&logo=keybase&logoColor=white)](lib/services/hive_encryption_service.dart)
+[![Threat Model](https://img.shields.io/badge/Security-STRIDE_Threat_Model-critical.svg?style=flat-square&logo=shield&logoColor=white)](docs/THREAT_MODEL.md)
+[![AIML Anti-Cheat](https://img.shields.io/badge/AIML_AntiCheat-LightGBM_25--Feature-9C27B0.svg?style=flat-square&logo=scikitlearn&logoColor=white)](docs/AIML_EVALUATION.md)
+[![Target SDK](https://img.shields.io/badge/Android-TargetSdk_36-34A853.svg?style=flat-square&logo=android&logoColor=white)](android/app/build.gradle.kts)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
 
 <br>
 
-[![Flutter](https://img.shields.io/badge/Flutter-3.47+-02569B.svg?style=flat-square&logo=Flutter&logoColor=white)](https://flutter.dev/)
-[![Dart](https://img.shields.io/badge/Dart-3.13.2+-0175C2.svg?style=flat-square&logo=dart&logoColor=white)](https://dart.dev/)
-[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
+[![Flutter](https://img.shields.io/badge/Flutter-3.29+-02569B.svg?style=flat-square&logo=Flutter&logoColor=white)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-3.7+-0175C2.svg?style=flat-square&logo=dart&logoColor=white)](https://dart.dev/)
+[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8.svg?style=flat-square&logo=go&logoColor=white)](https://go.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16_PostGIS_3.4-4169E1.svg?style=flat-square&logo=postgresql&logoColor=white)](https://postgis.net/)
 [![Docker](https://img.shields.io/badge/Docker-Compose_Ready-2496ED.svg?style=flat-square&logo=docker&logoColor=white)](docker-compose.yml)
 [![Auth](https://img.shields.io/badge/Auth-Firebase_RS256_JWT-FFA000.svg?style=flat-square&logo=firebase&logoColor=white)](backend/internal/auth/)
@@ -45,7 +48,7 @@
 
 <br>
 
-[Level 0: Concept](#-level-0-the-high-altitude-concept--paradigm) • [Level 1: Quickstart](#-level-1-fast-track-onboarding-zero-to-running-in-5-minutes) • [Structure](#-repository-file--folder-structure) • [Level 2: Gameplay](#-level-2-gameplay-mechanics--athlete-experience) • [Level 3: Mobile](#-level-3-mobile-client-engineering--offline-resiliency-flutter) • [Level 4: Backend](#-level-4-backend-engineering--distributed-spatial-systems-go--postgis) • [Level 5: Security](#-level-5-cryptography-privacy--zero-trust-security) • [Level 6: AI/ML](#-level-6-machine-learning--anti-cheat-pipeline) • [Level 7: Master](#-level-7-master-level-testing-verification--production-ops) • [Dossiers](#-technical-documentation--defense-dossiers)
+[Gallery](#-visual-interface-tour--in-app-showcase) • [Level 0: Concept](#-level-0-the-high-altitude-concept--paradigm) • [Level 1: Quickstart](#-level-1-fast-track-onboarding-zero-to-running-in-5-minutes) • [Structure](#-repository-file--folder-structure) • [Level 2: Gameplay](#-level-2-gameplay-mechanics--athlete-experience) • [Level 3: Mobile](#-level-3-mobile-client-engineering--offline-resiliency-flutter) • [Level 4: Backend](#-level-4-backend-engineering--distributed-spatial-systems-go--postgis) • [Level 5: Security](#-level-5-cryptography-privacy--zero-trust-security) • [Level 6: AI/ML](#-level-6-machine-learning--anti-cheat-pipeline) • [Level 7: Master](#-level-7-master-level-testing-verification--production-ops) • [Dossiers](#-technical-documentation--defense-dossiers)
 
 </div>
 
@@ -124,6 +127,40 @@ Conversely, first-generation location-based games (Ingress, Pokémon GO, Turf) c
                                                                 │
 🏆 PostGIS Authority ◄── ☁️ Offline Sync Queue ◄── ✂️ Clipper2 Optimistic Preview
 ```
+
+---
+
+<a id="gallery"></a><a id="-visual-interface-tour--in-app-showcase"></a>
+### 📱 Visual Interface Tour & In-App Showcase
+
+The mobile application is crafted in Flutter with an executive, high-contrast athletic design system (OLED Obsidian `#0A0E14` and Calm Moss `#00F59B` accents) adhering to WCAG AAA contrast and athletic gesture budgets:
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/assets/home_screen.png" width="100%" alt="Athlete Home Dashboard" /><br />
+      <b>🏃 Athlete Home & Daily Quests</b><br />
+      <sub>Above-the-fold athletic dashboard with animated living streak flame, AI readiness forecast, and daily quest cards.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/assets/map_screen.png" width="100%" alt="OpenStreetMap Cartography" /><br />
+      <b>🗺️ Cartography & Territory Defense</b><br />
+      <sub>Crisp OpenStreetMap cartography canvas, real-time closed-loop polygon enclosure, and 120-minute territory shields.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="docs/assets/live_run.png" width="100%" alt="Live Athletic HUD" /><br />
+      <b>⚡ Live Athletic Telemetry HUD</b><br />
+      <sub>Real-time split pace, cadence, distance, proximity loop closure bar, and GPS satellite accuracy status chip.</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="docs/assets/tools_sheet.png" width="100%" alt="Athletic Tools & Calibration" /><br />
+      <b>📊 Tools & Training Calibration</b><br />
+      <sub>Minetti incline metabolic physics, MET energy tables, athlete body profile factors, and OSRM route generation.</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -413,7 +450,8 @@ territory_runner/
 │   ├── icons/                  # Vector-rendered Shield & Stride crest (`logo.png`, `logo_foreground.png`)
 │   ├── models/                 # LightGBM trees, ONNX anti-cheat, Calorie & Pace quantile models
 │   └── loading_quotes.json     # Motivational athletic mindset quotes
-├── backend/                    # High-throughput Go 1.26 Spatial Backend
+├── backend/                    # High-throughput Go 1.24 Spatial Backend
+│   ├── README.md               # Backend architecture specification & API setup guide
 │   ├── cmd/server/             # HTTP & WebSocket entrypoint (main.go)
 │   ├── internal/               # Server-authoritative domain packages (11 test packages)
 │   │   ├── anticheat/          # Tier 1 Kinematic gate, motion window & replay auditing
@@ -430,6 +468,9 @@ territory_runner/
 │   └── Dockerfile              # Multi-stage lightweight scratch/alpine production build
 ├── bin/                        # Standalone Dart CLI tools (`generate_interval_audio.dart`)
 ├── docs/                       # Technical defense dossiers & specifications
+│   ├── README.md               # Comprehensive documentation index & dossier directory
+│   ├── artifacts/              # Compiled study notes, printable HTML & PDF handbooks
+│   ├── assets/                 # High-resolution in-app screenshots & brand artwork
 │   ├── presentation/           # Defense decks, speaker notes, and architecture visuals
 │   ├── ACTIVITY_FAIRNESS.md    # Multi-sport kinematic speed/cadence envelopes
 │   ├── AIML_EVALUATION.md      # Statistical validation of LightGBM & neural anti-cheat
@@ -445,7 +486,8 @@ territory_runner/
 │   └── VIVA.md                 # Comprehensive viva defense cheatsheet
 ├── integration_test/           # End-to-end device integration tests
 │   └── run_flow_sync_integration_test.dart # Full workout lifecycle & offline sync test
-├── lib/                        # Flutter Client Source Code (215 Dart files)
+├── lib/                        # Flutter Client Source Code (Clean Feature-First Architecture)
+│   ├── README.md               # Mobile architecture specification & module breakdown
 │   ├── core/                   # Shared foundational utilities & system logging
 │   │   ├── logging/            # AppLogger with Crashlytics forwarding & log hygiene
 │   │   └── utils/              # Team name validation, geohash cells, constants
@@ -455,7 +497,7 @@ territory_runner/
 │   │   ├── gallery/            # Debug Design System component gallery & token inspector
 │   │   ├── gameplay/           # PolygonEnclosureEngine, Clipper2, and TerritoryService
 │   │   ├── history/            # Workout archive, cloud run sync, splits, elevation & share cards
-│   │   ├── home/               # Dashboard, quick-launch hero, daily quests, weekly recap
+│   │   ├── home/               # Dashboard, quick-launch hero, daily quests, living streak flame
 │   │   ├── map/                # Live OSM viewport, exploration fog grid, ghost runner, run HUD
 │   │   ├── onboarding/         # Flagship 3-step athletic onboarding & permission primers
 │   │   ├── profile/            # Profile hub, stats grid, trophy case, tiered milestones, settings
@@ -463,24 +505,48 @@ territory_runner/
 │   │   ├── security/           # Anomaly detector service and kinematic auditor
 │   │   ├── social/             # Activity feed, kudos, moderation, squad management, duels & crews
 │   │   └── training/           # Guided multi-week 5K / 10K / fitness training plan sheets
-│   ├── models/                 # 25 immutable Dart models & Hive TypeAdapters
-│   ├── services/               # 39 System & domain services (GPS, ZUPT, SyncQueue, DailyQuests,
+│   ├── models/                 # Immutable Dart domain models & Hive TypeAdapters
+│   ├── services/               # System & domain services (GPS, ZUPT, SyncQueue, DailyQuests,
 │   │                           # ExplorationGrid, GhostRunner, SavedLoops, IntervalWorkouts,
 │   │                           # VoiceCoach, OfflineTiles, PrivacyZones, WebSocketService)
 │   ├── ui/                     # Design system tokens, motion curves, BrandMark & AppIntroGate
-│   │   ├── motion/             # Calibrated motion durations & reduced-motion accessibility
+│   │   ├── motion/             # Purposeful athletic timing, BouncyTap, CelebrationBurst, StreakFlame
 │   │   ├── theme/              # AppColors (Calm Moss & Neutral Obsidian), AppText, AppPalette
 │   │   ├── widgets/            # BrandLogo crest, AppIntroGate, buttons, sheets & modals
 │   │   └── ui.dart             # Unified barrel export for design system primitives
 │   └── main.dart               # App bootstrap, Provider wiring & parallel async pre-warming
 ├── ml/                         # Machine Learning Anti-Cheat, Calorie & Progression Pipelines
+│   ├── README.md               # ML engineering specification and reproducible benchmarks
 │   ├── calories/               # Monotone-constrained LightGBM calorie surrogate & report
 │   ├── data/                   # Microsoft GeoLife preparation, spoof generator & trace validator
 │   ├── features/               # 22 GPS displacement kinematic feature extractors
 │   ├── models/                 # LightGBM, 1D-CNN+GRU (PyTorch), Quantile Pace & ONNX export
 │   └── reports/                # LOUO-CV benchmarks (311,383 windows), PR & calibration curves
 ├── scripts/                    # Automation, test runners & PostGIS backup/restore scripts
-├── test/                       # Automated Flutter Unit, Widget & Compliance Suites (11 dirs)
+│   ├── README.md               # Production operations & shell script manifest
+│   ├── backup_db.sh            # Automated PostgreSQL/PostGIS database backup
+│   ├── restore_db.sh           # Safe database restore with verification checks
+│   ├── smoke_test.sh           # Linux/macOS API and WebSocket end-to-end smoke test
+│   ├── smoke_test.ps1          # Windows PowerShell native backend verification test
+│   ├── balance_simulation.py   # Multi-agent 1,000-run game balance simulator
+│   └── train_anomaly_model.py  # Anti-cheat LightGBM model training CLI
+├── test/                       # Automated Flutter Unit, Widget & Compliance Suites (743 tests)
+│   ├── README.md               # Test directory manifest & category execution guide
+│   ├── assets/                 # Asset compliance and tile licensing tests
+│   ├── benchmarks/             # Performance baseline & frame-budget benchmarks
+│   ├── features/               # Feature-specific widget & workout lifecycle tests
+│   ├── gameplay/               # 120-min shield, loop enclosure, decay & grace tests
+│   ├── gps/                    # ZUPT stationary drift, Kalman & gap segmentation tests
+│   ├── integrity/              # Simulation isolation & environment flag tests
+│   ├── motion/                 # Launch intro, celebration burst & tap motion budget tests
+│   ├── services/               # Low-level service tests (Hive, SyncQueue, Calorie, DailyQuests)
+│   ├── social/                 # Activity feed, kudos & moderation tests
+│   ├── theme/                  # Zero-raw-color, token-budget & WCAG contrast audits
+│   └── ui/                     # Font-size token enforcement, loading experience & avatar tests
+└── test_fixtures/              # 17 Shared Golden Datasets (Dart & Go parity verification)
+    ├── anomaly_vectors.json    # Synthetic spoof vectors (teleport, vehicle speed, jitter)
+    ├── golden_*.json           # 15 reference loop trajectories & modality edge cases
+    └── parity_200_windows.json # 200 kinematic test tracks verified across client & server
 │   ├── assets/                 # Asset compliance and tile licensing tests
 │   ├── benchmarks/             # Performance baseline & frame-budget benchmarks
 │   ├── features/               # Feature-specific widget & workout lifecycle tests
@@ -582,7 +648,26 @@ Captured / Defended ──► [ 120-Minute (2h) Defense Shield (ST_Difference Im
 
 ---
 
-### 4. Explore Claim Planner (OSRM + Clipper2 Net-New Deduction)
+### 4. ✨ Delightful Micro-Animations & Athletic Haptics
+
+Territory Runner features a purpose-built athletic micro-interaction system that gives tactile and visual dopamine on major milestones while strictly respecting battery life and reduced-motion accessibility:
+
+1. **Territory Sonar & Star-Sparkle Burst (`LoopCelebrationOverlay`):**
+   - When an athlete closes an arbitrary GPS loop, an expanding sonar shockwave ring ripples outward in team accent color (`#00F59B`).
+   - 14 golden and cyan micro-starburst particles drift outward with quadratic deceleration and twinkling opacity.
+   - The claim pill springs into view using an energetic spring-curve (`Curves.easeOutBack`) accompanied by an immediate hardware haptic burst (`AppMotion.heavyBurst()`).
+2. **Living Streak Flame (`StreakFlameWidget`):**
+   - Active streaks in the Home dashboard and Profile feature an organic breathing scale oscillation ($1.00 \to 1.10$) over a 1.3s sine wave with an amber/gold radiant ember glow.
+   - Interactive bouncy tap with sound and an encouraging streak milestone toast (`AppToast.show`).
+3. **Finish-Line Victory Triumph (`SummaryVictoryHeader`):**
+   - Completing a run triggers a celebratory golden micro-sparkle burst across the runner avatar and completion stamp, giving athletes that authentic finish-line accomplishment feel.
+4. **Physical Tactile Spring (`BouncyTap`):**
+   - Primary action buttons ("Start Run", "Claim", "Finish", "Share") provide physical spring compression ($0.95$ scale) with smooth release, creating crisp, responsive tactile feedback.
+   - Strictly honors `MediaQuery.maybeDisableAnimationsOf(context)` for accessibility compliance.
+
+---
+
+### 5. Explore Claim Planner (OSRM + Clipper2 Net-New Deduction)
 
 Athletes can plan territory routes before leaving home:
 - **Pedestrian Graph Routing:** Generates real pedestrian routes along runnable footpaths and sidewalks using the Open Source Routing Machine (OSRM).
@@ -591,7 +676,7 @@ Athletes can plan territory routes before leaving home:
 
 ---
 
-### 5. Unique Runner ID, Friend Requests Inbox, Duels & Crews
+### 6. Unique Runner ID, Friend Requests Inbox, Duels & Crews
 
 - **Unique Runner ID (`RUN-XXXXXX`):** Every athlete receives a deterministic/random shareable Runner ID (`RUN-XXXXXX`) on account creation and login ([`auth_screen.dart`](lib/features/auth/auth_screen.dart), migration [`000015_add_user_runner_code.up.sql`](backend/migrations/000015_add_user_runner_code.up.sql)). Athletes can copy and share their ID directly from the Profile header badge or Squad view.
 - **Friend Search & Quick Add:** Search athletes by exact Runner ID (`RUN-XXXXXX`) or display name via `GET /v1/users/search` inside the Add Friend sheet ([`social_add_friend_dialog.dart`](lib/features/social/widgets/social_add_friend_dialog.dart)), with 1-tap clipboard paste.
@@ -610,7 +695,7 @@ Athletes can plan territory routes before leaving home:
 
 ---
 
-### 6. Physiological Calorie & Energy Expenditure Engine
+### 7. Physiological Calorie & Energy Expenditure Engine
 
 Territory Runner replaces naive flat distance multipliers ($kcal = d \cdot M \cdot 1.036$) with a peer-reviewed biomechanical energy pipeline:
 
@@ -627,7 +712,7 @@ Territory Runner replaces naive flat distance multipliers ($kcal = d \cdot M \cd
 
 ---
 
-### 7. Weekly Competitive League Engine
+### 8. Weekly Competitive League Engine
 
 - **Canonical UTC Reset:** All league divisions reset every **Monday at 00:00:00 UTC**:
   $$\text{ResetTimestamp} = \text{date\_trunc}('week', \text{NOW}() \text{ AT TIME ZONE } 'UTC') + 7\text{ days}$$
@@ -640,7 +725,7 @@ Territory Runner replaces naive flat distance multipliers ($kcal = d \cdot M \cd
 
 ---
 
-### 8. Google Gemini AI Athletic Coach
+### 9. Google Gemini AI Athletic Coach
 
 - **Post-Run Debrief:** Calls Google Gemini 2.5 Flash (`POST /v1/runs/{id}/coach`) to generate physiological workout debriefs analyzing cardiovascular effort, pace degradation, elevation profile, and tactical route suggestions.
 - **Zero Key Leakage:** Client never touches Google Gemini API keys; requests proxy through the Go backend.
