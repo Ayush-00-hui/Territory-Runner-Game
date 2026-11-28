@@ -130,6 +130,41 @@ class SafetyService {
     return false;
   }
 
+  /// Formats and launches WhatsApp distress dispatch to saved emergency contact with GPS map link
+  Future<bool> sendWhatsAppDistress({
+    required LatLng position,
+    String? batteryStatus,
+  }) async {
+    if (!_isLoaded) await loadSettings();
+    if (_contactPhone.isEmpty) return false;
+
+    final locationUrl =
+        'https://maps.google.com/?q=${position.latitude.toStringAsFixed(6)},${position.longitude.toStringAsFixed(6)}';
+    final batteryInfo = batteryStatus != null
+        ? '\nBattery level: $batteryStatus'
+        : '';
+    final body =
+        '$_customMessage\n$locationUrl\n(Lat: ${position.latitude.toStringAsFixed(6)}, Lng: ${position.longitude.toStringAsFixed(6)})$batteryInfo';
+
+    final cleanPhone = _contactPhone.replaceAll(RegExp(r'\D'), '');
+    final uri = Uri.parse(
+      'https://wa.me/$cleanPhone?text=${Uri.encodeComponent(body)}',
+    );
+
+    try {
+      if (await canLaunchUrl(uri)) {
+        return await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      AppLogger.error(
+        'Failed to launch WhatsApp distress: $e',
+        tag: 'SafetyService',
+        error: e,
+      );
+    }
+    return false;
+  }
+
   /// Shares current GPS coordinates and map link via standard system share sheet
   Future<void> shareLiveLocation({required LatLng position}) async {
     final locationUrl =

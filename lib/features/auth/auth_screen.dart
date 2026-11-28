@@ -1,11 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../models/runner_profile.dart';
+import '../../services/biometric_auth_service.dart';
 import '../../services/firebase_service.dart';
 import '../gameplay/territory_service.dart';
 import '../../ui/ui.dart';
+import 'widgets/country_code_picker.dart';
+import 'widgets/otp_pin_input_view.dart';
 
 /// Redesigned Athlete Authentication Screen with Charcoal + Ember aesthetic.
 /// Supports Google One-Tap, Email & Password, Phone SMS OTP, and Instant Guest Access.
@@ -38,6 +42,35 @@ class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _otpController = TextEditingController();
   String? _verificationId;
   bool _codeSent = false;
+  CountryCodeItem _selectedCountry = kSupportedCountryCodes.first;
+  bool _canUseBiometrics = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final bio = BiometricAuthService();
+    await bio.initialize();
+    final available = await bio.canCheckBiometrics();
+    if (mounted) {
+      setState(() {
+        _canUseBiometrics = available && bio.isEnabled;
+      });
+    }
+  }
+
+  Future<void> _handleBiometricUnlock() async {
+    final success = await BiometricAuthService().authenticate();
+    if (success && mounted) {
+      final profile = _territoryService.getProfile();
+      _finishAuth(
+        profile.username.isNotEmpty ? profile.username : 'Verified Athlete',
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -171,14 +204,14 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> _sendPhoneOtp() async {
-    String phone = _phoneController.text.trim();
-    if (phone.isEmpty) {
-      _showError('Please enter a valid phone number.');
+    final rawNumber = _phoneController.text
+        .replaceAll(RegExp(r'\D'), '')
+        .trim();
+    if (rawNumber.isEmpty) {
+      _showError('Please enter a valid mobile number.');
       return;
     }
-    if (!phone.startsWith('+')) {
-      phone = '+$phone';
-    }
+    final fullPhone = '${_selectedCountry.dialCode}$rawNumber';
 
     setState(() {
       _isLoading = true;
@@ -187,7 +220,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     try {
       await _firebaseService.verifyPhoneNumber(
-        phoneNumber: phone,
+        phoneNumber: fullPhone,
         onCodeSent: (verId) {
           if (mounted) {
             setState(() {
@@ -197,7 +230,7 @@ class _AuthScreenState extends State<AuthScreen> {
             });
             AppToast.show(
               context,
-              'SMS verification code sent to $phone',
+              'SMS verification code sent to $fullPhone',
               type: AppToastType.info,
             );
           }
@@ -205,26 +238,26 @@ class _AuthScreenState extends State<AuthScreen> {
         onVerificationFailed: (e) {
           if (mounted) {
             setState(() => _isLoading = false);
-            _showError('Phone verification failed: ${e.message ?? e.code}');
+            _showError('Phone verification notice: ${e.message ?? e.code}');
           }
         },
         onVerificationCompleted: (cred) async {
           if (mounted) {
             setState(() => _isLoading = false);
-            _finishAuth(phone);
+            _finishAuth(fullPhone);
           }
         },
       );
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        _showError('Error sending OTP: $e');
+        _showError('Notice sending OTP: $e');
       }
     }
   }
 
-  Future<void> _verifyPhoneOtp() async {
-    final code = _otpController.text.trim();
+  Future<void> _verifyPhoneOtp([String? explicitCode]) async {
+    final code = explicitCode ?? _otpController.text.trim();
     if (code.length < 6 || _verificationId == null) {
       _showError('Please enter the 6-digit OTP code.');
       return;
@@ -238,10 +271,13 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       final cred = await _firebaseService.signInWithOtp(_verificationId!, code);
       if (cred != null) {
-        _finishAuth(_phoneController.text.trim());
+        final rawNumber = _phoneController.text
+            .replaceAll(RegExp(r'\D'), '')
+            .trim();
+        _finishAuth('${_selectedCountry.dialCode}$rawNumber');
       }
     } catch (e) {
-      _showError('Invalid OTP code: $e');
+      _showError('Invalid verification code: $e');
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -460,19 +496,116 @@ class _AuthScreenState extends State<AuthScreen> {
                     children: [
                       if (!_codeSent) ...[
                         Text(
-                          'Sign in with your mobile number to receive an SMS verification code:',
+                          'Mobile Number (with country code)',
+                          style: AppText.labelMedium.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.s4),
+                        Text(
+                          'Select your region and enter your mobile number:',
                           style: AppText.bodySmall.copyWith(
                             color: AppColors.textSecondary,
-                            fontSize: 12.5,
                           ),
                         ),
                         const SizedBox(height: AppSpacing.s14),
-                        _buildInputField(
-                          controller: _phoneController,
-                          label: 'Mobile Number (with country code)',
-                          hintText: '+91 98765 43210',
-                          icon: Icons.phone_iphone_rounded,
-                          keyboardType: TextInputType.phone,
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                final picked = await showCountryCodePickerSheet(
+                                  context,
+                                );
+                                if (picked != null && mounted) {
+                                  setState(() => _selectedCountry = picked);
+                                }
+                              },
+                              child: Container(
+                                height: 50,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.s12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface2,
+                                  borderRadius: AppRadius.br12,
+                                  border: Border.all(
+                                    color: AppColors.borderSubtle,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _selectedCountry.flagEmoji,
+                                      style: AppText.titleMedium,
+                                    ),
+                                    const SizedBox(width: AppSpacing.s6),
+                                    Text(
+                                      _selectedCountry.dialCode,
+                                      style: AppText.labelLarge.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.s4),
+                                    const Icon(
+                                      Icons.arrow_drop_down_rounded,
+                                      color: AppColors.textMuted,
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.s8),
+                            Expanded(
+                              child: TextField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  AthletePhoneInputFormatter(),
+                                ],
+                                style: AppText.bodyMedium.copyWith(
+                                  color: AppColors.textPrimary,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: '89200 47823',
+                                  hintStyle: AppText.bodyMedium.copyWith(
+                                    color: AppColors.textMuted.withValues(
+                                      alpha: 0.6,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: AppColors.surface2,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.s16,
+                                    vertical: AppSpacing.s14,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: AppRadius.br12,
+                                    borderSide: const BorderSide(
+                                      color: AppColors.borderSubtle,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: AppRadius.br12,
+                                    borderSide: const BorderSide(
+                                      color: AppColors.borderSubtle,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: AppRadius.br12,
+                                    borderSide: const BorderSide(
+                                      color: AppColors.accent,
+                                      width: 1.5,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: AppSpacing.s20),
                         PrimaryButton(
@@ -482,64 +615,14 @@ class _AuthScreenState extends State<AuthScreen> {
                           onPressed: _sendPhoneOtp,
                         ),
                       ] else ...[
-                        Text(
-                          'Enter 6-digit OTP code sent to ${_phoneController.text}:',
-                          style: AppText.bodySmall.copyWith(
-                            color: AppColors.textSecondary,
-                            fontSize: 12.5,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.s14),
-                        TextField(
-                          controller: _otpController,
-                          keyboardType: TextInputType.number,
-                          maxLength: 6,
-                          textAlign: TextAlign.center,
-                          style: AppText.headingMedium.copyWith(
-                            color: AppColors.textPrimary,
-                            fontSize: 24,
-                            letterSpacing: 8,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            hintText: '••••••',
-                            hintStyle: TextStyle(
-                              color: AppColors.textMuted.withValues(alpha: 0.5),
-                              letterSpacing: 8,
-                            ),
-                            filled: true,
-                            fillColor: AppColors.surface2,
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.s16,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: AppRadius.br12,
-                              borderSide: const BorderSide(
-                                color: AppColors.borderSubtle,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: AppRadius.br12,
-                              borderSide: const BorderSide(
-                                color: AppColors.borderSubtle,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: AppRadius.br12,
-                              borderSide: const BorderSide(
-                                color: AppColors.accent,
-                                width: 1.5,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.s20),
-                        PrimaryButton(
-                          label: 'Verify & Enter Grid',
-                          icon: Icons.check_circle_outline_rounded,
-                          isLoading: _isLoading,
-                          onPressed: _verifyPhoneOtp,
+                        OtpPinInputView(
+                          formattedPhone:
+                              '${_selectedCountry.dialCode} ${_phoneController.text}',
+                          onCompleted: (pin) {
+                            _otpController.text = pin;
+                            _verifyPhoneOtp(pin);
+                          },
+                          onResend: _sendPhoneOtp,
                         ),
                         const SizedBox(height: AppSpacing.s12),
                         Center(
@@ -557,8 +640,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 'Change Phone Number',
                                 style: AppText.label.copyWith(
                                   color: AppColors.accent,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
@@ -698,6 +780,14 @@ class _AuthScreenState extends State<AuthScreen> {
                       icon: Icons.directions_run_rounded,
                       onPressed: _handleGuestContinue,
                     ),
+                    if (_canUseBiometrics) ...[
+                      const SizedBox(height: AppSpacing.s12),
+                      SecondaryButton(
+                        label: 'Unlock with Biometrics',
+                        icon: Icons.fingerprint_rounded,
+                        onPressed: _handleBiometricUnlock,
+                      ),
+                    ],
                   ],
                 ),
               ),

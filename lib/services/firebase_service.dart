@@ -89,6 +89,10 @@ class FirebaseService {
 
   User? get currentUser => _isInitialized ? _auth?.currentUser : null;
 
+  /// Whether current signed in athlete is an anonymous guest
+  bool get isAnonymous =>
+      _isInitialized && (_auth?.currentUser?.isAnonymous ?? false);
+
   /// Google Sign-In with Auth Credential Handling
   Future<UserCredential?> signInWithGoogle() async {
     if (!_isInitialized || _auth == null) return null;
@@ -104,6 +108,10 @@ class FirebaseService {
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
+      if (_auth!.currentUser != null && _auth!.currentUser!.isAnonymous) {
+        // Seamlessly link guest progress to Google account
+        return await _auth!.currentUser!.linkWithCredential(credential);
+      }
       return await _auth!.signInWithCredential(credential);
     } catch (e) {
       AppLogger.warning(
@@ -166,6 +174,9 @@ class FirebaseService {
         verificationId: verificationId,
         smsCode: smsCode,
       );
+      if (_auth!.currentUser != null && _auth!.currentUser!.isAnonymous) {
+        return await _auth!.currentUser!.linkWithCredential(credential);
+      }
       return await _auth!.signInWithCredential(credential);
     } catch (e) {
       AppLogger.warning(

@@ -188,6 +188,27 @@ class _SosBeaconSheetState extends State<_SosBeaconSheet> {
             },
           ),
 
+          if (_safetyService.hasContactConfigured) ...[
+            const SizedBox(height: AppSpacing.s12),
+            SecondaryButton(
+              label: 'WhatsApp Beacon to Contact',
+              icon: Icons.chat_rounded,
+              height: 48,
+              onPressed: () async {
+                final launched = await _safetyService.sendWhatsAppDistress(
+                  position: position,
+                );
+                if (!launched && context.mounted) {
+                  AppToast.show(
+                    context,
+                    'Unable to open WhatsApp on this device',
+                    type: AppToastType.error,
+                  );
+                }
+              },
+            ),
+          ],
+
           const SizedBox(height: AppSpacing.s12),
 
           // Action 3: Row with Share Live Location & Audio Siren

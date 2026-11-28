@@ -64,6 +64,7 @@ import '../gameplay/loot_crate_service.dart';
 import 'widgets/loot_collected_sheet.dart';
 import 'widgets/sector_guardian_chip.dart';
 import 'widgets/sprint_incursion_banner.dart';
+import 'widgets/ghost_duel_hud.dart';
 
 export 'controllers/map_run_controller.dart';
 export 'widgets/summary_sheet.dart';
@@ -763,12 +764,13 @@ class _MapScreenState extends State<MapScreen>
                 top: pad.top + 68,
                 left: 16,
                 right: 16,
-                child: const Column(
+                child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SprintIncursionBanner(),
-                    SizedBox(height: 4),
-                    SectorGuardianChip(),
+                    GhostDuelHud(controller: controller),
+                    const SprintIncursionBanner(),
+                    const SizedBox(height: 4),
+                    const SectorGuardianChip(),
                   ],
                 ),
               ),

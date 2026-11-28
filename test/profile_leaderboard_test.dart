@@ -287,10 +287,11 @@ void main() {
         expect(find.text('Haptics'), findsOneWidget);
         expect(find.text('Haptic feedback'), findsOneWidget);
         expect(find.text('Battery saver'), findsOneWidget);
+        expect(find.text('Biometric quick-unlock'), findsOneWidget);
 
         // Tap haptic switch
         final switchTiles = find.byType(Switch);
-        expect(switchTiles, findsNWidgets(7));
+        expect(switchTiles, findsNWidgets(8));
 
         await tester.tap(switchTiles.first);
         await tester.pumpAndSettle();

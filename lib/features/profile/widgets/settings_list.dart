@@ -26,6 +26,7 @@ import 'emergency_contact_dialog.dart';
 import 'live_visibility_sheet.dart';
 import 'offline_maps_sheet.dart';
 import 'privacy_zones_sheet.dart';
+import '../../../services/biometric_auth_service.dart';
 
 class ProfileSettingsList extends StatefulWidget {
   final FirebaseService firebaseService;
@@ -875,6 +876,30 @@ class _ProfileSettingsListState extends State<ProfileSettingsList> {
             onTap: () {
               showPrivacyZonesSheet(context);
             },
+          ),
+          const Divider(height: 1, color: AppColors.border),
+          ProfileOptionTile(
+            icon: Icons.fingerprint_rounded,
+            title: 'Biometric quick-unlock',
+            subtitle: 'Secure profile access with fingerprint or face ID',
+            trailing: Switch.adaptive(
+              value: BiometricAuthService().isEnabled,
+              activeColor: AppColors.accent,
+              onChanged: (val) async {
+                final canCheck = await BiometricAuthService()
+                    .canCheckBiometrics();
+                if (!canCheck && val && context.mounted) {
+                  AppToast.show(
+                    context,
+                    'Biometric hardware unavailable on this device',
+                    type: AppToastType.warning,
+                  );
+                  return;
+                }
+                await BiometricAuthService().setEnabled(val);
+                setState(() {});
+              },
+            ),
           ),
           const Divider(height: 1, color: AppColors.border),
           ValueListenableBuilder<bool>(
