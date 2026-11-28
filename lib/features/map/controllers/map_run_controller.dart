@@ -12,6 +12,7 @@ import '../../../models/pace_target.dart';
 import '../../../models/run_goal.dart';
 import '../../../models/saved_loop.dart';
 import '../../../services/app_preferences.dart';
+import '../../../services/arcade_audio_service.dart';
 import '../../../services/auto_lap_service.dart';
 import '../../../services/auto_pause_engine.dart';
 import '../../../services/battery_saver_service.dart';
@@ -26,6 +27,9 @@ import '../../../services/motion_sensor_service.dart';
 import '../../../services/run_recovery_service.dart';
 import '../../../services/saved_loop_service.dart';
 import '../../../services/speed_smoothing_service.dart';
+import '../../../services/tactical_loadout_service.dart';
+import '../../gameplay/incursion_service.dart';
+import '../../gameplay/loot_crate_service.dart';
 import '../../gameplay/polygon_enclosure_engine.dart';
 import '../../gameplay/territory_service.dart';
 import '../../routing/route_service.dart';
@@ -394,6 +398,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
 
     telemetryNotifier.reset();
     telemetryNotifier.setRunActive(true);
+    TacticalLoadoutService().activateLoadoutForRun();
+    LootCrateService().reset();
+    IncursionService().reset();
     _speedPipeline.reset();
     _elevationPipeline.reset();
     _distanceFilter.reset();
@@ -673,6 +680,7 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
               _distanceToClosureMeters = candidate.distanceMeters;
               _proximityToClosure = candidate.proximity;
               _nearestClosurePoint = candidate.candidatePoint;
+              ArcadeAudioService().playLoopProximityCue(candidate.distanceMeters);
               if (candidate.proximity >= 0.80 && !_closureCueSpokenThisLoop) {
                 _closureCueSpokenThisLoop = true;
                 unawaited(

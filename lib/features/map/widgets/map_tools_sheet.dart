@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../services/app_preferences.dart';
 import '../../../ui/ui.dart';
+import '../../profile/widgets/city_exploration_sheet.dart';
 import '../../social/widgets/social_hub_sheet.dart';
+import 'tactical_loadout_sheet.dart';
 
 /// Bottom sheet presenting secondary tools during an active or idle run:
 /// - Virtual Pacer (Demo mode)
@@ -244,7 +246,31 @@ class MapToolsSheet extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.s8),
 
-              // 7. Emergency SOS Trigger
+              // 7. Tactical Loadout
+              _ToolTile(
+                icon: Icons.tune_rounded,
+                title: 'Tactical loadout',
+                subtitle: 'Equip perks: Sonar Pulse, Aegis Shield, Overdrive',
+                accentColor: AppColors.accent,
+                onTap: () {
+                  TacticalLoadoutSheet.show(context);
+                },
+              ),
+              const SizedBox(height: AppSpacing.s8),
+
+              // 8. Metropolitan Exploration
+              _ToolTile(
+                icon: Icons.explore_rounded,
+                title: 'City exploration',
+                subtitle: 'Fog of War map clearance & landmark Citadels',
+                accentColor: const Color(0xFF38BDF8),
+                onTap: () {
+                  CityExplorationSheet.show(context);
+                },
+              ),
+              const SizedBox(height: AppSpacing.s8),
+
+              // 9. Emergency SOS Trigger
               _ToolTile(
                 icon: Icons.emergency_rounded,
                 title: 'Emergency SOS',

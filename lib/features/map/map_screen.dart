@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/utils/geohash_utils.dart';
 import '../../models/activity_type.dart';
+import '../../models/loot_crate.dart';
 import '../../models/territory.dart';
 import '../../models/ws_events.dart';
 import '../../services/api_client.dart';
@@ -52,6 +53,17 @@ import 'widgets/summary_sheet.dart';
 import '../profile/widgets/body_details_sheet.dart';
 import '../profile/widgets/offline_maps_sheet.dart';
 import '../social/widgets/social_hub_sheet.dart';
+import '../../services/arcade_audio_service.dart';
+import '../../services/citadel_service.dart';
+import '../../services/drone_companion_service.dart';
+import '../../services/fog_of_war_service.dart';
+import '../../services/tactical_ai_engine.dart';
+import '../gameplay/guardian_challenge_service.dart';
+import '../gameplay/incursion_service.dart';
+import '../gameplay/loot_crate_service.dart';
+import 'widgets/loot_collected_sheet.dart';
+import 'widgets/sector_guardian_chip.dart';
+import 'widgets/sprint_incursion_banner.dart';
 
 export 'controllers/map_run_controller.dart';
 export 'widgets/summary_sheet.dart';
@@ -104,6 +116,7 @@ class _MapScreenState extends State<MapScreen>
   StreamSubscription<RunnerPresenceEvent>? _wsPresenceSub;
   StreamSubscription<String>? _wsRunnerLeftSub;
   StreamSubscription<TerritoryAlertEvent>? _wsAlertSub;
+  StreamSubscription<LootCrate>? _crateSub;
   DateTime? _lastBBoxFetchAt;
   LatLng? _lastBBoxCenter;
   bool _showGoCue = false;
@@ -132,8 +145,19 @@ class _MapScreenState extends State<MapScreen>
     final controller = _resolveController();
     _refreshTerritoryCache();
 
+    unawaited(TacticalAiEngine().init());
+    unawaited(FogOfWarService().init());
+    _crateSub = LootCrateService().onCrateCollected.listen((crate) {
+      if (mounted) {
+        LootCollectedSheet.show(context, crate);
+      }
+    });
+
     controller.onLoopCaptured = (loop, netArea, xp) {
       if (!mounted) return;
+      CitadelService().checkPolygonEnclosure(loop.polygon, 'Athlete', 'Apex Vanguard');
+      ArcadeAudioService().playLoopVictoryChime();
+      DroneCompanionService().onLoopClosed();
       LoopCelebrationOverlay.show(
         context,
         areaSqMeters: netArea,
@@ -233,6 +257,16 @@ class _MapScreenState extends State<MapScreen>
           unawaited(_syncNearbyTerritories(target));
         }
       }
+
+      // Live gameplay services update
+      FogOfWarService().revealFogAt(target);
+      LootCrateService().updateRunnerLocation(target, pos.speed, 5.0);
+      IncursionService().updateRunnerSpeed(pos.speed);
+      GuardianChallengeService().updateAthleteProgress(controller.runDistanceKm * 1000.0, target);
+      if (controller.isRunActive && LootCrateService().activeCrates.isEmpty) {
+        LootCrateService().spawnProceduralCrate(runnerPos: target, headingDeg: pos.heading);
+      }
+      CitadelService().seedCitadelsNear(target);
     });
 
     LocationService().warmUpLocation();
@@ -406,6 +440,7 @@ class _MapScreenState extends State<MapScreen>
       _cameraCurvedAnimation!.removeListener(_cameraListener!);
     }
     _cameraAnimationController.dispose();
+    _crateSub?.cancel();
     _positionSub?.cancel();
     _territoryFocusSub?.cancel();
     _wsPresenceSub?.cancel();
@@ -714,6 +749,21 @@ class _MapScreenState extends State<MapScreen>
                   athleteName: athleteName,
                   satelliteAccuracyMeters: controller.satelliteAccuracyMeters,
                   isGpsSearching: controller.currentLocation == null,
+                ),
+              ),
+
+              // Incursion Alert & Sector Guardian HUD
+              Positioned(
+                top: pad.top + 68,
+                left: 16,
+                right: 16,
+                child: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SprintIncursionBanner(),
+                    SizedBox(height: 4),
+                    SectorGuardianChip(),
+                  ],
                 ),
               ),
 

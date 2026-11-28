@@ -9,6 +9,10 @@ import '../../../services/exploration_service.dart';
 import '../../../services/firebase_service.dart';
 import '../../../ui/ui.dart';
 import '../controllers/map_run_controller.dart';
+import 'citadel_layer.dart';
+import 'drone_companion_marker.dart';
+import 'fog_of_war_layer.dart';
+import 'loot_crate_layer.dart';
 import 'map_layers.dart';
 
 /// Fullscreen FlutterMap viewport rendering tiles, explored grid blocks, territories, paths, and markers.
@@ -101,6 +105,9 @@ class _MapViewportState extends State<MapViewport> {
             ),
             children: [
               MapLayers.buildTileLayer(isLight: useLightTiles),
+              const FogOfWarLayer(),
+              const CitadelLayer(),
+              const LootCrateLayer(),
               if (prefs.showExploredGridLayer && exploredPolygons.isNotEmpty)
                 MapLayers.buildExploredGridLayer(
                   exploredPolygons,
@@ -172,6 +179,12 @@ class _MapViewportState extends State<MapViewport> {
                             palette: palette,
                           ),
                     ),
+              ),
+              ValueListenableBuilder<LatLng?>(
+                valueListenable: widget.controller.liveLocationNotifier,
+                builder: (context, loc, _) => DroneCompanionMarker(
+                  runnerPosition: loc ?? widget.controller.currentLocation,
+                ),
               ),
               if (AppConstants.tileAttribution.isNotEmpty)
                 RichAttributionWidget(
