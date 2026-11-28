@@ -1,0 +1,33 @@
+{
+  "model_name": "RouteLoopSynthesizerNet",
+  "version": "1.0.0",
+  "trained_device": "NVIDIA GeForce RTX 5070 Laptop GPU",
+  "cuda_version": "12.8",
+  "num_harmonics": 8,
+  "num_waypoints": 32,
+  "num_conditions": 5,
+  "condition_names": [
+    "target_dist_km",
+    "aspect_ratio",
+    "smoothness_factor",
+    "difficulty",
+    "territory_xp_weight"
+  ],
+  "validation_mse": 0.0009865569161354667,
+  "cond_mean": [
+    8.285497665405273,
+    1.7468341588974,
+    0.7506443858146667,
+    3.0007193088531494,
+    1.9961464405059814
+  ],
+  "cond_std": [
+    3.8973755836486816,
+    0.4325140416622162,
+    0.14417216181755066,
+    1.1537131071090698,
+    0.576841413974762
+  ],
+  "weights_sha256": "d7e722506d7b30468b66eb720fc8f8f4f8a2bfb421ac6beb389feb705fa5c04c",
+  "exported_at": "2026-11-28T16:17:46Z"
+}
