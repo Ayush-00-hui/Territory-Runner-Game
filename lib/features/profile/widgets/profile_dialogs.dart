@@ -619,10 +619,7 @@ void showBadgeDetailModal(
           ),
           const SizedBox(height: 4),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 8,
-              vertical: 3,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: unlocked
                   ? AppColors.gold.withValues(alpha: 0.16)
