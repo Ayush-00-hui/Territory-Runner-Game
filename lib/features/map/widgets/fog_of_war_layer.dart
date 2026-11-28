@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../services/fog_of_war_service.dart';
 
 /// Atmospheric Fog of War map overlay that reveals explored corridors
@@ -37,10 +38,7 @@ class _FogOfWarLayerState extends State<FogOfWarLayer> {
     final explored = _fogService.recentExploredPoints;
 
     return CustomPaint(
-      painter: _FogOfWarPainter(
-        camera: camera,
-        exploredPoints: explored,
-      ),
+      painter: _FogOfWarPainter(camera: camera, exploredPoints: explored),
       size: Size.infinite,
     );
   }
@@ -50,10 +48,7 @@ class _FogOfWarPainter extends CustomPainter {
   final MapCamera camera;
   final List<LatLng> exploredPoints;
 
-  _FogOfWarPainter({
-    required this.camera,
-    required this.exploredPoints,
-  });
+  _FogOfWarPainter({required this.camera, required this.exploredPoints});
 
   @override
   void paint(Canvas canvas, Size size) {

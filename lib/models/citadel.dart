@@ -1,13 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
 /// Point-of-Interest Citadel / Stronghold representing King of the Hill landmarks.
-enum CitadelCategory {
-  park,
-  hilltop,
-  stadium,
-  monument,
-  bridge,
-}
+enum CitadelCategory { park, hilltop, stadium, monument, bridge }
 
 class Citadel {
   final String id;
@@ -76,7 +70,8 @@ class Citadel {
         (json['longitude'] as num).toDouble(),
       ),
       radiusMeters: (json['radiusMeters'] as num?)?.toDouble() ?? 80.0,
-      controllingFaction: json['controllingFaction'] as String? ?? 'Apex Vanguard',
+      controllingFaction:
+          json['controllingFaction'] as String? ?? 'Apex Vanguard',
       rulerAthleteName: json['rulerAthleteName'] as String? ?? 'Ghost Guardian',
       capturedAt: DateTime.parse(json['capturedAt'] as String),
       influenceRadiance: (json['influenceRadiance'] as num?)?.toDouble() ?? 1.5,

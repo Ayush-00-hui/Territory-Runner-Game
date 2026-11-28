@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+
 import '../../../models/loot_crate.dart';
 import '../../gameplay/loot_crate_service.dart';
 
@@ -80,7 +81,9 @@ class _LootCrateLayerState extends State<LootCrateLayer>
                     border: Border.all(color: themeColor, width: 2.2),
                     boxShadow: [
                       BoxShadow(
-                        color: themeColor.withValues(alpha: 0.55 * _pulseController.value),
+                        color: themeColor.withValues(
+                          alpha: 0.55 * _pulseController.value,
+                        ),
                         blurRadius: 14.0 * scale,
                         spreadRadius: 2.0,
                       ),

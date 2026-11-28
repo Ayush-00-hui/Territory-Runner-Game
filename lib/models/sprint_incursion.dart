@@ -1,9 +1,5 @@
 /// State of an active sprint incursion challenge.
-enum IncursionStatus {
-  active,
-  repelled,
-  failed,
-}
+enum IncursionStatus { active, repelled, failed }
 
 /// Dynamic in-run gamified HIIT challenge representing a rival faction border breach.
 class SprintIncursion {
@@ -24,7 +20,9 @@ class SprintIncursion {
     required this.remainingSeconds,
     this.status = IncursionStatus.active,
     this.rewardXp = 100,
-  }) : targetPaceMinPerKm = targetSpeedMps > 0 ? (1000.0 / targetSpeedMps) / 60.0 : 5.0;
+  }) : targetPaceMinPerKm = targetSpeedMps > 0
+           ? (1000.0 / targetSpeedMps) / 60.0
+           : 5.0;
 
   bool get isActive => status == IncursionStatus.active;
   bool get isRepelled => status == IncursionStatus.repelled;
@@ -54,7 +52,8 @@ class SprintIncursion {
   factory SprintIncursion.fromJson(Map<String, dynamic> json) {
     return SprintIncursion(
       id: json['id'] as String,
-      rivalFactionName: json['rivalFactionName'] as String? ?? 'Obsidian Syndicate',
+      rivalFactionName:
+          json['rivalFactionName'] as String? ?? 'Obsidian Syndicate',
       targetSpeedMps: (json['targetSpeedMps'] as num).toDouble(),
       totalDurationSeconds: json['totalDurationSeconds'] as int,
       remainingSeconds: json['remainingSeconds'] as int,

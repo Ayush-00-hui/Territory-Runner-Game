@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../services/fog_of_war_service.dart';
 import '../../../services/citadel_service.dart';
 import '../../gameplay/incursion_service.dart';
@@ -33,7 +34,10 @@ class CityExplorationSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1115),
         borderRadius: BorderRadius.circular(24.0),
-        border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.8), width: 1.8),
+        border: Border.all(
+          color: const Color(0xFF38BDF8).withValues(alpha: 0.8),
+          width: 1.8,
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF38BDF8).withValues(alpha: 0.25),
@@ -53,9 +57,16 @@ class CityExplorationSheet extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                  border: Border.all(color: const Color(0xFF38BDF8), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFF38BDF8),
+                    width: 1.5,
+                  ),
                 ),
-                child: const Icon(Icons.explore_rounded, color: Color(0xFF38BDF8), size: 24.0),
+                child: const Icon(
+                  Icons.explore_rounded,
+                  color: Color(0xFF38BDF8),
+                  size: 24.0,
+                ),
               ),
               const SizedBox(width: 14.0),
               Expanded(
@@ -91,7 +102,9 @@ class CityExplorationSheet extends StatelessWidget {
             child: LinearProgressIndicator(
               value: (pct / 100.0).clamp(0.01, 1.0),
               backgroundColor: const Color(0xFF1E242C),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF38BDF8)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFF38BDF8),
+              ),
               minHeight: 8.0,
             ),
           ),
@@ -105,11 +118,31 @@ class CityExplorationSheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildStat('Explored Area', '${areaSqKm.toStringAsFixed(2)} km²', const Color(0xFFF8FAFC)),
-                Container(width: 1.0, height: 32.0, color: const Color(0xFF334155)),
-                _buildStat('Discovered Citadels', '$totalCitadels POIs', const Color(0xFFFBBF24)),
-                Container(width: 1.0, height: 32.0, color: const Color(0xFF334155)),
-                _buildStat('Incursions Repelled', '$repelled', const Color(0xFF10B981)),
+                _buildStat(
+                  'Explored Area',
+                  '${areaSqKm.toStringAsFixed(2)} km²',
+                  const Color(0xFFF8FAFC),
+                ),
+                Container(
+                  width: 1.0,
+                  height: 32.0,
+                  color: const Color(0xFF334155),
+                ),
+                _buildStat(
+                  'Discovered Citadels',
+                  '$totalCitadels POIs',
+                  const Color(0xFFFBBF24),
+                ),
+                Container(
+                  width: 1.0,
+                  height: 32.0,
+                  color: const Color(0xFF334155),
+                ),
+                _buildStat(
+                  'Incursions Repelled',
+                  '$repelled',
+                  const Color(0xFF10B981),
+                ),
               ],
             ),
           ),
@@ -134,7 +167,10 @@ class CityExplorationSheet extends StatelessWidget {
               ),
               child: const Text(
                 'CONTINUE EXPEDITION',
-                style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
           ),
@@ -148,12 +184,20 @@ class CityExplorationSheet extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 10.0, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 10.0,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 4.0),
         Text(
           value,
-          style: TextStyle(color: color, fontSize: 13.0, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            color: color,
+            fontSize: 13.0,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ],
     );

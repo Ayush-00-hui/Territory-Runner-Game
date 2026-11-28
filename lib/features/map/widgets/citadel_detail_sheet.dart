@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/citadel.dart';
 
 /// Bottom sheet detailing Citadel status, ruling athlete, defense level, and rewards.
@@ -28,7 +29,10 @@ class CitadelDetailSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1115),
         borderRadius: BorderRadius.circular(24.0),
-        border: Border.all(color: factionColor.withValues(alpha: 0.8), width: 1.8),
+        border: Border.all(
+          color: factionColor.withValues(alpha: 0.8),
+          width: 1.8,
+        ),
         boxShadow: [
           BoxShadow(
             color: factionColor.withValues(alpha: 0.3),
@@ -49,7 +53,11 @@ class CitadelDetailSheet extends StatelessWidget {
                   color: factionColor.withValues(alpha: 0.15),
                   border: Border.all(color: factionColor, width: 1.5),
                 ),
-                child: const Icon(Icons.fort_rounded, color: Color(0xFFF8FAFC), size: 28.0),
+                child: const Icon(
+                  Icons.fort_rounded,
+                  color: Color(0xFFF8FAFC),
+                  size: 28.0,
+                ),
               ),
               const SizedBox(width: 14.0),
               Expanded(
@@ -89,11 +97,31 @@ class CitadelDetailSheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildMetric('Controlling Faction', citadel.controllingFaction, factionColor),
-                Container(width: 1.0, height: 32.0, color: const Color(0xFF334155)),
-                _buildMetric('Current Ruler', citadel.rulerAthleteName, const Color(0xFFF8FAFC)),
-                Container(width: 1.0, height: 32.0, color: const Color(0xFF334155)),
-                _buildMetric('Defense Tier', 'Tier ${citadel.defenseLevel}', const Color(0xFF38BDF8)),
+                _buildMetric(
+                  'Controlling Faction',
+                  citadel.controllingFaction,
+                  factionColor,
+                ),
+                Container(
+                  width: 1.0,
+                  height: 32.0,
+                  color: const Color(0xFF334155),
+                ),
+                _buildMetric(
+                  'Current Ruler',
+                  citadel.rulerAthleteName,
+                  const Color(0xFFF8FAFC),
+                ),
+                Container(
+                  width: 1.0,
+                  height: 32.0,
+                  color: const Color(0xFF334155),
+                ),
+                _buildMetric(
+                  'Defense Tier',
+                  'Tier ${citadel.defenseLevel}',
+                  const Color(0xFF38BDF8),
+                ),
               ],
             ),
           ),
@@ -132,12 +160,20 @@ class CitadelDetailSheet extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 10.0, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            color: Color(0xFF64748B),
+            fontSize: 10.0,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         const SizedBox(height: 4.0),
         Text(
           value,
-          style: TextStyle(color: color, fontSize: 12.0, fontWeight: FontWeight.w800),
+          style: TextStyle(
+            color: color,
+            fontSize: 12.0,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ],
     );

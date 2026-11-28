@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/services.dart';
+
 import '../core/logging/app_logger.dart';
 
 /// Service delivering tactical radio squelch tones, loop proximity frequency hums,
@@ -20,7 +22,10 @@ class ArcadeAudioService {
       await HapticFeedback.mediumImpact();
       await SystemSound.play(SystemSoundType.click);
     } catch (e) {
-      AppLogger.warning('Radio squelch playback suppressed: $e', tag: 'ArcadeAudioService');
+      AppLogger.warning(
+        'Radio squelch playback suppressed: $e',
+        tag: 'ArcadeAudioService',
+      );
     }
   }
 
@@ -55,7 +60,10 @@ class ArcadeAudioService {
       await HapticFeedback.heavyImpact();
       await SystemSound.play(SystemSoundType.alert);
     } catch (e) {
-      AppLogger.warning('Loop victory chime error: $e', tag: 'ArcadeAudioService');
+      AppLogger.warning(
+        'Loop victory chime error: $e',
+        tag: 'ArcadeAudioService',
+      );
     }
   }
 
@@ -68,7 +76,10 @@ class ArcadeAudioService {
       await HapticFeedback.lightImpact();
       await SystemSound.play(SystemSoundType.click);
     } catch (e) {
-      AppLogger.warning('Crate collection sound error: $e', tag: 'ArcadeAudioService');
+      AppLogger.warning(
+        'Crate collection sound error: $e',
+        tag: 'ArcadeAudioService',
+      );
     }
   }
 

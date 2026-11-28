@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../core/logging/app_logger.dart';
 import '../models/drone_companion.dart';
 import 'countdown_audio_service.dart';
@@ -8,7 +10,8 @@ import 'countdown_audio_service.dart';
 /// Service managing the AI Companion Drone ('Aero'), computing its orbiting map
 /// position and dispatching personality-driven tactical audio coaching.
 class DroneCompanionService extends ChangeNotifier {
-  static final DroneCompanionService _instance = DroneCompanionService._internal();
+  static final DroneCompanionService _instance =
+      DroneCompanionService._internal();
   factory DroneCompanionService() => _instance;
   DroneCompanionService._internal();
 
@@ -49,22 +52,32 @@ class DroneCompanionService extends ChangeNotifier {
     _lastVoiceCue = now;
 
     try {
-      AppLogger.info('Drone Aero dispatch: "$message"', tag: 'DroneCompanionService');
+      AppLogger.info(
+        'Drone Aero dispatch: "$message"',
+        tag: 'DroneCompanionService',
+      );
       await CountdownAudioService().speakCue(message);
     } catch (e) {
-      AppLogger.warning('Drone voice prompt failed: $e', tag: 'DroneCompanionService');
+      AppLogger.warning(
+        'Drone voice prompt failed: $e',
+        tag: 'DroneCompanionService',
+      );
     }
   }
 
   /// Triggered when runner encounters an incline grade >= 4%
   void onInclineEncountered(double gradePct) {
     final pct = (gradePct * 100).round();
-    deliverDroneCue('Incline $pct percent ahead! Minetti metabolic physics engaged — pump those arms!');
+    deliverDroneCue(
+      'Incline $pct percent ahead! Minetti metabolic physics engaged — pump those arms!',
+    );
   }
 
   /// Triggered when a tactical crate is spotted
   void onCrateSpotted(String crateTitle) {
-    deliverDroneCue('$crateTitle detected on radar! Intercept ahead for tactical advantage!');
+    deliverDroneCue(
+      '$crateTitle detected on radar! Intercept ahead for tactical advantage!',
+    );
   }
 
   /// Triggered on loop closure

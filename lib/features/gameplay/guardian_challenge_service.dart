@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../core/logging/app_logger.dart';
 import '../../models/sector_guardian.dart';
 
 /// Service managing Asynchronous Sector Guardian Ghost Boss challenges.
 class GuardianChallengeService extends ChangeNotifier {
-  static final GuardianChallengeService _instance = GuardianChallengeService._internal();
+  static final GuardianChallengeService _instance =
+      GuardianChallengeService._internal();
   factory GuardianChallengeService() => _instance;
   GuardianChallengeService._internal();
 
@@ -47,7 +49,10 @@ class GuardianChallengeService extends ChangeNotifier {
     _activeGuardian = guardian;
     _isChallengeActive = true;
     _userLeadDistanceMeters = 0.0;
-    AppLogger.info('Started challenge against Sector Guardian: ${guardian.guardianName} (${guardian.districtName})', tag: 'GuardianChallengeService');
+    AppLogger.info(
+      'Started challenge against Sector Guardian: ${guardian.guardianName} (${guardian.districtName})',
+      tag: 'GuardianChallengeService',
+    );
     notifyListeners();
   }
 
@@ -64,7 +69,8 @@ class GuardianChallengeService extends ChangeNotifier {
 
     // Projected ghost position along guardian route based on pace
     // If athlete has covered 800m, compare with guardian expected distance
-    final expectedGhostDist = athleteDistanceMeters * 0.98; // Simulated competitive pacing
+    final expectedGhostDist =
+        athleteDistanceMeters * 0.98; // Simulated competitive pacing
     _userLeadDistanceMeters = athleteDistanceMeters - expectedGhostDist;
     notifyListeners();
   }

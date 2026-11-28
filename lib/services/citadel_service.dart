@@ -1,6 +1,8 @@
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../core/logging/app_logger.dart';
 import '../models/citadel.dart';
 import 'arcade_audio_service.dart';
@@ -36,24 +38,35 @@ class CitadelService extends ChangeNotifier {
       final dist = 600.0 + random.nextDouble() * 1400.0;
       final pos = _distanceCalc.offset(center, dist, angle);
 
-      _citadels.add(Citadel(
-        id: 'citadel_$i',
-        name: names[i],
-        category: categories[i % categories.length],
-        position: pos,
-        radiusMeters: 90.0,
-        controllingFaction: i % 2 == 0 ? 'Apex Vanguard' : 'Obsidian Syndicate',
-        rulerAthleteName: i == 0 ? 'Rival_Ghost_X' : 'Local_Legend',
-        capturedAt: DateTime.now().subtract(Duration(days: i + 1)),
-        defenseLevel: (i % 3) + 1,
-      ));
+      _citadels.add(
+        Citadel(
+          id: 'citadel_$i',
+          name: names[i],
+          category: categories[i % categories.length],
+          position: pos,
+          radiusMeters: 90.0,
+          controllingFaction: i % 2 == 0
+              ? 'Apex Vanguard'
+              : 'Obsidian Syndicate',
+          rulerAthleteName: i == 0 ? 'Rival_Ghost_X' : 'Local_Legend',
+          capturedAt: DateTime.now().subtract(Duration(days: i + 1)),
+          defenseLevel: (i % 3) + 1,
+        ),
+      );
     }
-    AppLogger.info('Seeded ${_citadels.length} Landmark Citadels.', tag: 'CitadelService');
+    AppLogger.info(
+      'Seeded ${_citadels.length} Landmark Citadels.',
+      tag: 'CitadelService',
+    );
     notifyListeners();
   }
 
   /// Evaluates whether an enclosed polygon captured a Citadel
-  Citadel? checkPolygonEnclosure(List<LatLng> polygonVertices, String claimerName, String claimerFaction) {
+  Citadel? checkPolygonEnclosure(
+    List<LatLng> polygonVertices,
+    String claimerName,
+    String claimerFaction,
+  ) {
     if (polygonVertices.length < 3) return null;
 
     for (final citadel in _citadels) {
@@ -64,7 +77,10 @@ class CitadelService extends ChangeNotifier {
         citadel.capturedAt = DateTime.now();
         citadel.defenseLevel = 1;
         ArcadeAudioService().playLoopVictoryChime();
-        AppLogger.info('CITADEL CAPTURED! ${citadel.name} is now ruled by $claimerName ($claimerFaction)!', tag: 'CitadelService');
+        AppLogger.info(
+          'CITADEL CAPTURED! ${citadel.name} is now ruled by $claimerName ($claimerFaction)!',
+          tag: 'CitadelService',
+        );
         notifyListeners();
         return citadel;
       }
@@ -79,9 +95,14 @@ class CitadelService extends ChangeNotifier {
     for (int i = 0; i < polygon.length; j = i++) {
       final pi = polygon[i];
       final pj = polygon[j];
-      final intersect = ((pi.longitude > point.longitude) != (pj.longitude > point.longitude)) &&
-          (point.latitude < (pj.latitude - pi.latitude) * (point.longitude - pi.longitude) /
-                  (pj.longitude - pi.longitude + 1e-12) + pi.latitude);
+      final intersect =
+          ((pi.longitude > point.longitude) !=
+              (pj.longitude > point.longitude)) &&
+          (point.latitude <
+              (pj.latitude - pi.latitude) *
+                      (point.longitude - pi.longitude) /
+                      (pj.longitude - pi.longitude + 1e-12) +
+                  pi.latitude);
       if (intersect) inside = !inside;
     }
     return inside;

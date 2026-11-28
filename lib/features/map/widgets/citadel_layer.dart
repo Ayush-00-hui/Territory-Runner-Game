@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+
 import '../../../services/citadel_service.dart';
 import 'citadel_detail_sheet.dart';
 
@@ -73,11 +74,17 @@ class _CitadelLayerState extends State<CitadelLayer> {
                 ),
                 const SizedBox(height: 3.0),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 2.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6.0,
+                    vertical: 2.0,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFF0D0F11).withValues(alpha: 0.88),
                     borderRadius: BorderRadius.circular(6.0),
-                    border: Border.all(color: factionColor.withValues(alpha: 0.6), width: 1.0),
+                    border: Border.all(
+                      color: factionColor.withValues(alpha: 0.6),
+                      width: 1.0,
+                    ),
                   ),
                   child: Text(
                     citadel.name,

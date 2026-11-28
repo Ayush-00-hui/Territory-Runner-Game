@@ -1,8 +1,8 @@
 /// Personality style of the tactical companion drone.
 enum DronePersonality {
   tactical, // Crisp, military scout briefing
-  zen,      // Calm, breathing and posture focus
-  hype,     // High-energy arcade cheerleader
+  zen, // Calm, breathing and posture focus
+  hype, // High-energy arcade cheerleader
 }
 
 /// AI Companion Drone that orbits the athlete on the map and delivers personalized coaching.

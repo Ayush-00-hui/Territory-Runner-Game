@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:math' as math;
+
 import 'package:crypto/crypto.dart';
 import 'package:flutter/services.dart';
+
 import '../core/logging/app_logger.dart';
 
 /// Telemetry input features for the Tactical Guardian Neural Network.
@@ -91,7 +93,9 @@ class TacticalAiEngine {
 
     try {
       final weightsJsonStr = await rootBundle.loadString(weightsAssetPath);
-      final computedSha = sha256.convert(utf8.encode(weightsJsonStr)).toString();
+      final computedSha = sha256
+          .convert(utf8.encode(weightsJsonStr))
+          .toString();
 
       if (computedSha.toLowerCase() == expectedWeightsSha256.toLowerCase()) {
         _isVerified = true;
@@ -107,15 +111,29 @@ class TacticalAiEngine {
       final metaJsonStr = await rootBundle.loadString(metaAssetPath);
       final meta = jsonDecode(metaJsonStr) as Map<String, dynamic>;
 
-      _xMean = (meta['x_mean'] as List).map((e) => (e as num).toDouble()).toList();
-      _xStd = (meta['x_std'] as List).map((e) => (e as num).toDouble()).toList();
-      _yMean = (meta['y_mean'] as List).map((e) => (e as num).toDouble()).toList();
-      _yStd = (meta['y_std'] as List).map((e) => (e as num).toDouble()).toList();
+      _xMean = (meta['x_mean'] as List)
+          .map((e) => (e as num).toDouble())
+          .toList();
+      _xStd = (meta['x_std'] as List)
+          .map((e) => (e as num).toDouble())
+          .toList();
+      _yMean = (meta['y_mean'] as List)
+          .map((e) => (e as num).toDouble())
+          .toList();
+      _yStd = (meta['y_std'] as List)
+          .map((e) => (e as num).toDouble())
+          .toList();
 
       _isInitialized = true;
-      AppLogger.info('Tactical Guardian Deep Neural Network loaded & verified successfully.', tag: 'TacticalAiEngine');
+      AppLogger.info(
+        'Tactical Guardian Deep Neural Network loaded & verified successfully.',
+        tag: 'TacticalAiEngine',
+      );
     } catch (e) {
-      AppLogger.warning('Failed to load neural assets ($e); falling back to physiological equations.', tag: 'TacticalAiEngine');
+      AppLogger.warning(
+        'Failed to load neural assets ($e); falling back to physiological equations.',
+        tag: 'TacticalAiEngine',
+      );
       _isInitialized = true;
       _isVerified = false;
     }
@@ -130,7 +148,10 @@ class TacticalAiEngine {
     try {
       // 1. Feature normalization
       final rawX = input.toList();
-      final normX = List<double>.generate(8, (i) => (rawX[i] - _xMean[i]) / _xStd[i]);
+      final normX = List<double>.generate(
+        8,
+        (i) => (rawX[i] - _xMean[i]) / _xStd[i],
+      );
 
       // 2. Encoder Layer 0: Linear(8 -> 128)
       var h = _linear(normX, 'encoder.0.weight', 'encoder.0.bias');
@@ -173,7 +194,10 @@ class TacticalAiEngine {
       final normOut = [inc[0], inc[1], crate[0], guard[0], guard[1], guard[2]];
 
       // De-normalize
-      final rawOut = List<double>.generate(6, (i) => normOut[i] * _yStd[i] + _yMean[i]);
+      final rawOut = List<double>.generate(
+        6,
+        (i) => normOut[i] * _yStd[i] + _yMean[i],
+      );
 
       return TacticalGuardianPrediction(
         sprintVelocityTargetMps: rawOut[0].clamp(2.5, 7.5),
@@ -185,16 +209,34 @@ class TacticalAiEngine {
         isModelVerified: true,
       );
     } catch (e) {
-      AppLogger.warning('Neural forward pass error ($e); falling back to analytical equations.', tag: 'TacticalAiEngine');
+      AppLogger.warning(
+        'Neural forward pass error ($e); falling back to analytical equations.',
+        tag: 'TacticalAiEngine',
+      );
       return _analyticalFallback(input);
     }
   }
 
   TacticalGuardianPrediction _analyticalFallback(TacticalTelemetryInput input) {
-    final sprintBoost = (1.25 + 0.05 * input.athleteExperience - 0.25 * input.cumulativeFatigue - 0.8 * math.max(input.gradePct, 0.0)).clamp(1.10, 1.40);
+    final sprintBoost =
+        (1.25 +
+                0.05 * input.athleteExperience -
+                0.25 * input.cumulativeFatigue -
+                0.8 * math.max(input.gradePct, 0.0))
+            .clamp(1.10, 1.40);
     final targetSprintMps = (input.speedMps * sprintBoost).clamp(2.5, 7.0);
-    final durationSec = (75.0 + 15.0 * input.athleteExperience - 35.0 * input.cumulativeFatigue - 50.0 * math.max(input.gradePct, 0.0)).round().clamp(30, 90);
-    final crateDist = (280.0 + 60.0 * (1.0 - input.cumulativeFatigue) - 80.0 * input.gradePct.abs()).clamp(150.0, 400.0);
+    final durationSec =
+        (75.0 +
+                15.0 * input.athleteExperience -
+                35.0 * input.cumulativeFatigue -
+                50.0 * math.max(input.gradePct, 0.0))
+            .round()
+            .clamp(30, 90);
+    final crateDist =
+        (280.0 +
+                60.0 * (1.0 - input.cumulativeFatigue) -
+                80.0 * input.gradePct.abs())
+            .clamp(150.0, 400.0);
 
     return TacticalGuardianPrediction(
       sprintVelocityTargetMps: targetSprintMps,
@@ -248,7 +290,8 @@ class TacticalAiEngine {
     final out = List<double>.filled(n, 0.0);
     for (int i = 0; i < n; i++) {
       final norm = (x[i] - mean) * stdInv;
-      out[i] = norm * (gamma[i] as num).toDouble() + (beta[i] as num).toDouble();
+      out[i] =
+          norm * (gamma[i] as num).toDouble() + (beta[i] as num).toDouble();
     }
     return out;
   }

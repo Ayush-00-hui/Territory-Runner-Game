@@ -1,7 +1,9 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../../services/drone_companion_service.dart';
 
 /// Interactive map layer rendering the animated orbiting AI Tactical Drone ('Aero').
@@ -49,7 +51,8 @@ class _DroneCompanionMarkerState extends State<DroneCompanionMarker>
           child: AnimatedBuilder(
             animation: _hoverController,
             builder: (context, child) {
-              final bobbingOffset = math.sin(_hoverController.value * math.pi) * 3.0;
+              final bobbingOffset =
+                  math.sin(_hoverController.value * math.pi) * 3.0;
 
               return Transform.translate(
                 offset: Offset(0, bobbingOffset),
@@ -57,7 +60,10 @@ class _DroneCompanionMarkerState extends State<DroneCompanionMarker>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: const Color(0xFF0F1115),
-                    border: Border.all(color: const Color(0xFF38BDF8), width: 1.8),
+                    border: Border.all(
+                      color: const Color(0xFF38BDF8),
+                      width: 1.8,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFF38BDF8).withValues(alpha: 0.5),

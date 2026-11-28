@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../gameplay/guardian_challenge_service.dart';
 
 /// Floating HUD chip displaying real-time lead or lag distance against the Sector Guardian ghost boss.
@@ -37,8 +38,12 @@ class _SectorGuardianChipState extends State<SectorGuardianChip> {
     final guardian = _service.activeGuardian!;
     final isLeading = _service.isUserLeading;
     final deltaMeters = _service.userLeadDistanceMeters.abs().round();
-    final deltaText = isLeading ? '+$deltaMeters m Lead' : '-$deltaMeters m Trailing';
-    final themeColor = isLeading ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+    final deltaText = isLeading
+        ? '+$deltaMeters m Lead'
+        : '-$deltaMeters m Trailing';
+    final themeColor = isLeading
+        ? const Color(0xFF10B981)
+        : const Color(0xFFEF4444);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),

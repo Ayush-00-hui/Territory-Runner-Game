@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/tactical_perk.dart';
 import '../../../services/tactical_loadout_service.dart';
 
@@ -33,7 +34,10 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1115),
         borderRadius: BorderRadius.circular(24.0),
-        border: Border.all(color: const Color(0xFFA3C586).withValues(alpha: 0.8), width: 1.8),
+        border: Border.all(
+          color: const Color(0xFFA3C586).withValues(alpha: 0.8),
+          width: 1.8,
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFA3C586).withValues(alpha: 0.25),
@@ -57,7 +61,11 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
                       color: const Color(0xFFA3C586).withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.tune_rounded, color: Color(0xFFA3C586), size: 22.0),
+                    child: const Icon(
+                      Icons.tune_rounded,
+                      color: Color(0xFFA3C586),
+                      size: 22.0,
+                    ),
                   ),
                   const SizedBox(width: 12.0),
                   const Text(
@@ -72,7 +80,10 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 4.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10.0,
+                  vertical: 4.0,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1E242C),
                   borderRadius: BorderRadius.circular(8.0),
@@ -96,7 +107,9 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
           const SizedBox(height: 16.0),
           ...perks.map((perk) {
             final isEquipped = perk.isEquipped;
-            final cardColor = isEquipped ? const Color(0xFFA3C586) : const Color(0xFF475569);
+            final cardColor = isEquipped
+                ? const Color(0xFFA3C586)
+                : const Color(0xFF475569);
 
             return Container(
               margin: const EdgeInsets.only(bottom: 10.0),
@@ -109,7 +122,10 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
                 ),
               ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 4.0,
+                ),
                 leading: Icon(
                   _getPerkIcon(perk.type),
                   color: cardColor,
@@ -125,7 +141,10 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
                 ),
                 subtitle: Text(
                   perk.description,
-                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12.0),
+                  style: const TextStyle(
+                    color: Color(0xFF94A3B8),
+                    fontSize: 12.0,
+                  ),
                 ),
                 trailing: Switch(
                   value: isEquipped,
@@ -154,7 +173,10 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
               ),
               child: const Text(
                 'CONFIRM LOADOUT',
-                style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
           ),

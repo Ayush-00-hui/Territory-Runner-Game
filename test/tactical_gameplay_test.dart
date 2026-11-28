@@ -26,8 +26,14 @@ void main() {
       expect(pred.sprintVelocityTargetMps, greaterThan(3.5));
       expect(pred.incursionMaxDurationSeconds, inInclusiveRange(30, 90));
       expect(pred.optimalCrateDetourMeters, inInclusiveRange(120.0, 450.0));
-      expect(pred.guardianP10Multiplier, lessThanOrEqualTo(pred.guardianP50Multiplier));
-      expect(pred.guardianP50Multiplier, lessThanOrEqualTo(pred.guardianP90Multiplier));
+      expect(
+        pred.guardianP10Multiplier,
+        lessThanOrEqualTo(pred.guardianP50Multiplier),
+      );
+      expect(
+        pred.guardianP50Multiplier,
+        lessThanOrEqualTo(pred.guardianP90Multiplier),
+      );
     });
   });
 
@@ -108,7 +114,11 @@ void main() {
         LatLng(cLat - 0.005, cLng + 0.005),
       ];
 
-      final captured = service.checkPolygonEnclosure(polygon, 'SpeedDemon', 'Apex Vanguard');
+      final captured = service.checkPolygonEnclosure(
+        polygon,
+        'SpeedDemon',
+        'Apex Vanguard',
+      );
       expect(captured, isNotNull);
       expect(captured!.controllingFaction, 'Apex Vanguard');
       expect(captured.rulerAthleteName, 'SpeedDemon');

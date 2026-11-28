@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/sprint_incursion.dart';
 import '../../gameplay/incursion_service.dart';
 
@@ -51,7 +52,9 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
     return AnimatedBuilder(
       animation: _strobeController,
       builder: (context, child) {
-        final glowAlpha = isRepelled ? 0.3 : (0.2 + 0.3 * _strobeController.value);
+        final glowAlpha = isRepelled
+            ? 0.3
+            : (0.2 + 0.3 * _strobeController.value);
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -99,8 +102,8 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
                           isRepelled
                               ? 'INCURSION REPELLED! (+${inc.rewardXp} XP)'
                               : isFailed
-                                  ? 'PERIMETER COMPROMISED'
-                                  : 'BORDER BREACH: ${inc.rivalFactionName.toUpperCase()}',
+                              ? 'PERIMETER COMPROMISED'
+                              : 'BORDER BREACH: ${inc.rivalFactionName.toUpperCase()}',
                           style: TextStyle(
                             color: primaryColor,
                             fontWeight: FontWeight.w800,
@@ -124,7 +127,10 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
                   ),
                   if (inc.isActive)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 6.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10.0,
+                        vertical: 6.0,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E242C),
                         borderRadius: BorderRadius.circular(8.0),

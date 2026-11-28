@@ -155,7 +155,11 @@ class _MapScreenState extends State<MapScreen>
 
     controller.onLoopCaptured = (loop, netArea, xp) {
       if (!mounted) return;
-      CitadelService().checkPolygonEnclosure(loop.polygon, 'Athlete', 'Apex Vanguard');
+      CitadelService().checkPolygonEnclosure(
+        loop.polygon,
+        'Athlete',
+        'Apex Vanguard',
+      );
       ArcadeAudioService().playLoopVictoryChime();
       DroneCompanionService().onLoopClosed();
       LoopCelebrationOverlay.show(
@@ -262,9 +266,15 @@ class _MapScreenState extends State<MapScreen>
       FogOfWarService().revealFogAt(target);
       LootCrateService().updateRunnerLocation(target, pos.speed, 5.0);
       IncursionService().updateRunnerSpeed(pos.speed);
-      GuardianChallengeService().updateAthleteProgress(controller.runDistanceKm * 1000.0, target);
+      GuardianChallengeService().updateAthleteProgress(
+        controller.runDistanceKm * 1000.0,
+        target,
+      );
       if (controller.isRunActive && LootCrateService().activeCrates.isEmpty) {
-        LootCrateService().spawnProceduralCrate(runnerPos: target, headingDeg: pos.heading);
+        LootCrateService().spawnProceduralCrate(
+          runnerPos: target,
+          headingDeg: pos.heading,
+        );
       }
       CitadelService().seedCitadelsNear(target);
     });

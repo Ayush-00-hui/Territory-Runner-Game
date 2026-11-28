@@ -680,7 +680,9 @@ class MapRunController extends ChangeNotifier with MapRivalSimulationMixin {
               _distanceToClosureMeters = candidate.distanceMeters;
               _proximityToClosure = candidate.proximity;
               _nearestClosurePoint = candidate.candidatePoint;
-              ArcadeAudioService().playLoopProximityCue(candidate.distanceMeters);
+              ArcadeAudioService().playLoopProximityCue(
+                candidate.distanceMeters,
+              );
               if (candidate.proximity >= 0.80 && !_closureCueSpokenThisLoop) {
                 _closureCueSpokenThisLoop = true;
                 unawaited(

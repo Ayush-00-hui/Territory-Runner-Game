@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
+
 import '../core/logging/app_logger.dart';
 import '../models/tactical_perk.dart';
 import '../features/gameplay/loot_crate_service.dart';
 
 /// Service managing athlete pre-run tactical perk loadouts.
 class TacticalLoadoutService extends ChangeNotifier {
-  static final TacticalLoadoutService _instance = TacticalLoadoutService._internal();
+  static final TacticalLoadoutService _instance =
+      TacticalLoadoutService._internal();
   factory TacticalLoadoutService() => _instance;
   TacticalLoadoutService._internal() {
     _availablePerks = TacticalPerk.defaultPerks();
@@ -26,7 +28,10 @@ class TacticalLoadoutService extends ChangeNotifier {
       return true;
     } else {
       if (equippedPerks.length >= 2) {
-        AppLogger.warning('Cannot equip more than 2 tactical perks simultaneously.', tag: 'TacticalLoadoutService');
+        AppLogger.warning(
+          'Cannot equip more than 2 tactical perks simultaneously.',
+          tag: 'TacticalLoadoutService',
+        );
         return false;
       }
       perk.isEquipped = true;
@@ -38,7 +43,10 @@ class TacticalLoadoutService extends ChangeNotifier {
   /// Activates equipped perks at the start of a run session
   void activateLoadoutForRun() {
     for (final perk in equippedPerks) {
-      AppLogger.info('Activating Tactical Perk: ${perk.title}', tag: 'TacticalLoadoutService');
+      AppLogger.info(
+        'Activating Tactical Perk: ${perk.title}',
+        tag: 'TacticalLoadoutService',
+      );
       if (perk.type == TacticalPerkType.trailMagnet) {
         LootCrateService().hasTrailMagnet = true;
       }

@@ -44,7 +44,8 @@ class TacticalPerk {
     TacticalPerk(
       type: TacticalPerkType.overdrive,
       title: 'Cadence Overdrive',
-      description: 'Awards 1.5x territory area points whenever cadence exceeds 165 SPM.',
+      description:
+          'Awards 1.5x territory area points whenever cadence exceeds 165 SPM.',
       durationMinutes: 45,
     ),
     TacticalPerk(

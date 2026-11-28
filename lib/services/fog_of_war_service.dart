@@ -1,7 +1,9 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../core/logging/app_logger.dart';
 
 /// Persistent service managing city Fog of War, tracking visited coordinate cells,
@@ -19,13 +21,15 @@ class FogOfWarService extends ChangeNotifier {
   final List<LatLng> _recentExploredPoints = [];
 
   Set<String> get visitedCells => Set.unmodifiable(_visitedCells);
-  List<LatLng> get recentExploredPoints => List.unmodifiable(_recentExploredPoints);
+  List<LatLng> get recentExploredPoints =>
+      List.unmodifiable(_recentExploredPoints);
 
   /// Approximate explored land area in square kilometers (each 50m cell ≈ 0.0025 km²)
   double get totalExploredAreaSqKm => (_visitedCells.length * 0.0025);
 
   /// Exploration percentage of the active metropolitan region (based on a nominal 50 km² urban footprint)
-  double get urbanExplorationPercentage => ((totalExploredAreaSqKm / 50.0) * 100.0).clamp(0.1, 100.0);
+  double get urbanExplorationPercentage =>
+      ((totalExploredAreaSqKm / 50.0) * 100.0).clamp(0.1, 100.0);
 
   /// Loads saved explored cells from persistent storage
   Future<void> init() async {
@@ -35,10 +39,16 @@ class FogOfWarService extends ChangeNotifier {
       if (savedJson != null) {
         final List<dynamic> list = jsonDecode(savedJson);
         _visitedCells.addAll(list.map((e) => e.toString()));
-        AppLogger.info('Loaded ${_visitedCells.length} explored Fog of War cells from disk.', tag: 'FogOfWarService');
+        AppLogger.info(
+          'Loaded ${_visitedCells.length} explored Fog of War cells from disk.',
+          tag: 'FogOfWarService',
+        );
       }
     } catch (e) {
-      AppLogger.warning('Failed to load Fog of War cache: $e', tag: 'FogOfWarService');
+      AppLogger.warning(
+        'Failed to load Fog of War cache: $e',
+        tag: 'FogOfWarService',
+      );
     }
   }
 
@@ -74,7 +84,10 @@ class FogOfWarService extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_prefKey, jsonEncode(_visitedCells.toList()));
     } catch (e) {
-      AppLogger.warning('Failed to persist Fog of War cells: $e', tag: 'FogOfWarService');
+      AppLogger.warning(
+        'Failed to persist Fog of War cells: $e',
+        tag: 'FogOfWarService',
+      );
     }
   }
 }

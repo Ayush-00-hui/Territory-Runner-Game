@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+
 import '../../core/logging/app_logger.dart';
 import '../../models/loot_crate.dart';
 import '../../services/arcade_audio_service.dart';
@@ -54,13 +56,19 @@ class LootCrateService extends ChangeNotifier {
   }) {
     // Offset slightly left or right of running corridor (15-30 degrees)
     final random = math.Random();
-    final angleJitter = (random.nextBool() ? 1 : -1) * (15.0 + random.nextDouble() * 25.0);
+    final angleJitter =
+        (random.nextBool() ? 1 : -1) * (15.0 + random.nextDouble() * 25.0);
     final spawnBearing = (headingDeg + angleJitter) % 360.0;
 
     // Project coordinate
-    final cratePos = _distanceCalc.offset(runnerPos, distanceMeters, spawnBearing);
+    final cratePos = _distanceCalc.offset(
+      runnerPos,
+      distanceMeters,
+      spawnBearing,
+    );
 
-    final type = specificType ??
+    final type =
+        specificType ??
         LootCrateType.values[random.nextInt(LootCrateType.values.length)];
 
     final crate = LootCrate(
@@ -83,7 +91,11 @@ class LootCrateService extends ChangeNotifier {
   }
 
   /// Evaluates runner proximity against active crates on each GPS update
-  void updateRunnerLocation(LatLng currentPos, double speedMps, double stepDistanceMeters) {
+  void updateRunnerLocation(
+    LatLng currentPos,
+    double speedMps,
+    double stepDistanceMeters,
+  ) {
     if (_activeCrates.isEmpty && !_isOverchargeActive) return;
 
     // Update active overcharge buff distance
@@ -92,7 +104,10 @@ class LootCrateService extends ChangeNotifier {
       if (_overchargeRemainingMeters <= 0) {
         _isOverchargeActive = false;
         _overchargeRemainingMeters = 0.0;
-        AppLogger.info('Overcharge Beacon buff expired.', tag: 'LootCrateService');
+        AppLogger.info(
+          'Overcharge Beacon buff expired.',
+          tag: 'LootCrateService',
+        );
       }
       notifyListeners();
     }
@@ -106,7 +121,11 @@ class LootCrateService extends ChangeNotifier {
         continue;
       }
 
-      final dist = _distanceCalc.as(LengthUnit.Meter, currentPos, crate.position);
+      final dist = _distanceCalc.as(
+        LengthUnit.Meter,
+        currentPos,
+        crate.position,
+      );
       if (dist <= pickupRadius) {
         // Collect Crate!
         crate.isCollected = true;
@@ -115,7 +134,10 @@ class LootCrateService extends ChangeNotifier {
         _applyCrateReward(crate);
         _crateCollectedStream.add(crate);
         ArcadeAudioService().playCrateCollectedSound();
-        AppLogger.info('Collected ${crate.title} within ${dist.toStringAsFixed(1)}m!', tag: 'LootCrateService');
+        AppLogger.info(
+          'Collected ${crate.title} within ${dist.toStringAsFixed(1)}m!',
+          tag: 'LootCrateService',
+        );
       }
     }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../models/loot_crate.dart';
 
 /// Modal bottom sheet celebrating collection of a tactical loot crate.
@@ -42,7 +43,10 @@ class LootCollectedSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF0F1115),
         borderRadius: BorderRadius.circular(24.0),
-        border: Border.all(color: themeColor.withValues(alpha: 0.8), width: 1.8),
+        border: Border.all(
+          color: themeColor.withValues(alpha: 0.8),
+          width: 1.8,
+        ),
         boxShadow: [
           BoxShadow(
             color: themeColor.withValues(alpha: 0.35),
@@ -86,14 +90,14 @@ class LootCollectedSheet extends StatelessWidget {
           Text(
             crate.description,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFF94A3B8),
-              fontSize: 14.0,
-            ),
+            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14.0),
           ),
           const SizedBox(height: 20.0),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 10.0,
+            ),
             decoration: BoxDecoration(
               color: const Color(0xFF1E242C),
               borderRadius: BorderRadius.circular(12.0),
@@ -101,7 +105,11 @@ class LootCollectedSheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 18.0),
+                const Icon(
+                  Icons.star_rounded,
+                  color: Color(0xFFFBBF24),
+                  size: 18.0,
+                ),
                 const SizedBox(width: 8.0),
                 Text(
                   '+${crate.bonusXp} Faction XP Added',
@@ -129,7 +137,10 @@ class LootCollectedSheet extends StatelessWidget {
               ),
               child: const Text(
                 'CONTINUE RUN',
-                style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.8),
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
               ),
             ),
           ),

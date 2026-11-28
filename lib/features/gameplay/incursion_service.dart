@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
+
 import '../../core/logging/app_logger.dart';
 import '../../models/sprint_incursion.dart';
 import '../../services/arcade_audio_service.dart';
@@ -18,13 +20,15 @@ class IncursionService extends ChangeNotifier {
   int _totalEarnedXp = 0;
 
   SprintIncursion? get currentIncursion => _currentIncursion;
-  bool get hasActiveIncursion => _currentIncursion != null && _currentIncursion!.isActive;
+  bool get hasActiveIncursion =>
+      _currentIncursion != null && _currentIncursion!.isActive;
   int get repelledIncursionsCount => _repelledIncursionsCount;
   int get totalEarnedXp => _totalEarnedXp;
 
   final StreamController<SprintIncursion> _incursionStateStream =
       StreamController<SprintIncursion>.broadcast();
-  Stream<SprintIncursion> get onIncursionStateChanged => _incursionStateStream.stream;
+  Stream<SprintIncursion> get onIncursionStateChanged =>
+      _incursionStateStream.stream;
 
   void reset() {
     _countdownTimer?.cancel();
@@ -45,7 +49,8 @@ class IncursionService extends ChangeNotifier {
     if (hasActiveIncursion) return;
 
     final factions = ['Obsidian Syndicate', 'Apex Vanguard', 'Terra Wardens'];
-    final faction = rivalFaction ?? factions[math.Random().nextInt(factions.length)];
+    final faction =
+        rivalFaction ?? factions[math.Random().nextInt(factions.length)];
     // Default target: ~4:45/km (3.51 m/s) or adaptive
     final targetSpeed = customTargetSpeedMps ?? 3.5;
 
@@ -59,7 +64,10 @@ class IncursionService extends ChangeNotifier {
     );
 
     ArcadeAudioService().playIncursionAlarm();
-    AppLogger.info('Sprint Incursion TRIGGERED! Repel $faction for ${durationSeconds}s at $targetSpeed m/s', tag: 'IncursionService');
+    AppLogger.info(
+      'Sprint Incursion TRIGGERED! Repel $faction for ${durationSeconds}s at $targetSpeed m/s',
+      tag: 'IncursionService',
+    );
 
     _startIncursionTimer();
     _incursionStateStream.add(_currentIncursion!);
@@ -100,10 +108,16 @@ class IncursionService extends ChangeNotifier {
       _repelledIncursionsCount++;
       _totalEarnedXp += _currentIncursion!.rewardXp;
       ArcadeAudioService().playLoopVictoryChime();
-      AppLogger.info('Incursion REPELLED successfully! +${_currentIncursion!.rewardXp} XP', tag: 'IncursionService');
+      AppLogger.info(
+        'Incursion REPELLED successfully! +${_currentIncursion!.rewardXp} XP',
+        tag: 'IncursionService',
+      );
     } else {
       _currentIncursion!.status = IncursionStatus.failed;
-      AppLogger.info('Incursion FAILED: pace fell below target speed threshold.', tag: 'IncursionService');
+      AppLogger.info(
+        'Incursion FAILED: pace fell below target speed threshold.',
+        tag: 'IncursionService',
+      );
     }
 
     _incursionStateStream.add(_currentIncursion!);
