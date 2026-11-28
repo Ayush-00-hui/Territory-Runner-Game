@@ -1,0 +1,48 @@
+{
+  "model_name": "LocomotionTemporalNet",
+  "version": "1.0.0",
+  "trained_device": "NVIDIA GeForce RTX 5070 Laptop GPU",
+  "cuda_version": "12.8",
+  "window_size": 32,
+  "num_features": 8,
+  "feature_names": [
+    "speed_mps",
+    "accel_mps2",
+    "bearing_rate_rads",
+    "cadence_spm",
+    "vert_osc_cm",
+    "gnss_acc_m",
+    "jerk_mps3",
+    "pitch_deg"
+  ],
+  "classes": [
+    "HUMAN_RUNNING",
+    "HUMAN_WALKING",
+    "VEHICLE_TRANSIT",
+    "E_SCOOTER_GLIDE",
+    "MOCK_JOYSTICK"
+  ],
+  "test_accuracy": 100.0,
+  "norm_mean": [
+    6.138243675231934,
+    0.0158535223454237,
+    0.0314270481467247,
+    59.161441802978516,
+    2.55197811126709,
+    4.352810382843018,
+    -0.4025565981864929,
+    -0.0010471746791154146
+  ],
+  "norm_std": [
+    4.980229377746582,
+    1.8374779224395752,
+    0.20546405017375946,
+    70.40886688232422,
+    3.178765058517456,
+    1.3681520223617554,
+    16.946495056152344,
+    1.2448561191558838
+  ],
+  "weights_sha256": "fde06bcaef5b6c248914346e7d6a064668e353c78e375bd8c0f699e4d19f24ce",
+  "exported_at": "2026-11-28T16:08:43Z"
+}
