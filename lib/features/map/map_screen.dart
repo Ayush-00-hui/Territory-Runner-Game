@@ -44,12 +44,15 @@ import 'widgets/map_top_bar.dart';
 import 'widgets/map_viewport.dart';
 import 'widgets/pacer_sheet.dart';
 import 'widgets/run_countdown_overlay.dart';
+import 'widgets/run_flyover_sheet.dart';
 import 'widgets/run_go_cue.dart';
 import 'widgets/run_goal_sheet.dart';
 import 'widgets/run_recovery_dialog.dart';
 import 'widgets/saved_loops_sheet.dart';
 import 'widgets/sos_beacon_sheet.dart';
 import 'widgets/summary_sheet.dart';
+import 'widgets/sweat_lock_overlay.dart';
+import 'widgets/territory_bloom_overlay.dart';
 import '../profile/widgets/body_details_sheet.dart';
 import '../profile/widgets/offline_maps_sheet.dart';
 import '../social/widgets/social_hub_sheet.dart';
@@ -121,6 +124,8 @@ class _MapScreenState extends State<MapScreen>
   DateTime? _lastBBoxFetchAt;
   LatLng? _lastBBoxCenter;
   bool _showGoCue = false;
+  TerritoryCaptureCelebration? _activeCelebration;
+  bool _isSweatLockActive = false;
 
   MapRunController _resolveController() {
     try {
@@ -159,6 +164,13 @@ class _MapScreenState extends State<MapScreen>
       CitadelService().checkPolygonEnclosure(loop.polygon, 'Athlete', 'Apex');
       ArcadeAudioService().playLoopVictoryChime();
       DroneCompanionService().onLoopClosed();
+      setState(() {
+        _activeCelebration = TerritoryCaptureCelebration(
+          xpEarned: xp,
+          netAreaSqM: netArea,
+          timestamp: DateTime.now().toIso8601String(),
+        );
+      });
       LoopCelebrationOverlay.show(
         context,
         areaSqMeters: netArea,
@@ -672,6 +684,17 @@ class _MapScreenState extends State<MapScreen>
         );
       },
       onOpenSocialHub: () => showSocialHubSheet(context),
+      onActivateSweatLock: () {
+        setState(() => _isSweatLockActive = true);
+      },
+      onOpenRouteFlyover: () {
+        RunFlyoverSheet.show(
+          context: context,
+          coordinates: controller.runCoordinates,
+          distanceKm: controller.runDistanceKm,
+          durationSeconds: controller.elapsedDurationSeconds,
+        );
+      },
       activePacerLabel: controller.activePaceTarget != null
           ? '${controller.activePaceTarget!.targetSecondsPerKm ~/ 60}:${(controller.activePaceTarget!.targetSecondsPerKm % 60).toString().padLeft(2, '0')}/km'
           : null,
@@ -980,6 +1003,28 @@ class _MapScreenState extends State<MapScreen>
                   );
                 },
               ),
+
+              // 8. Territory Bloom & Shockwave Capture Overlay
+              if (_activeCelebration != null)
+                Positioned.fill(
+                  child: TerritoryBloomOverlay(
+                    celebration: _activeCelebration,
+                    onDismissed: () {
+                      if (mounted) setState(() => _activeCelebration = null);
+                    },
+                  ),
+                ),
+
+              // 9. Minimalist OLED Sweat Lock Overlay
+              if (_isSweatLockActive)
+                Positioned.fill(
+                  child: SweatLockOverlay(
+                    controller: controller,
+                    onUnlock: () {
+                      if (mounted) setState(() => _isSweatLockActive = false);
+                    },
+                  ),
+                ),
             ],
           ),
         ),

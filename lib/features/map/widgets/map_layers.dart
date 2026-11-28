@@ -12,6 +12,7 @@ import '../../../ui/theme/app_palette.dart';
 import '../../../services/tile_cache_service.dart';
 import '../../gameplay/polygon_enclosure_engine.dart';
 import 'ghost_runner_marker.dart';
+import 'kinetic_comet_puck.dart';
 
 /// Performance-optimized Map Layers component wrapped in a RepaintBoundary.
 class MapLayers {
@@ -398,6 +399,8 @@ class MapLayers {
     required Map<String, RunnerPresenceEvent> activeRivalRunners,
     LatLng? ghostLocation,
     LatLng? closureSnapPoint,
+    double currentSpeedKmh = 0.0,
+    double? headingDegrees,
     bool isBatterySaverActive = false,
     bool isReducedMotion = false,
     AppPalette palette = AppPalette.dark,
@@ -451,33 +454,18 @@ class MapLayers {
       );
     }
 
-    // User Position Marker: Crisp geometric circle with center notch, NO pulsing rings, NO glow
+    // User Position Marker: Kinetic Comet Puck
     if (currentLocation != null) {
       markers.add(
         Marker(
           point: currentLocation,
-          width: 28,
-          height: 28,
-          child: Center(
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: palette.accent,
-                border: Border.all(color: palette.bgDeep, width: 2.5),
-              ),
-              child: Center(
-                child: Container(
-                  width: 5,
-                  height: 5,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: palette.onAccent,
-                  ),
-                ),
-              ),
-            ),
+          width: 38,
+          height: 38,
+          child: KineticCometPuck(
+            currentSpeedKmh: currentSpeedKmh,
+            headingDegrees: headingDegrees,
+            isBatterySaverActive: isBatterySaverActive,
+            isReducedMotion: isReducedMotion,
           ),
         ),
       );

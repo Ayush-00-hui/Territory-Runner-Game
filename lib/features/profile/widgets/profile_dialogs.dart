@@ -9,6 +9,7 @@ import '../../gameplay/territory_service.dart';
 import '../../../models/runner_profile.dart';
 import '../../../services/api_client.dart';
 import '../../../ui/ui.dart';
+import 'gyroscopic_badge_card.dart';
 
 void showEditCallsignDialog(
   BuildContext context,
@@ -595,69 +596,51 @@ void showBadgeDetailModal(
       title: 'Achievement',
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  unlocked
-                      ? Icons.emoji_events_rounded
-                      : Icons.lock_outline_rounded,
-                  color: badgeColor,
-                  size: 26,
-                ),
+          Center(
+            child: GyroscopicBadgeCard(
+              title: title,
+              subtitle: subtitle,
+              icon: unlocked
+                  ? Icons.emoji_events_rounded
+                  : Icons.lock_outline_rounded,
+              accentColor: badgeColor,
+              tierLabel: unlocked ? 'Unlocked' : 'Locked',
+            ),
+          ),
+          const SizedBox(height: AppSpacing.s16),
+          Text(
+            title,
+            style: AppText.headlineMedium.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 3,
+            ),
+            decoration: BoxDecoration(
+              color: unlocked
+                  ? AppColors.gold.withValues(alpha: 0.16)
+                  : AppColors.surface2,
+              borderRadius: AppSpacing.br8,
+              border: Border.all(
+                color: unlocked
+                    ? AppColors.gold.withValues(alpha: 0.3)
+                    : AppColors.border,
               ),
-              const SizedBox(width: AppSpacing.s14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: AppText.headlineMedium.copyWith(
-                        color: AppColors.textPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: unlocked
-                            ? AppColors.gold.withValues(alpha: 0.16)
-                            : AppColors.surface2,
-                        borderRadius: AppSpacing.br8,
-                        border: Border.all(
-                          color: unlocked
-                              ? AppColors.gold.withValues(alpha: 0.3)
-                              : AppColors.border,
-                        ),
-                      ),
-                      child: Text(
-                        unlocked ? 'Unlocked' : 'Locked',
-                        style: AppText.labelSmall.copyWith(
-                          color: unlocked
-                              ? AppColors.gold
-                              : AppColors.textMuted,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+            ),
+            child: Text(
+              unlocked ? 'Unlocked' : 'Locked',
+              style: AppText.labelSmall.copyWith(
+                color: unlocked ? AppColors.gold : AppColors.textMuted,
+                fontWeight: FontWeight.w700,
               ),
-            ],
+            ),
           ),
           const SizedBox(height: AppSpacing.s16),
           Container(

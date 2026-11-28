@@ -24,6 +24,8 @@ class MapToolsSheet extends StatelessWidget {
   final VoidCallback? onOpenIntervalWorkouts;
   final VoidCallback? onOpenSavedLoops;
   final VoidCallback? onOpenSocialHub;
+  final VoidCallback? onActivateSweatLock;
+  final VoidCallback? onOpenRouteFlyover;
   final String? activePacerLabel;
   final String? activeGoalLabel;
   final String? activeGhostLabel;
@@ -43,6 +45,8 @@ class MapToolsSheet extends StatelessWidget {
     this.onOpenIntervalWorkouts,
     this.onOpenSavedLoops,
     this.onOpenSocialHub,
+    this.onActivateSweatLock,
+    this.onOpenRouteFlyover,
     this.activePacerLabel,
     this.activeGoalLabel,
     this.activeGhostLabel,
@@ -63,6 +67,8 @@ class MapToolsSheet extends StatelessWidget {
     VoidCallback? onOpenIntervalWorkouts,
     VoidCallback? onOpenSavedLoops,
     VoidCallback? onOpenSocialHub,
+    VoidCallback? onActivateSweatLock,
+    VoidCallback? onOpenRouteFlyover,
     String? activePacerLabel,
     String? activeGoalLabel,
     String? activeGhostLabel,
@@ -119,6 +125,18 @@ class MapToolsSheet extends StatelessWidget {
             ? () {
                 Navigator.pop(ctx);
                 onOpenSocialHub();
+              }
+            : null,
+        onActivateSweatLock: onActivateSweatLock != null
+            ? () {
+                Navigator.pop(ctx);
+                onActivateSweatLock();
+              }
+            : null,
+        onOpenRouteFlyover: onOpenRouteFlyover != null
+            ? () {
+                Navigator.pop(ctx);
+                onOpenRouteFlyover();
               }
             : null,
         activePacerLabel: activePacerLabel,
@@ -269,6 +287,29 @@ class MapToolsSheet extends StatelessWidget {
                 },
               ),
               const SizedBox(height: AppSpacing.s8),
+
+              if (onActivateSweatLock != null) ...[
+                _ToolTile(
+                  icon: Icons.lock_outline_rounded,
+                  title: 'Sweat lock (pocket guard)',
+                  subtitle: 'Lock display in high-contrast mode against accidental taps',
+                  accentColor: AppColors.accent,
+                  onTap: onActivateSweatLock!,
+                ),
+                const SizedBox(height: AppSpacing.s8),
+              ],
+
+              if (onOpenRouteFlyover != null) ...[
+                _ToolTile(
+                  icon: Icons.flight_takeoff_rounded,
+                  title: 'Route flyover replay',
+                  subtitle:
+                      'Cinematic animated playback of your recorded route',
+                  accentColor: AppColors.accent,
+                  onTap: onOpenRouteFlyover!,
+                ),
+                const SizedBox(height: AppSpacing.s8),
+              ],
 
               // 9. Emergency SOS Trigger
               _ToolTile(

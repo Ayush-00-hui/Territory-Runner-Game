@@ -163,6 +163,7 @@ class _MapViewportState extends State<MapViewport> {
                           MapLayers.buildMarkerLayer(
                             currentLocation:
                                 loc ?? widget.controller.currentLocation,
+                            currentSpeedKmh: widget.controller.currentSpeedKmh,
                             activeRivalRunners: prefs.showRivalsLayer
                                 ? widget.controller.activeRivalRunners
                                 : const {},

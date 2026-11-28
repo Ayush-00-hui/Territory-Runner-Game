@@ -1,0 +1,19 @@
+{
+  "model_name": "LoopClosureIntentClassifier",
+  "version": "1.0.0",
+  "accuracy": 1.0,
+  "roc_auc": 1.0,
+  "feature_names": [
+    "dist_to_origin_m",
+    "total_path_m",
+    "closure_ratio",
+    "heading_divergence_deg",
+    "curvature_deg_per_m",
+    "aspect_ratio",
+    "speed_kmh",
+    "closing_rate_mps"
+  ],
+  "n_estimators": 20,
+  "learning_rate": 0.15,
+  "init_value": 0.0
+}
