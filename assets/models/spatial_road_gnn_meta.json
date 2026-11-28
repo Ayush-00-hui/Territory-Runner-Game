@@ -1,0 +1,13 @@
+{
+  "model_name": "SpatialRoadGNN",
+  "version": "1.0.0",
+  "trained_device": "NVIDIA GeForce RTX 5070 Laptop GPU",
+  "cuda_version": "12.8",
+  "node_features": 8,
+  "edge_features": 4,
+  "hidden_dim": 64,
+  "val_dss_mse": 0.008812271058559418,
+  "val_safety_mse": 0.024278905242681503,
+  "weights_sha256": "bb0c316e8032269e7c685df2c05a0f843bdfc8467a2de6baf6a7f42d45017c6c",
+  "exported_at": "2026-11-28T16:26:31Z"
+}

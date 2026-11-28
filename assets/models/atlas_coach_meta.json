@@ -1,0 +1,54 @@
+{
+  "model_name": "AtlasCoachNet",
+  "version": "1.0.0",
+  "trained_device": "NVIDIA GeForce RTX 5070 Laptop GPU",
+  "cuda_version": "12.8",
+  "num_features": 10,
+  "feature_names": [
+    "pace",
+    "cadence",
+    "cadence_delta",
+    "intensity",
+    "grad_pct",
+    "duration_min",
+    "dist_km",
+    "stamina",
+    "in_hostile",
+    "dist_to_closure"
+  ],
+  "intents": [
+    "PACE_CADENCE_CORRECTION",
+    "LOOP_CLOSURE_FINAL_SPRINT",
+    "HOSTILE_TERRITORY_ALERT",
+    "FATIGUE_PREVENTION_RECOVERY",
+    "HYDRATION_CADENCE_RHYTHM",
+    "CELEBRATION_MILESTONE"
+  ],
+  "validation_accuracy": 76.29166666666667,
+  "x_mean": [
+    5.514265537261963,
+    164.07005310058594,
+    -6.351773262023926,
+    0.7560368776321411,
+    2.3849594593048096,
+    39.73173141479492,
+    8.77853012084961,
+    49.058685302734375,
+    0.5814999938011169,
+    1046.672607421875
+  ],
+  "x_std": [
+    1.155430555343628,
+    14.278043746948242,
+    8.18065071105957,
+    0.1392945498228073,
+    3.3688342571258545,
+    19.72248649597168,
+    4.315910816192627,
+    25.598140716552734,
+    0.49329859018325806,
+    713.4083251953125
+  ],
+  "weights_sha256": "acab8461c96d6b62e57172ad9392dceaed1452a807d6da5e911c6124f9ee728b",
+  "exported_at": "2026-11-28T16:28:50Z"
+}
