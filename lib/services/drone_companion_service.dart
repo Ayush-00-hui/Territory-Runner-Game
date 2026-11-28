@@ -76,7 +76,7 @@ class DroneCompanionService extends ChangeNotifier {
   /// Triggered when a tactical crate is spotted
   void onCrateSpotted(String crateTitle) {
     deliverDroneCue(
-      '$crateTitle detected on radar! Intercept ahead for tactical advantage!',
+      '$crateTitle detected on radar! Intercept ahead for sprint advantage!',
     );
   }
 

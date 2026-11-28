@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../services/drone_companion_service.dart';
+import '../../../ui/ui.dart';
 
 /// Interactive map layer rendering the animated orbiting AI Tactical Drone ('Aero').
 class DroneCompanionMarker extends StatefulWidget {
@@ -59,14 +60,11 @@ class _DroneCompanionMarkerState extends State<DroneCompanionMarker>
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF0F1115),
-                    border: Border.all(
-                      color: const Color(0xFF38BDF8),
-                      width: 1.8,
-                    ),
+                    color: AppColors.surface,
+                    border: Border.all(color: AppColors.accent, width: 1.8),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF38BDF8).withValues(alpha: 0.5),
+                        color: AppColors.accent.withValues(alpha: 0.5),
                         blurRadius: 10.0,
                         spreadRadius: 1.5,
                       ),
@@ -75,7 +73,7 @@ class _DroneCompanionMarkerState extends State<DroneCompanionMarker>
                   child: const Center(
                     child: Icon(
                       Icons.flight_takeoff_rounded,
-                      color: Color(0xFF38BDF8),
+                      color: AppColors.accent,
                       size: 18.0,
                     ),
                   ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 
 import '../../../services/citadel_service.dart';
+import '../../../ui/ui.dart';
 import 'citadel_detail_sheet.dart';
 
 /// Interactive map layer rendering Landmark Citadels / King of the Hill strongholds.
@@ -38,10 +39,8 @@ class _CitadelLayerState extends State<CitadelLayer> {
 
     return MarkerLayer(
       markers: citadels.map((citadel) {
-        final isVanguard = citadel.controllingFaction.contains('Vanguard');
-        final factionColor = isVanguard
-            ? const Color(0xFFA3C586) // Calm Moss / Vanguard
-            : const Color(0xFF9333EA); // Obsidian Syndicate
+        final isApex = citadel.controllingFaction.contains('Apex');
+        final factionColor = isApex ? AppColors.accent : AppColors.gold;
 
         return Marker(
           point: citadel.position,
@@ -55,7 +54,7 @@ class _CitadelLayerState extends State<CitadelLayer> {
                 Container(
                   padding: const EdgeInsets.all(7.0),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0D0F11).withValues(alpha: 0.94),
+                    color: AppColors.bgDeep.withValues(alpha: 0.94),
                     shape: BoxShape.circle,
                     border: Border.all(color: factionColor, width: 2.2),
                     boxShadow: [
@@ -68,7 +67,7 @@ class _CitadelLayerState extends State<CitadelLayer> {
                   ),
                   child: const Icon(
                     Icons.fort_rounded,
-                    color: Color(0xFFF8FAFC),
+                    color: AppColors.textPrimary,
                     size: 22.0,
                   ),
                 ),
@@ -79,7 +78,7 @@ class _CitadelLayerState extends State<CitadelLayer> {
                     vertical: 2.0,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0D0F11).withValues(alpha: 0.88),
+                    color: AppColors.bgDeep.withValues(alpha: 0.88),
                     borderRadius: BorderRadius.circular(6.0),
                     border: Border.all(
                       color: factionColor.withValues(alpha: 0.6),
@@ -90,9 +89,8 @@ class _CitadelLayerState extends State<CitadelLayer> {
                     citadel.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFFF8FAFC),
-                      fontSize: 9.0,
+                    style: AppText.caption.copyWith(
+                      color: AppColors.textPrimary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

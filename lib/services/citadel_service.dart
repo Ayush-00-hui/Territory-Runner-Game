@@ -28,7 +28,7 @@ class CitadelService extends ChangeNotifier {
       'Apex Summit Citadel',
       'Emerald Park Stronghold',
       'Obsidian Bridge Gate',
-      'Vanguard Arena Oval',
+      'Apex Arena Oval',
       'Horizon Hilltop Beacon',
     ];
 
@@ -45,9 +45,7 @@ class CitadelService extends ChangeNotifier {
           category: categories[i % categories.length],
           position: pos,
           radiusMeters: 90.0,
-          controllingFaction: i % 2 == 0
-              ? 'Apex Vanguard'
-              : 'Obsidian Syndicate',
+          controllingFaction: i % 2 == 0 ? 'Apex' : 'Obsidian',
           rulerAthleteName: i == 0 ? 'Rival_Ghost_X' : 'Local_Legend',
           capturedAt: DateTime.now().subtract(Duration(days: i + 1)),
           defenseLevel: (i % 3) + 1,

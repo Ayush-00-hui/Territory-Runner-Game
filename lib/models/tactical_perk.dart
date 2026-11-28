@@ -32,7 +32,7 @@ class TacticalPerk {
     TacticalPerk(
       type: TacticalPerkType.sonarPulse,
       title: 'Sonar Pulse',
-      description: 'Reveals all tactical crates and ghost beacons within 1.5km for 30 minutes.',
+      description: 'Reveals all supply crates and ghost beacons within 1.5km for 30 minutes.',
       durationMinutes: 30,
     ),
     TacticalPerk(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 
 import '../../../models/loot_crate.dart';
+import '../../../ui/ui.dart';
 import '../../gameplay/loot_crate_service.dart';
 
 /// Interactive FlutterMap layer rendering procedural tactical loot crates
@@ -59,15 +60,15 @@ class _LootCrateLayerState extends State<LootCrateLayer>
 
               switch (crate.type) {
                 case LootCrateType.shieldBattery:
-                  themeColor = const Color(0xFF38BDF8); // Electric sky blue
+                  themeColor = AppColors.info;
                   icon = Icons.shield_rounded;
                   break;
                 case LootCrateType.overchargeBeacon:
-                  themeColor = const Color(0xFFFBBF24); // Amber gold
+                  themeColor = AppColors.gold;
                   icon = Icons.bolt_rounded;
                   break;
                 case LootCrateType.factionShard:
-                  themeColor = const Color(0xFFA855F7); // Neon amethyst
+                  themeColor = AppColors.accent;
                   icon = Icons.diamond_rounded;
                   break;
               }
@@ -77,7 +78,7 @@ class _LootCrateLayerState extends State<LootCrateLayer>
                 child: Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF0D0F11).withValues(alpha: 0.92),
+                    color: AppColors.bgDeep.withValues(alpha: 0.92),
                     border: Border.all(color: themeColor, width: 2.2),
                     boxShadow: [
                       BoxShadow(

@@ -29,7 +29,7 @@ class TacticalLoadoutService extends ChangeNotifier {
     } else {
       if (equippedPerks.length >= 2) {
         AppLogger.warning(
-          'Cannot equip more than 2 tactical perks simultaneously.',
+          'Cannot equip more than 2 runner perks simultaneously.',
           tag: 'TacticalLoadoutService',
         );
         return false;
@@ -44,7 +44,7 @@ class TacticalLoadoutService extends ChangeNotifier {
   void activateLoadoutForRun() {
     for (final perk in equippedPerks) {
       AppLogger.info(
-        'Activating Tactical Perk: ${perk.title}',
+        'Activating Runner Perk: ${perk.title}',
         tag: 'TacticalLoadoutService',
       );
       if (perk.type == TacticalPerkType.trailMagnet) {

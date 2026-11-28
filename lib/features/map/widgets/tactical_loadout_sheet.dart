@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../models/tactical_perk.dart';
 import '../../../services/tactical_loadout_service.dart';
+import '../../../ui/ui.dart';
 
-/// Modal sheet for selecting and equipping pre-run tactical perk loadouts.
+/// Modal sheet for selecting and equipping pre-run runner perk loadouts.
 class TacticalLoadoutSheet extends StatefulWidget {
   const TacticalLoadoutSheet({super.key});
 
@@ -29,18 +30,22 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
     final equippedCount = _loadoutService.equippedPerks.length;
 
     return Container(
-      padding: const EdgeInsets.all(24.0),
-      margin: const EdgeInsets.only(bottom: 24.0, left: 16.0, right: 16.0),
+      padding: const EdgeInsets.all(AppSpacing.s24),
+      margin: const EdgeInsets.only(
+        bottom: AppSpacing.s24,
+        left: AppSpacing.s16,
+        right: AppSpacing.s16,
+      ),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1115),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(24.0),
         border: Border.all(
-          color: const Color(0xFFA3C586).withValues(alpha: 0.8),
+          color: AppColors.accent.withValues(alpha: 0.8),
           width: 1.8,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFA3C586).withValues(alpha: 0.25),
+            color: AppColors.accent.withValues(alpha: 0.25),
             blurRadius: 24.0,
             spreadRadius: 2.0,
           ),
@@ -56,24 +61,23 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.all(AppSpacing.s8),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFA3C586).withValues(alpha: 0.15),
+                      color: AppColors.accent.withValues(alpha: 0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.tune_rounded,
-                      color: Color(0xFFA3C586),
+                      color: AppColors.accent,
                       size: 22.0,
                     ),
                   ),
                   const SizedBox(width: 12.0),
-                  const Text(
-                    'TACTICAL LOADOUT',
-                    style: TextStyle(
-                      color: Color(0xFFF8FAFC),
-                      fontSize: 18.0,
-                      fontWeight: FontWeight.w800,
+                  Text(
+                    'RUNNER LOADOUT',
+                    style: AppText.titleLarge.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 0.8,
                     ),
                   ),
@@ -85,14 +89,13 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
                   vertical: 4.0,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E242C),
+                  color: AppColors.surface2,
                   borderRadius: BorderRadius.circular(8.0),
                 ),
                 child: Text(
                   '$equippedCount/2 EQUIPPED',
-                  style: const TextStyle(
-                    color: Color(0xFFA3C586),
-                    fontSize: 11.0,
+                  style: AppText.caption.copyWith(
+                    color: AppColors.accent,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -100,24 +103,24 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
             ],
           ),
           const SizedBox(height: 12.0),
-          const Text(
-            'Equip up to 2 active tactical perks to deploy during your upcoming run session.',
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.0),
+          Text(
+            'Equip up to 2 active runner perks to deploy during your upcoming run session.',
+            style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 16.0),
           ...perks.map((perk) {
             final isEquipped = perk.isEquipped;
             final cardColor = isEquipped
-                ? const Color(0xFFA3C586)
-                : const Color(0xFF475569);
+                ? AppColors.accent
+                : AppColors.textMuted;
 
             return Container(
               margin: const EdgeInsets.only(bottom: 10.0),
               decoration: BoxDecoration(
-                color: const Color(0xFF161B22),
+                color: AppColors.surface2,
                 borderRadius: BorderRadius.circular(14.0),
                 border: Border.all(
-                  color: isEquipped ? cardColor : const Color(0xFF1E293B),
+                  color: isEquipped ? cardColor : AppColors.borderSubtle,
                   width: isEquipped ? 1.5 : 1.0,
                 ),
               ),
@@ -133,22 +136,20 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
                 ),
                 title: Text(
                   perk.title,
-                  style: const TextStyle(
-                    color: Color(0xFFF8FAFC),
+                  style: AppText.labelLarge.copyWith(
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
-                    fontSize: 14.0,
                   ),
                 ),
                 subtitle: Text(
                   perk.description,
-                  style: const TextStyle(
-                    color: Color(0xFF94A3B8),
-                    fontSize: 12.0,
+                  style: AppText.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 trailing: Switch(
                   value: isEquipped,
-                  activeColor: const Color(0xFFA3C586),
+                  activeColor: AppColors.accent,
                   onChanged: (val) {
                     setState(() {
                       _loadoutService.toggleEquip(perk.type);
@@ -164,17 +165,17 @@ class _TacticalLoadoutSheetState extends State<TacticalLoadoutSheet> {
             child: ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA3C586),
-                foregroundColor: const Color(0xFF0D0F11),
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.bgDeep,
                 padding: const EdgeInsets.symmetric(vertical: 14.0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14.0),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'CONFIRM LOADOUT',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
+                style: AppText.labelLarge.copyWith(
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
                 ),
               ),

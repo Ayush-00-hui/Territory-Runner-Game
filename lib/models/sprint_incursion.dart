@@ -52,8 +52,7 @@ class SprintIncursion {
   factory SprintIncursion.fromJson(Map<String, dynamic> json) {
     return SprintIncursion(
       id: json['id'] as String,
-      rivalFactionName:
-          json['rivalFactionName'] as String? ?? 'Obsidian Syndicate',
+      rivalFactionName: json['rivalFactionName'] as String? ?? 'Obsidian',
       targetSpeedMps: (json['targetSpeedMps'] as num).toDouble(),
       totalDurationSeconds: json['totalDurationSeconds'] as int,
       remainingSeconds: json['remainingSeconds'] as int,

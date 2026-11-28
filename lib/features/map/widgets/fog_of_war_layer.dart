@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../../services/fog_of_war_service.dart';
+import '../../../ui/ui.dart';
 
 /// Atmospheric Fog of War map overlay that reveals explored corridors
 /// while keeping unexplored city streets cloaked in obsidian shadow.
@@ -54,9 +55,9 @@ class _FogOfWarPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (exploredPoints.isEmpty) return;
 
-    // Soft subtle atmospheric tint
+    // Soft subtle atmospheric tint using AppColors base canvas
     final veilPaint = Paint()
-      ..color = const Color(0xFF0B0E14).withValues(alpha: 0.18)
+      ..color = AppColors.bgDeep.withValues(alpha: 0.18)
       ..style = PaintingStyle.fill;
 
     canvas.drawRect(Offset.zero & size, veilPaint);

@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../../ui/ui.dart';
 import '../../gameplay/guardian_challenge_service.dart';
 
-/// Floating HUD chip displaying real-time lead or lag distance against the Sector Guardian ghost boss.
+/// Floating HUD chip displaying real-time lead or lag distance against the District Guardian ghost boss.
 class SectorGuardianChip extends StatefulWidget {
   const SectorGuardianChip({super.key});
 
@@ -41,14 +42,15 @@ class _SectorGuardianChipState extends State<SectorGuardianChip> {
     final deltaText = isLeading
         ? '+$deltaMeters m Lead'
         : '-$deltaMeters m Trailing';
-    final themeColor = isLeading
-        ? const Color(0xFF10B981)
-        : const Color(0xFFEF4444);
+    final themeColor = isLeading ? AppColors.success : AppColors.error;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.s12,
+        vertical: 6.0,
+      ),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1115).withValues(alpha: 0.92),
+        color: AppColors.surface.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(20.0),
         border: Border.all(color: themeColor, width: 1.5),
         boxShadow: [
@@ -69,18 +71,16 @@ class _SectorGuardianChipState extends State<SectorGuardianChip> {
           const SizedBox(width: 6.0),
           Text(
             'VS ${guardian.guardianName}: ',
-            style: const TextStyle(
-              color: Color(0xFF94A3B8),
-              fontSize: 11.0,
+            style: AppText.labelSmall.copyWith(
+              color: AppColors.textSecondary,
               fontWeight: FontWeight.w600,
             ),
           ),
           Text(
             deltaText,
-            style: TextStyle(
+            style: AppText.labelSmall.copyWith(
               color: themeColor,
-              fontSize: 12.0,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],

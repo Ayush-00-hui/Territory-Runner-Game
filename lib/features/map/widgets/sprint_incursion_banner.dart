@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/sprint_incursion.dart';
+import '../../../ui/ui.dart';
 import '../../gameplay/incursion_service.dart';
 
 /// Electric HUD banner displayed during an active dynamic sprint incursion challenge.
@@ -45,9 +46,9 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
     final isRepelled = inc.status == IncursionStatus.repelled;
     final isFailed = inc.status == IncursionStatus.failed;
 
-    Color primaryColor = const Color(0xFFEF4444); // Electric crimson
-    if (isRepelled) primaryColor = const Color(0xFF10B981); // Emerald
-    if (isFailed) primaryColor = const Color(0xFF6B7280);
+    Color primaryColor = AppColors.error;
+    if (isRepelled) primaryColor = AppColors.success;
+    if (isFailed) primaryColor = AppColors.disabled;
 
     return AnimatedBuilder(
       animation: _strobeController,
@@ -57,11 +58,14 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
             : (0.2 + 0.3 * _strobeController.value);
 
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-          padding: const EdgeInsets.all(14.0),
+          margin: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.s16,
+            vertical: AppSpacing.s8,
+          ),
+          padding: const EdgeInsets.all(AppSpacing.s12),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F1115).withValues(alpha: 0.96),
-            borderRadius: BorderRadius.circular(16.0),
+            color: AppColors.surface.withValues(alpha: 0.96),
+            borderRadius: AppSpacing.br16,
             border: Border.all(
               color: primaryColor.withValues(alpha: 0.85),
               width: 2.0,
@@ -80,7 +84,7 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8.0),
+                    padding: const EdgeInsets.all(AppSpacing.s8),
                     decoration: BoxDecoration(
                       color: primaryColor.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
@@ -93,7 +97,7 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
                       size: 22.0,
                     ),
                   ),
-                  const SizedBox(width: 12.0),
+                  const SizedBox(width: AppSpacing.s12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -102,24 +106,21 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
                           isRepelled
                               ? 'INCURSION REPELLED! (+${inc.rewardXp} XP)'
                               : isFailed
-                              ? 'PERIMETER COMPROMISED'
-                              : 'BORDER BREACH: ${inc.rivalFactionName.toUpperCase()}',
-                          style: TextStyle(
+                              ? 'PERIMETER DEFENSE DROPPED'
+                              : 'BORDER ALERT: ${inc.rivalFactionName.toUpperCase()}',
+                          style: AppText.labelSmall.copyWith(
                             color: primaryColor,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13.0,
+                            fontWeight: FontWeight.w700,
                             letterSpacing: 0.8,
                           ),
                         ),
                         const SizedBox(height: 2.0),
                         Text(
                           isRepelled
-                              ? 'Perimeter territory secured successfully.'
+                              ? 'Territory perimeter secured successfully.'
                               : 'Hold pace under ${inc.targetPaceString} to repel!',
-                          style: const TextStyle(
-                            color: Color(0xFFE2E8F0),
-                            fontSize: 12.0,
-                            fontWeight: FontWeight.w500,
+                          style: AppText.bodySmall.copyWith(
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ],
@@ -128,32 +129,31 @@ class _SprintIncursionBannerState extends State<SprintIncursionBanner>
                   if (inc.isActive)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10.0,
+                        horizontal: AppSpacing.s10,
                         vertical: 6.0,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E242C),
-                        borderRadius: BorderRadius.circular(8.0),
+                        color: AppColors.surface2,
+                        borderRadius: AppSpacing.br8,
                       ),
                       child: Text(
                         '${inc.remainingSeconds}s',
-                        style: const TextStyle(
-                          color: Color(0xFFF8FAFC),
-                          fontSize: 15.0,
+                        style: AppText.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
                           fontWeight: FontWeight.w700,
-                          fontFeatures: [FontFeature.tabularFigures()],
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),
                 ],
               ),
               if (inc.isActive) ...[
-                const SizedBox(height: 10.0),
+                const SizedBox(height: AppSpacing.s10),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4.0),
                   child: LinearProgressIndicator(
                     value: inc.progressFraction,
-                    backgroundColor: const Color(0xFF1E242C),
+                    backgroundColor: AppColors.surface2,
                     valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
                     minHeight: 6.0,
                   ),

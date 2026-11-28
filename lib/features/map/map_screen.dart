@@ -155,11 +155,7 @@ class _MapScreenState extends State<MapScreen>
 
     controller.onLoopCaptured = (loop, netArea, xp) {
       if (!mounted) return;
-      CitadelService().checkPolygonEnclosure(
-        loop.polygon,
-        'Athlete',
-        'Apex Vanguard',
-      );
+      CitadelService().checkPolygonEnclosure(loop.polygon, 'Athlete', 'Apex');
       ArcadeAudioService().playLoopVictoryChime();
       DroneCompanionService().onLoopClosed();
       LoopCelebrationOverlay.show(

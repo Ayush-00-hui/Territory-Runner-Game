@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../models/citadel.dart';
+import '../../../ui/ui.dart';
 
 /// Bottom sheet detailing Citadel status, ruling athlete, defense level, and rewards.
 class CitadelDetailSheet extends StatelessWidget {
@@ -18,17 +19,19 @@ class CitadelDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isVanguard = citadel.controllingFaction.contains('Vanguard');
-    final factionColor = isVanguard
-        ? const Color(0xFFA3C586)
-        : const Color(0xFFA855F7);
+    final isApex = citadel.controllingFaction.contains('Apex');
+    final factionColor = isApex ? AppColors.accent : AppColors.gold;
 
     return Container(
-      padding: const EdgeInsets.all(24.0),
-      margin: const EdgeInsets.only(bottom: 24.0, left: 16.0, right: 16.0),
+      padding: const EdgeInsets.all(AppSpacing.s24),
+      margin: const EdgeInsets.only(
+        bottom: AppSpacing.s24,
+        left: AppSpacing.s16,
+        right: AppSpacing.s16,
+      ),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1115),
-        borderRadius: BorderRadius.circular(24.0),
+        color: AppColors.surface,
+        borderRadius: AppSpacing.br24,
         border: Border.all(
           color: factionColor.withValues(alpha: 0.8),
           width: 1.8,
@@ -47,7 +50,7 @@ class CitadelDetailSheet extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(AppSpacing.s12),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: factionColor.withValues(alpha: 0.15),
@@ -55,31 +58,29 @@ class CitadelDetailSheet extends StatelessWidget {
                 ),
                 child: const Icon(
                   Icons.fort_rounded,
-                  color: Color(0xFFF8FAFC),
+                  color: AppColors.textPrimary,
                   size: 28.0,
                 ),
               ),
-              const SizedBox(width: 14.0),
+              const SizedBox(width: AppSpacing.s12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'KING OF THE HILL CITADEL',
-                      style: TextStyle(
+                      'DISTRICT CITADEL BEACON',
+                      style: AppText.labelSmall.copyWith(
                         color: factionColor,
-                        fontSize: 11.0,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 1.0,
                       ),
                     ),
                     const SizedBox(height: 2.0),
                     Text(
                       citadel.name,
-                      style: const TextStyle(
-                        color: Color(0xFFF8FAFC),
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.w800,
+                      style: AppText.titleLarge.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -87,66 +88,59 @@ class CitadelDetailSheet extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20.0),
+          const SizedBox(height: AppSpacing.s20),
           Container(
-            padding: const EdgeInsets.all(14.0),
+            padding: const EdgeInsets.all(AppSpacing.s16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E242C),
-              borderRadius: BorderRadius.circular(14.0),
+              color: AppColors.surface2,
+              borderRadius: AppSpacing.br16,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildMetric(
-                  'Controlling Faction',
+                  'Club / Group',
                   citadel.controllingFaction,
                   factionColor,
                 ),
-                Container(
-                  width: 1.0,
-                  height: 32.0,
-                  color: const Color(0xFF334155),
-                ),
+                Container(width: 1.0, height: 32.0, color: AppColors.border),
                 _buildMetric(
-                  'Current Ruler',
+                  'Current Leader',
                   citadel.rulerAthleteName,
-                  const Color(0xFFF8FAFC),
+                  AppColors.textPrimary,
                 ),
-                Container(
-                  width: 1.0,
-                  height: 32.0,
-                  color: const Color(0xFF334155),
-                ),
+                Container(width: 1.0, height: 32.0, color: AppColors.border),
                 _buildMetric(
                   'Defense Tier',
                   'Tier ${citadel.defenseLevel}',
-                  const Color(0xFF38BDF8),
+                  AppColors.accent,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16.0),
-          const Text(
-            'Encircle this Citadel in your running polygon loop to capture it for your faction and claim the Sector Ruler title.',
+          const SizedBox(height: AppSpacing.s16),
+          Text(
+            'Encircle this Citadel in your running polygon loop to capture it for your team and claim the District Leader title.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.0),
+            style: AppText.bodySmall.copyWith(color: AppColors.textSecondary),
           ),
-          const SizedBox(height: 20.0),
+          const SizedBox(height: AppSpacing.s20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: factionColor,
-                foregroundColor: const Color(0xFF0D0F11),
-                padding: const EdgeInsets.symmetric(vertical: 14.0),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14.0),
-                ),
+                foregroundColor: AppColors.bgDeep,
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.s16),
+                shape: RoundedRectangleBorder(borderRadius: AppSpacing.br16),
               ),
-              child: const Text(
+              child: Text(
                 'DISMISS CITADEL INTEL',
-                style: TextStyle(fontWeight: FontWeight.w800),
+                style: AppText.labelLarge.copyWith(
+                  color: AppColors.bgDeep,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -160,19 +154,17 @@ class CitadelDetailSheet extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF64748B),
-            fontSize: 10.0,
+          style: AppText.labelSmall.copyWith(
+            color: AppColors.textMuted,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 4.0),
         Text(
           value,
-          style: TextStyle(
+          style: AppText.labelSmall.copyWith(
             color: color,
-            fontSize: 12.0,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],

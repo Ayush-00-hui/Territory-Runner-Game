@@ -36,8 +36,8 @@ class GuardianChallengeService extends ChangeNotifier {
     return SectorGuardian(
       sectorId: 'sector_central_01',
       districtName: 'Metro Central Loop',
-      guardianName: 'Vanguard_Phantom',
-      faction: 'Apex Vanguard',
+      guardianName: 'Apex_Phantom',
+      faction: 'Apex',
       recordTimeSeconds: 680.0, // ~11:20 for 2.4km (~4:43/km)
       distanceKm: 2.4,
       averagePaceMinPerKm: 4.72,
@@ -50,7 +50,7 @@ class GuardianChallengeService extends ChangeNotifier {
     _isChallengeActive = true;
     _userLeadDistanceMeters = 0.0;
     AppLogger.info(
-      'Started challenge against Sector Guardian: ${guardian.guardianName} (${guardian.districtName})',
+      'Started challenge against District Guardian: ${guardian.guardianName} (${guardian.districtName})',
       tag: 'GuardianChallengeService',
     );
     notifyListeners();

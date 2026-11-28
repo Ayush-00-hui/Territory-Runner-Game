@@ -126,7 +126,7 @@ class TacticalAiEngine {
 
       _isInitialized = true;
       AppLogger.info(
-        'Tactical Guardian Deep Neural Network loaded & verified successfully.',
+        'District Guardian Deep Neural Network loaded & verified successfully.',
         tag: 'TacticalAiEngine',
       );
     } catch (e) {

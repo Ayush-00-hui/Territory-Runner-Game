@@ -70,8 +70,7 @@ class Citadel {
         (json['longitude'] as num).toDouble(),
       ),
       radiusMeters: (json['radiusMeters'] as num?)?.toDouble() ?? 80.0,
-      controllingFaction:
-          json['controllingFaction'] as String? ?? 'Apex Vanguard',
+      controllingFaction: json['controllingFaction'] as String? ?? 'Apex',
       rulerAthleteName: json['rulerAthleteName'] as String? ?? 'Ghost Guardian',
       capturedAt: DateTime.parse(json['capturedAt'] as String),
       influenceRadiance: (json['influenceRadiance'] as num?)?.toDouble() ?? 1.5,

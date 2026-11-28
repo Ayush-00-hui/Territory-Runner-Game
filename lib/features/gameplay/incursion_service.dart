@@ -48,7 +48,7 @@ class IncursionService extends ChangeNotifier {
   }) {
     if (hasActiveIncursion) return;
 
-    final factions = ['Obsidian Syndicate', 'Apex Vanguard', 'Terra Wardens'];
+    final factions = ['Obsidian', 'Apex', 'Terra Wardens'];
     final faction =
         rivalFaction ?? factions[math.Random().nextInt(factions.length)];
     // Default target: ~4:45/km (3.51 m/s) or adaptive

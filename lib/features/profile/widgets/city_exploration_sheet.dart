@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../services/fog_of_war_service.dart';
 import '../../../services/citadel_service.dart';
+import '../../../ui/ui.dart';
 import '../../gameplay/incursion_service.dart';
 
 /// Modal sheet presenting city exploration statistics, district badges, and Fog of War progress.
@@ -29,18 +30,22 @@ class CityExplorationSheet extends StatelessWidget {
     final repelled = incursions.repelledIncursionsCount;
 
     return Container(
-      padding: const EdgeInsets.all(24.0),
-      margin: const EdgeInsets.only(bottom: 24.0, left: 16.0, right: 16.0),
+      padding: const EdgeInsets.all(AppSpacing.s24),
+      margin: const EdgeInsets.only(
+        bottom: AppSpacing.s24,
+        left: AppSpacing.s16,
+        right: AppSpacing.s16,
+      ),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1115),
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(24.0),
         border: Border.all(
-          color: const Color(0xFF38BDF8).withValues(alpha: 0.8),
+          color: AppColors.accent.withValues(alpha: 0.8),
           width: 1.8,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF38BDF8).withValues(alpha: 0.25),
+            color: AppColors.accent.withValues(alpha: 0.25),
             blurRadius: 24.0,
             spreadRadius: 2.0,
           ),
@@ -56,15 +61,12 @@ class CityExplorationSheet extends StatelessWidget {
                 padding: const EdgeInsets.all(10.0),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
-                  border: Border.all(
-                    color: const Color(0xFF38BDF8),
-                    width: 1.5,
-                  ),
+                  color: AppColors.accent.withValues(alpha: 0.15),
+                  border: Border.all(color: AppColors.accent, width: 1.5),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.explore_rounded,
-                  color: Color(0xFF38BDF8),
+                  color: AppColors.accent,
                   size: 24.0,
                 ),
               ),
@@ -73,22 +75,20 @@ class CityExplorationSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'METROPOLITAN EXPLORATION',
-                      style: TextStyle(
-                        color: Color(0xFF38BDF8),
-                        fontSize: 11.0,
-                        fontWeight: FontWeight.w800,
+                      style: AppText.caption.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w700,
                         letterSpacing: 1.0,
                       ),
                     ),
                     const SizedBox(height: 2.0),
                     Text(
                       '${pct.toStringAsFixed(1)}% City Unlocked',
-                      style: const TextStyle(
-                        color: Color(0xFFF8FAFC),
-                        fontSize: 20.0,
-                        fontWeight: FontWeight.w800,
+                      style: AppText.headlineMedium.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -101,18 +101,16 @@ class CityExplorationSheet extends StatelessWidget {
             borderRadius: BorderRadius.circular(6.0),
             child: LinearProgressIndicator(
               value: (pct / 100.0).clamp(0.01, 1.0),
-              backgroundColor: const Color(0xFF1E242C),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFF38BDF8),
-              ),
+              backgroundColor: AppColors.surface2,
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
               minHeight: 8.0,
             ),
           ),
           const SizedBox(height: 20.0),
           Container(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(AppSpacing.s16),
             decoration: BoxDecoration(
-              color: const Color(0xFF161B22),
+              color: AppColors.surface2,
               borderRadius: BorderRadius.circular(16.0),
             ),
             child: Row(
@@ -121,36 +119,36 @@ class CityExplorationSheet extends StatelessWidget {
                 _buildStat(
                   'Explored Area',
                   '${areaSqKm.toStringAsFixed(2)} km²',
-                  const Color(0xFFF8FAFC),
+                  AppColors.textPrimary,
                 ),
                 Container(
                   width: 1.0,
                   height: 32.0,
-                  color: const Color(0xFF334155),
+                  color: AppColors.borderSubtle,
                 ),
                 _buildStat(
                   'Discovered Citadels',
                   '$totalCitadels POIs',
-                  const Color(0xFFFBBF24),
+                  AppColors.gold,
                 ),
                 Container(
                   width: 1.0,
                   height: 32.0,
-                  color: const Color(0xFF334155),
+                  color: AppColors.borderSubtle,
                 ),
                 _buildStat(
                   'Incursions Repelled',
                   '$repelled',
-                  const Color(0xFF10B981),
+                  AppColors.success,
                 ),
               ],
             ),
           ),
           const SizedBox(height: 16.0),
-          const Text(
+          Text(
             'Keep discovering unmapped streets to clear the city Fog of War and unlock exclusive territorial discovery badges.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13.0),
+            style: AppText.bodyMedium.copyWith(color: AppColors.textSecondary),
           ),
           const SizedBox(height: 20.0),
           SizedBox(
@@ -158,17 +156,17 @@ class CityExplorationSheet extends StatelessWidget {
             child: ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF38BDF8),
-                foregroundColor: const Color(0xFF0D0F11),
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.bgDeep,
                 padding: const EdgeInsets.symmetric(vertical: 14.0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14.0),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 'CONTINUE EXPEDITION',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
+                style: AppText.labelLarge.copyWith(
+                  fontWeight: FontWeight.w700,
                   letterSpacing: 0.8,
                 ),
               ),
@@ -184,19 +182,17 @@ class CityExplorationSheet extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Color(0xFF64748B),
-            fontSize: 10.0,
+          style: AppText.caption.copyWith(
+            color: AppColors.textMuted,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 4.0),
         Text(
           value,
-          style: TextStyle(
+          style: AppText.labelLarge.copyWith(
             color: color,
-            fontSize: 13.0,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ],

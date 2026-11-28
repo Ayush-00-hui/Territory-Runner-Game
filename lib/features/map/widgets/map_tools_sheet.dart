@@ -249,7 +249,7 @@ class MapToolsSheet extends StatelessWidget {
               // 7. Tactical Loadout
               _ToolTile(
                 icon: Icons.tune_rounded,
-                title: 'Tactical loadout',
+                title: 'Runner loadout',
                 subtitle: 'Equip perks: Sonar Pulse, Aegis Shield, Overdrive',
                 accentColor: AppColors.accent,
                 onTap: () {
@@ -263,7 +263,7 @@ class MapToolsSheet extends StatelessWidget {
                 icon: Icons.explore_rounded,
                 title: 'City exploration',
                 subtitle: 'Fog of War map clearance & landmark Citadels',
-                accentColor: const Color(0xFF38BDF8),
+                accentColor: AppColors.accent,
                 onTap: () {
                   CityExplorationSheet.show(context);
                 },
