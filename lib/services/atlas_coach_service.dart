@@ -12,7 +12,7 @@ enum AtlasCoachingIntent {
   celebrationMilestone,
 }
 
-/// Dynamic athlete telemetry & state inputs for the Atlas Coach Neural Model.
+/// Dynamic athlete motion metrics & state inputs for the Atlas Coach Neural Model.
 class AtlasCoachInput {
   final double paceMinKm;
   final double cadenceSpm;
@@ -120,7 +120,7 @@ class AtlasCoachService {
         projectedStaminaDepletion1Km: 0.20,
         dialogueTitle: 'Lactate Wall Approaching',
         spokenNarration:
-            'Cadence dropped by ${input.cadenceDelta60s.abs().toStringAsFixed(0)} spm. Ease your stride length to conserve stamina for the final sector claim.',
+            'Cadence dropped by ${input.cadenceDelta60s.abs().toStringAsFixed(0)} spm. Ease your stride length to conserve stamina for the final loop claim.',
         audioChimeKey: 'fatigue_warning',
       );
     }

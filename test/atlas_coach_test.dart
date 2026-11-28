@@ -71,7 +71,7 @@ void main() {
           durationMinutes: 20.0,
           distanceKm: 3.5,
           staminaPct: 60.0,
-          isInHostileTerritory: true, // Inside enemy sector
+          isInHostileTerritory: true, // Inside enemy zone
           distanceToLoopClosureM: 650.0,
         ),
       );
