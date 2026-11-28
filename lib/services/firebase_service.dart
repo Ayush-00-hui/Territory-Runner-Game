@@ -20,7 +20,9 @@ class FirebaseService {
 
   FirebaseAuth? _auth;
   FirebaseFirestore? _firestore;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    serverClientId: '644195360354-dfkl86gce5lpamkart0ojm1b1c5uonfb.apps.googleusercontent.com',
+  );
 
   FirebaseAuth? get auth => _auth;
   FirebaseFirestore? get firestore => _firestore;
